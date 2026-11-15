@@ -15,7 +15,9 @@ import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +64,8 @@ class CatalogOrderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
     val uiState: StateFlow<CatalogOrderUiState> = _uiState.asStateFlow()
     private var disabledKeysCache: Set<String> = emptySet()
+    private var persistedDisabledKeys: Set<String> = emptySet()
+    private var lastDiskOrderKeys: List<String> = emptyList()
     private var persistedItemsCache: List<CatalogOrderItem> = emptyList()
     private var draftOrderKeys: List<String>? = null
     private var moveBaselineItems: List<CatalogOrderItem>? = null
@@ -164,6 +168,8 @@ class CatalogOrderViewModel @Inject constructor(
                         wrote = true
                     }
                 }
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (t: Throwable) {
                 Log.e(TAG, "confirmMove write failed gen=$generation", t)
             }
@@ -178,9 +184,29 @@ class CatalogOrderViewModel @Inject constructor(
                 homeCatalogSettingsSyncService.triggerPush()
             } else if (generation == persistGeneration) {
                 pendingSavedOrderKeys = null
-                sessionBaseline?.let { baseline ->
-                    persistedItemsCache = baseline
-                    _uiState.update { it.copy(items = baseline) }
+                val current = _uiState.value
+                if (current.movingKey == null && current.items == confirmedItems) {
+                    sessionBaseline?.let { baseline ->
+                        persistedItemsCache = baseline
+                        _uiState.update { it.copy(items = baseline) }
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            delay(PENDING_SAVED_ORDER_TIMEOUT_MS + 500)
+            if (pendingSavedOrderKeys == draft && lastDiskOrderKeys != draft) {
+                Log.w(TAG, "pending order expired, reverting UI to disk order")
+                pendingSavedOrderKeys = null
+                val diskItems = itemsInOrder(
+                    orderKeys = lastDiskOrderKeys,
+                    source = persistedItemsCache,
+                    followAddonsOrder = _uiState.value.followAddonsOrder,
+                )
+                persistedItemsCache = diskItems
+                if (_uiState.value.movingKey == null) {
+                    _uiState.update { it.copy(items = diskItems) }
                 }
             }
         }
@@ -294,9 +320,10 @@ class CatalogOrderViewModel @Inject constructor(
                 scanIdx--
             }
             if (scanIdx < 0) return null
-            val targetAddonName = items.firstOrNull { it.key == draft[scanIdx] }?.addonName ?: return null
+            val targetAddonId = items.firstOrNull { it.key == draft[scanIdx] }?.addonId
+                ?: return null
             while (scanIdx > 0 && !draft[scanIdx - 1].startsWith("collection_") &&
-                items.firstOrNull { it.key == draft[scanIdx - 1] }?.addonName == targetAddonName
+                items.firstOrNull { it.key == draft[scanIdx - 1] }?.addonId == targetAddonId
             ) {
                 scanIdx--
             }
@@ -307,9 +334,10 @@ class CatalogOrderViewModel @Inject constructor(
                 scanIdx++
             }
             if (scanIdx >= draft.size) return null
-            val targetAddonName = items.firstOrNull { it.key == draft[scanIdx] }?.addonName ?: return null
+            val targetAddonId = items.firstOrNull { it.key == draft[scanIdx] }?.addonId
+                ?: return null
             while (scanIdx < draft.lastIndex && !draft[scanIdx + 1].startsWith("collection_") &&
-                items.firstOrNull { it.key == draft[scanIdx + 1] }?.addonName == targetAddonName
+                items.firstOrNull { it.key == draft[scanIdx + 1] }?.addonId == targetAddonId
             ) {
                 scanIdx++
             }
@@ -365,10 +393,10 @@ class CatalogOrderViewModel @Inject constructor(
     }
 
     fun toggleCatalogEnabled(disableKey: String) {
-        val updatedDisabled = disabledKeysCache.toMutableSet().apply {
+        val updatedDisabled = persistedDisabledKeys.toMutableSet().apply {
             if (disableKey in this) remove(disableKey) else add(disableKey)
         }
-        disabledKeysCache = updatedDisabled
+        persistedDisabledKeys = updatedDisabled
         viewModelScope.launch {
             withContext(NonCancellable) {
                 layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
@@ -437,6 +465,7 @@ class CatalogOrderViewModel @Inject constructor(
                 @Suppress("UNCHECKED_CAST")
                 val customTitles = values[4] as Map<String, String>
                 val followAddons = values[5] as Boolean
+                persistedDisabledKeys = disabledKeys
 
                 val buildStarted = SystemClock.elapsedRealtime()
                 val items = buildOrderedCatalogItems(
@@ -457,6 +486,7 @@ class CatalogOrderViewModel @Inject constructor(
                 )
                 Triple(items, followAddons, savedOrderKeys)
             }.collectLatest { (orderedItems, followAddons, diskOrderKeys) ->
+                lastDiskOrderKeys = diskOrderKeys
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
                 var pendingKeys = pendingSavedOrderKeys
                 if (pendingKeys != null && diskOrderKeys != pendingKeys &&
@@ -636,6 +666,7 @@ class CatalogOrderViewModel @Inject constructor(
                 disableKey = entry.disableKey,
                 catalogName = displayName,
                 addonName = entry.addonName,
+                addonId = entry.addonId,
                 typeLabel = entry.typeLabel,
                 isDisabled = entry.disableKey in disabledKeys ||
                     (entry.legacyDisableKey != null && entry.legacyDisableKey in disabledKeys),
@@ -666,14 +697,14 @@ class CatalogOrderViewModel @Inject constructor(
                     i++
                     continue
                 }
-                val prevAddon = findAddonNameBefore(result, i, availableMap)
-                val nextAddon = findAddonNameAfter(result, i, availableMap)
-                if (prevAddon != null && nextAddon != null && prevAddon == nextAddon) {
+                val prevAddonId = findAddonIdBefore(result, i, availableMap)
+                val nextAddonId = findAddonIdAfter(result, i, availableMap)
+                if (prevAddonId != null && nextAddonId != null && prevAddonId == nextAddonId) {
                     result.removeAt(i)
                     var insertPos = i
                     while (insertPos < result.size &&
                         !result[insertPos].startsWith("collection_") &&
-                        availableMap[result[insertPos]]?.addonName == prevAddon
+                        availableMap[result[insertPos]]?.addonId == prevAddonId
                     ) {
                         insertPos++
                     }
@@ -688,27 +719,27 @@ class CatalogOrderViewModel @Inject constructor(
         return result
     }
 
-    private fun findAddonNameBefore(
+    private fun findAddonIdBefore(
         order: List<String>,
         index: Int,
         availableMap: Map<String, CatalogOrderEntry>
     ): String? {
         for (j in index - 1 downTo 0) {
             if (!order[j].startsWith("collection_")) {
-                return availableMap[order[j]]?.addonName
+                return availableMap[order[j]]?.addonId
             }
         }
         return null
     }
 
-    private fun findAddonNameAfter(
+    private fun findAddonIdAfter(
         order: List<String>,
         index: Int,
         availableMap: Map<String, CatalogOrderEntry>
     ): String? {
         for (j in index + 1 until order.size) {
             if (!order[j].startsWith("collection_")) {
-                return availableMap[order[j]]?.addonName
+                return availableMap[order[j]]?.addonId
             }
         }
         return null
@@ -744,6 +775,7 @@ class CatalogOrderViewModel @Inject constructor(
                                 ),
                                 catalogName = catalog.name,
                                 addonName = addon.displayName,
+                                addonId = addon.id,
                                 typeLabel = catalog.apiType
                             )
                         )
@@ -771,6 +803,7 @@ data class CatalogOrderItem(
     val disableKey: String,
     val catalogName: String,
     val addonName: String,
+    val addonId: String = "",
     val typeLabel: String,
     val isDisabled: Boolean,
     val canMoveUp: Boolean,
@@ -784,5 +817,6 @@ private data class CatalogOrderEntry(
     val legacyDisableKey: String? = null,
     val catalogName: String,
     val addonName: String,
+    val addonId: String = "",
     val typeLabel: String
 )

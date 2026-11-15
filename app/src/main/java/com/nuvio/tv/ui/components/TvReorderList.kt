@@ -457,6 +457,8 @@ fun <T> TvReorderList(
     LaunchedEffect(movingKey) {
         if (movingKey != null) {
             runtime.hadMoveSession = true
+            runtime.cancelScrollJob?.cancel()
+            runtime.cancelScrollJob = null
             runtime.cancelReturnSlot = animatedIndices[movingKey]
             runtime.cancelReturnOrderKeys = slotOrderKeys
             val movingIndex = animatedIndices[movingKey]
@@ -510,7 +512,8 @@ fun <T> TvReorderList(
             val target = tops[returnSlot]
                 .roundToInt()
                 .coerceIn(0, scrollState.maxValue)
-            runtime.neighborScrollJob = scope.launch {
+            runtime.neighborScrollJob?.cancel()
+            runtime.cancelScrollJob = scope.launch {
                 scrollState.animateScrollTo(target, ReorderTravelSpec)
             }
         }
@@ -734,6 +737,7 @@ private class TvReorderListRuntime(
     var latestMovingKey: String? = initialMovingKey
     var cancelReturnSlot: Int? = null
     var cancelReturnOrderKeys: List<String>? = null
+    var cancelScrollJob: Job? = null
 }
 
 private class CachedRowContent<T>(
