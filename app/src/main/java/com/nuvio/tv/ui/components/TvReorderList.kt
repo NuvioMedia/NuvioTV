@@ -133,7 +133,11 @@ fun <T> TvReorderList(
                 containerSize: Float,
             ): Float {
                 if (containerSize <= 0f || size <= 0f) return 0f
-                if (headerHeightPx[0] <= 0f || rowHeightPx[0] <= 0f) return 0f
+                if (headerHeightPx[0] <= 0f || rowHeightPx[0] <= 0f) {
+                    return inheritedBringIntoViewSpec.calculateScrollDistance(
+                        offset, size, containerSize,
+                    )
+                }
                 val itemTopInContent = scrollState.value + offset
                 val firstRowBottom = headerHeightPx[0] + if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
                 if (headerHeightPx[0] > 0f && itemTopInContent < firstRowBottom) {
