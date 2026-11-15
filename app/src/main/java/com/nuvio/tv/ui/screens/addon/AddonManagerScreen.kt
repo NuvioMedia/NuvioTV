@@ -132,6 +132,22 @@ private enum class AddonManagerFocusTarget {
     Collections
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+internal fun Modifier.addonManagerFocusRestorer(
+    pendingRequester: FocusRequester?,
+    fallbackRequester: FocusRequester
+): Modifier = this
+    .then(
+        if (pendingRequester != null) {
+            Modifier.focusProperties {
+                onEnter = { pendingRequester.requestFocus() }
+            }
+        } else {
+            Modifier
+        }
+    )
+    .focusRestorer(pendingRequester ?: fallbackRequester)
+
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun AddonManagerScreen(
@@ -231,7 +247,15 @@ fun AddonManagerScreen(
     val requestManageFromPhoneFocus = {
         coroutineScope.launch {
             repeat(2) { withFrameNanos { } }
-            runCatching { manageFromPhoneFocusRequester.requestFocus() }
+            if (pendingFocusRestore == null &&
+                restoreManageFromPhoneFocus &&
+                !uiState.isQrModeActive &&
+                uiState.pendingChange == null &&
+                !isEditing &&
+                addonUrlPendingDeletion == null
+            ) {
+                runCatching { manageFromPhoneFocusRequester.requestFocus() }
+            }
         }
     }
 
@@ -255,6 +279,18 @@ fun AddonManagerScreen(
                 requestInputBarFocus()
             }
         }
+    }
+
+    // Claim focus as soon as the list is laid out so the default initial focus
+    // (URL field / Manage) never flashes before ON_RESUME restores it.
+    LaunchedEffect(Unit) {
+        val earlyFocusRequester = when (pendingFocusRestore) {
+            AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
+            AddonManagerFocusTarget.Collections -> collectionsFocusRequester
+            null -> return@LaunchedEffect
+        }
+        repeat(2) { withFrameNanos { } }
+        runCatching { earlyFocusRequester.requestFocus() }
     }
 
     LaunchedEffect(addonUrlPendingDeletion) {
@@ -324,12 +360,13 @@ fun AddonManagerScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .focusRestorer(
-                    when (pendingFocusRestore) {
+                .addonManagerFocusRestorer(
+                    pendingRequester = when (pendingFocusRestore) {
                         AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
                         AddonManagerFocusTarget.Collections -> collectionsFocusRequester
-                        null -> surfaceFocusRequester
-                    }
+                        null -> null
+                    },
+                    fallbackRequester = surfaceFocusRequester
                 ),
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -508,6 +545,7 @@ fun AddonManagerScreen(
                 item {
                     CatalogOrderEntryCard(
                         onClick = {
+                            restoreManageFromPhoneFocus = false
                             pendingFocusRestore = AddonManagerFocusTarget.CatalogOrder
                             onNavigateToCatalogOrder()
                         },
@@ -520,6 +558,7 @@ fun AddonManagerScreen(
                 item {
                     CollectionsEntryCard(
                         onClick = {
+                            restoreManageFromPhoneFocus = false
                             pendingFocusRestore = AddonManagerFocusTarget.Collections
                             onNavigateToCollections()
                         },

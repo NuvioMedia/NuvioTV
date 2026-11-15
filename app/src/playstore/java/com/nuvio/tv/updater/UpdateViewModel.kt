@@ -22,7 +22,9 @@ data class UpdateUiState(
     val updateChannel: UpdateChannel = UpdateChannel.STABLE,
     val autoInstallEnabled: Boolean = false,
     val autoInstallSupported: Boolean = false,
-    val autoInstallNoticeEnabled: Boolean = false
+    val autoInstallNoticeEnabled: Boolean = false,
+    val optimizeDuringInstall: Boolean = false,
+    val optimizeDuringInstallSupported: Boolean = false
 )
 
 @HiltViewModel
@@ -51,4 +53,6 @@ class UpdateViewModel @Inject constructor() : ViewModel() {
     fun setAutoInstallEnabled(enabled: Boolean) = Unit
 
     fun setAutoInstallNoticeEnabled(enabled: Boolean) = Unit
+
+    fun setOptimizeDuringInstall(enabled: Boolean) = Unit
 }
