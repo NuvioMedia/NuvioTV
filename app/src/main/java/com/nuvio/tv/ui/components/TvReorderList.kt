@@ -587,6 +587,9 @@ fun <T> TvReorderList(
                         } else {
                             measureSlot(0).height.toFloat()
                         }
+                        val movingSlot = movingKey
+                            ?.let { animatedIndices[it] }
+                            ?.coerceIn(0, items.lastIndex)
                         val visibleRange = if (viewportPx <= 0f) {
                             0..items.lastIndex
                         } else {
@@ -597,13 +600,14 @@ fun <T> TvReorderList(
                                 viewportHeightPx = viewportPx,
                                 headerHeightPx = headerHeightPx[0],
                                 scrollPx = scrollState.value,
-                                movingSlot = movingKey
-                                    ?.let { animatedIndices[it] }
-                                    ?.coerceIn(0, items.lastIndex),
                             )
                         }
+                        val extraSlot = movingSlot?.takeIf { it !in visibleRange }
                         for (index in visibleRange) {
                             measureSlot(index)
+                        }
+                        if (extraSlot != null) {
+                            measureSlot(extraSlot)
                         }
                         val stride = sampledRowHeight + rowSpacingPx
                         val totalHeight = (
@@ -615,8 +619,8 @@ fun <T> TvReorderList(
                             placeables.values.maxOfOrNull { it.width } ?: 0
                         }
                         layout(layoutWidth, totalHeight) {
-                            for (index in visibleRange) {
-                                val placeable = placeables[index] ?: continue
+                            fun placeRow(index: Int) {
+                                val placeable = placeables[index] ?: return
                                 val itemKey = key(items[index])
                                 val slotIndex = animatedIndices[itemKey] ?: index
                                 placeable.place(
@@ -624,6 +628,12 @@ fun <T> TvReorderList(
                                     y = (slotIndex * stride).roundToInt(),
                                     zIndex = if (itemKey == movingKey) 1f else 0f,
                                 )
+                            }
+                            for (index in visibleRange) {
+                                placeRow(index)
+                            }
+                            if (extraSlot != null) {
+                                placeRow(extraSlot)
                             }
                         }
                     }
@@ -639,29 +649,26 @@ private class CachedRowContent<T>(
     val content: @Composable () -> Unit,
 )
 
-private fun visibleReorderSlotRange(
+internal fun visibleReorderSlotRange(
     slotCount: Int,
     rowHeightPx: Float,
     rowSpacingPx: Float,
     viewportHeightPx: Float,
     headerHeightPx: Float,
     scrollPx: Int,
-    movingSlot: Int?,
 ): IntRange {
     val lastSlot = slotCount - 1
     if (lastSlot < 0) return IntRange.EMPTY
     val stride = if (rowHeightPx > 0f) rowHeightPx + rowSpacingPx else 0f
     if (stride <= 0f || viewportHeightPx <= 0f) {
-        return 0..(movingSlot ?: 0).coerceIn(0, lastSlot)
+        return 0..lastSlot
     }
     val overscanPx = viewportHeightPx
     val topEdge = scrollPx - headerHeightPx - overscanPx
     val bottomEdge = scrollPx + viewportHeightPx - headerHeightPx + overscanPx
     val first = ((topEdge - rowHeightPx) / stride).toInt()
         .coerceIn(0, lastSlot)
-        .coerceAtMost(movingSlot ?: lastSlot)
     val last = (bottomEdge / stride).toInt()
         .coerceIn(0, lastSlot)
-        .coerceAtLeast(movingSlot ?: 0)
-    return first..last
+    return first..last.coerceAtLeast(first)
 }
