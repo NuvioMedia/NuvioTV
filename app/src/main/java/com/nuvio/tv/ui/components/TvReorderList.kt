@@ -79,6 +79,7 @@ fun <T> TvReorderList(
     modifier: Modifier = Modifier,
     header: @Composable (() -> Unit)? = null,
     useHeaderAwareBringIntoView: Boolean = false,
+    scrollToTopOnEdgeItem: Boolean = false,
     itemContent: @Composable (
         item: T,
         isMoving: Boolean,
@@ -187,7 +188,11 @@ fun <T> TvReorderList(
 
     fun pinScroll(reason: String) {
         val movingIndex = movingKey?.let { animatedIndices[it] }
-        pinnedScrollPx = if (movingIndex == 0) 0 else scrollState.value
+        pinnedScrollPx = if (scrollToTopOnEdgeItem && movingIndex == 0) {
+            0
+        } else {
+            scrollState.value
+        }
         Log.d(LIST_TAG, "list pinScroll reason=$reason value=$pinnedScrollPx")
     }
 
@@ -357,7 +362,8 @@ fun <T> TvReorderList(
         val peek = movingHeight
         if (movingHeight <= 0f) return
         if (newIndex <= 0 &&
-            headerHeightPx[0] + movingHeight * 2f <= viewport
+            (scrollToTopOnEdgeItem ||
+                headerHeightPx[0] + movingHeight * 2f <= viewport)
         ) {
             runtime.neighborScrollJob?.cancel()
             Log.d(
@@ -467,7 +473,10 @@ fun <T> TvReorderList(
             runtime.cancelReturnSlot = animatedIndices[movingKey]
             runtime.cancelReturnOrderKeys = slotOrderKeys
             val movingIndex = animatedIndices[movingKey]
-            if (movingIndex == 0 && scrollState.value != 0) {
+            if (scrollToTopOnEdgeItem &&
+                movingIndex == 0 &&
+                scrollState.value != 0
+            ) {
                 runtime.neighborScrollJob?.cancel()
                 scrollState.animateScrollTo(0, ReorderTravelSpec)
             }

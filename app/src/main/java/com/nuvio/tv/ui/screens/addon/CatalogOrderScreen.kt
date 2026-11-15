@@ -133,6 +133,7 @@ fun CatalogOrderScreen(
                         )
                     },
                     useHeaderAwareBringIntoView = true,
+                    scrollToTopOnEdgeItem = true,
                 ) { item, isMoving, onStartMove, onConfirmMove ->
                     CatalogOrderCard(
                         item = item,
