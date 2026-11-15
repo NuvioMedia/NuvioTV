@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -71,6 +74,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.stableItemKey
 import com.nuvio.tv.domain.model.stableItemKeys
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -456,12 +460,16 @@ fun CatalogRowSection(
             if (!showSeeAll && catalogRow.isLoading) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_loading") {
                     val cardDepthStyle = LocalCardDepthStyle.current
+                    val globalLandscape = LocalLandscapePosterMode.current
+                    val loadingCardWidth = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+                    val loadingCardHeight = if (globalLandscape) posterCardStyle.height / PosterShape.LANDSCAPE.aspectRatio() else posterCardStyle.height
                     Card(
                         onClick = {},
                         modifier = Modifier
-                            .width(posterCardStyle.width)
-                            .height(posterCardStyle.height)
-                            .focusProperties { canFocus = false },
+                            .width(loadingCardWidth)
+                            .height(loadingCardHeight)
+                              .clearAndSetSemantics {}
+                              .focusProperties { canFocus = false },
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(
                             containerColor = NuvioTheme.colors.BackgroundCard,
@@ -487,11 +495,14 @@ fun CatalogRowSection(
             if (showSeeAll) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_see_all") {
                     val cardDepthStyle = LocalCardDepthStyle.current
+                    val globalLandscape = LocalLandscapePosterMode.current
+                    val seeAllCardWidth = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+                    val seeAllCardHeight = if (globalLandscape) posterCardStyle.height / PosterShape.LANDSCAPE.aspectRatio() else posterCardStyle.height
                     Card(
                         onClick = onSeeAll,
                         modifier = Modifier
-                            .width(posterCardStyle.width)
-                            .height(posterCardStyle.height)
+                            .width(seeAllCardWidth)
+                            .height(seeAllCardHeight)
                             .then(directionalFocusModifier),
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(
@@ -523,7 +534,7 @@ fun CatalogRowSection(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = seeAllLabel ?: stringResource(R.string.action_see_all),
+                                    contentDescription = null,
                                     modifier = Modifier.size(NuvioTheme.spacing.xxl),
                                     tint = NuvioTheme.colors.TextSecondary
                                 )

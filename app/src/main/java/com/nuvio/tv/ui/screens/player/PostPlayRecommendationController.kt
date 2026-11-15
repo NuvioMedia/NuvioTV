@@ -375,6 +375,9 @@ internal class PostPlayRecommendationController(
             recommendationCandidates = candidates
             val preferences = loadRatingPreferences()
             ratingPreferences = preferences
+            // Propagate rating order to UI state.
+            val mdbSettings = mdbListSettingsDataStore.settings.first()
+            _uiState.update { it.copy(mdbListRatingOrder = mdbSettings.enabledRatingOrder()) }
             autoPlayTrailerEnabled = postPlayTrailerPlaybackEnabled && runCatching {
                 trailerSettingsDataStore.settings.first().enabled
             }.getOrDefault(true)

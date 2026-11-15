@@ -5,9 +5,11 @@ import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
+import com.nuvio.tv.domain.model.ContinueWatchingClickAction
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
+import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
@@ -27,8 +29,10 @@ data class HomeUiState(
     val homeLayout: HomeLayout = HomeLayout.MODERN,
     val modernLandscapePostersEnabled: Boolean = false,
     val alwaysShowLandscapeClearlogo: Boolean = false,
+    val heroDescriptionAutoScrollEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
+    val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
     val heroItems: List<MetaPreview> = emptyList(),
     val heroCatalogKeys: List<String> = emptyList(),
     val heroSectionEnabled: Boolean = true,
@@ -66,12 +70,15 @@ data class HomeUiState(
     val useEpisodeThumbnailsInCw: Boolean = true,
     val continueWatchingEnabled: Boolean = true,
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
+    val continueWatchingClickAction: ContinueWatchingClickAction = ContinueWatchingClickAction.STREAM,
     val heroEnrichmentEnabled: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
     val homeRows: List<HomeRow> = emptyList(),
     val customPosterUrlPattern: String = "",
     val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
-        com.nuvio.tv.core.poster.CustomPosterScreen.ALL
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL,
+    val mdbListShowOnHero: Boolean = false,
+    val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 )
 
 @Immutable
@@ -88,7 +95,8 @@ sealed class ContinueWatchingItem {
         val contentLanguage: String? = null,
         override val shufflePlayback: Boolean = false,
         val originalPoster: String? = null,
-        val customLandscapePoster: String? = null
+        val customLandscapePoster: String? = null,
+        val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null
     ) : ContinueWatchingItem()
 
     @Immutable
@@ -105,6 +113,12 @@ val ContinueWatchingItem.shuffleFocusKey: String?
         is ContinueWatchingItem.InProgress -> "cw_shuffle_${progress.contentId}"
         is ContinueWatchingItem.NextUp -> "cw_shuffle_${info.contentId}"
     }
+
+fun ContinueWatchingClickAction.opensDetails(item: ContinueWatchingItem): Boolean = when (this) {
+    ContinueWatchingClickAction.STREAM -> false
+    ContinueWatchingClickAction.DETAILS -> true
+    ContinueWatchingClickAction.DETAILS_FOR_UPCOMING -> item is ContinueWatchingItem.NextUp && !item.info.hasAired
+}
 
 @Immutable
 data class NextUpInfo(
@@ -133,7 +147,8 @@ data class NextUpInfo(
     val isNewSeasonRelease: Boolean = false,
     val seedSeason: Int? = null,
     val seedEpisode: Int? = null,
-    val contentLanguage: String? = null
+    val contentLanguage: String? = null,
+    val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null
 )
 
 @Immutable
@@ -214,7 +229,55 @@ sealed class HomeEvent {
         val episode: Int? = null,
         val isNextUp: Boolean = false
     ) : HomeEvent()
+    data class OnMarkContinueWatchingWatched(val item: ContinueWatchingItem) : HomeEvent()
     data object OnRetry : HomeEvent()
+}
+
+/** Upcoming episodes stay in Next Up but cannot be marked until they air. */
+internal fun ContinueWatchingItem.canMarkWatched(): Boolean = when (this) {
+    is ContinueWatchingItem.InProgress -> true
+    is ContinueWatchingItem.NextUp -> info.hasAired
+}
+
+/** Same shape as the details screen builds, so tracking sync takes the same path. */
+internal fun ContinueWatchingItem.toCompletedProgress(
+    nowMs: Long = System.currentTimeMillis()
+): WatchProgress = when (this) {
+    is ContinueWatchingItem.InProgress -> {
+        val duration = progress.duration.coerceAtLeast(1L)
+        WatchProgress(
+            contentId = progress.contentId,
+            contentType = progress.contentType,
+            name = progress.name,
+            poster = progress.poster,
+            backdrop = progress.backdrop,
+            logo = progress.logo,
+            videoId = progress.videoId,
+            season = progress.season,
+            episode = progress.episode,
+            episodeTitle = progress.episodeTitle,
+            position = duration,
+            duration = duration,
+            lastWatched = nowMs,
+            progressPercent = 100f
+        )
+    }
+    is ContinueWatchingItem.NextUp -> WatchProgress(
+        contentId = info.contentId,
+        contentType = info.contentType,
+        name = info.name,
+        poster = info.poster,
+        backdrop = info.thumbnail ?: info.backdrop,
+        logo = info.logo,
+        videoId = info.videoId,
+        season = info.season,
+        episode = info.episode,
+        episodeTitle = info.episodeTitle,
+        position = 1L,
+        duration = 1L,
+        lastWatched = nowMs,
+        progressPercent = 100f
+    )
 }
 
 fun homeItemStatusKey(itemId: String, itemType: String): String {

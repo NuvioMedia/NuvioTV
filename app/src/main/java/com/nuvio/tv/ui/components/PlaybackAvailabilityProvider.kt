@@ -11,6 +11,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.streams.PlaybackAvailability
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.mediaserver.ServerRepository
+import com.nuvio.tv.data.mediaserver.ServerStreams
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
@@ -27,7 +29,9 @@ internal val LocalPlaybackAvailability = compositionLocalOf { PlaybackAvailabili
 internal class PlaybackAvailabilityViewModel @Inject constructor(
     addonRepository: AddonRepository,
     pluginDataStore: PluginDataStore,
-    metaRepository: MetaRepository
+    metaRepository: MetaRepository,
+    serverRepository: ServerRepository,
+    serverStreams: ServerStreams
 ) : ViewModel() {
     private val enabledScrapers = if (AppFeaturePolicy.pluginsEnabled) {
         combine(pluginDataStore.scrapers, pluginDataStore.pluginsEnabled) { scrapers, enabled ->
@@ -37,8 +41,18 @@ internal class PlaybackAvailabilityViewModel @Inject constructor(
         flowOf(emptyList())
     }
 
-    val availability = combine(addonRepository.getInstalledAddons(), enabledScrapers) { addons, scrapers ->
-        PlaybackAvailability(addons, scrapers, isLoaded = true, cachedMeta = metaRepository::getCachedMeta)
+    val availability = combine(
+        addonRepository.getInstalledAddons(),
+        enabledScrapers,
+        serverRepository.uiState
+    ) { addons, scrapers, _ ->
+        PlaybackAvailability(
+            addons,
+            scrapers,
+            isLoaded = true,
+            cachedMeta = metaRepository::getCachedMeta,
+            serverStreams = serverStreams::canServe
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaybackAvailability())
 }
 

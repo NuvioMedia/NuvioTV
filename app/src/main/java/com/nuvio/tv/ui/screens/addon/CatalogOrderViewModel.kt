@@ -9,8 +9,8 @@ import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.domain.model.Addon
-import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -54,7 +54,8 @@ class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val collectionsDataStore: CollectionsDataStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
+    private val serverCatalog: ServerCatalog
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
@@ -370,12 +371,17 @@ class CatalogOrderViewModel @Inject constructor(
             val openedAt = SystemClock.elapsedRealtime()
             Log.d(TAG, "observeCatalogs subscribe waiting for 6 sources")
             combine(
-                addonRepository.getInstalledAddons().onEach { addons ->
-                    Log.d(
-                        TAG,
-                        "source[addons] +${SystemClock.elapsedRealtime() - openedAt}ms " +
-                            "n=${addons.size} enabled=${addons.count { it.enabled }}",
-                    )
+                combine(
+                    addonRepository.getInstalledAddons().onEach { addons ->
+                        Log.d(
+                            TAG,
+                            "source[addons] +${SystemClock.elapsedRealtime() - openedAt}ms " +
+                                "n=${addons.size} enabled=${addons.count { it.enabled }}",
+                        )
+                    },
+                    serverCatalog.addons,
+                ) { installed, servers ->
+                    installed.enabledAddons() + servers
                 },
                 collectionsDataStore.collections.onEach { collections ->
                     Log.d(
@@ -423,7 +429,7 @@ class CatalogOrderViewModel @Inject constructor(
 
                 val buildStarted = SystemClock.elapsedRealtime()
                 val items = buildOrderedCatalogItems(
-                    addons = addons.enabledAddons(),
+                    addons = addons,
                     collections = collections,
                     savedOrderKeys = savedOrderKeys,
                     disabledKeys = disabledKeys,
@@ -731,10 +737,6 @@ class CatalogOrderViewModel @Inject constructor(
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
         return homeCatalogKey(addonId, type, catalogId)
-    }
-
-    private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-        return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
     }
 }
 

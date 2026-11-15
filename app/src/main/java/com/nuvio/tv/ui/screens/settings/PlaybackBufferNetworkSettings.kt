@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.background
@@ -345,12 +346,6 @@ private fun ParallelNetworkControls(
     updateMemory: PlaybackSettingsUpdate
 ) {
     SettingsToggleRow(
-        title = stringResource(R.string.playback_net_http2),
-        subtitle = stringResource(R.string.playback_net_http2_sub),
-        checked = settings.enableHttp2,
-        onToggle = { updateMemory { setEnableHttp2(!settings.enableHttp2) } }
-    )
-    SettingsToggleRow(
         title = stringResource(R.string.playback_net_parallel),
         subtitle = stringResource(R.string.playback_net_parallel_sub),
         checked = settings.useParallelConnections,
@@ -443,7 +438,7 @@ internal fun PlaybackMemoryUsageCard(settings: PlayerSettings) {
     val usageColor = when (MemoryBudget.getUsageStatus(totalUsageMb, safeLimitMb, warningLimitMb)) {
         MemoryUsageStatus.DANGER -> Color(0xFFF44336)
         MemoryUsageStatus.WARNING -> Color(0xFFFF9800)
-        MemoryUsageStatus.SAFE -> Color(0xFF4CAF50)
+        MemoryUsageStatus.SAFE -> NuvioPrimitives.success
     }
     val effectiveExoMb = (effectiveBufferMb - parallelOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
     val baseText = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, warningLimitMb)

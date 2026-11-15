@@ -108,6 +108,7 @@ fun PostPlayRecommendationOverlay(
     playFocusRequester: FocusRequester,
     playerWindowFocusRequester: FocusRequester,
     onBack: () -> Unit,
+    onForceExit: () -> Unit,
     onStopTrailer: () -> Unit,
     onPlay: (PostPlayRecommendation) -> Unit,
     onPlayManually: (PostPlayRecommendation) -> Unit,
@@ -116,6 +117,7 @@ fun PostPlayRecommendationOverlay(
     onTrailerEnded: () -> Unit,
     onPreviousRecommendation: () -> Unit,
     onNextRecommendation: () -> Unit,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     modifier: Modifier = Modifier
 ) {
     val recommendation = state.recommendation ?: return
@@ -135,6 +137,7 @@ fun PostPlayRecommendationOverlay(
     var showPlayOptionsDialog by remember(recommendation.id) { mutableStateOf(false) }
     var descriptionTruncated by remember(recommendation.id) { mutableStateOf(false) }
     var showSynopsisOverlay by remember(recommendation.id) { mutableStateOf(false) }
+    var backLongPressed by remember { mutableStateOf(false) }
     var pendingNavigationFocusDirection by remember { mutableIntStateOf(0) }
     val logoHeight by animateDpAsState(
         targetValue = if (state.isTrailerPlaying) 60.dp else 92.dp,
@@ -223,11 +226,20 @@ fun PostPlayRecommendationOverlay(
                 .fillMaxSize()
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
-                    if (native.keyCode == AndroidKeyEvent.KEYCODE_BACK && native.action == AndroidKeyEvent.ACTION_UP) {
-                        if (state.isTrailerPlaying) onStopTrailer() else onBack()
-                        return@onPreviewKeyEvent true
-                    }
-                    if (native.keyCode == AndroidKeyEvent.KEYCODE_BACK && native.action == AndroidKeyEvent.ACTION_DOWN) {
+                    if (native.keyCode == AndroidKeyEvent.KEYCODE_BACK) {
+                        if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
+                            backLongPressed = true
+                            onForceExit()
+                            return@onPreviewKeyEvent true
+                        }
+                        if (native.action == AndroidKeyEvent.ACTION_UP) {
+                            if (backLongPressed) {
+                                backLongPressed = false
+                            } else {
+                                if (state.isTrailerPlaying) onStopTrailer() else onBack()
+                            }
+                            return@onPreviewKeyEvent true
+                        }
                         return@onPreviewKeyEvent true
                     }
                     false
@@ -296,7 +308,8 @@ fun PostPlayRecommendationOverlay(
                     playerWindowFocusRequester = playerWindowFocusRequester,
                     playFocusRequester = playFocusRequester,
                     onShowSynopsis = { showSynopsisOverlay = true },
-                    onDescriptionTruncationChanged = { descriptionTruncated = it }
+                    onDescriptionTruncationChanged = { descriptionTruncated = it },
+                    mdbListRatingOrder = mdbListRatingOrder
                 )
 
                 Spacer(modifier = Modifier.height(actionTopSpacing))
@@ -468,7 +481,8 @@ private fun PostPlayRecommendationSummary(
     playerWindowFocusRequester: FocusRequester,
     playFocusRequester: FocusRequester,
     onShowSynopsis: () -> Unit,
-    onDescriptionTruncationChanged: (Boolean) -> Unit
+    onDescriptionTruncationChanged: (Boolean) -> Unit,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 ) {
     val context = LocalContext.current
     val headerVisibility = remember {
@@ -610,7 +624,7 @@ private fun PostPlayRecommendationSummary(
                         ?.takeUnless { it.isEmpty() }
                         ?.let { ratings ->
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-                            MDBListRatingsRow(ratings = ratings)
+                            MDBListRatingsRow(ratings = ratings, order = mdbListRatingOrder)
                         }
 
                     if (!displayedRecommendation.description.isNullOrBlank()) {

@@ -53,6 +53,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -89,6 +95,8 @@ import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -151,8 +159,8 @@ fun CollectionEditorScreen(
         item(key = "header") {
             Text(
                 text = if (uiState.isNew) stringResource(R.string.collections_new) else stringResource(R.string.collections_editor_edit_collection),
-                style = MaterialTheme.typography.headlineMedium,
-                color = NuvioTheme.colors.TextPrimary
+                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                color = NuvioTheme.colors.TextPrimary,
             )
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
         }
@@ -202,7 +210,12 @@ fun CollectionEditorScreen(
         item(key = "pin_to_top") {
             Card(
                 onClick = { viewModel.setPinToTop(!uiState.pinToTop) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        role = Role.Switch
+                        toggleableState = if (uiState.pinToTop) ToggleableState.On else ToggleableState.Off
+                    },
                 colors = CardDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -226,8 +239,8 @@ fun CollectionEditorScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.collections_editor_pin_above),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = NuvioTheme.colors.TextPrimary
+                            style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                            color = NuvioTheme.colors.TextPrimary,
                         )
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                         Text(
@@ -239,7 +252,7 @@ fun CollectionEditorScreen(
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                     Switch(
                         checked = uiState.pinToTop,
-                        onCheckedChange = { viewModel.setPinToTop(it) },
+                        onCheckedChange = null,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = NuvioTheme.colors.Secondary,
                             checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
@@ -255,7 +268,12 @@ fun CollectionEditorScreen(
         item(key = "focus_glow") {
             Card(
                 onClick = { viewModel.setFocusGlowEnabled(!uiState.focusGlowEnabled) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        role = Role.Switch
+                        toggleableState = if (uiState.focusGlowEnabled) ToggleableState.On else ToggleableState.Off
+                    },
                 colors = CardDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -279,8 +297,8 @@ fun CollectionEditorScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.collections_editor_focus_glow),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = NuvioTheme.colors.TextPrimary
+                            style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                            color = NuvioTheme.colors.TextPrimary,
                         )
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                         Text(
@@ -292,7 +310,7 @@ fun CollectionEditorScreen(
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                     Switch(
                         checked = uiState.focusGlowEnabled,
-                        onCheckedChange = { viewModel.setFocusGlowEnabled(it) },
+                        onCheckedChange = null,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = NuvioTheme.colors.Secondary,
                             checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
@@ -325,6 +343,10 @@ fun CollectionEditorScreen(
                     val isSelected = uiState.viewMode == mode
                     Button(
                         onClick = { viewModel.setViewMode(mode) },
+                        modifier = Modifier.semantics {
+                            role = Role.RadioButton
+                            selected = isSelected
+                        },
                         colors = ButtonDefaults.colors(
                             containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (isSelected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -354,7 +376,12 @@ fun CollectionEditorScreen(
             item(key = "show_all_tab") {
                 Card(
                     onClick = { viewModel.setShowAllTab(!uiState.showAllTab) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            role = Role.Switch
+                            toggleableState = if (uiState.showAllTab) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -378,8 +405,8 @@ fun CollectionEditorScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.collections_editor_show_all_tab),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = NuvioTheme.colors.TextPrimary
+                                style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                                color = NuvioTheme.colors.TextPrimary,
                             )
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                             Text(
@@ -391,7 +418,7 @@ fun CollectionEditorScreen(
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                         Switch(
                             checked = uiState.showAllTab,
-                            onCheckedChange = { viewModel.setShowAllTab(it) },
+                            onCheckedChange = null,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = NuvioTheme.colors.Secondary,
                                 checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
@@ -413,8 +440,8 @@ fun CollectionEditorScreen(
             ) {
                 Text(
                     text = stringResource(R.string.collections_editor_folders),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NuvioTheme.colors.TextPrimary
+                    style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                    color = NuvioTheme.colors.TextPrimary,
                 )
                 Text(
                     text = stringResource(
@@ -461,7 +488,7 @@ fun CollectionEditorScreen(
                     },
                     modifier = Modifier.focusRequester(addFolderFocusRequester)
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(stringResource(R.string.collections_editor_add_folder))
                 }

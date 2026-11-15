@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import android.util.Log
 import android.content.Context
 import android.os.SystemClock
 import androidx.compose.runtime.mutableStateMapOf
@@ -8,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.recommendations.TvRecommendationManager
+import com.nuvio.tv.core.tmdb.MetaPreviewEnricher
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
@@ -19,6 +21,7 @@ import com.nuvio.tv.data.local.MDBListSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
@@ -79,11 +82,18 @@ class HomeViewModel @Inject constructor(
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
     internal val mdbListRepository: MDBListRepository,
+    internal val imdbEpisodeRatingsRepository: com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository,
     internal val trailerService: TrailerService,
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
     internal val profileManager: com.nuvio.tv.core.profile.ProfileManager,
-    internal val tvRecommendationManager: TvRecommendationManager
+    internal val tvRecommendationManager: TvRecommendationManager,
+    internal val serverCatalog: ServerCatalog,
+    internal val metaPreviewEnricher: MetaPreviewEnricher = MetaPreviewEnricher(
+        tmdbService,
+        tmdbMetadataService,
+        mdbListRepository
+    )
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -262,6 +272,10 @@ class HomeViewModel @Inject constructor(
 
     /** Items an enrichment merge was applied for. */
     internal val enrichmentMergedIds: MutableSet<String> = Collections.newSetFromMap(createLruMap(MAX_PREFETCH_CACHE_SIZE))
+
+    internal val mdbBatchNegativeIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    internal var mdbBatchRowFocusJob: Job? = null
+    @Volatile internal var mdbBatchHasFired: Boolean = false
     internal val cwMetaCache: MutableMap<String, CwMetaSummary?> = createLruMap(MAX_CW_CACHE_SIZE)
     internal val cwMetaNegativeCacheTimestamps: MutableMap<String, Long> = createLruMap(MAX_CW_CACHE_SIZE)
     /** Ultra-light cache for badge evaluation: contentId → set of aired (season, episode) pairs. */
@@ -281,6 +295,14 @@ class HomeViewModel @Inject constructor(
     internal val cwLastProcessedNextUpContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     internal val cwProcessedOlderSeedContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     internal val cwEnrichedNextUpOverlay = ConcurrentHashMap<String, NextUpInfo>()
+    /** Next-up overlay entries restored from the disk snapshot and not enriched yet in this session. */
+    internal val cwDiskSeededNextUpOverlayIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    /** Next-up seed keys an earlier launch found without a next episode, with their recheck time. */
+    internal val cwNoNextUpSeeds = ConcurrentHashMap<String, Long>()
+    /** Profile whose [cwNoNextUpSeeds] are loaded; null loads them again from disk. */
+    @Volatile internal var cwNoNextUpSeedsProfileId: Int? = null
+    /** Wall clock time the last Continue Watching cycle started, to spot releases passed since. */
+    @Volatile internal var cwLastCycleStartedAtMs: Long = System.currentTimeMillis()
     /** In-memory cache of enriched InProgress items per contentId+episode key. */
     internal val cwEnrichedInProgressOverlay = ConcurrentHashMap<String, ContinueWatchingItem.InProgress>()
     /** Bumped to force the CW pipeline to re-run (e.g. after cache clear). */
@@ -354,6 +376,7 @@ class HomeViewModel @Inject constructor(
             observeLayoutPreferences()
             observeModernHomePresentation()
             loadContinueWatching()
+            observeContinueWatchingReleases()
             watchedSeriesStateHolder.loadFromDisk()
             observeExternalMetaPrefetchPreference()
             observeContinueWatchingSortMode()
@@ -387,10 +410,13 @@ class HomeViewModel @Inject constructor(
                     cwTmdbIdCache.clear()
                     cwNextUpResolutionCache.clear()
                     cwNextUpNegativeCacheTimestamps.clear()
+                    cwNoNextUpSeeds.clear()
+                    cwNoNextUpSeedsProfileId = null
                     discoveredOlderNextUpItems.clear()
                     cwLastProcessedNextUpContentIds.clear()
                     cwProcessedOlderSeedContentIds.clear()
                     cwEnrichedNextUpOverlay.clear()
+                    cwDiskSeededNextUpOverlayIds.clear()
                     cwEnrichedInProgressOverlay.clear()
                     cwLastBadgeEpisodeKeys = emptySet()
                     cwLastShowIdSiblings = emptyMap()
@@ -441,10 +467,13 @@ class HomeViewModel @Inject constructor(
         cwTmdbIdCache.clear()
         cwNextUpResolutionCache.clear()
         cwNextUpNegativeCacheTimestamps.clear()
+        cwNoNextUpSeeds.clear()
+        cwNoNextUpSeedsProfileId = null
         discoveredOlderNextUpItems.clear()
         cwLastProcessedNextUpContentIds.clear()
         cwProcessedOlderSeedContentIds.clear()
         cwEnrichedNextUpOverlay.clear()
+        cwDiskSeededNextUpOverlayIds.clear()
         cwEnrichedInProgressOverlay.clear()
         cwLastBadgeEpisodeKeys = emptySet()
         cwLastShowIdSiblings = emptyMap()
@@ -516,6 +545,13 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { style ->
                     _uiState.update { it.copy(continueWatchingCardStyle = style) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.continueWatchingClickAction
+                .distinctUntilChanged()
+                .collect { action ->
+                    _uiState.update { it.copy(continueWatchingClickAction = action) }
                 }
         }
         viewModelScope.launch {
@@ -605,6 +641,12 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { settings ->
                     currentMdbListSettings = settings
+                    _uiState.update {
+                        it.copy(
+                            mdbListShowOnHero = settings.showOnHero,
+                            mdbListRatingOrder = settings.enabledRatingOrder()
+                        )
+                    }
                 }
         }
     }
@@ -626,6 +668,7 @@ class HomeViewModel @Inject constructor(
                         // Genuine in-profile source change — clear CW caches to prevent mixing.
                         cwMetaCache.clear()
                         cwEnrichedNextUpOverlay.clear()
+                        cwDiskSeededNextUpOverlayIds.clear()
                         cwEnrichedInProgressOverlay.clear()
                         discoveredOlderNextUpItems.clear()
                         cwLastProcessedNextUpContentIds.clear()
@@ -674,6 +717,7 @@ class HomeViewModel @Inject constructor(
         when (event) {
             is HomeEvent.OnItemClick -> navigateToDetail(event.itemId, event.itemType)
             is HomeEvent.OnLoadMoreCatalog -> loadMoreCatalogItems(event.catalogId, event.addonId, event.type)
+            is HomeEvent.OnMarkContinueWatchingWatched -> markContinueWatchingWatched(event.item)
             is HomeEvent.OnRemoveContinueWatching -> removeContinueWatching(
                 contentId = event.contentId,
                 season = event.season,
@@ -715,7 +759,7 @@ class HomeViewModel @Inject constructor(
                         ),
                         episodeThumbnail = cached.episodeThumbnail,
                         episodeDescription = cached.episodeDescription,
-                        episodeImdbRating = cached.episodeImdbRating,
+                        episodeImdbRating = if (cached.ratingVisible) cached.episodeImdbRating else null,
                         genres = cached.genres,
                         releaseInfo = cached.releaseInfo
                     )
@@ -742,7 +786,7 @@ class HomeViewModel @Inject constructor(
                         hasAired = cached.hasAired,
                         airDateLabel = cached.airDateLabel,
                         lastWatched = cached.lastWatched,
-                        imdbRating = cached.imdbRating,
+                        imdbRating = if (cached.ratingVisible) cached.imdbRating else null,
                         genres = cached.genres,
                         releaseInfo = cached.releaseInfo,
                         sortTimestamp = cached.sortTimestamp,
@@ -782,6 +826,14 @@ class HomeViewModel @Inject constructor(
         isNextUp = isNextUp
     )
 
+    private fun markContinueWatchingWatched(item: ContinueWatchingItem) {
+        if (!item.canMarkWatched()) return
+        viewModelScope.launch {
+            runCatching { watchProgressRepository.markAsCompleted(item.toCompletedProgress()) }
+                .onFailure { error -> Log.w(TAG, "Failed to mark continue watching item as watched", error) }
+        }
+    }
+
     private fun observeCollections() = observeCollectionsPipeline()
 
     private fun observeInstalledAddons() = observeInstalledAddonsPipeline()
@@ -807,6 +859,7 @@ class HomeViewModel @Inject constructor(
     /** Called by the Home content when the focused row changes. */
     fun setLiveFocusedRowKey(rowKey: String?) {
         liveFocusedRowKey = rowKey
+        onFocusedRowChangedForMdbBatch(rowKey)
     }
 
     /**

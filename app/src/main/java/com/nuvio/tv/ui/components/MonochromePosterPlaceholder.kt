@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -23,7 +25,8 @@ import androidx.tv.material3.Icon
 
 @Composable
 fun MonochromePosterPlaceholder(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
 ) {
     val base = NuvioTheme.colors.BackgroundCard
     val strokeColor = NuvioTheme.colors.TextTertiary.copy(alpha = 0.28f)
@@ -40,6 +43,11 @@ fun MonochromePosterPlaceholder(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .then(
+                contentDescription?.let { description ->
+                    Modifier.semantics { this.contentDescription = description }
+                } ?: Modifier
+            )
             .background(backgroundGradient)
     ) {
         Box(

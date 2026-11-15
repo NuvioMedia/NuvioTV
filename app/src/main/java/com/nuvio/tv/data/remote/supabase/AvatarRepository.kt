@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.data.local.MemberCatalogStorage
 import com.nuvio.tv.domain.model.ServerConfiguration
+import com.nuvio.tv.domain.model.UserProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
@@ -17,6 +18,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -25,6 +28,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.days
 
 private const val MemberAvatarBucket = "membership-profile-avatars"
 private const val MemberAvatarTag = "MemberAvatars"
@@ -131,27 +135,53 @@ class AvatarRepository @Inject constructor(
         memberCatalogLoaded = true
         lastMemberRefreshAtMs = SystemClock.elapsedRealtime()
         saveStoredCatalog()
+        val downloadSemaphore = Semaphore(6)
         val catalog = coroutineScope {
             remote.map { item ->
                 async {
-                    try {
-                        toMemberCatalogItem(item, cacheMemberAvatar(item))
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Exception) {
-                        Log.w(MemberAvatarTag, "Unable to load supporter avatar ${item.id}", error)
-                        null
+                    downloadSemaphore.withPermit {
+                        try {
+                            toMemberCatalogItem(item, cacheMemberAvatar(item))
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Log.w(MemberAvatarTag, "Unable to load supporter avatar ${item.id}", error)
+                            toMemberCatalogFallbackItem(item)
+                        }
                     }
                 }
-            }.awaitAll().filterNotNull()
+            }.awaitAll()
         }
         cachedMemberCatalog = catalog
         return catalog
     }
 
+    suspend fun shareableImageUrl(profile: UserProfile): String? {
+        val storageUrl = "${serverConfiguration.backendUrl.trimEnd('/')}/storage/v1/object/"
+        profile.avatarUrl?.takeIf { it.isNotBlank() }?.let { url ->
+            return url.takeIf { it.startsWith(storageUrl) }
+        }
+        val avatarId = profile.avatarId ?: return null
+        val standard = standardMetadata.firstOrNull { it.id == avatarId }
+        if (standard != null) {
+            return avatarImageUrl(standard.storagePath).takeIf { it.startsWith(storageUrl) }
+        }
+        val avatar = memberMetadata.firstOrNull { it.id == avatarId } ?: return null
+        val sanitizedPath = avatar.storagePath.trim().trimStart('/')
+        return try {
+            storage[MemberAvatarBucket].createSignedUrl(sanitizedPath, 1.days)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(MemberAvatarTag, "Unable to share supporter avatar ${avatar.id}", error)
+            null
+        }
+    }
+
     fun getAvatarImageUrl(avatarId: String, catalog: List<AvatarCatalogItem>): String? {
         return catalog.find { it.id == avatarId }?.imageUrl
-            ?: latestCachedMemberAvatar(avatarId)?.toURI()?.toString()
+            ?: latestCachedMemberAvatar(avatarId)?.toFileUriString()
+            ?: memberMetadata.firstOrNull { it.id == avatarId }?.let { toMemberCatalogFallbackItem(it).imageUrl }
     }
 
     fun invalidateCache() {
@@ -192,7 +222,7 @@ class AvatarRepository @Inject constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                Log.w(MemberAvatarTag, "Unable to refresh supporter avatars", error)
+                Log.w(MemberAvatarTag, "Unable to refresh supporter avatar catalog", error)
             }
         }
     }
@@ -200,7 +230,9 @@ class AvatarRepository @Inject constructor(
     private fun loadStoredCatalog(): StoredAvatarCatalogPayload? {
         val payload = memberCatalogStorage.loadAvatarCatalogPayload().orEmpty().trim()
         if (payload.isEmpty()) return null
-        return runCatching { json.decodeFromString<StoredAvatarCatalogPayload>(payload) }.getOrNull()
+        return runCatching {
+            json.decodeFromString<StoredAvatarCatalogPayload>(payload)
+        }.getOrNull()
     }
 
     private fun saveStoredCatalog() {
@@ -226,16 +258,31 @@ class AvatarRepository @Inject constructor(
             bgColor = item.bgColor
         )
 
-    private fun loadCachedMemberAvatar(item: SupabaseMemberAvatarCatalogItem): AvatarCatalogItem? {
-        val imageFile = memberAvatarFile(item).takeIf { it.isFile && it.length() > 0L } ?: return null
-        return toMemberCatalogItem(item, imageFile)
+    private fun loadCachedMemberAvatar(item: SupabaseMemberAvatarCatalogItem): AvatarCatalogItem {
+        val imageFile = memberAvatarFile(item).takeIf { it.isFile && it.length() > 0L }
+        return if (imageFile != null) {
+            toMemberCatalogItem(item, imageFile)
+        } else {
+            toMemberCatalogFallbackItem(item)
+        }
     }
+
+    private fun toMemberCatalogFallbackItem(item: SupabaseMemberAvatarCatalogItem): AvatarCatalogItem =
+        AvatarCatalogItem(
+            id = item.id,
+            displayName = item.displayName,
+            imageUrl = avatarImageUrl(item.storagePath.trim().trimStart('/')),
+            category = item.category,
+            sortOrder = item.sortOrder,
+            bgColor = item.bgColor,
+            memberOnly = true
+        )
 
     private fun toMemberCatalogItem(item: SupabaseMemberAvatarCatalogItem, imageFile: File) =
         AvatarCatalogItem(
             id = item.id,
             displayName = item.displayName,
-            imageUrl = imageFile.toURI().toString(),
+            imageUrl = imageFile.toFileUriString(),
             category = item.category,
             sortOrder = item.sortOrder,
             bgColor = item.bgColor,
@@ -252,9 +299,10 @@ class AvatarRepository @Inject constructor(
         val imageFile = memberAvatarFile(item)
         if (imageFile.isFile && imageFile.length() > 0L) return@withContext imageFile
 
+        val sanitizedPath = item.storagePath.trim().trimStart('/')
         val directory = imageFile.parentFile ?: return@withContext imageFile
         directory.mkdirs()
-        val imageBytes = storage[MemberAvatarBucket].downloadAuthenticated(item.storagePath)
+        val imageBytes = storage[MemberAvatarBucket].downloadAuthenticated(sanitizedPath)
         val temporaryFile = directory.resolve(".${imageFile.name}.tmp")
         temporaryFile.writeBytes(imageBytes)
         if (!temporaryFile.renameTo(imageFile)) {
@@ -266,8 +314,8 @@ class AvatarRepository @Inject constructor(
 
     private fun memberAvatarFile(item: SupabaseMemberAvatarCatalogItem): File {
         val extension = item.storagePath.substringAfterLast('.', "img")
-            .takeIf { it.length in 2..5 && it.all(Char::isLetterOrDigit) }
-            ?: "img"
+        .takeIf { it.length in 2..5 && it.all(Char::isLetterOrDigit) }
+        ?: "img"
         return context.cacheDir.resolve("member_profile_avatars/${item.id}-v${item.assetVersion}.$extension")
     }
 
@@ -278,5 +326,14 @@ class AvatarRepository @Inject constructor(
             ?.maxByOrNull { file ->
                 file.name.removePrefix(prefix).substringBefore('.').toIntOrNull() ?: Int.MIN_VALUE
             }
+    }
+
+    private fun File.toFileUriString(): String {
+        val uri = toURI().toString()
+        return if (uri.startsWith("file:/") && !uri.startsWith("file:///")) {
+            uri.replaceFirst("file:/", "file:///")
+        } else {
+            uri
+        }
     }
 }

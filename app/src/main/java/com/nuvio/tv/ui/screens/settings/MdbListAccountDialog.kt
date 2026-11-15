@@ -6,6 +6,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 
 @Composable
 internal fun MdbListAccountDialog(

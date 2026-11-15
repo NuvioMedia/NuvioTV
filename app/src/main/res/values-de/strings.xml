@@ -663,15 +663,6 @@
     <string name="sub_libass">libass für ASS/SSA-Untertitel verwenden</string>
     <string name="sub_libass_sub">Experimentell: Erweiterte ASS/SSA-Wiedergabe (Stile, Position, Animation)</string>
     <string name="sub_libass_mode">Libass-Rendering-Modus</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (empfohlen)</string>
-    <string name="sub_mode_overlay_gl_sub">Beste Qualität mit HDR-Unterstützung. Rendert Untertitel in einem separaten Thread.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animationsunterstützung mit Media3-Effekten. Schneller als Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animationsunterstützung mit Media3-Effekten und Canvas-Rendering.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Grundlegende Untertitel-Rendering ohne Animationsunterstützung. Höchste Kompatibilität.</string>
     <string name="sub_org_none">Keine (Standardreihenfolge)</string>
     <string name="sub_org_by_lang">Nach Sprache</string>
     <string name="sub_org_by_addon">Nach Add-on</string>
@@ -1216,7 +1207,6 @@
     <string name="parental_severity_moderate">mäßig</string>
     <string name="parental_severity_mild">leicht</string>
     <string name="player_ends_at">Endet um %1$s</string>
-    <string name="player_via">über %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Untertitelverzögerung</string>
@@ -1438,11 +1428,6 @@
     <string name="library_watchlist">Watchlist</string>
     <string name="library_syncing_library">Synchronisiere Bibliothek\u2026</string>
     <string name="library_type_all">Alle</string>
-    <string name="library_type_items">Elemente</string>
-    <string name="library_empty_local_title">Noch keine %1$s</string>
-    <string name="library_empty_trakt_title">Keine %1$s in dieser Liste</string>
-    <string name="library_empty_local_subtitle">Speichern Sie Ihre Favoriten, um sie hier anzuzeigen</string>
-    <string name="library_empty_trakt_subtitle">Verwenden Sie + in den Details, um Elemente zur Beobachtungsliste oder zu Listen hinzuzufügen</string>
     <string name="library_empty_trakt_not_auth_title">Trakt ist nicht verbunden</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt-Konto in den Einstellungen verbinden, um Trakt-Bibliothek zu sehen</string>
 
@@ -1731,7 +1716,6 @@
     <string name="player_error_failed_start_torrent">Failed to start torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
     <string name="subtitle_style_weight">Weight</string>
 
     <!-- Plugin screen -->

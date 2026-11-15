@@ -869,15 +869,6 @@
     <string name="sub_libass">對 ASS/SSA 字幕使用 libass</string>
     <string name="sub_libass_sub">實驗性：進階 ASS/SSA 渲染 (樣式、定位、動畫)</string>
     <string name="sub_libass_mode">Libass 渲染模式</string>
-    <string name="sub_mode_overlay_gl">覆蓋 OpenGL (建議)</string>
-    <string name="sub_mode_overlay_gl_sub">最佳品質，支援 HDR。在獨立執行緒上渲染字幕。</string>
-    <string name="sub_mode_overlay_canvas">覆蓋 Canvas</string>
-    <string name="sub_mode_effects_gl">效果 OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">使用 Media3 效果支援動畫。比 Canvas 更快。</string>
-    <string name="sub_mode_effects_canvas">效果 Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">使用 Media3 效果搭配 Canvas 渲染支援動畫。</string>
-    <string name="sub_mode_standard">標準提示</string>
-    <string name="sub_mode_standard_sub">不支援動畫的基本字幕渲染。相容性最佳。</string>
     <string name="sub_org_none">無 (預設順序)</string>
     <string name="sub_org_by_lang">依語言</string>
     <string name="sub_org_by_addon">依擴充套件</string>
@@ -1746,7 +1737,6 @@
     <string name="parental_severity_mild">輕微</string>
     <string name="player_ends_at">結束於 %1$s</string>
     <string name="player_live_watched">直播  %1$s</string>
-    <string name="player_via">透過 %1$s</string>
     <!-- 播放器 UI 中顯示的季/集代碼 -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">字幕延遲</string>
@@ -2022,15 +2012,8 @@
     <string name="library_status_dropped">已放棄</string>
     <string name="library_syncing_library">正在同步媒體庫…</string>
     <string name="library_type_all">全部</string>
-    <string name="library_type_items">項目</string>
-    <string name="library_empty_local_title">尚無 %1$s</string>
-    <string name="library_empty_trakt_title">此清單中沒有 %1$s</string>
-    <string name="library_empty_local_subtitle">開始儲存您的最愛，在此顯示</string>
-    <string name="library_empty_trakt_subtitle">在詳情中使用 + 將項目新增至觀看清單或清單</string>
     <string name="library_empty_trakt_not_auth_title">Trakt 未連線</string>
     <string name="library_empty_trakt_not_auth_subtitle">在設定中連線您的 Trakt 帳戶以檢視您的 Trakt 媒體庫</string>
-    <string name="library_empty_simkl_title">此狀態中沒有 %1$s</string>
-    <string name="library_empty_simkl_subtitle">在詳情中使用 + 將項目新增至 Simkl 狀態</string>
     <string name="library_empty_simkl_not_auth_title">Simkl 未連線</string>
     <string name="library_empty_simkl_not_auth_subtitle">在設定中連線您的 Simkl 帳戶以檢視您的 Simkl 媒體庫</string>
     <string name="library_list_create_dialog_title">建立清單</string>
@@ -2404,7 +2387,6 @@
     <string name="player_error_failed_start_torrent">啟動 torrent 失敗：%1$s</string>
 
     <!-- 播放字幕設定 -->
-    <string name="sub_mode_overlay_canvas_sub">支援 HDR 的 Canvas 渲染。可能阻塞 UI 執行緒。</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -3145,8 +3127,6 @@
     <string name="playback_reset_to_default">重設為預設</string>
     <string name="playback_net_custom">自訂網路</string>
     <string name="playback_net_custom_sub">使用多個並行連線來獲取漸進式串流。關閉時使用單一連線。</string>
-    <string name="playback_net_http2">啟用 HTTP/2</string>
-    <string name="playback_net_http2_sub">為網路連線啟用 HTTP/2 協定，支援請求多工和更快的握手時間。</string>
     <string name="playback_net_parallel">並行連線</string>
     <string name="playback_net_parallel_sub">使用多個並行連線來獲取串流。當您遇到緩衝但下載速度明顯足夠時啟用。</string>
     <string name="playback_net_connection_count">連線數量</string>
@@ -3225,17 +3205,17 @@
     <string name="stream_test_no_stream">未記錄播放。請播放影片以對其主機執行診斷測試。</string>
     <string name="stream_test_btn_start">開始測試</string>
     <string name="stream_test_btn_measuring_baseline">正在測量基準…</string>
-    <string name="stream_test_btn_measuring_parallel1">正在測量並行 (1MB)…</string>
-    <string name="stream_test_btn_measuring_parallel4">正在測量並行 (4MB)…</string>
-    <string name="stream_test_btn_measuring_parallel8">正在測量並行 (8MB)…</string>
-    <string name="stream_test_btn_measuring_parallel16">正在測量並行 (16MB)…</string>
+    <string name="stream_test_btn_measuring_parallel1">正在測量並行 (1個連線)…</string>
+    <string name="stream_test_btn_measuring_parallel4">正在測量並行 (4個連線)…</string>
+    <string name="stream_test_btn_measuring_parallel8">正在測量並行 (8個連線)…</string>
+    <string name="stream_test_btn_measuring_parallel16">正在測量並行 (16個連線)…</string>
     <string name="stream_test_btn_run_again">再次執行</string>
     <string name="stream_test_btn_running">執行中…</string>
     <string name="stream_test_label_baseline">標準單連線 (基準)</string>
-    <string name="stream_test_label_parallel1">並行連線 (1 MB 區塊)</string>
-    <string name="stream_test_label_parallel4">並行連線 (4 MB 區塊)</string>
-    <string name="stream_test_label_parallel8">並行連線 (8 MB 區塊)</string>
-    <string name="stream_test_label_parallel16">並行連線 (16 MB 區塊)</string>
+    <string name="stream_test_label_parallel1">並行連線 (1個連線)</string>
+    <string name="stream_test_label_parallel4">並行連線 (4個連線)</string>
+    <string name="stream_test_label_parallel8">並行連線 (8個連線)</string>
+    <string name="stream_test_label_parallel16">並行連線 (16個連線)</string>
     <string name="stream_test_error_prefix">錯誤：%1$s</string>
     <string name="stream_test_video_bitrate">平均影片位元率：%1$s</string>
     <string name="stream_test_error_connection">連線失敗。上次播放的串流連結可能已過期或無法存取。請重新播放影片並重試。</string>

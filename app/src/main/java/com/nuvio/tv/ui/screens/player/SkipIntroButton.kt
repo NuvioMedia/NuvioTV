@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.animation.AnimatedVisibility
@@ -49,6 +50,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.data.repository.SkipInterval
+import com.nuvio.tv.data.repository.segmentCategory
 
 /**
  * Skip Intro/Outro/Recap button for the player.
@@ -87,8 +89,10 @@ fun SkipIntroButton(
     var isFocused by remember { mutableStateOf(false) }
     val progress = remember { Animatable(1f) }
 
-    // Reset auto-hide and progress when interval changes
-    LaunchedEffect(interval?.startTime, interval?.type) {
+    // Reset auto-hide and progress when interval category changes (opening/ending/recap),
+    // but not when the same category switches provider (e.g. op[aniskip] -> intro[chapters]).
+    val intervalCategory = interval?.type?.let { segmentCategory(it) }
+    LaunchedEffect(intervalCategory) {
         autoHidden = false
         manuallyDismissed = false
         progress.snapTo(0f)
@@ -193,7 +197,7 @@ fun SkipIntroButton(
                     if (it.isFocused) onFocused?.invoke()
                 },
             colors = CardDefaults.colors(
-                containerColor = Color(0xFF1E1E1E).copy(alpha = 0.85f),
+                containerColor = NuvioPrimitives.neutral875.copy(alpha = 0.85f),
                 focusedContainerColor = NuvioTheme.colors.Secondary
             ),
             shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md))
@@ -229,7 +233,7 @@ fun SkipIntroButton(
                         modifier = Modifier
                             .fillMaxWidth(progress.value)
                             .height(NuvioTheme.spacing.xs)
-                            .background(Color(0xFF1E1E1E).copy(alpha = if (controlsVisible || autoHidden || dismissed) 0f else 0.85f))
+                            .background(NuvioPrimitives.neutral875.copy(alpha = if (controlsVisible || autoHidden || dismissed) 0f else 0.85f))
                     )
                 }
             }

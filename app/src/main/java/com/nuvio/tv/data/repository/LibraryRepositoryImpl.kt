@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.repository
 
 import android.util.Log
+import com.nuvio.tv.R
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.profile.ProfileManager
@@ -17,6 +18,7 @@ import com.nuvio.tv.core.tracking.effectiveLibrarySourceMode
 import com.nuvio.tv.core.tracking.providerId
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryEntryInput
@@ -59,6 +61,7 @@ class LibraryRepositoryImpl @Inject constructor(
     private val metaRepository: MetaRepository,
     private val trackingProviders: TrackingLibraryProviderRegistry,
     private val profileManager: ProfileManager,
+    private val addonEventDispatcher: AddonEventDispatcher,
 ) : LibraryRepository {
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -124,7 +127,8 @@ class LibraryRepositoryImpl @Inject constructor(
                             imdbRating = saved.imdbRating,
                             genres = saved.genres,
                             addonBaseUrl = saved.addonBaseUrl,
-                            listedAt = saved.addedAt
+                            listedAt = saved.addedAt,
+                            rawPosterUrl = saved.poster
                         )
                     }
                 }
@@ -183,9 +187,17 @@ class LibraryRepositoryImpl @Inject constructor(
     override suspend fun toggleDefault(
         item: LibraryEntryInput,
         confirmedRemovalProviders: Set<TrackingProviderId>
+    ): TrackingMembershipApplyResult = withAddonLibraryEvent(item) {
+        toggleDefaultInternal(item, confirmedRemovalProviders)
+    }
+
+    private suspend fun toggleDefaultInternal(
+        item: LibraryEntryInput,
+        confirmedRemovalProviders: Set<TrackingProviderId>
     ): TrackingMembershipApplyResult {
         val provider = sourceMode.first().providerId?.let(trackingProviders::provider)
         if (provider != null) {
+            if (item.isServerItem) throw IllegalStateException(appContext.getString(R.string.library_server_title_unsupported))
             val currentMembership = provider.getMembershipSnapshot(item).listMembership
             val changes = ListMembershipChanges(
                 provider.toggledDefaultMembership(currentMembership)
@@ -238,9 +250,11 @@ class LibraryRepositoryImpl @Inject constructor(
         val membership = mutableMapOf<String, Boolean>()
         membership[LOCAL_LIBRARY_LIST_KEY] = inLocal
 
-        trackingProviders.providers().forEach { provider ->
-            if (provider.isAuthenticated.first()) {
-                membership.putAll(provider.getMembershipSnapshot(item).listMembership)
+        if (!item.isServerItem) {
+            trackingProviders.providers().forEach { provider ->
+                if (provider.isAuthenticated.first()) {
+                    membership.putAll(provider.getMembershipSnapshot(item).listMembership)
+                }
             }
         }
 
@@ -251,14 +265,45 @@ class LibraryRepositoryImpl @Inject constructor(
         item: LibraryEntryInput,
         changes: ListMembershipChanges,
         confirmedRemovalProviders: Set<TrackingProviderId>
+    ): TrackingMembershipApplyResult = withAddonLibraryEvent(item) {
+        applyMembershipChangesInternal(item, changes, confirmedRemovalProviders)
+    }
+
+    private suspend inline fun withAddonLibraryEvent(
+        item: LibraryEntryInput,
+        mutation: () -> TrackingMembershipApplyResult
+    ): TrackingMembershipApplyResult {
+        if (!addonEventDispatcher.hasEnabledAddonFor(ADDON_LIBRARY_RESOURCE)) return mutation()
+        val wasInLibrary = isInLibrary(item.itemId, item.itemType).first()
+        val result = mutation()
+        if (result.requiresRemovalConfirmation) return result
+        val isInLibraryNow = isInLibrary(item.itemId, item.itemType).first()
+        if (wasInLibrary != isInLibraryNow) {
+            addonEventDispatcher.library(
+                type = item.itemType,
+                id = item.itemId,
+                action = if (isInLibraryNow) AddonLibraryAction.LIBRARY_ADD else AddonLibraryAction.LIBRARY_REMOVE
+            )
+        }
+        return result
+    }
+
+    private suspend fun applyMembershipChangesInternal(
+        item: LibraryEntryInput,
+        changes: ListMembershipChanges,
+        confirmedRemovalProviders: Set<TrackingProviderId>
     ): TrackingMembershipApplyResult {
         val desired = changes.desiredMembership
-        val providerChanges = trackingProviders.providers().mapNotNull { provider ->
+        val requestedChanges = trackingProviders.providers().mapNotNull { provider ->
             if (!provider.isAuthenticated.first()) return@mapNotNull null
             desired.filterKeys(provider::recognizesListKey)
                 .takeIf { providerMembership -> providerMembership.isNotEmpty() }
                 ?.let { provider to ListMembershipChanges(it) }
         }
+        if (item.isServerItem && requestedChanges.any { (_, change) -> change.desiredMembership.values.any { it } }) {
+            throw IllegalStateException(appContext.getString(R.string.library_server_title_unsupported))
+        }
+        val providerChanges = if (item.isServerItem) emptyList() else requestedChanges
         val requiredConfirmations = providerChanges.mapNotNull { (provider, providerChange) ->
             provider.membershipRemovalConfirmation(item, providerChange)
                 ?.takeUnless { confirmation -> confirmation.providerId in confirmedRemovalProviders }
@@ -375,3 +420,6 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 }
+
+private val LibraryEntryInput.isServerItem: Boolean
+    get() = ServerItemRef.isServerId(itemId)
