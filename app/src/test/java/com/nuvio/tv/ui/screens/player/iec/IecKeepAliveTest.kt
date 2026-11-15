@@ -174,6 +174,27 @@ class IecKeepAliveTest {
     }
 
     @Test
+    fun aLatePause_replaysFromThePositionThePlayerLastSaw() {
+        val track = HeadTrack()
+        val events = mutableListOf<String>()
+        val sink = sink(track, events)
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        feed(sink, 0 until 192, ptsStartUs = 0L)
+        assertTrue(track.contents.size >= 5)
+        track.playHead = track.written - 3 * FRAME
+        val seenByThePlayer = sink.getCurrentPositionUs(false)
+        assertEquals((track.written - 3L * FRAME) / 16L * 1_000_000L / 192_000L, seenByThePlayer)
+        track.playOut()
+
+        sink.pause()
+        assertTrue(events.any { it.startsWith("iec_keepalive_replay frames=3") })
+        repeat(6) { sink.keepAliveTick() }
+        track.playOut()
+        assertEquals(seenByThePlayer, sink.getCurrentPositionUs(false))
+    }
+
+    @Test
     fun pauseAfterEverythingPlayed_replaysNothing() {
         val track = HeadTrack()
         val events = mutableListOf<String>()

@@ -33,6 +33,7 @@ internal class IecPassthroughAudioSink(
     private val pendingFrames = ArrayDeque<ByteArray>()
     private val writtenHistory = ArrayDeque<WrittenFrame>()
     private var replayFramesPending = 0
+    private var reportedHeadFrames = NO_REPORTED_HEAD
     private val uncommitted = ArrayDeque<UncommittedAu>()
     private val sourcesOnFrame = ArrayDeque<Int>()
     private var sourcesSinceFrame: Int = 0
@@ -237,7 +238,9 @@ internal class IecPassthroughAudioSink(
         val sample: IecAudioTimestampSample?
         synchronized(writeLock) {
             val realEnd = realEndFrames
-            val played = minOf(track.playbackHeadFrames(), realEnd)
+            val rawHead = track.playbackHeadFrames()
+            if (playing) reportedHeadFrames = rawHead
+            val played = minOf(rawHead, realEnd)
             head = fillerLedger.contentFrames(played) - headAnchorFrames
             written = (fillerLedger.contentFrames(realEnd) - headAnchorFrames).coerceAtLeast(0L)
             sample = track.timestamp()?.let { stamp ->
@@ -976,7 +979,7 @@ internal class IecPassthroughAudioSink(
         val frame = pendingFrames.removeFirst()
         pendingOffset = 0
         writtenHistory.addLast(WrittenFrame(frame, realEndBytes - frame.size, realEndBytes))
-        val headBytes = track.playbackHeadFrames() * track.frameSizeBytes
+        val headBytes = replayFromFrames(track) * track.frameSizeBytes
         while (writtenHistory.isNotEmpty() &&
             (writtenHistory.first().endByte <= headBytes || writtenHistory.size > WRITTEN_HISTORY_LIMIT)
         ) {
@@ -988,7 +991,7 @@ internal class IecPassthroughAudioSink(
     private fun requeueUnplayedContent() {
         val track = iecTrack ?: return
         val frameSize = track.frameSizeBytes
-        val headBytes = track.playbackHeadFrames() * frameSize
+        val headBytes = replayFromFrames(track) * frameSize
         val replay = ArrayList<WrittenFrame>()
         while (writtenHistory.isNotEmpty() && writtenHistory.last().endByte > headBytes) {
             replay.add(0, writtenHistory.removeLast())
@@ -1003,9 +1006,16 @@ internal class IecPassthroughAudioSink(
         onDiagnosticEvent?.invoke(line)
     }
 
+    private fun replayFromFrames(track: IecAudioTrack): Long {
+        val head = track.playbackHeadFrames()
+        val reported = reportedHeadFrames
+        return if (reported == NO_REPORTED_HEAD) head else minOf(head, reported)
+    }
+
     private fun clearWrittenHistory() {
         while (writtenHistory.isNotEmpty()) recycleFrame(writtenHistory.removeFirst().bytes)
         replayFramesPending = 0
+        reportedHeadFrames = NO_REPORTED_HEAD
     }
 
     /** Writes the rest of a started filler frame, or a whole one. False while a frame is still partly written. */
@@ -1296,6 +1306,7 @@ internal class IecPassthroughAudioSink(
         internal const val KEEP_ALIVE_TICK_MS = 10L
         internal const val FILLER_FRAMES_PER_TICK = 16
         internal const val WRITTEN_HISTORY_LIMIT = 64
+        private const val NO_REPORTED_HEAD = -1L
         internal const val KEEP_ALIVE_MAX_HOLD_NANOS = 30L * 60L * 1_000_000_000L
         internal const val KEEP_ALIVE_HEAD_IDLE_NANOS = 200_000_000L
         private const val HEAD_NOT_MOVED = Long.MIN_VALUE
