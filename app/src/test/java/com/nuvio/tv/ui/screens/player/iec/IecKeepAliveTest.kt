@@ -94,10 +94,8 @@ class IecKeepAliveTest {
 
         sink.pause()
         track.playOut()
-        for (n in 1..4) {
-            sink.keepAliveTick()
-            assertEquals("tick $n", writtenBefore + n * FRAME, track.written)
-        }
+        sink.keepAliveTick()
+        assertEquals("one tick fills to the low-water mark", writtenBefore + 4 * FRAME, track.written)
         sink.keepAliveTick()
         assertEquals("queue sits at the low-water mark", writtenBefore + 4 * FRAME, track.written)
         assertTrue(track.writes.takeLast(4).all { it.filler })
@@ -408,22 +406,73 @@ class IecKeepAliveTest {
     }
 
     @Test
-    fun silentDtsCore_isA512SampleFrameInBothLayouts() {
-        for (multichannel in listOf(true, false)) {
-            val frame = DtsSilence.coreFrame(multichannel)
+    fun silentDtsCore_framesDescribeThemselves() {
+        for (core in listOf(CORE_5_1, CORE_2_0)) {
+            val frame = DtsSilence.frameFor(core)!!
             assertEquals(DtsSilence.FRAME_BYTES, frame.size)
-            assertEquals(multichannel, DtsSilence.coreIsMultichannel(frame))
-            assertEquals(DtsSilence.SAMPLE_COUNT, DtsSilence.coreSampleCount(frame))
-            val swapped = frame.copyOf()
-            for (i in 0 until swapped.size - 1 step 2) {
-                val b = swapped[i]
-                swapped[i] = swapped[i + 1]
-                swapped[i + 1] = b
-            }
-            assertEquals(multichannel, DtsSilence.coreIsMultichannel(swapped))
-            assertEquals(DtsSilence.SAMPLE_COUNT, DtsSilence.coreSampleCount(swapped))
+            assertEquals(core, DtsSilence.parseCore(frame))
+            assertEquals(core, DtsSilence.parseCore(swapped(frame)))
         }
-        assertEquals(null, DtsSilence.coreIsMultichannel(ByteArray(16) { 0x5A }))
+        assertEquals(null, DtsSilence.parseCore(ByteArray(16) { 0x5A }))
+    }
+
+    @Test
+    fun silentDtsCore_onlyMatchesA48kCoreWithTheSameLayout() {
+        assertEquals(null, DtsSilence.frameFor(CORE_5_1.copy(sampleRate = 44_100)))
+        assertEquals(null, DtsSilence.frameFor(CORE_5_1.copy(lfe = false)))
+        assertEquals(null, DtsSilence.frameFor(CORE_5_1.copy(amode = 6)))
+        assertEquals(null, DtsSilence.frameFor(CORE_2_0.copy(lfe = true)))
+        assertEquals(null, DtsSilence.frameFor(CORE_5_1.copy(sampleCount = 1024)))
+    }
+
+    @Test
+    fun dtsHd_a44k1Core_keepsTheOldPauseAndFlush() {
+        val track = HeadTrack(fillerSignature = dtsFiller())
+        val sink = sink(track)
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+        feedDts(sink, 0 until 24, ptsStartUs = 0L, core = withSampleRateCode(silence51(), 8))
+        assertFalse(sink.isKeepAliveActive)
+        sink.pause()
+        assertEquals(1, track.pauses)
+    }
+
+    @Test
+    fun dtsHd_aCoreWithoutLfe_keepsTheOldPauseAndFlush() {
+        val track = HeadTrack(fillerSignature = dtsFiller())
+        val sink = sink(track)
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+        feedDts(sink, 0 until 24, ptsStartUs = 0L, core = withoutLfe(silence51()))
+        assertFalse(sink.isKeepAliveActive)
+        sink.pause()
+        assertEquals(1, track.pauses)
+    }
+
+    @Test
+    fun plainDts_whilePaused_silentCoreBurstsKeepTheOutputAlive() {
+        val filler = ByteArray(Iec61937Packer.dtsCoreBurstBytes(DtsSilence.SAMPLE_COUNT))
+        assertTrue(Iec61937Packer.packDtsCoreInto(ByteBuffer.wrap(silence51()), DtsSilence.SAMPLE_COUNT, false, filler))
+        val track = HeadTrack(fillerSignature = filler)
+        val events = mutableListOf<String>()
+        val sink = sink(track, events)
+        sink.configure(plainDtsFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+        var pts = 0L
+        for (i in 0 until 24) {
+            val unit = silence51()
+            unit[unit.size - 1] = (i + 1).toByte()
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(unit), pts, 1))
+            pts += DTS_AU_US
+        }
+        assertTrue(sink.isKeepAliveActive)
+        assertTrue(events.any { it.startsWith("iec_keepalive_armed mode=DTS_HD") })
+        sink.pause()
+        assertEquals(0, track.pauses)
+        track.playOut()
+        sink.keepAliveTick()
+        assertTrue(track.writes.last().filler)
     }
 
     @Test
@@ -560,19 +609,54 @@ class IecKeepAliveTest {
         dtsKeepAliveEnabled = dtsKeepAlive
     )
 
-    private fun feedDts(sink: IecPassthroughAudioSink, units: IntRange, ptsStartUs: Long) {
+    private fun feedDts(
+        sink: IecPassthroughAudioSink,
+        units: IntRange,
+        ptsStartUs: Long,
+        core: ByteArray = silence51()
+    ) {
         var pts = ptsStartUs
         for (i in units) {
-            val au = DtsSilence.coreFrame(true) + ByteArray(64) { (i and 0x7F).toByte() }
+            val au = core + ByteArray(64) { (i and 0x7F).toByte() }
             assertTrue("unit $i", sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
             pts += DTS_AU_US
         }
     }
 
     private fun dtsFiller(): ByteArray = Iec61937Packer.packDtsHd(
-        DtsSilence.coreFrame(true),
+        silence51(),
         Iec61937Packer.dtsHdIecPeriod(8, DtsSilence.SAMPLE_COUNT)
     )
+
+    private fun silence51(): ByteArray = DtsSilence.frameFor(CORE_5_1)!!
+
+    private fun withSampleRateCode(frame: ByteArray, code: Int): ByteArray {
+        val out = frame.copyOf()
+        out[8] = ((out[8].toInt() and 0xC3) or (code shl 2)).toByte()
+        return out
+    }
+
+    private fun withoutLfe(frame: ByteArray): ByteArray {
+        val out = frame.copyOf()
+        out[10] = (out[10].toInt() and 0xF9).toByte()
+        return out
+    }
+
+    private fun swapped(frame: ByteArray): ByteArray {
+        val out = frame.copyOf()
+        for (i in 0 until out.size - 1 step 2) {
+            val b = out[i]
+            out[i] = out[i + 1]
+            out[i + 1] = b
+        }
+        return out
+    }
+
+    private fun plainDtsFormat(): Format = Format.Builder()
+        .setSampleMimeType(MimeTypes.AUDIO_DTS)
+        .setChannelCount(6)
+        .setSampleRate(48_000)
+        .build()
 
     private fun feed(
         sink: IecPassthroughAudioSink,
@@ -744,6 +828,8 @@ class IecKeepAliveTest {
         const val FRAME = Iec61937Packer.TRUEHD_IEC_SIZE
         const val AU_US = 833L
         const val DTS_AU_US = 10_667L
+        val CORE_5_1 = DtsSilence.CoreHeader(sampleCount = 512, amode = 9, sampleRate = 48_000, lfe = true)
+        val CORE_2_0 = DtsSilence.CoreHeader(sampleCount = 512, amode = 2, sampleRate = 48_000, lfe = false)
         const val CAP_BYTES = IecPassthroughAudioSink.KEEP_ALIVE_CAP_MS * 192_000L / 1000L * 16L
     }
 }

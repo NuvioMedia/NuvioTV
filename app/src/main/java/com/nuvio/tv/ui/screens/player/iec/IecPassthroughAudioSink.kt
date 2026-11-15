@@ -56,8 +56,7 @@ internal class IecPassthroughAudioSink(
     private var dtsCarrierOverride: Int? = null
     private var dtsCarrierKnown = false
     private var dtsCarrierLossless = false
-    private var dtsFillerMultichannel: Boolean? = null
-    private var dtsFillerSampleCount = 0
+    private var dtsFillerCore: DtsSilence.CoreHeader? = null
     private val dtsDuration = DtsHdFrameDurationEstimator()
     private val uhdAudioChunkId = AtomicInteger()
     private var configuredFormat: Format? = null
@@ -703,6 +702,7 @@ internal class IecPassthroughAudioSink(
             0
         }
         val burstBytes = Iec61937Packer.dtsCoreBurstBytes(sampleCount)
+        noteDtsFillerLayout(buffer)
         if (littleEndian == null || burstBytes == 0) {
             return fallbackToWrappedSink("dts_core_unsupported samples=$sampleCount")
         }
@@ -727,7 +727,7 @@ internal class IecPassthroughAudioSink(
         buffer.get(head)
         buffer.position(position)
         val sampleCount = resolveDtsSampleCount(head, buffer, presentationTimeUs)
-        noteDtsFillerLayout(buffer, sampleCount)
+        noteDtsFillerLayout(buffer)
         val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, sampleCount)
         val burst = acquireDtsBurst(period shl 2)
         Iec61937Packer.packDtsHdInto(buffer, period, burst)
@@ -736,25 +736,27 @@ internal class IecPassthroughAudioSink(
         return true
     }
 
-    private fun noteDtsFillerLayout(buffer: ByteBuffer, sampleCount: Int) {
-        if (dtsFillerMultichannel != null) return
+    private fun noteDtsFillerLayout(buffer: ByteBuffer) {
+        if (dtsFillerCore != null) return
         val position = buffer.position()
         val head = ByteArray(buffer.remaining().coerceAtMost(16))
         buffer.get(head)
         buffer.position(position)
-        val multichannel = DtsSilence.coreIsMultichannel(head) ?: return
-        dtsFillerSampleCount = sampleCount
-        dtsFillerMultichannel = multichannel
+        dtsFillerCore = DtsSilence.parseCore(head) ?: return
         val track = iecTrack ?: return
         if (trackStarted) synchronized(writeLock) { armKeepAlive(track) }
     }
 
     private fun dtsSilenceBurst(): ByteArray? {
-        if (!dtsKeepAliveEnabled || dtsCore) return null
-        val multichannel = dtsFillerMultichannel ?: return null
-        if (dtsFillerSampleCount != DtsSilence.SAMPLE_COUNT) return null
+        if (!dtsKeepAliveEnabled) return null
+        val frame = DtsSilence.frameFor(dtsFillerCore ?: return null) ?: return null
+        if (dtsCore) {
+            val burst = ByteArray(Iec61937Packer.dtsCoreBurstBytes(DtsSilence.SAMPLE_COUNT))
+            val packed = Iec61937Packer.packDtsCoreInto(ByteBuffer.wrap(frame), DtsSilence.SAMPLE_COUNT, false, burst)
+            return if (packed) burst else null
+        }
         val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, DtsSilence.SAMPLE_COUNT)
-        return Iec61937Packer.packDtsHd(DtsSilence.coreFrame(multichannel), period)
+        return Iec61937Packer.packDtsHd(frame, period)
     }
 
     private fun resolveDtsSampleCount(head: ByteArray, buffer: ByteBuffer, ptsUs: Long): Int {
@@ -951,7 +953,7 @@ internal class IecPassthroughAudioSink(
                 }
                 if (!writeFiller(track, whole = true)) return
                 written++
-            } while (mode == Mode.DTS_HD && written < DTS_FILLER_BURSTS_PER_TICK)
+            } while (written < FILLER_FRAMES_PER_TICK)
         }
     }
 
@@ -996,9 +998,9 @@ internal class IecPassthroughAudioSink(
         fillerLedger.markFiller(startByte / frameSize, realEndBytes / frameSize)
         for (frame in replay.asReversed()) pendingFrames.addFirst(frame.bytes)
         replayFramesPending += replay.size
-        onDiagnosticEvent?.invoke(
-            "iec_keepalive_replay frames=${replay.size} ms=${(realEndBytes - startByte) / frameSize * 1000L / track.sampleRate}"
-        )
+        val line = "iec_keepalive_replay frames=${replay.size} ms=${(realEndBytes - startByte) / frameSize * 1000L / track.sampleRate}"
+        android.util.Log.i("IecPassthrough", line)
+        onDiagnosticEvent?.invoke(line)
     }
 
     private fun clearWrittenHistory() {
@@ -1262,8 +1264,7 @@ internal class IecPassthroughAudioSink(
         resetIecState(keepTrack = false)
         mode = Mode.FORWARD
         dtsCore = false
-        dtsFillerMultichannel = null
-        dtsFillerSampleCount = 0
+        dtsFillerCore = null
     }
 
     private class UncommittedAu(val bytes: ByteArray, val ptsUs: Long, val count: Int)
@@ -1293,7 +1294,7 @@ internal class IecPassthroughAudioSink(
         // Below this the keep-alive adds a padding-only MAT frame (20 ms) so the output never runs dry.
         internal const val KEEP_ALIVE_LOW_WATER_MS = 80L
         internal const val KEEP_ALIVE_TICK_MS = 10L
-        internal const val DTS_FILLER_BURSTS_PER_TICK = 16
+        internal const val FILLER_FRAMES_PER_TICK = 16
         internal const val WRITTEN_HISTORY_LIMIT = 64
         internal const val KEEP_ALIVE_MAX_HOLD_NANOS = 30L * 60L * 1_000_000_000L
         internal const val KEEP_ALIVE_HEAD_IDLE_NANOS = 200_000_000L
