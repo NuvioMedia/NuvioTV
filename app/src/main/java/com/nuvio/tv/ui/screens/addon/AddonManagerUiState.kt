@@ -8,6 +8,7 @@ data class AddonManagerUiState(
     val isInstalling: Boolean = false,
     val installUrl: String = "",
     val installedAddons: List<Addon> = emptyList(),
+    val movingAddonKey: String? = null,
     val error: String? = null,
     val transientMessage: String? = null,
     val transientMessageIsError: Boolean = false,

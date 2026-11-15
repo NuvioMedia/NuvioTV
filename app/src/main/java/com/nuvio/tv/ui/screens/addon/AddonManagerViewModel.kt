@@ -106,6 +106,8 @@ class AddonManagerViewModel @Inject constructor(
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
     private var followAddonsOrderEnabled: Boolean = false
     private var currentCollections: List<Collection> = emptyList()
+    private var addonDraftOrder: List<String>? = null
+    private var addonMoveBaseline: List<Addon>? = null
 
     init {
         observeInstalledAddons()
@@ -228,30 +230,73 @@ class AddonManagerViewModel @Inject constructor(
         }
     }
 
-    fun moveAddonUp(baseUrl: String) {
-        reorderAddon(baseUrl, -1)
-    }
-
-    fun moveAddonDown(baseUrl: String) {
-        reorderAddon(baseUrl, 1)
-    }
-
-    private fun reorderAddon(baseUrl: String, direction: Int) {
+    fun enterAddonMoveMode(baseUrl: String) {
         val current = _uiState.value.installedAddons
-        val index = current.indexOfFirst { it.baseUrl == baseUrl }
-        if (index == -1) return
+        if (current.none { it.baseUrl == baseUrl }) return
+        addonMoveBaseline = current
+        addonDraftOrder = current.map { it.baseUrl }
+        _uiState.update { it.copy(movingAddonKey = baseUrl) }
+    }
 
-        val newIndex = index + direction
-        if (newIndex !in current.indices) return
-
-        val reordered = current.toMutableList().apply {
-            val item = removeAt(index)
-            add(newIndex, item)
+    fun moveAddonDuringDrag(baseUrl: String, direction: Int): Int? {
+        val draft = addonDraftOrder ?: return null
+        val fromIndex = draft.indexOf(baseUrl)
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
         }
+        addonDraftOrder = reordered
+        applyAddonDraftOrder()
+        return toIndex
+    }
 
-        viewModelScope.launch {
-            addonRepository.setAddonOrder(reordered.map { it.baseUrl })
+    fun confirmAddonMove() {
+        val draft = addonDraftOrder
+        addonDraftOrder = null
+        addonMoveBaseline = null
+        _uiState.update { it.copy(movingAddonKey = null) }
+        if (draft != null) {
+            viewModelScope.launch {
+                addonRepository.setAddonOrder(draft)
+            }
         }
+    }
+
+    fun cancelAddonMove() {
+        val baseline = addonMoveBaseline
+        addonDraftOrder = null
+        addonMoveBaseline = null
+        _uiState.update {
+            it.copy(
+                movingAddonKey = null,
+                installedAddons = baseline ?: it.installedAddons
+            )
+        }
+    }
+
+    private fun applyAddonDraftOrder() {
+        val draft = addonDraftOrder ?: return
+        _uiState.update { state ->
+            state.copy(installedAddons = orderAddonsByKeys(state.installedAddons, draft))
+        }
+    }
+
+    private fun orderAddonsByKeys(
+        addons: List<Addon>,
+        orderKeys: List<String>
+    ): List<Addon> {
+        val byUrl = addons.associateBy { it.baseUrl }
+        val seen = LinkedHashSet<String>()
+        val ordered = ArrayList<Addon>(addons.size)
+        for (url in orderKeys) {
+            val addon = byUrl[url] ?: continue
+            if (seen.add(url)) ordered.add(addon)
+        }
+        for (addon in addons) {
+            if (seen.add(addon.baseUrl)) ordered.add(addon)
+        }
+        return ordered
     }
 
     fun startQrMode(webConfigMode: AddonWebConfigMode = this.webConfigMode) {
@@ -850,9 +895,12 @@ class AddonManagerViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, error = error.message) }
                 }
                 .collect { addons ->
+                    val ordered = addonDraftOrder
+                        ?.let { orderAddonsByKeys(addons, it) }
+                        ?: addons
                     _uiState.update { state ->
                         state.copy(
-                            installedAddons = addons,
+                            installedAddons = ordered,
                             isLoading = false,
                             error = null
                         )
