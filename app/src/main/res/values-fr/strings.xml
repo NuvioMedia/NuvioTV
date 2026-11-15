@@ -954,7 +954,7 @@
     <string name="sub_font_serif">Avec empattement</string>
     <string name="sub_font_mono">Chasse fixe</string>
     <string name="sub_font_import">Importer depuis le téléphone</string>
-    <string name="sub_font_import_desc">Ajoutez une police .ttf ou .otf jusqu’à 10&#160;Mo. Les polices importées restent sur cette TV.</string>
+    <string name="sub_font_import_desc">Ajoutez une police .ttf ou .otf jusqu’à 10 Mo. Les polices importées restent sur cette TV.</string>
     <string name="sub_font_import_qr">Scannez avec votre téléphone pour ajouter une police .ttf ou .otf</string>
     <string name="sub_font_missing">Police indisponible sur cet appareil. Utilisation de la police par défaut.</string>
     <string name="sub_font_remove">Retirer %1$s</string>
@@ -1277,7 +1277,7 @@
     <string name="web_subtitle_font_choose">Choisir le fichier de police</string>
     <string name="web_subtitle_font_uploading">Envoi…</string>
     <string name="web_subtitle_font_added">Ajoutée à votre TV</string>
-    <string name="web_subtitle_font_error">Impossible d’importer cette police. Choisissez un fichier .ttf ou .otf valide de moins de 10&#160;Mo.</string>
+    <string name="web_subtitle_font_error">Impossible d’importer cette police. Choisissez un fichier .ttf ou .otf valide de moins de 10 Mo.</string>
     <string name="web_subtitle_font_connection_error">Erreur de connexion</string>
 
 
@@ -2218,6 +2218,10 @@
     <string name="library_status_dropped">Abandonnés</string>
     <string name="library_syncing_library">Synchronisation de la bibliothèque…</string>
     <string name="library_type_all">Tout</string>
+    <string name="library_empty_title">Aucun élément à afficher</string>
+    <string name="library_empty_local_hint">Modifiez vos filtres ou commencez à enregistrer vos favoris pour les voir ici</string>
+    <string name="library_empty_trakt_hint">Modifiez vos filtres ou utilisez + dans les détails pour ajouter des éléments à la liste de suivi ou à des listes</string>
+    <string name="library_empty_simkl_hint">Modifiez vos filtres ou utilisez + dans les détails pour ajouter des éléments à un statut Simkl</string>
     <string name="library_empty_trakt_not_auth_title">Trakt non connecté</string>
     <string name="library_empty_trakt_not_auth_subtitle">Connectez votre compte Trakt dans les paramètres pour afficher votre bibliothèque Trakt</string>
     <string name="library_empty_simkl_not_auth_title">Simkl non connecté</string>
