@@ -1431,7 +1431,7 @@ private fun AddonCard(
             label = "addonCardColor",
         )
         val cardBorder = if (isMoving) {
-            BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Primary)
+            BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing)
         } else {
             null
         }

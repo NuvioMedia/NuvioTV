@@ -247,7 +247,7 @@ private fun CatalogOrderCard(
         label = "catalogOrderCardColor",
     )
     val cardBorder = if (isMoving) {
-        BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Primary)
+        BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing)
     } else {
         null
     }
