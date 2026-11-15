@@ -10,7 +10,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,13 +31,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -165,23 +160,9 @@ private fun CatalogOrderHeader(
         color = NuvioTheme.colors.TextSecondary,
     )
     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-    var followRowFocused by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged { followRowFocused = it.isFocused }
-            .then(
-                if (followRowFocused) {
-                    Modifier.border(
-                        width = NuvioTheme.spacing.xxs,
-                        color = NuvioTheme.colors.Primary,
-                        shape = RoundedCornerShape(NuvioTheme.radii.md),
-                    )
-                } else {
-                    Modifier
-                },
-            )
-            .padding(NuvioTheme.spacing.xs)
             .toggleable(
                 value = followAddonsOrder,
                 enabled = movingKey == null,
