@@ -53,8 +53,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,7 +116,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.TextStyle
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeoutOrNull
 
 private sealed interface AddonExperienceModeState {
     data object Loading : AddonExperienceModeState
@@ -124,6 +128,47 @@ private sealed interface AddonExperienceModeState {
 private enum class AddonManagerFocusTarget {
     CatalogOrder,
     Collections
+}
+
+private sealed interface AddonDeleteFocusRestore {
+    data class Cancel(val addonUrl: String) : AddonDeleteFocusRestore
+    data class AfterDelete(
+        val deletedUrl: String,
+        val deletedIndex: Int,
+        val targetAddonUrl: String?
+    ) : AddonDeleteFocusRestore
+}
+
+internal fun resolvePostDeleteTargetAddonUrl(
+    addonsBeforeDelete: List<Addon>,
+    deletedUrl: String
+): String? {
+    val deletedIndex = addonsBeforeDelete.indexOfFirst { it.baseUrl == deletedUrl }
+    return resolveSurvivingPostDeleteAddonUrl(
+        addons = addonsBeforeDelete,
+        deletedUrl = deletedUrl,
+        preferredTargetUrl = null,
+        deletedIndex = deletedIndex
+    )
+}
+
+internal fun resolveSurvivingPostDeleteAddonUrl(
+    addons: List<Addon>,
+    deletedUrl: String,
+    preferredTargetUrl: String?,
+    deletedIndex: Int
+): String? {
+    val surviving = addons.filterNot { it.baseUrl == deletedUrl }
+    if (surviving.isEmpty()) return null
+    preferredTargetUrl
+        ?.takeIf { target -> surviving.any { it.baseUrl == target } }
+        ?.let { return it }
+    val fallbackIndex = if (deletedIndex >= 0) {
+        deletedIndex.coerceIn(0, surviving.lastIndex)
+    } else {
+        0
+    }
+    return surviving[fallbackIndex].baseUrl
 }
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
@@ -152,7 +197,13 @@ fun AddonManagerScreen(
     onNavigateToCollections: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val firstAddonToggleFocusRequester = remember { FocusRequester() }
+    val addonToggleFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val addonRemoveFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    fun toggleFocusRequesterFor(baseUrl: String): FocusRequester =
+        addonToggleFocusRequesters.getOrPut(baseUrl) { FocusRequester() }
+    fun removeFocusRequesterFor(baseUrl: String): FocusRequester =
+        addonRemoveFocusRequesters.getOrPut(baseUrl) { FocusRequester() }
+    val refreshAddonsFocusRequester = remember { FocusRequester() }
     val catalogOrderFocusRequester = remember { FocusRequester() }
     val collectionsFocusRequester = remember { FocusRequester() }
     var pendingFocusRestore by rememberSaveable { mutableStateOf<AddonManagerFocusTarget?>(null) }
@@ -186,8 +237,12 @@ fun AddonManagerScreen(
     val deleteDialogFocusRequester = remember { FocusRequester() }
     var isEditing by remember { mutableStateOf(false) }
     var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteFocusRestore by remember { mutableStateOf<AddonDeleteFocusRestore?>(null) }
     var restoreManageFromPhoneFocus by remember { mutableStateOf(false) }
     var hasHandledInitialFocusState by remember { mutableStateOf(false) }
+    val latestUiState by rememberUpdatedState(uiState)
+    val latestIsEditing by rememberUpdatedState(isEditing)
+    val latestPendingFocusRestore by rememberUpdatedState(pendingFocusRestore)
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
         uiState.installedAddons.any { addon ->
             addon.enabled && addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
@@ -230,7 +285,13 @@ fun AddonManagerScreen(
     val requestInputBarFocus = {
         coroutineScope.launch {
             repeat(2) { withFrameNanos { } }
-            if (pendingFocusRestore == null) {
+            if (pendingFocusRestore == null &&
+                pendingDeleteFocusRestore == null &&
+                !uiState.isQrModeActive &&
+                uiState.pendingChange == null &&
+                !isEditing &&
+                addonUrlPendingDeletion == null
+            ) {
                 runCatching { surfaceFocusRequester.requestFocus() }
             }
         }
@@ -240,6 +301,7 @@ fun AddonManagerScreen(
         coroutineScope.launch {
             repeat(2) { withFrameNanos { } }
             if (pendingFocusRestore == null &&
+                pendingDeleteFocusRestore == null &&
                 restoreManageFromPhoneFocus &&
                 !uiState.isQrModeActive &&
                 uiState.pendingChange == null &&
@@ -251,7 +313,7 @@ fun AddonManagerScreen(
         }
     }
 
-    LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange, addonUrlPendingDeletion) {
+    LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange) {
         if (uiState.isQrModeActive) {
             restoreManageFromPhoneFocus = true
         }
@@ -260,6 +322,7 @@ fun AddonManagerScreen(
             return@LaunchedEffect
         }
         if (pendingFocusRestore == null &&
+            pendingDeleteFocusRestore == null &&
             !uiState.isQrModeActive &&
             uiState.pendingChange == null &&
             !isEditing &&
@@ -270,6 +333,54 @@ fun AddonManagerScreen(
             } else {
                 requestInputBarFocus()
             }
+        }
+    }
+
+    LaunchedEffect(pendingDeleteFocusRestore, addonUrlPendingDeletion) {
+        val restore = pendingDeleteFocusRestore ?: return@LaunchedEffect
+        if (addonUrlPendingDeletion != null) return@LaunchedEffect
+        if (restore is AddonDeleteFocusRestore.AfterDelete) {
+            withTimeoutOrNull(600) {
+                snapshotFlow { latestUiState.installedAddons }
+                    .first { addons -> addons.none { it.baseUrl == restore.deletedUrl } }
+            }
+        }
+        repeat(2) { withFrameNanos { } }
+        val currentState = latestUiState
+        if (addonUrlPendingDeletion == null &&
+            !currentState.isQrModeActive &&
+            currentState.pendingChange == null &&
+            !latestIsEditing &&
+            latestPendingFocusRestore == null
+        ) {
+            val addons = currentState.installedAddons
+            val targetRequester = when (restore) {
+                is AddonDeleteFocusRestore.Cancel -> {
+                    if (addons.any { it.baseUrl == restore.addonUrl }) {
+                        removeFocusRequesterFor(restore.addonUrl)
+                    } else {
+                        addons.firstOrNull()?.baseUrl?.let(::toggleFocusRequesterFor)
+                            ?: refreshAddonsFocusRequester
+                    }
+                }
+                is AddonDeleteFocusRestore.AfterDelete -> {
+                    if (addons.any { it.baseUrl == restore.deletedUrl }) {
+                        removeFocusRequesterFor(restore.deletedUrl)
+                    } else {
+                        resolveSurvivingPostDeleteAddonUrl(
+                            addons = addons,
+                            deletedUrl = restore.deletedUrl,
+                            preferredTargetUrl = restore.targetAddonUrl,
+                            deletedIndex = restore.deletedIndex
+                        )?.let(::toggleFocusRequesterFor)
+                            ?: refreshAddonsFocusRequester
+                    }
+                }
+            }
+            runCatching { targetRequester.requestFocus() }
+        }
+        if (pendingDeleteFocusRestore == restore) {
+            pendingDeleteFocusRestore = null
         }
     }
 
@@ -341,6 +452,22 @@ fun AddonManagerScreen(
         onDispose { viewModel.stopQrMode() }
     }
 
+    val deleteRestoreFallback = when (val restore = pendingDeleteFocusRestore) {
+        is AddonDeleteFocusRestore.Cancel ->
+            restore.addonUrl
+                .takeIf { url -> uiState.installedAddons.any { it.baseUrl == url } }
+                ?.let(::removeFocusRequesterFor)
+        is AddonDeleteFocusRestore.AfterDelete ->
+            resolveSurvivingPostDeleteAddonUrl(
+                addons = uiState.installedAddons,
+                deletedUrl = restore.deletedUrl,
+                preferredTargetUrl = restore.targetAddonUrl,
+                deletedIndex = restore.deletedIndex
+            )?.let(::toggleFocusRequesterFor)
+                ?: refreshAddonsFocusRequester
+        null -> null
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -364,7 +491,7 @@ fun AddonManagerScreen(
                         AddonManagerFocusTarget.Collections -> collectionsFocusRequester
                         null -> null
                     },
-                    fallbackRequester = surfaceFocusRequester
+                    fallbackRequester = deleteRestoreFallback ?: surfaceFocusRequester
                 ),
             header = {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -552,15 +679,28 @@ fun AddonManagerScreen(
                     )
             }
 
+                    val firstAddonToggleRequester = if (!viewModel.isReadOnly) {
+                        uiState.installedAddons.firstOrNull()?.baseUrl?.let(::toggleFocusRequesterFor)
+                    } else {
+                        null
+                    }
                     RefreshAddonsEntryCard(
                         subtitle = refreshAddonsSubtitle,
                         onClick = {
                             viewModel.requestAddonSyncNow()
                             refreshAddonsSubtitle = refreshedAddonsSubtitle
                         },
-                        modifier = Modifier.focusProperties {
-                            down = firstAddonToggleFocusRequester
-                        }
+                        modifier = Modifier
+                            .focusRequester(refreshAddonsFocusRequester)
+                            .then(
+                                if (firstAddonToggleRequester != null) {
+                                    Modifier.focusProperties {
+                                        down = firstAddonToggleRequester
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                            )
                     )
 
                     Row(
@@ -589,18 +729,21 @@ fun AddonManagerScreen(
                 }
             },
         ) { addon, isMoving, onStartMove, onConfirmMove ->
-            val firstAddonUrl = uiState.installedAddons.firstOrNull()?.baseUrl
             AddonCard(
                 addon = addon,
                 isMoving = isMoving,
                 canMove = !isEssential,
                 onStartMove = onStartMove,
                 onConfirmMove = onConfirmMove,
-                onRemove = { addonUrlPendingDeletion = addon.baseUrl },
+                onRemove = {
+                    pendingDeleteFocusRestore = null
+                    addonUrlPendingDeletion = addon.baseUrl
+                },
                 onEnabledChange = { enabled -> viewModel.setAddonEnabled(addon.baseUrl, enabled) },
                 isReadOnly = viewModel.isReadOnly,
                 showReorder = !isEssential,
-                toggleFocusRequester = if (addon.baseUrl == firstAddonUrl) firstAddonToggleFocusRequester else null
+                toggleFocusRequester = if (viewModel.isReadOnly) null else toggleFocusRequesterFor(addon.baseUrl),
+                removeFocusRequester = if (viewModel.isReadOnly) null else removeFocusRequesterFor(addon.baseUrl)
             )
         }
 
@@ -632,8 +775,12 @@ fun AddonManagerScreen(
         }
 
         addonUrlPendingDeletion?.let { addonUrl ->
+            val dismissDeleteDialog = {
+                addonUrlPendingDeletion = null
+                pendingDeleteFocusRestore = AddonDeleteFocusRestore.Cancel(addonUrl)
+            }
             NuvioDialog(
-                onDismiss = { addonUrlPendingDeletion = null },
+                onDismiss = dismissDeleteDialog,
                 title = stringResource(R.string.addon_delete_confirm_title),
                 subtitle = stringResource(R.string.addon_delete_confirm_message),
                 suppressFirstKeyUp = false
@@ -643,7 +790,7 @@ fun AddonManagerScreen(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
                 ) {
                     Button(
-                        onClick = { addonUrlPendingDeletion = null },
+                        onClick = dismissDeleteDialog,
                         modifier = Modifier
                             .focusRequester(deleteDialogFocusRequester)
                             .semantics { role = Role.Button }
@@ -652,6 +799,14 @@ fun AddonManagerScreen(
                     }
                     Button(
                         onClick = {
+                            val currentAddons = uiState.installedAddons
+                            val deletedIndex = currentAddons.indexOfFirst { it.baseUrl == addonUrl }
+                            val targetAddonUrl = resolvePostDeleteTargetAddonUrl(currentAddons, addonUrl)
+                            pendingDeleteFocusRestore = AddonDeleteFocusRestore.AfterDelete(
+                                deletedUrl = addonUrl,
+                                deletedIndex = deletedIndex,
+                                targetAddonUrl = targetAddonUrl
+                            )
                             viewModel.removeAddon(addonUrl)
                             addonUrlPendingDeletion = null
                         },
@@ -1395,7 +1550,8 @@ private fun AddonCard(
     onEnabledChange: (Boolean) -> Unit,
     isReadOnly: Boolean = false,
     showReorder: Boolean = true,
-    toggleFocusRequester: FocusRequester? = null
+    toggleFocusRequester: FocusRequester? = null,
+    removeFocusRequester: FocusRequester? = null
 ) {
     if (isReadOnly) {
         Surface(
@@ -1457,7 +1613,8 @@ private fun AddonCard(
                 onRemove = onRemove,
                 onEnabledChange = onEnabledChange,
                 showReorder = showReorder,
-                toggleFocusRequester = effectiveToggleFocusRequester
+                toggleFocusRequester = effectiveToggleFocusRequester,
+                removeFocusRequester = removeFocusRequester
             )
         }
     }
@@ -1475,7 +1632,8 @@ private fun AddonCardContent(
     onRemove: () -> Unit = {},
     onEnabledChange: (Boolean) -> Unit = {},
     showReorder: Boolean = true,
-    toggleFocusRequester: FocusRequester? = null
+    toggleFocusRequester: FocusRequester? = null,
+    removeFocusRequester: FocusRequester? = null
 ) {
     Column(modifier = Modifier.padding(20.dp)) {
         Row(
@@ -1581,10 +1739,15 @@ private fun AddonCardContent(
                             )
                         }
                     }
+                    val removeButtonModifier = if (removeFocusRequester != null) {
+                        Modifier.focusRequester(removeFocusRequester)
+                    } else {
+                        Modifier
+                    }
                     Button(
                         onClick = onRemove,
                         enabled = !isMoving,
-                        modifier = Modifier.semantics { role = Role.Button },
+                        modifier = removeButtonModifier.semantics { role = Role.Button },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioTheme.colors.BackgroundCard,
                             contentColor = NuvioTheme.colors.TextSecondary,
