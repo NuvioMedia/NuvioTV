@@ -314,10 +314,10 @@ private fun CatalogOrderCard(
                     enabled = isMoving || (item.canMove && actionsEnabled),
                     colors = if (isMoving) {
                         ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.Primary,
-                            contentColor = NuvioTheme.colors.TextPrimary,
-                            focusedContainerColor = NuvioTheme.colors.Primary,
-                            focusedContentColor = NuvioTheme.colors.TextPrimary,
+                            containerColor = NuvioTheme.colors.Secondary,
+                            contentColor = NuvioTheme.colors.OnSecondary,
+                            focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                            focusedContentColor = NuvioTheme.colors.OnSecondary,
                         )
                     } else {
                         ButtonDefaults.colors(

@@ -1561,10 +1561,10 @@ private fun AddonCardContent(
                             enabled = isMoving || canMove,
                             modifier = Modifier.semantics { role = Role.Button },
                             colors = ButtonDefaults.colors(
-                                containerColor = if (isMoving) NuvioTheme.colors.Primary else NuvioTheme.colors.BackgroundCard,
-                                contentColor = if (isMoving) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary,
-                                focusedContainerColor = if (isMoving) NuvioTheme.colors.Primary else NuvioTheme.colors.FocusBackground,
-                                focusedContentColor = if (isMoving) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.Primary
+                                containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                                contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
                             ),
                             border = ButtonDefaults.border(
                                 focusedBorder = Border(
