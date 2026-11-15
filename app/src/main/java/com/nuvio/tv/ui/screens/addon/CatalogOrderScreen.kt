@@ -132,6 +132,7 @@ fun CatalogOrderScreen(
                             onToggleFollowAddons = viewModel::toggleFollowAddonsOrder,
                         )
                     },
+                    useHeaderAwareBringIntoView = true,
                 ) { item, isMoving, onStartMove, onConfirmMove ->
                     CatalogOrderCard(
                         item = item,

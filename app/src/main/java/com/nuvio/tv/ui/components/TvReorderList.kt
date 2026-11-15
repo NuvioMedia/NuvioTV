@@ -78,6 +78,7 @@ fun <T> TvReorderList(
     onCancelMove: () -> Unit,
     modifier: Modifier = Modifier,
     header: @Composable (() -> Unit)? = null,
+    useHeaderAwareBringIntoView: Boolean = false,
     itemContent: @Composable (
         item: T,
         isMoving: Boolean,
@@ -178,8 +179,10 @@ fun <T> TvReorderList(
     runtime.latestMovingKey = movingKey
     val bringIntoViewSpec = if (movingKey != null || pinnedScrollPx >= 0) {
         freezeScrollBringIntoView
-    } else {
+    } else if (useHeaderAwareBringIntoView) {
         headerAwareBringIntoView
+    } else {
+        inheritedBringIntoViewSpec
     }
 
     fun pinScroll(reason: String) {
