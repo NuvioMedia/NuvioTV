@@ -1789,6 +1789,13 @@
     <string name="addon_installing">Đang cài đặt</string>
     <string name="addon_install_btn">Cài đặt</string>
     <string name="addon_install_success">Đã cài đặt %1$s</string>
+    <string name="addon_tracking_consent_title">Tiện ích theo dõi</string>
+    <string name="addon_tracking_consent_body">%1$s là một tiện ích theo dõi. Nuvio sẽ gửi cho tiện ích này hoạt động của bạn: những gì bạn phát, tạm dừng và dừng kèm vị trí phát lại, nội dung bạn thêm vào hoặc xóa khỏi thư viện và nội dung bạn đánh dấu đã xem hoặc chưa xem. Dữ liệu này sẽ rời khỏi Nuvio và được xử lý bởi nhà phát triển tiện ích cùng dịch vụ mà nó kết nối tới.</string>
+    <string name="addon_tracking_consent_checkbox">Tôi đồng ý chia sẻ hoạt động xem và thư viện với tiện ích này</string>
+    <string name="addon_tracking_consent_checked">Đã chọn</string>
+    <string name="addon_tracking_consent_unchecked">Chưa chọn</string>
+    <string name="addon_tracking_consent_cancel">Hủy</string>
+    <string name="addon_tracking_consent_install">Cài đặt</string>
     <string name="addon_error_invalid_url">Nhập URL tiện ích hợp lệ</string>
     <string name="addon_error_invalid_scheme">URL tiện ích phải bắt đầu bằng http hoặc https</string>
     <string name="addon_installed_section">Đã cài đặt</string>
