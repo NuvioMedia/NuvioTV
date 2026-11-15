@@ -102,6 +102,37 @@ class TvReorderListLayoutTest {
         assertEquals(0..9, range)
     }
 
+    @Test
+    fun `slot tops accumulate variable row heights plus spacing`() {
+        val heights = floatArrayOf(100f, 140f, 100f)
+        val tops = computeSlotTops(
+            slotCount = 3,
+            heightAt = { heights[it] },
+            spacingPx = 10f,
+        )
+        assertEquals(0f, tops[0], 0.001f)
+        assertEquals(110f, tops[1], 0.001f)
+        assertEquals(260f, tops[2], 0.001f)
+    }
+
+    @Test
+    fun `slot tops with uniform heights match stride math`() {
+        val tops = computeSlotTops(
+            slotCount = 5,
+            heightAt = { 100f },
+            spacingPx = 10f,
+        )
+        for (i in 0 until 5) {
+            assertEquals(i * 110f, tops[i], 0.001f)
+        }
+    }
+
+    @Test
+    fun `slot tops empty when no slots`() {
+        val tops = computeSlotTops(0, { 100f }, 10f)
+        assertEquals(0, tops.size)
+    }
+
     private fun assertTrue(condition: Boolean) {
         org.junit.Assert.assertTrue(condition)
     }

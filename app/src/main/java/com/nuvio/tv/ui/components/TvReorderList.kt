@@ -91,10 +91,27 @@ fun <T> TvReorderList(
     val rowHeightPx = remember { FloatArray(1) }
     val headerHeightPx = remember { FloatArray(1) }
     val viewportHeightPx = remember { FloatArray(1) }
+    val measuredRowHeights = remember { mutableStateMapOf<String, Float>() }
 
     fun slotStridePx(): Float {
         val height = rowHeightPx[0]
         return if (height > 0f) height + rowSpacingPx else 0f
+    }
+
+    fun defaultRowHeightPx(): Float {
+        return if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
+    }
+
+    fun heightForItemKey(itemKey: String): Float {
+        return measuredRowHeights[itemKey] ?: defaultRowHeightPx()
+    }
+
+    fun slotTopsFor(orderKeys: List<String>): FloatArray {
+        return computeSlotTops(
+            slotCount = orderKeys.size,
+            heightAt = { index -> heightForItemKey(orderKeys[index]) },
+            spacingPx = rowSpacingPx,
+        )
     }
 
     fun indicesFrom(source: List<T>): Map<String, Int> {
@@ -201,8 +218,9 @@ fun <T> TvReorderList(
         dragOffsets.clear()
     }
 
+    val itemKeys = remember(items) { items.map(key) }
+
     SideEffect {
-        val itemKeys = items.map(key)
         val movingChanged = runtime.previousMovingKey != movingKey
         val itemsChanged = runtime.previousItemKeys != itemKeys
         if (itemsChanged && movingKey == null) {
@@ -243,7 +261,7 @@ fun <T> TvReorderList(
         offsetJobs[itemKey]?.cancel()
         val start = dragOffsets[itemKey] ?: 0f
         if (start == 0f) return
-        offsetJobs[itemKey] = scope.launch {
+        val job = scope.launch {
             animate(
                 initialValue = start,
                 targetValue = 0f,
@@ -254,37 +272,54 @@ fun <T> TvReorderList(
                 }
             }
         }
+        offsetJobs[itemKey] = job
+        job.invokeOnCompletion { offsetJobs.remove(itemKey, job) }
     }
 
     fun animateMove(movedKey: String, oldIndex: Int, newIndex: Int) {
-        if (slotStridePx() <= 0f || oldIndex == newIndex) return
+        if (oldIndex == newIndex) return
+        val orderKeys = items.map(key)
+        if (movedKey !in orderKeys) return
+        val clampedOld = oldIndex.coerceIn(0, orderKeys.lastIndex)
+        val clampedNew = newIndex.coerceIn(0, orderKeys.lastIndex)
+        val oldOrderKeys = orderKeys.toMutableList().apply {
+            remove(movedKey)
+            add(clampedOld, movedKey)
+        }
+        val oldTops = slotTopsFor(oldOrderKeys)
+        val newTops = slotTopsFor(orderKeys)
+
         val shiftRange: IntRange
         val slotShift: Int
-        if (newIndex > oldIndex) {
-            shiftRange = (oldIndex + 1)..newIndex
+        if (clampedNew > clampedOld) {
+            shiftRange = (clampedOld + 1)..clampedNew
             slotShift = -1
         } else {
-            shiftRange = newIndex until oldIndex
+            shiftRange = clampedNew until clampedOld
             slotShift = 1
         }
         val shifting = animatedIndices.mapNotNull { (itemKey, slot) ->
             if (itemKey != movedKey && slot in shiftRange) itemKey to slot else null
         }
-        val movedDeltaSlots = newIndex - oldIndex
+        val movedDeltaSlots = clampedNew - clampedOld
         Log.d(
             LIST_TAG,
             "list animateMove key=$movedKey $oldIndex->$newIndex delta=$movedDeltaSlots " +
                 "shifting=${shifting.size}",
         )
 
+        fun visualDelta(itemKey: String, oldSlot: Int, newSlot: Int): Float {
+            return (oldTops[oldSlot] - newTops[newSlot]) + (dragOffsets[itemKey] ?: 0f)
+        }
+
         offsetJobs[movedKey]?.cancel()
         shifting.forEach { (itemKey, _) -> offsetJobs[itemKey]?.cancel() }
 
-        dragOffsets[movedKey] = (dragOffsets[movedKey] ?: 0f) - movedDeltaSlots * slotStridePx()
-        shifting.forEach { (itemKey, _) ->
-            dragOffsets[itemKey] = (dragOffsets[itemKey] ?: 0f) - slotShift * slotStridePx()
+        dragOffsets[movedKey] = visualDelta(movedKey, clampedOld, clampedNew)
+        shifting.forEach { (itemKey, slot) ->
+            dragOffsets[itemKey] = visualDelta(itemKey, slot, slot + slotShift)
         }
-        animatedIndices[movedKey] = newIndex
+        animatedIndices[movedKey] = clampedNew
         shifting.forEach { (itemKey, slot) ->
             animatedIndices[itemKey] = slot + slotShift
         }
@@ -293,9 +328,16 @@ fun <T> TvReorderList(
     }
 
     fun keepNeighborVisible(newIndex: Int, direction: Int) {
-        val stride = slotStridePx()
         val viewport = viewportHeightPx[0]
-        if (stride <= 0f || viewport <= 0f) return
+        if (viewport <= 0f) return
+        val orderKeys = items.map(key)
+        if (orderKeys.isEmpty()) return
+        val clampedIndex = newIndex.coerceIn(0, orderKeys.lastIndex)
+        val tops = slotTopsFor(orderKeys)
+        val movingTop = headerHeightPx[0] + tops[clampedIndex]
+        val movingHeight = heightForItemKey(orderKeys[clampedIndex])
+        val peek = movingHeight
+        if (movingHeight <= 0f) return
         if (newIndex <= 0) {
             runtime.neighborScrollJob?.cancel()
             Log.d(
@@ -308,9 +350,7 @@ fun <T> TvReorderList(
             }
             return
         }
-        val movingTop = headerHeightPx[0] + newIndex * stride
-        val movingBottom = movingTop + rowHeightPx[0]
-        val peek = rowHeightPx[0]
+        val movingBottom = movingTop + movingHeight
         val desiredTop = if (direction < 0) (movingTop - peek).coerceAtLeast(0f) else movingTop
         val desiredBottom = if (direction > 0) movingBottom + peek else movingBottom
         val current = scrollState.value.toFloat()
@@ -564,8 +604,12 @@ fun <T> TvReorderList(
                             }
                             val placeable = subcompose(itemKey, content).first().measure(itemConstraints)
                             placeables[index] = placeable
-                            if (rowHeightPx[0] == 0f && !isMoving && placeable.height > 0) {
-                                rowHeightPx[0] = placeable.height.toFloat()
+                            val measuredHeight = placeable.height.toFloat()
+                            if (measuredRowHeights[itemKey] != measuredHeight) {
+                                measuredRowHeights[itemKey] = measuredHeight
+                            }
+                            if (rowHeightPx[0] == 0f && !isMoving && measuredHeight > 0f) {
+                                rowHeightPx[0] = measuredHeight
                             }
                             return placeable
                         }
@@ -597,9 +641,11 @@ fun <T> TvReorderList(
                         if (extraSlot != null) {
                             measureSlot(extraSlot)
                         }
-                        val stride = sampledRowHeight + rowSpacingPx
+                        val orderKeys = items.map(key)
+                        val slotTops = slotTopsFor(orderKeys)
+                        val lastSlot = orderKeys.lastIndex
                         val totalHeight = (
-                            sampledRowHeight + (items.size - 1) * stride
+                            slotTops[lastSlot] + heightForItemKey(orderKeys[lastSlot])
                             ).roundToInt()
                         val layoutWidth = if (layoutConstraints.hasBoundedWidth) {
                             layoutConstraints.maxWidth
@@ -613,7 +659,7 @@ fun <T> TvReorderList(
                                 val slotIndex = animatedIndices[itemKey] ?: index
                                 placeable.place(
                                     x = 0,
-                                    y = (slotIndex * stride).roundToInt(),
+                                    y = slotTops[slotIndex.coerceIn(0, lastSlot)].roundToInt(),
                                     zIndex = if (itemKey == movingKey) 1f else 0f,
                                 )
                             }
@@ -648,6 +694,20 @@ private class CachedRowContent<T>(
     val isMoving: Boolean,
     val content: @Composable () -> Unit,
 )
+
+internal fun computeSlotTops(
+    slotCount: Int,
+    heightAt: (Int) -> Float,
+    spacingPx: Float,
+): FloatArray {
+    val tops = FloatArray(slotCount)
+    var acc = 0f
+    for (i in 0 until slotCount) {
+        tops[i] = acc
+        acc += heightAt(i).coerceAtLeast(0f) + spacingPx
+    }
+    return tops
+}
 
 internal fun visibleReorderSlotRange(
     slotCount: Int,
