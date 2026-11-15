@@ -4,7 +4,6 @@ package com.nuvio.tv.ui.screens.player.audiosync
 
 import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncPreferences
 import kotlinx.coroutines.flow.combine
 import androidx.media3.common.C
@@ -16,7 +15,6 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.CuesWithTiming
-import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.screens.player.PlayerPlaybackNetworking
 import com.nuvio.tv.ui.screens.player.PlayerRuntimeController
@@ -102,7 +100,6 @@ internal class AudioSyncFallback private constructor(
     private var takeOverJob: Job? = null
     private var settingsJob: Job? = null
     private var candidatesJob: Job? = null
-    private val resultToasts = AudioSyncResultToasts()
     private var pendingStatus: AudioSyncStatus? = null
 
     /** Playback time the current takeover has gone without any mapping. */
@@ -149,7 +146,6 @@ internal class AudioSyncFallback private constructor(
     /** AutoSync started analysing a subtitle: listen meanwhile, so a takeover starts with audio. */
     fun arm() {
         stop()
-        resultToasts.reset()
         if (!AudioSyncSettings.fallbackEnabled.value) return
         controller.enabled = true
         controller.samplingMode = AudioSyncSettings.samplingMode.value
@@ -226,12 +222,7 @@ internal class AudioSyncFallback private constructor(
             }
             val generation = runtime.currentSidecarGenerationFor(url)
             val cues = runtime.sidecarTimedCues
-            if (generation == null || cues.isEmpty()) {
-                if (runtime._uiState.value.selectedAddonSubtitle?.url == url && runtime.currentStreamUrl == sourceUrl) {
-                    reportResult(success = false)
-                }
-                return@launch disarm()
-            }
+            if (generation == null || cues.isEmpty()) return@launch disarm()
             target.set(Target(url, cues, generation))
             appliedModel = null
             unmatchedPlayedMs = 0L
@@ -248,10 +239,7 @@ internal class AudioSyncFallback private constructor(
         val subtitle = runtime._uiState.value.selectedAddonSubtitle?.takeIf { it.url == url }
         val cues = if (subtitle == null) emptyList() else downloadCues(url, subtitle.headers.orEmpty())
         if (!isMpvShowing(url)) return disarm()
-        if (cues.isEmpty()) {
-            reportResult(success = false)
-            return disarm()
-        }
+        if (cues.isEmpty()) return disarm()
         val current = Target(url, cues, generation = 0L)
         target.set(current)
         appliedModel = null
@@ -344,7 +332,6 @@ internal class AudioSyncFallback private constructor(
                         is AudioSyncStatus.Synced, is AudioSyncStatus.Adjusted -> {
                             if (appliedModel != null && appliedModel === controller.currentModel()) {
                                 AutoSyncSyncedSubtitle.mark(current.url)
-                                reportResult(success = true)
                             } else if (controller.currentModel() != null) {
                                 pendingStatus = status
                             }
@@ -352,20 +339,17 @@ internal class AudioSyncFallback private constructor(
                         AudioSyncStatus.Withdrawn, AudioSyncStatus.Failed -> {
                             if (controller.currentModel() == null) {
                                 AutoSyncSyncedSubtitle.clear()
-                                reportResult(success = false)
                             }
                         }
                         else -> Unit
                     }
                 }
-                // Still nothing after a while: say so once, and keep searching quietly. A later
-                // match still shows its success.
+                // Still nothing after a while: log it once, and keep searching.
                 if (current != null && target.get() === current && !unmatchedReported && controller.currentModel() == null) {
                     if (runtime.isPlaybackCurrentlyPlaying()) unmatchedPlayedMs += TICK_MS
                     if (unmatchedPlayedMs >= UNMATCHED_REPORT_MS) {
                         unmatchedReported = true
                         SyncLog.i("no audio match after ${unmatchedPlayedMs / 1_000}s of playback; still searching")
-                        reportResult(success = false)
                     }
                 }
                 delay(TICK_MS)
@@ -490,7 +474,7 @@ internal class AudioSyncFallback private constructor(
         }
     }
 
-    /** Only confirmed results reach the UI; later refinements stay silent. */
+    /** Only confirmed results mark the subtitle as synced; later refinements change nothing. */
     private fun onStatus(status: AudioSyncStatus) {
         if (status !is AudioSyncStatus.Synced && status !is AudioSyncStatus.Adjusted &&
             status != AudioSyncStatus.Withdrawn && status != AudioSyncStatus.Failed) return
@@ -498,15 +482,6 @@ internal class AudioSyncFallback private constructor(
         scope.launch {
             if (target.get() === current) pendingStatus = status
         }
-    }
-
-    private fun reportResult(success: Boolean) {
-        if (!resultToasts.shouldShow(success)) return
-        Toast.makeText(
-            appContext,
-            if (success) R.string.player_audio_sync_success else R.string.player_audio_sync_failed,
-            Toast.LENGTH_SHORT,
-        ).show()
     }
 
     companion object {
