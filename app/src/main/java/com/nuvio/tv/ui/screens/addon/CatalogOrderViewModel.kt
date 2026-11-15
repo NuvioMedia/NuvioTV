@@ -64,6 +64,8 @@ class CatalogOrderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
     val uiState: StateFlow<CatalogOrderUiState> = _uiState.asStateFlow()
     private var persistedDisabledKeys: Set<String> = emptySet()
+    private var lastDiskOrderKeys: List<String> = emptyList()
+    private var failedSaveGeneration = -1
     private var persistedItemsCache: List<CatalogOrderItem> = emptyList()
     private var draftOrderKeys: List<String>? = null
     private var moveBaselineItems: List<CatalogOrderItem>? = null
@@ -140,6 +142,7 @@ class CatalogOrderViewModel @Inject constructor(
         pendingSavedOrderKeys = draft
         pendingSavedOrderKeysAt = SystemClock.elapsedRealtime()
         val sessionBaseline = moveBaselineItems
+        val diskKeysAtConfirm = lastDiskOrderKeys
         draftOrderKeys = null
         moveBaselineItems = null
         Log.d(
@@ -165,6 +168,10 @@ class CatalogOrderViewModel @Inject constructor(
                         layoutPreferenceDataStore.setHomeCatalogOrderKeys(draft)
                         wrote = true
                     }
+                    if (wrote && generation == persistGeneration) {
+                        Log.d(TAG, "confirmMove triggerPush gen=$generation")
+                        homeCatalogSettingsSyncService.triggerPush()
+                    }
                 }
             } catch (ce: CancellationException) {
                 throw ce
@@ -177,12 +184,8 @@ class CatalogOrderViewModel @Inject constructor(
                 "confirmMove writeDone gen=$generation wrote=$wrote writeMs=$writeMs " +
                     "stillCurrent=${generation == persistGeneration} pending=${pendingSavedOrderKeys != null}",
             )
-            if (wrote && generation == persistGeneration) {
-                Log.d(TAG, "confirmMove triggerPush gen=$generation")
-                withContext(NonCancellable) {
-                    homeCatalogSettingsSyncService.triggerPush()
-                }
-            } else if (generation == persistGeneration) {
+            if (!wrote && generation == persistGeneration) {
+                failedSaveGeneration = generation
                 pendingSavedOrderKeys = null
                 val current = _uiState.value
                 if (current.movingKey == null && current.items == confirmedItems) {
@@ -198,13 +201,18 @@ class CatalogOrderViewModel @Inject constructor(
             delay(PENDING_SAVED_ORDER_TIMEOUT_MS + 500)
             val current = _uiState.value
             if (pendingSavedOrderKeys == draft && generation == persistGeneration &&
-                current.movingKey == null && current.items == confirmedItems &&
-                sessionBaseline != null
+                current.movingKey == null && current.items == confirmedItems
             ) {
-                Log.w(TAG, "pending order expired, reverting UI to pre-move order")
                 pendingSavedOrderKeys = null
-                persistedItemsCache = sessionBaseline
-                _uiState.update { it.copy(items = sessionBaseline) }
+                if (failedSaveGeneration == generation &&
+                    lastDiskOrderKeys == diskKeysAtConfirm && sessionBaseline != null
+                ) {
+                    Log.w(TAG, "pending order expired, reverting UI to pre-move order")
+                    persistedItemsCache = sessionBaseline
+                    _uiState.update { it.copy(items = sessionBaseline) }
+                } else {
+                    Log.w(TAG, "pending order expired, keeping current UI order")
+                }
             }
         }
     }
@@ -485,6 +493,7 @@ class CatalogOrderViewModel @Inject constructor(
                 )
                 Triple(items, followAddons, savedOrderKeys)
             }.collectLatest { (orderedItems, followAddons, diskOrderKeys) ->
+                lastDiskOrderKeys = diskOrderKeys
                 var pendingKeys = pendingSavedOrderKeys
                 if (pendingKeys != null && diskOrderKeys != pendingKeys &&
                     SystemClock.elapsedRealtime() - pendingSavedOrderKeysAt >
