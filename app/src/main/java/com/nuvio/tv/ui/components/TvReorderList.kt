@@ -201,14 +201,12 @@ fun <T> TvReorderList(
         val movingChanged = previousMovingKey.value != movingKey
         val itemsChanged = previousItemKeys.value != itemKeys
         if (itemsChanged && movingKey == null) {
+            clearOffsets()
             val nextIndices = indicesFrom(items)
             if (nextIndices != animatedIndices) {
                 Log.d(LIST_TAG, "list syncSlots ${visualSnapshot("itemsReorder")}")
                 animatedIndices.clear()
                 animatedIndices.putAll(nextIndices)
-                offsetJobs.values.forEach { it.cancel() }
-                offsetJobs.clear()
-                dragOffsets.clear()
             }
         }
         if (movingChanged || itemsChanged) {
