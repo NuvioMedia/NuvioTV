@@ -92,6 +92,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import coil3.compose.AsyncImage
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Video
