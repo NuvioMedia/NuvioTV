@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.repository.AddonPlayerAction
+import com.nuvio.tv.data.repository.AddonPlayerEventTarget
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.Player
@@ -916,6 +918,7 @@ internal fun PlayerRuntimeController.handleNaturalPlaybackEnded() {
         return
     }
 
+    emitAddonPlayerEvent(AddonPlayerAction.STOP)
     emitCompletionScrobbleStop(progressPercent = 99.5f)
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = true)
@@ -1068,7 +1071,38 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TrackingMediaReference
     }
 }
 
+internal fun PlayerRuntimeController.emitAddonPlayerEvent(
+    action: AddonPlayerAction,
+    resend: Boolean = false
+) {
+    if (isShortPlaceholderStream()) return
+    val positionMs = currentPlaybackPositionMs() ?: 0L
+    val durationMs = currentPlaybackDurationMs().takeIf { it > 0 } ?: lastKnownDuration
+    val active = activeAddonPlayerEventTarget
+    if (action == AddonPlayerAction.STOP) {
+        if (active == null) return
+        activeAddonPlayerEventTarget = null
+        lastAddonPlayerAction = null
+        addonEventDispatcher.player(active, AddonPlayerAction.STOP, positionMs, durationMs)
+        return
+    }
+    val type = contentType ?: return
+    val videoId = currentVideoId?.takeIf { it.isNotBlank() } ?: contentId ?: return
+    val target = AddonPlayerEventTarget(type = type, videoId = videoId)
+    if (active != null && active != target) {
+        addonEventDispatcher.player(active, AddonPlayerAction.STOP, positionMs, durationMs)
+        activeAddonPlayerEventTarget = null
+        lastAddonPlayerAction = null
+    }
+    if (action == AddonPlayerAction.PAUSE && activeAddonPlayerEventTarget == null) return
+    if (!resend && action == lastAddonPlayerAction && activeAddonPlayerEventTarget == target) return
+    activeAddonPlayerEventTarget = target
+    lastAddonPlayerAction = action
+    addonEventDispatcher.player(target, action, positionMs, durationMs)
+}
+
 internal fun PlayerRuntimeController.emitScrobbleStart() {
+    emitAddonPlayerEvent(AddonPlayerAction.START)
     logScrobbleDiagnostic("start_evaluated")
     if (isShortPlaceholderStream()) {
         logScrobbleDiagnostic("start_skipped", "reason=short_placeholder")
@@ -1201,6 +1235,7 @@ internal fun PlayerRuntimeController.emitCompletionScrobbleStop(progressPercent:
 }
 
 internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
+    emitAddonPlayerEvent(AddonPlayerAction.STOP)
     val progressPercent = currentPlaybackProgressPercent()
     if (!shouldSendStopScrobble(hasRequestedScrobbleStartForCurrentItem, progressPercent)) {
         logScrobbleDiagnostic(
@@ -1217,6 +1252,7 @@ internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
 }
 
 internal fun PlayerRuntimeController.emitPauseScrobbleForCurrentProgress() {
+    emitAddonPlayerEvent(AddonPlayerAction.PAUSE)
     emitScrobblePause(progressPercent = currentPlaybackProgressPercent())
 }
 
@@ -1263,6 +1299,7 @@ internal fun PlayerRuntimeController.scheduleProgressSyncAfterSeek() {
     seekProgressSyncJob = scope.launch {
         delay(seekProgressSyncDebounceMs)
         saveWatchProgress()
+        lastAddonPlayerAction?.let { action -> emitAddonPlayerEvent(action, resend = true) }
 
         val progressPercent = currentPlaybackProgressPercent()
         emitSeekScrobbleRestart(progressPercent = progressPercent)
