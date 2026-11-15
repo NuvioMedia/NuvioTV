@@ -356,7 +356,9 @@ fun <T> TvReorderList(
         val movingHeight = heightForItemKey(orderKeys[clampedIndex])
         val peek = movingHeight
         if (movingHeight <= 0f) return
-        if (newIndex <= 0) {
+        if (newIndex <= 0 &&
+            headerHeightPx[0] + movingHeight * 2f <= viewport
+        ) {
             runtime.neighborScrollJob?.cancel()
             Log.d(
                 LIST_TAG,
