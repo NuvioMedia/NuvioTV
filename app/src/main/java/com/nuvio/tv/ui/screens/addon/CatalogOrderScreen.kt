@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
@@ -34,16 +33,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.TvReorderList
@@ -161,14 +167,7 @@ private fun CatalogOrderHeader(
     )
     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = followAddonsOrder,
-                enabled = movingKey == null,
-                role = Role.Switch,
-                onValueChange = onToggleFollowAddons,
-            ),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -184,15 +183,44 @@ private fun CatalogOrderHeader(
                 color = NuvioTheme.colors.TextSecondary,
             )
         }
-        Switch(
-            checked = followAddonsOrder,
-            onCheckedChange = null,
-            enabled = movingKey == null,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = NuvioTheme.colors.Primary,
-                checkedTrackColor = NuvioTheme.colors.Primary.copy(alpha = 0.5f),
+        Surface(
+            onClick = {
+                if (movingKey == null) {
+                    onToggleFollowAddons(!followAddonsOrder)
+                }
+            },
+            modifier = Modifier.semantics {
+                role = Role.Switch
+                toggleableState = if (followAddonsOrder) ToggleableState.On else ToggleableState.Off
+            },
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Color.Transparent,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground
             ),
-        )
+            border = ClickableSurfaceDefaults.border(
+                focusedBorder = Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                )
+            ),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+        ) {
+            Box(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Switch(
+                    checked = followAddonsOrder,
+                    onCheckedChange = null,
+                    enabled = movingKey == null,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = NuvioTheme.colors.Secondary,
+                        checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
+                    ),
+                )
+            }
+        }
     }
     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
