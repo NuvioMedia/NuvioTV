@@ -39,6 +39,7 @@ type File struct {
 	Index         int
 	order         int    // subject's release order, when provided; Index stays the NZB order.
 	recoveredName string // yEnc name discovered during normal streaming.
+	expected      *subjectOrderedVolume
 	segments      []segment
 	prefix        []int64
 	size          int64

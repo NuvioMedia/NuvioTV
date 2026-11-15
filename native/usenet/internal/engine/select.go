@@ -471,7 +471,17 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				} else if vols, err = obfuscated7zVolumes(ctx, vols); err != nil {
 					return nil, err
 				}
+				from := index
 				c, err := select7z(ctx, vols, s, &index, consider)
+				if errors.Is(err, err7zVolumeOrder) {
+					// A volume read while opening the set disagreed with its subject
+					// position: order the set by every volume's name, as before.
+					index = from
+					if vols, err = obfuscated7zVolumesByName(ctx, unknown[i:]); err != nil {
+						return nil, err
+					}
+					c, err = select7z(ctx, vols, s, &index, consider)
+				}
 				if err == nil && c != nil {
 					return c, nil
 				}
