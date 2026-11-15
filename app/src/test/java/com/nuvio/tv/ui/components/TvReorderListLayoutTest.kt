@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.components
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TvReorderListLayoutTest {
@@ -8,98 +9,8 @@ class TvReorderListLayoutTest {
     private val rowHeight = 100f
     private val spacing = 10f
 
-    @Test
-    fun `empty slot count returns empty range`() {
-        val range = visibleReorderSlotRange(
-            slotCount = 0,
-            rowHeightPx = rowHeight,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 0f,
-            scrollPx = 0,
-        )
-        assertTrue(range.isEmpty())
-    }
-
-    @Test
-    fun `top of list measures only rows covering viewport plus overscan`() {
-        // stride = 110, viewport = 500 -> overscan covers ~9-10 slots around the fold
-        val range = visibleReorderSlotRange(
-            slotCount = 100,
-            rowHeightPx = rowHeight,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 0f,
-            scrollPx = 0,
-        )
-        assertEquals(0, range.first)
-        // bottomEdge = 0 + 500 + 500 = 1000 -> last = 1000/110 = 9
-        assertEquals(9, range.last)
-        assertTrue(range.last < 99)
-    }
-
-    @Test
-    fun `scrolled down does not measure rows above viewport`() {
-        // scrollPx = 5000 -> content offset ~45 slots down; must not start at 0
-        val range = visibleReorderSlotRange(
-            slotCount = 100,
-            rowHeightPx = rowHeight,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 0f,
-            scrollPx = 5000,
-        )
-        assertTrue("first=${range.first} should skip off-screen rows", range.first > 20)
-        assertTrue(range.last <= 99)
-    }
-
-    @Test
-    fun `header height shifts the visible window`() {
-        val withoutHeader = visibleReorderSlotRange(
-            slotCount = 100,
-            rowHeightPx = rowHeight,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 0f,
-            scrollPx = 1000,
-        )
-        val withHeader = visibleReorderSlotRange(
-            slotCount = 100,
-            rowHeightPx = rowHeight,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 300f,
-            scrollPx = 1000,
-        )
-        // header consumes 300px of the scroll content -> window starts earlier in slot space
-        assertTrue(withHeader.first <= withoutHeader.first)
-    }
-
-    @Test
-    fun `range is clamped to slot bounds near the end`() {
-        val range = visibleReorderSlotRange(
-            slotCount = 20,
-            rowHeightPx = rowHeight,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 0f,
-            scrollPx = 100000,
-        )
-        assertEquals(19, range.last)
-        assertTrue(range.first <= range.last)
-    }
-
-    @Test
-    fun `degenerate height falls back to measuring everything once`() {
-        val range = visibleReorderSlotRange(
-            slotCount = 10,
-            rowHeightPx = 0f,
-            rowSpacingPx = spacing,
-            viewportHeightPx = 500f,
-            headerHeightPx = 0f,
-            scrollPx = 0,
-        )
-        assertEquals(0..9, range)
+    private fun uniformTops(count: Int, height: Float = rowHeight, gap: Float = spacing): FloatArray {
+        return computeSlotTops(count, { height }, gap)
     }
 
     @Test
@@ -133,11 +44,50 @@ class TvReorderListLayoutTest {
         assertEquals(0, tops.size)
     }
 
-    private fun assertTrue(condition: Boolean) {
-        org.junit.Assert.assertTrue(condition)
+    @Test
+    fun `empty tops returns empty range`() {
+        val range = visibleSlotRangeFromTops(
+            tops = FloatArray(0),
+            topEdgePx = 0f,
+            bottomEdgePx = 500f,
+        )
+        assertTrue(range.isEmpty())
     }
 
-    private fun assertTrue(message: String, condition: Boolean) {
-        org.junit.Assert.assertTrue(message, condition)
+    @Test
+    fun `tops range at scroll top covers viewport plus overscan`() {
+        // stride 110, tops 0..; window [-500, 1000] -> slots 0..9
+        val tops = uniformTops(100)
+        val range = visibleSlotRangeFromTops(tops, topEdgePx = -500f, bottomEdgePx = 1000f)
+        assertEquals(0, range.first)
+        assertEquals(9, range.last)
+        assertTrue(range.last < 99)
+    }
+
+    @Test
+    fun `tops range skips off-screen rows when scrolled`() {
+        // tops[i] = i*110; window [4500, 5500] -> slots ~41..50
+        val tops = uniformTops(100)
+        val range = visibleSlotRangeFromTops(tops, topEdgePx = 4500f, bottomEdgePx = 5500f)
+        assertTrue("first=${range.first}", range.first in 40..42)
+        assertTrue(range.last in 49..51)
+    }
+
+    @Test
+    fun `tops range follows variable heights not uniform stride`() {
+        // first 40 rows are 200px tall, rest 100px -> cumulative tops diverge from stride math
+        val heights = FloatArray(100) { if (it < 40) 200f else 100f }
+        val tops = computeSlotTops(100, { heights[it] }, 10f)
+        // window around content y = 40*210 = 8400 -> slot ~42; stride-based estimate would say ~76
+        val range = visibleSlotRangeFromTops(tops, topEdgePx = 8400f - 500f, bottomEdgePx = 8400f + 500f)
+        assertTrue("first=${range.first} should be near slot 38", range.first in 36..38)
+    }
+
+    @Test
+    fun `tops range clamps to bounds near end`() {
+        val tops = uniformTops(20)
+        val range = visibleSlotRangeFromTops(tops, topEdgePx = 5000f, bottomEdgePx = 100000f)
+        assertEquals(19, range.last)
+        assertTrue(range.first <= range.last)
     }
 }
