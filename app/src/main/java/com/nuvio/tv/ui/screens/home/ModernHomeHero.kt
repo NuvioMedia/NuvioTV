@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,7 @@ import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.ui.components.AutoScrollingText
 import androidx.compose.ui.res.stringResource
 
 private data class ModernHeroSecondaryMeta(
@@ -303,10 +305,18 @@ internal fun HeroTitleBlock(
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false },
+    descriptionAutoScrollEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val currentPreview = previewProvider()
-    val isEnriching = enrichmentActive()
+    // The providers read hero state that is rewritten on every focus move, often with an equal
+    // value. Deriving the pair recomposes this block only when what it shows actually changes.
+    val latestPreviewProvider = rememberUpdatedState(previewProvider)
+    val latestEnrichmentActive = rememberUpdatedState(enrichmentActive)
+    val displayInputs by remember {
+        derivedStateOf { latestPreviewProvider.value() to latestEnrichmentActive.value() }
+    }
+    val currentPreview = displayInputs.first
+    val isEnriching = displayInputs.second
     
     var stablePreview by remember { mutableStateOf<HeroPreview?>(null) }
 
@@ -333,7 +343,8 @@ internal fun HeroTitleBlock(
             showImdbRatings = showImdbRatings,
             mdbListShowOnHero = mdbListShowOnHero,
             mdbListRatingOrder = mdbListRatingOrder,
-            trailerPlaying = trailerPlaying
+            trailerPlaying = trailerPlaying,
+            descriptionAutoScrollEnabled = descriptionAutoScrollEnabled
         )
     }
 }
@@ -345,7 +356,8 @@ private fun HeroTitleContent(
     showImdbRatings: Boolean,
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
-    trailerPlaying: () -> Boolean = { false }
+    trailerPlaying: () -> Boolean = { false },
+    descriptionAutoScrollEnabled: Boolean = false
 ) {
     val preview = previewProvider() ?: return
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
@@ -373,7 +385,9 @@ private fun HeroTitleContent(
                 .build()
         }
     }
-    val trailerPlayingValue = trailerPlaying()
+    // Same idea as in HeroTitleBlock: only a flip of the result should recompose this content.
+    val latestTrailerPlaying = rememberUpdatedState(trailerPlaying)
+    val trailerPlayingValue by remember { derivedStateOf { latestTrailerPlaying.value() } }
     val metaAlpha by animateFloatAsState(
         targetValue = if (trailerPlayingValue) 0f else 1f,
         animationSpec = tween(durationMillis = 480),
@@ -649,12 +663,13 @@ private fun HeroTitleContent(
         }
 
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
-            Text(
+            AutoScrollingText(
                 text = description,
                 style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
-                overflow = TextOverflow.Ellipsis,
+                autoScrollEnabled = descriptionAutoScrollEnabled,
+                paused = trailerPlaying,
                 modifier = Modifier.graphicsLayer { alpha = metaAlpha }
             )
         }

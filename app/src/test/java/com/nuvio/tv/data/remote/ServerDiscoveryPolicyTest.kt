@@ -37,7 +37,8 @@ class ServerDiscoveryPolicyTest {
                   "publishable_key": "public-key",
                   "capabilities": {
                     "email_password_auth": true,
-                    "tv_login": true
+                    "tv_login": true,
+                    "watch_party": true
                   }
                 }
             """.trimIndent()
@@ -48,6 +49,7 @@ class ServerDiscoveryPolicyTest {
         assertTrue(configuration.isCustom)
         assertTrue(configuration.capabilities.emailPasswordAuth)
         assertTrue(configuration.capabilities.tvLogin)
+        assertTrue(configuration.capabilities.watchParty)
     }
 
     @Test

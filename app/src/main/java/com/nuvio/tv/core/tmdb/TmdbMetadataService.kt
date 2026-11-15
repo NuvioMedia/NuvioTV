@@ -64,6 +64,12 @@ class TmdbMetadataService(
     private val entityRailCache = ConcurrentHashMap<String, List<MetaPreview>>()
     private val entityBrowseCache = ConcurrentHashMap<String, TmdbEntityBrowseData>()
 
+    /** The original title from an enrichment that is already in memory; TMDB is not asked. */
+    fun cachedOriginalTitle(tmdbId: String, contentType: ContentType): String? {
+        val prefix = "$tmdbId:${contentType.name}:"
+        return enrichmentCache.entries.firstOrNull { it.key.startsWith(prefix) }?.value?.originalTitle
+    }
+
     suspend fun fetchEnrichment(
         tmdbId: String,
         contentType: ContentType,

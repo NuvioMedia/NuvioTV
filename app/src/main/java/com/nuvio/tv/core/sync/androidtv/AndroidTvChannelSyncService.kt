@@ -2,12 +2,15 @@ package com.nuvio.tv.core.sync.androidtv
 
 import android.content.Context
 import android.util.Log
+import com.nuvio.tv.core.poster.CustomPosterScreen
+import com.nuvio.tv.core.poster.patternForScreen
+import com.nuvio.tv.core.poster.withCustomPosterArt
+import com.nuvio.tv.core.recommendations.TvRecommendationManager
 import com.nuvio.tv.data.local.CachedInProgressItem
 import com.nuvio.tv.data.local.CachedNextUpItem
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
-import com.nuvio.tv.core.recommendations.TvRecommendationManager
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -116,7 +119,13 @@ class AndroidTvChannelSyncService @Inject constructor(
         val nextUpItems = runCatching { cwEnrichmentCache.getNextUpSnapshot() }
             .getOrDefault(emptyList())
 
+        val posterPattern = patternForScreen(
+            layoutPreferenceDataStore.customPosterUrlPattern.first(),
+            CustomPosterScreen.TV_RECOMMENDATIONS,
+            layoutPreferenceDataStore.customPosterEnabledScreens.first()
+        )
         val channelItems = buildChannelItems(inProgressItems, nextUpItems, resolvedSettings)
+            .withCustomPosterArt(posterPattern)
 
         Log.d(
             TAG,

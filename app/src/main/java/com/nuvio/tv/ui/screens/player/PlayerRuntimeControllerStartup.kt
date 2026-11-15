@@ -17,13 +17,13 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
 
     initialPlaybackStarted = true
 
-    // Persist binge group from navigation args so that subsequent plays
-    // (from CW, Details, or next-episode) can reuse the same source group.
     val bg = navigationArgs.bingeGroup
     val cid = contentId
-    if (cid != null) {
+    if (cid != null && bg != null) {
         scope.launch(kotlinx.coroutines.NonCancellable) {
-            bingeGroupCacheDataStore.replace(cid, bg)
+            val existingFilename = bingeGroupCacheDataStore.getFilename(cid)
+            val existingInfoHash = bingeGroupCacheDataStore.getInfoHash(cid)
+            bingeGroupCacheDataStore.replace(cid, bg, existingFilename, existingInfoHash)
         }
     }
 
@@ -56,6 +56,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 Log.d("PlayerStartup", "Torrent stream ready: $localUrl")
                 currentStreamUrl = localUrl
                 currentHeaders = emptyMap()
+                recordDistinctPluginPlay(
+                    bingeGroup = navigationArgs.bingeGroup,
+                    playbackIdentity = infoHash
+                )
                 preparePlaybackBeforeStart(
                     url = localUrl,
                     headers = emptyMap(),
@@ -83,6 +87,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
         url = currentStreamUrl,
         headers = currentHeaders,
         loadSavedProgress = !navigationArgs.startFromBeginning
+    )
+    recordDistinctPluginPlay(
+        bingeGroup = navigationArgs.bingeGroup,
+        playbackIdentity = navigationArgs.infoHash ?: initialStreamUrl
     )
 }
 

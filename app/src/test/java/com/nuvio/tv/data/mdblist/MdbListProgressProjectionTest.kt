@@ -26,10 +26,10 @@ class MdbListProgressProjectionTest {
 
     @Test
     fun `eighty percent is completed and never projected as paused progress`() {
-        for (percent in listOf(0f, 1.99f, 2f, 79.99f, 80f, 99f, 100f)) {
+        for (percent in listOf(0f, 0.99f, 1f, 79.99f, 80f, 99f, 100f)) {
             val projection = projection(playback = listOf(mdbListTestPlayback(percent)))
             assertEquals(percent < 80f, projection.progress.isNotEmpty())
-            if (percent < 80f) assertEquals(percent >= 2f, projection.progress.single().isInProgress())
+            if (percent < 80f) assertEquals(percent > 0f, projection.progress.single().isInProgress())
         }
         val progress = projection(playback = listOf(mdbListTestPlayback(79f))).progress.single().copy(progressPercent = 80f)
         assertTrue(progress.isCompleted())

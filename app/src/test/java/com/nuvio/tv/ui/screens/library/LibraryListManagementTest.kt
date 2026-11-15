@@ -95,7 +95,7 @@ class LibraryListManagementTest {
     }
 
     @Test
-    fun `MDBList never offers list reordering and defaults to each selected list rank`() = runTest {
+    fun `MDBList never offers list reordering and defaults to each selected list order`() = runTest {
         val f = LibraryViewModelTestFixture()
         val second = f.tab.copy(key = "mdblist:list:8", title = "Other")
         f.tabs.value = listOf(f.tab, second)
@@ -106,9 +106,9 @@ class LibraryListManagementTest {
         )
         f.items.value = listOf(item("First", 1, 2), item("Second", 2, 1))
         runCurrent()
-        assertEquals(listOf("Second", "First"), f.viewModel.uiState.value.visibleItems.map { it.name })
-        f.viewModel.onSelectListTab(second.key)
         assertEquals(listOf("First", "Second"), f.viewModel.uiState.value.visibleItems.map { it.name })
+        f.viewModel.onSelectListTab(second.key)
+        assertEquals(listOf("Second", "First"), f.viewModel.uiState.value.visibleItems.map { it.name })
         f.viewModel.onOpenManageLists()
         f.viewModel.onMoveSelectedListDown()
         runCurrent()

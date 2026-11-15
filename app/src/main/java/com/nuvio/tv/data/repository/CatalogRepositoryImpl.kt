@@ -6,12 +6,16 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.data.mapper.toDomainOrNull
+import com.nuvio.tv.data.mediaserver.ServerCatalog
+import com.nuvio.tv.data.mediaserver.messageRes
+import com.nuvio.tv.data.mediaserver.serverFailure
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -23,7 +27,8 @@ import javax.inject.Singleton
 class CatalogRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: AddonApi,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val serverCatalog: ServerCatalog
 ) : CatalogRepository {
     companion object {
         private const val TAG = "CatalogRepository"
@@ -43,6 +48,19 @@ class CatalogRepositoryImpl @Inject constructor(
         posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
     ): Flow<NetworkResult<CatalogRow>> = flow {
         emit(NetworkResult.Loading)
+
+        if (ServerCatalog.isServerAddon(addonBaseUrl)) {
+            val row = try {
+                serverCatalog.catalog(addonBaseUrl, addonId, addonName, catalogId, catalogName, type, skip, extraArgs)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                emit(NetworkResult.Error(context.getString(error.serverFailure().messageRes())))
+                return@flow
+            }
+            emit(NetworkResult.Success(row))
+            return@flow
+        }
 
         val url = buildCatalogUrl(addonBaseUrl, type, catalogId, skip, extraArgs)
         Log.d(

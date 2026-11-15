@@ -8,11 +8,16 @@ import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.debrid.DebridStreamPresentation
 import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.mapper.toDomain
+import com.nuvio.tv.data.mediaserver.ServerStreamSource
+import com.nuvio.tv.data.mediaserver.ServerStreams
+import com.nuvio.tv.data.mediaserver.messageRes
+import com.nuvio.tv.data.mediaserver.serverFailure
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonStreams
@@ -54,7 +59,8 @@ class StreamRepositoryImpl @Inject constructor(
     private val debridSettingsDataStore: DebridSettingsDataStore,
     private val tmdbService: TmdbService,
     private val debridStreamPresentation: DebridStreamPresentation,
-    private val localDebridAvailabilityService: LocalDebridAvailabilityService
+    private val localDebridAvailabilityService: LocalDebridAvailabilityService,
+    private val serverStreams: ServerStreams
 ) : StreamRepository {
     private val streamSearchSessions = StreamSearchSessionCache()
     private val localPluginSearchPaused = MutableStateFlow(false)
@@ -89,25 +95,22 @@ class StreamRepositoryImpl @Inject constructor(
         videoId: String,
         season: Int?,
         episode: Int?,
-        forceRefresh: Boolean
+        forceRefresh: Boolean,
+        priorityBingeGroup: String?,
+        preferredPluginOnly: Boolean,
+        continuePluginOnly: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         val sourceConfiguration = captureSourceConfiguration()
-        val requestKey = StreamSearchRequestKey(
-            profileId = sourceConfiguration.profileId,
-            type = type.lowercase(),
-            videoId = videoId,
-            season = season,
-            episode = episode,
-            sourceConfiguration = buildSourceConfigurationKey(
-                addons = sourceConfiguration.addons,
-                pluginsEnabled = sourceConfiguration.pluginsEnabled,
-                enabledScrapers = sourceConfiguration.enabledScrapers,
-                groupPluginsByRepository = sourceConfiguration.groupPluginsByRepository,
-                pluginRepositories = sourceConfiguration.pluginRepositories,
-                debridPresentationConfiguration = sourceConfiguration.debridSettings
-                    .withoutRawCredentials()
-                    .toString()
-            )
+        val isNativeServerRequest = serverStreams.isNativeRequest(videoId)
+        val requestKey = buildStreamSearchRequestKey(
+            sourceConfiguration,
+            type,
+            videoId,
+            season,
+            episode,
+            preferredPluginOnly,
+            continuePluginOnly,
+            priorityBingeGroup
         )
 
         emitAll(
@@ -120,14 +123,73 @@ class StreamRepositoryImpl @Inject constructor(
                     videoId = videoId,
                     season = season,
                     episode = episode,
-                    addons = sourceConfiguration.addons,
+                    addons = if (isNativeServerRequest) emptyList() else sourceConfiguration.addons,
                     debridSettings = sourceConfiguration.debridSettings,
-                    hasCompatiblePlugins = sourceConfiguration.pluginsEnabled &&
-                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) }
+                    hasCompatiblePlugins = !isNativeServerRequest &&
+                        sourceConfiguration.pluginsEnabled &&
+                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) },
+                    serverSources = if (continuePluginOnly) {
+                        emptyList()
+                    } else {
+                        serverStreams.sources(type, videoId, season, episode, forceRefresh)
+                    },
+                    priorityBingeGroup = priorityBingeGroup,
+                    preferredPluginOnly = preferredPluginOnly,
+                    continuePluginOnly = continuePluginOnly
                 )
             }
         )
     }
+
+    override suspend fun getCachedStreamsFromAllAddons(
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?
+    ): List<AddonStreams>? = streamSearchSessions.peek(
+        buildStreamSearchRequestKey(captureSourceConfiguration(), type, videoId, season, episode)
+    )
+
+    private fun buildStreamSearchRequestKey(
+        sourceConfiguration: StreamSourceConfigurationSnapshot,
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?,
+        preferredPluginOnly: Boolean = false,
+        continuePluginOnly: Boolean = false,
+        priorityBingeGroup: String? = null
+    ): StreamSearchRequestKey = StreamSearchRequestKey(
+        profileId = sourceConfiguration.profileId,
+        type = type.lowercase(),
+        videoId = videoId,
+        season = season,
+        episode = episode,
+        sourceConfiguration = buildSourceConfigurationKey(
+            addons = sourceConfiguration.addons,
+            pluginsEnabled = sourceConfiguration.pluginsEnabled,
+            enabledScrapers = sourceConfiguration.enabledScrapers,
+            groupPluginsByRepository = sourceConfiguration.groupPluginsByRepository,
+            pluginRepositories = sourceConfiguration.pluginRepositories,
+            debridPresentationConfiguration = sourceConfiguration.debridSettings
+                .withoutRawCredentials()
+                .toString(),
+            serverRevision = serverStreams.revision
+        ),
+        searchMode = when {
+            continuePluginOnly -> "continuePluginOnly"
+            preferredPluginOnly -> "preferredPluginOnly"
+            else -> ""
+        },
+        // A full search returns every source; the priority only changes which scraper
+        // starts first. Keying on it would make the player's source list search again
+        // instead of reusing the stream screen's results.
+        priorityBingeGroup = if (continuePluginOnly || preferredPluginOnly) {
+            priorityBingeGroup?.trim().orEmpty()
+        } else {
+            ""
+        }
+    )
 
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
         while (true) {
@@ -161,17 +223,26 @@ class StreamRepositoryImpl @Inject constructor(
         episode: Int?,
         addons: List<Addon>,
         debridSettings: DebridSettings,
-        hasCompatiblePlugins: Boolean
+        hasCompatiblePlugins: Boolean,
+        serverSources: List<ServerStreamSource>,
+        priorityBingeGroup: String?,
+        preferredPluginOnly: Boolean,
+        continuePluginOnly: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         emit(NetworkResult.Loading)
 
         try {
-            // Filter addons that support streams for this type and id
-            val streamAddons = addons.filter { addon ->
-                addon.supportsStreamResource(type, videoId)
+            // A series started from a plugin keeps the next episode on that plugin.
+            // Addon and server results are what the prefetch was selecting instead.
+            val streamAddons = if (continuePluginOnly) {
+                emptyList()
+            } else {
+                addons.filter { addon ->
+                    addon.supportsStreamResource(type, videoId)
+                }
             }
 
-            val attemptedAddonNames = streamAddons.map { it.displayName }
+            val attemptedAddonNames = streamAddons.map { it.displayName } + serverSources.map { it.name }
             val attemptedFailures = java.util.Collections.synchronizedList(
                 mutableListOf<StreamAttemptFailure>()
             )
@@ -184,7 +255,7 @@ class StreamRepositoryImpl @Inject constructor(
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
                 
                 // Track number of pending jobs
-                val totalJobs = streamAddons.size + 1
+                val totalJobs = streamAddons.size + 1 + serverSources.size
                 val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
 
                 // Launch addon jobs
@@ -245,6 +316,34 @@ class StreamRepositoryImpl @Inject constructor(
                     }
                 }
 
+                serverSources.forEach { source ->
+                    launch {
+                        try {
+                            val streams = source.load()
+                            if (streams.isNotEmpty()) {
+                                resultChannel.send(AddonStreams(addonName = source.name, addonLogo = null, streams = streams))
+                            } else {
+                                attemptedFailures += StreamAttemptFailure(
+                                    addonName = source.name,
+                                    kind = StreamFailureKind.MISSING,
+                                    detail = context.getString(R.string.stream_error_detail_no_streams_for_id)
+                                )
+                            }
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            attemptedFailures += StreamAttemptFailure(
+                                addonName = source.name,
+                                kind = StreamFailureKind.REQUEST_FAILED,
+                                detail = context.getString(e.serverFailure().messageRes())
+                            )
+                        } finally {
+                            if (completedJobs.incrementAndGet() >= totalJobs) {
+                                resultChannel.close()
+                            }
+                        }
+                    }
+                }
+
                 launch {
                     try {
                         if (!hasCompatiblePlugins) return@launch
@@ -258,21 +357,32 @@ class StreamRepositoryImpl @Inject constructor(
                             season = season,
                             episode = episode
                         )
-                        localPluginSearchPaused
-                            .transformLatest { paused ->
-                                if (!paused) {
-                                    streamLocalPlugins(
-                                        pluginId = pluginRequest.id,
-                                        mediaType = pluginRequest.mediaType,
-                                        pluginSource = pluginRequest.source,
-                                        season = pluginSeason,
-                                        episode = pluginEpisode,
-                                        resultChannel = resultChannel
-                                    )
-                                    emit(Unit)
+                        val runPlugins: suspend () -> Unit = {
+                            streamLocalPlugins(
+                                pluginId = pluginRequest.id,
+                                mediaType = pluginRequest.mediaType,
+                                pluginSource = pluginRequest.source,
+                                season = pluginSeason,
+                                episode = pluginEpisode,
+                                priorityBingeGroup = priorityBingeGroup,
+                                preferredPluginOnly = preferredPluginOnly,
+                                resultChannel = resultChannel
+                            )
+                        }
+                        if (continuePluginOnly) {
+                            // Playback pause and closing the episode list suspend ordinary
+                            // plugin work. The next-episode scraper has to keep running.
+                            runPlugins()
+                        } else {
+                            localPluginSearchPaused
+                                .transformLatest { paused ->
+                                    if (!paused) {
+                                        runPlugins()
+                                        emit(Unit)
+                                    }
                                 }
-                            }
-                            .first()
+                                .first()
+                        }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         Log.e(TAG, "Plugin execution failed: ${e.message}")
@@ -320,7 +430,8 @@ class StreamRepositoryImpl @Inject constructor(
         enabledScrapers: List<ScraperInfo>,
         groupPluginsByRepository: Boolean,
         pluginRepositories: List<PluginRepository>,
-        debridPresentationConfiguration: String
+        debridPresentationConfiguration: String,
+        serverRevision: Int
     ): String = buildString {
         append("addons:")
         addons.forEach { addon ->
@@ -337,6 +448,7 @@ class StreamRepositoryImpl @Inject constructor(
             }
         }
         append("|debrid:").append(debridPresentationConfiguration)
+        append("|servers:").append(serverRevision)
     }.sha256()
 
     private fun DebridSettings.withoutRawCredentials(): DebridSettings = copy(
@@ -441,6 +553,8 @@ class StreamRepositoryImpl @Inject constructor(
         pluginSource: String,
         season: Int?,
         episode: Int?,
+        priorityBingeGroup: String?,
+        preferredPluginOnly: Boolean,
         resultChannel: Channel<AddonStreams>
     ) {
         // Check if plugins are enabled
@@ -464,7 +578,9 @@ class StreamRepositoryImpl @Inject constructor(
                 tmdbId = pluginId,
                 mediaType = mediaType,
                 season = season,
-                episode = episode
+                episode = episode,
+                priorityBingeGroup = priorityBingeGroup,
+                preferredPluginOnly = preferredPluginOnly
             ).collect { (scraper, results) ->
                 if (results.isNotEmpty()) {
                     val addonName = scraper.pluginAddonName(groupByRepository, repositoriesById)
@@ -509,16 +625,17 @@ class StreamRepositoryImpl @Inject constructor(
             title = displayTitle,
             url = url,
             addonName = addonName,
+            pluginSourceName = scraper.name,
             addonLogo = null,
             description = buildDescription(this),
-            behaviorHints = headers?.let { headers ->
-                StreamBehaviorHints(
-                    notWebReady = null,
-                    bingeGroup = null,
-                    countryWhitelist = null,
-                    proxyHeaders = ProxyHeaders(request = headers, response = null)
-                )
-            },
+            behaviorHints = StreamBehaviorHints(
+                notWebReady = null,
+                bingeGroup = pluginBingeGroup(scraperId = scraper.id, url = url, name = name, title = title, language = language, quality = quality),
+                countryWhitelist = null,
+                proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
+                audioDelayMs = audioDelayMs,
+                audioDelayLanguage = audioDelayLanguage
+            ),
             infoHash = infoHash,
             fileIdx = null,
             ytId = null,
@@ -535,6 +652,7 @@ class StreamRepositoryImpl @Inject constructor(
             ?: url
             ?: externalUrl
             ?: ytId
+            ?: serverTarget?.key()
             ?: "${addonName}:${name}:${title}"
         val nameSuffix = if (base == url) {
             val discriminator = name?.takeIf { it.isNotBlank() }

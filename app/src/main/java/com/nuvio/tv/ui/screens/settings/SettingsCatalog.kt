@@ -11,6 +11,7 @@ internal enum class SettingsRailGroup {
 internal enum class SettingsCategory(val group: SettingsRailGroup) {
     ACCOUNT(SettingsRailGroup.YOU),
     PROFILES(SettingsRailGroup.YOU),
+    WATCH_PARTY(SettingsRailGroup.YOU),
     APPEARANCE(SettingsRailGroup.LOOK),
     LAYOUT(SettingsRailGroup.LOOK),
     CONTENT_DISCOVERY(SettingsRailGroup.WATCH),
@@ -26,11 +27,13 @@ internal enum class SettingsCategory(val group: SettingsRailGroup) {
 internal fun visibleSettingsCategories(
     isPrimaryProfile: Boolean,
     isEssentialMode: Boolean,
-    isDebugBuild: Boolean
+    isDebugBuild: Boolean,
+    isWatchPartyAvailable: Boolean = false
 ): List<SettingsCategory> = SettingsCategory.entries.filter { category ->
     when (category) {
         SettingsCategory.ACCOUNT,
         SettingsCategory.PROFILES -> isPrimaryProfile
+        SettingsCategory.WATCH_PARTY -> isWatchPartyAvailable
         SettingsCategory.DEBUG -> isDebugBuild && !isEssentialMode
         SettingsCategory.EXPERIENCE -> false
         else -> true

@@ -72,6 +72,8 @@ class TraktSettingsDataStore @Inject constructor(
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
     private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
+    private val rememberedWatchProgressSourceKey = stringPreferencesKey("remembered_watch_progress_source")
+    private val rememberedLibrarySourceModeKey = stringPreferencesKey("remembered_library_source_mode")
     private val moreLikeThisSourceKey = stringPreferencesKey("more_like_this_source")
     private val simklAnimeIdPreferenceKey = stringPreferencesKey("simkl_anime_id_preference")
 
@@ -206,6 +208,30 @@ class TraktSettingsDataStore @Inject constructor(
     ) {
         store(profileId).edit { prefs ->
             prefs[librarySourceModeKey] = mode.name
+        }
+    }
+
+    suspend fun getRememberedWatchProgressSource(profileId: Int): WatchProgressSource? {
+        val stored = store(profileId).data.first()[rememberedWatchProgressSourceKey]
+        return WatchProgressSource.entries.firstOrNull { it.name == stored }
+    }
+
+    suspend fun setRememberedWatchProgressSource(source: WatchProgressSource?, profileId: Int) {
+        store(profileId).edit { prefs ->
+            if (source == null) prefs.remove(rememberedWatchProgressSourceKey)
+            else prefs[rememberedWatchProgressSourceKey] = source.name
+        }
+    }
+
+    suspend fun getRememberedLibrarySourceMode(profileId: Int): LibrarySourceMode? {
+        val stored = store(profileId).data.first()[rememberedLibrarySourceModeKey]
+        return LibrarySourceMode.entries.firstOrNull { it.name == stored }
+    }
+
+    suspend fun setRememberedLibrarySourceMode(mode: LibrarySourceMode?, profileId: Int) {
+        store(profileId).edit { prefs ->
+            if (mode == null) prefs.remove(rememberedLibrarySourceModeKey)
+            else prefs[rememberedLibrarySourceModeKey] = mode.name
         }
     }
 

@@ -133,7 +133,8 @@ data class MdbListSyncSnapshot(
     val checkedAtEpochMs: Long? = null,
     val isInitialized: Boolean = false,
     val invalidatedBuckets: Set<MdbListSyncBucket> = emptySet(),
-    val library: MdbListLibrarySnapshot? = null
+    val library: MdbListLibrarySnapshot? = null,
+    val storageRevision: String? = null
 )
 
 @Serializable

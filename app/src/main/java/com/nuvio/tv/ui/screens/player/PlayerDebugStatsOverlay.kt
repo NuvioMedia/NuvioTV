@@ -179,6 +179,7 @@ private class DebugStatsSampler(context: Context) {
     private var cpuSamples = 0
     private var faultTotal = 0.0
     private var faultSamples = 0
+    private var headroomMisses = 0
 
     fun sample(snapshot: PlayerSnapshot?): List<DebugStat> = buildList {
         val proc = readProcTimes()
@@ -342,7 +343,12 @@ private class DebugStatsSampler(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return listOf(DebugStat("thermal", UNAVAILABLE))
         }
-        val headroom = runCatching { pm.getThermalHeadroom(0) }.getOrDefault(Float.NaN)
+        val headroom = if (headroomMisses >= MAX_HEADROOM_MISSES) {
+            Float.NaN
+        } else {
+            runCatching { pm.getThermalHeadroom(0) }.getOrDefault(Float.NaN)
+        }
+        headroomMisses = if (headroom.isNaN()) headroomMisses + 1 else 0
         val status = runCatching { pm.currentThermalStatus }.getOrDefault(PowerManager.THERMAL_STATUS_NONE)
         val headroomStat = DebugStat(
             label = "thermal",
@@ -367,6 +373,7 @@ private class DebugStatsSampler(context: Context) {
 
     private companion object {
         const val MB = 1024L * 1024L
+        const val MAX_HEADROOM_MISSES = 3
 
         // A row carrying this is one the device will never fill in, so it is dropped rather than
         // taking a line; the warmup placeholder is left alone so no row appears a second later.

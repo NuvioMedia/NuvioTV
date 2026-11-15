@@ -17,6 +17,7 @@ import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.WatchedItem
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.domain.model.supportsExtra
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -129,10 +130,11 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeInstalledAddonsPipeline() {
     viewModelScope.launch {
-        addonRepository.getInstalledAddons()
+        combine(addonRepository.getInstalledAddons(), serverCatalog.addons) { installed, servers ->
+            installed.enabledAddons() + servers
+        }
             .distinctUntilChanged()
-            .collectLatest { installedAddons ->
-                val addons = installedAddons.enabledAddons()
+            .collectLatest { addons ->
                 addonsCache = addons
                 loadAllCatalogsPipeline(addons)
             }
@@ -197,7 +199,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     try {
         if (addons.isEmpty()) {
             catalogsLoadInProgress = false
-            _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_addons)) }
+            _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_empty_no_sources_title)) }
             return
         }
 
@@ -954,10 +956,11 @@ internal fun HomeViewModel.schedulePosterStatusReconcilePipeline(rows: List<Cata
 }
 
 internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<CatalogRow>) {
+    // Movies and every other one-video type (an add-on's "youtube", say) are watched as a whole.
     val allMovieItemsByKey = linkedMapOf<String, String>()
     rows.asSequence()
         .flatMap { row -> row.items.asSequence() }
-        .filter { it.apiType.equals("movie", ignoreCase = true) }
+        .filterNot { isSeriesLikeType(it.apiType) }
         .forEach { item ->
             val key = homeItemStatusKey(item.id, item.apiType)
             if (key !in allMovieItemsByKey) {

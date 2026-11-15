@@ -31,6 +31,7 @@ import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.screens.home.GridItem
@@ -57,6 +58,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -73,6 +75,8 @@ data class FolderDetailUiState(
     val showFullReleaseDate: Boolean = true,
     val modernLandscapePostersEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
+    val alwaysShowLandscapeClearlogo: Boolean = false,
+    val heroDescriptionAutoScrollEnabled: Boolean = false,
     val focusedPosterBackdropExpandEnabled: Boolean = false,
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
@@ -107,6 +111,8 @@ data class FolderDetailGridFocusState(
     val focusedItemKey: String? = null,
     val hasSavedFocus: Boolean = false
 )
+
+private const val TRAILER_PREVIEW_DEBOUNCE_MS = 180L
 
 @HiltViewModel
 class FolderDetailViewModel @Inject constructor(
@@ -153,6 +159,7 @@ class FolderDetailViewModel @Inject constructor(
     private val modernCarouselRowBuildCache = ModernCarouselRowBuildCache()
     private var activeTrailerPreviewItemId: String? = null
     private var trailerPreviewRequestVersion: Long = 0L
+    private var trailerPreviewJob: Job? = null
 
     /** Items for which enrichment was attempted but produced no enriched data. */
     private val _failedEnrichmentIds = MutableStateFlow<Set<String>>(emptySet())
@@ -205,9 +212,8 @@ class FolderDetailViewModel @Inject constructor(
                 allItems.forEach { item ->
                     val key = com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
                     val isWatched = when (item.apiType) {
-                        "movie" -> item.id in movieWatchedIds
                         "series", "tv" -> item.id in seriesWatchedIds
-                        else -> false
+                        else -> !isSeriesLikeType(item.apiType) && item.id in movieWatchedIds
                     }
                     newStatus[key] = isWatched
                 }
@@ -254,6 +260,8 @@ class FolderDetailViewModel @Inject constructor(
             val showFullReleaseDate = layoutPreferenceDataStore.showFullReleaseDate.first()
             val modernLandscapePosters = layoutPreferenceDataStore.modernLandscapePostersEnabled.first()
             val modernFullScreenBackdrop = layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled.first()
+            val alwaysShowLandscapeClearlogo = layoutPreferenceDataStore.alwaysShowLandscapeClearlogo.first()
+            val heroDescriptionAutoScrollEnabled = layoutPreferenceDataStore.heroDescriptionAutoScrollEnabled.first()
             val focusedPosterBackdropExpandEnabled = layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled.first()
             val focusedPosterBackdropExpandDelaySeconds = layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.first()
             val focusedPosterBackdropTrailerEnabled = layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled.first()
@@ -353,6 +361,8 @@ class FolderDetailViewModel @Inject constructor(
                     showFullReleaseDate = showFullReleaseDate,
                     modernLandscapePostersEnabled = modernLandscapePosters,
                     modernHeroFullScreenBackdropEnabled = modernFullScreenBackdrop,
+                    alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
+                    heroDescriptionAutoScrollEnabled = heroDescriptionAutoScrollEnabled,
                     focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
                     focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
                     focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled &&
@@ -565,6 +575,8 @@ class FolderDetailViewModel @Inject constructor(
                         posterLabelsEnabled = if (s.homeLayout == HomeLayout.MODERN) false else s.posterLabelsEnabled,
                         modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
                         modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
+                        alwaysShowLandscapeClearlogo = s.alwaysShowLandscapeClearlogo,
+                        heroDescriptionAutoScrollEnabled = s.heroDescriptionAutoScrollEnabled,
                         catalogAddonNameEnabled = s.catalogAddonNameEnabled,
                         catalogTypeSuffixEnabled = s.catalogTypeSuffixEnabled,
                         focusedPosterBackdropExpandEnabled = s.focusedPosterBackdropExpandEnabled,
@@ -601,6 +613,8 @@ class FolderDetailViewModel @Inject constructor(
                     posterLabelsEnabled = s.posterLabelsEnabled,
                     modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
                     modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
+                    alwaysShowLandscapeClearlogo = s.alwaysShowLandscapeClearlogo,
+                    heroDescriptionAutoScrollEnabled = s.heroDescriptionAutoScrollEnabled,
                     catalogAddonNameEnabled = s.catalogAddonNameEnabled,
                     catalogTypeSuffixEnabled = s.catalogTypeSuffixEnabled,
                     focusedPosterBackdropExpandEnabled = s.focusedPosterBackdropExpandEnabled,
@@ -693,7 +707,7 @@ class FolderDetailViewModel @Inject constructor(
                                     val enriched = _uiState.value.tabs
                                         .firstNotNullOfOrNull { tab -> tab.catalogRow?.items?.firstOrNull { it.id == item.id } }
                                     if (enriched != null) {
-                                        _enrichedPreviews.update { it + (item.id to enriched) }
+                                        publishEnrichedPreview(item.id, enriched)
                                     }
                                 }
                             } else {
@@ -1233,7 +1247,7 @@ class FolderDetailViewModel @Inject constructor(
                 val enrichedItem = _uiState.value.tabs
                     .firstNotNullOfOrNull { tab -> tab.catalogRow?.items?.firstOrNull { it.id == item.id } }
                 if (enrichedItem != null) {
-                    _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                    publishEnrichedPreview(item.id, enrichedItem)
                 }
             }
             return
@@ -1421,7 +1435,7 @@ class FolderDetailViewModel @Inject constructor(
                     tab.catalogRow?.items?.firstOrNull { it.id == item.id }
                 }
             if (enrichedItem != null) {
-                _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                publishEnrichedPreview(item.id, enrichedItem)
             }
             enrichedItemIds.add(item.id)
             rebuildFollowLayoutState()
@@ -1445,57 +1459,93 @@ class FolderDetailViewModel @Inject constructor(
         if (!trailerPreviewLoadingIds.add(itemId)) return
 
         val requestVersion = trailerPreviewRequestVersion
-        viewModelScope.launch {
-            val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
-            val trailerSource = trailerService.getTrailerPlaybackSource(
-                title = title,
-                year = extractYear(releaseInfo),
-                tmdbId = tmdbId,
-                type = apiType
-            )
+        // Only the focused item's lookup is kept. Scrolling through a row used to start a
+        // full YouTube extraction for every poster it passed, all running at once.
+        trailerPreviewJob?.cancel()
+        trailerPreviewJob = viewModelScope.launch {
+            try {
+                // Wait for focus to settle before hitting the network, as the home screen does.
+                delay(TRAILER_PREVIEW_DEBOUNCE_MS)
+                if (trailerPreviewRequestVersion != requestVersion) return@launch
 
-            val isLatestFocusedItem =
-                activeTrailerPreviewItemId == itemId && trailerPreviewRequestVersion == requestVersion
-            if (!isLatestFocusedItem) {
-                trailerPreviewLoadingIds.remove(itemId)
-                return@launch
-            }
-
-            // Prefer the localized YT id provided by the caller (typically TMDB
-            // enrichment trailers in the user locale) when the direct TMDB videos
-            // lookup didn't find anything for this language and we'd otherwise
-            // fall through to TMDB's en-US fallback.
-            val resolvedSource = if (trailerSource?.videoUrl.isNullOrBlank() && !fallbackYtId.isNullOrBlank()) {
-                trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
-                    youtubeUrl = "https://www.youtube.com/watch?v=$fallbackYtId",
+                val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
+                val trailerSource = trailerService.getTrailerPlaybackSource(
                     title = title,
-                    year = extractYear(releaseInfo)
+                    year = extractYear(releaseInfo),
+                    tmdbId = tmdbId,
+                    type = apiType
                 )
-            } else {
-                trailerSource
-            }
 
-            if (resolvedSource?.videoUrl.isNullOrBlank()) {
-                trailerPreviewNegativeCache.add(itemId)
-                _trailerPreviewUrls.update { it - itemId }
-                _trailerPreviewAudioUrls.update { it - itemId }
-            } else {
-                _trailerPreviewUrls.update { it + (itemId to resolvedSource.videoUrl) }
-                val audioUrl = resolvedSource.audioUrl
-                if (audioUrl.isNullOrBlank()) {
+                val isLatestFocusedItem =
+                    activeTrailerPreviewItemId == itemId && trailerPreviewRequestVersion == requestVersion
+                if (!isLatestFocusedItem) return@launch
+
+                // Prefer the localized YT id provided by the caller (typically TMDB
+                // enrichment trailers in the user locale) when the direct TMDB videos
+                // lookup didn't find anything for this language and we'd otherwise
+                // fall through to TMDB's en-US fallback.
+                val resolvedSource = if (trailerSource?.videoUrl.isNullOrBlank() && !fallbackYtId.isNullOrBlank()) {
+                    trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
+                        youtubeUrl = "https://www.youtube.com/watch?v=$fallbackYtId",
+                        title = title,
+                        year = extractYear(releaseInfo)
+                    )
+                } else {
+                    trailerSource
+                }
+
+                if (resolvedSource?.videoUrl.isNullOrBlank()) {
+                    // While YouTube is rate limiting, a miss isn't remembered, so the
+                    // trailer comes back on a later focus once the pause is over.
+                    if (!trailerService.isRateLimited()) {
+                        trailerPreviewNegativeCache.add(itemId)
+                    }
+                    _trailerPreviewUrls.update { it - itemId }
                     _trailerPreviewAudioUrls.update { it - itemId }
                 } else {
-                    _trailerPreviewAudioUrls.update { it + (itemId to audioUrl) }
+                    _trailerPreviewUrls.update { it + (itemId to resolvedSource.videoUrl) }
+                    val audioUrl = resolvedSource.audioUrl
+                    if (audioUrl.isNullOrBlank()) {
+                        _trailerPreviewAudioUrls.update { it - itemId }
+                    } else {
+                        _trailerPreviewAudioUrls.update { it + (itemId to audioUrl) }
+                    }
                 }
+            } finally {
+                trailerPreviewLoadingIds.remove(itemId)
             }
-
-            trailerPreviewLoadingIds.remove(itemId)
         }
     }
 
     private fun extractYear(releaseInfo: String?): String? {
         if (releaseInfo.isNullOrBlank()) return null
         return Regex("\\b(19|20)\\d{2}\\b").find(releaseInfo)?.value
+    }
+
+    private fun publishEnrichedPreview(itemId: String, item: MetaPreview) {
+        val withRatings = if (item.mdbListRatings == null) {
+            val existingRatings = _enrichedPreviews.value[itemId]?.mdbListRatings
+            val tabsRatings = if (existingRatings == null) {
+                _uiState.value.tabs
+                    .firstNotNullOfOrNull { tab -> tab.catalogRow?.items?.firstOrNull { it.id == itemId } }
+                    ?.mdbListRatings
+            } else null
+            val ratings = existingRatings ?: tabsRatings
+            if (ratings != null) {
+                val order = _enrichedPreviews.value[itemId]?.mdbListRatingOrder
+                    ?: _uiState.value.tabs
+                        .firstNotNullOfOrNull { tab -> tab.catalogRow?.items?.firstOrNull { it.id == itemId } }
+                        ?.mdbListRatingOrder
+                    ?: currentMdbListSettings?.enabledRatingOrder()
+                    ?: com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
+                item.copy(
+                    mdbListRatings = ratings,
+                    mdbListRatingOrder = order,
+                    imdbRating = ratings.imdb?.toFloat() ?: item.imdbRating
+                )
+            } else item
+        } else item
+        _enrichedPreviews.update { it + (itemId to withRatings) }
     }
 
     private fun updateItemInTabs(itemId: String, transform: (MetaPreview) -> MetaPreview) {
@@ -1598,7 +1648,7 @@ class FolderDetailViewModel @Inject constructor(
                                         tab.catalogRow?.items?.firstOrNull { it.id == item.id }
                                     }
                                 if (enrichedItem != null) {
-                                    _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                                    publishEnrichedPreview(item.id, enrichedItem)
                                 }
                                 rebuildFollowLayoutState()
                             }
@@ -1627,14 +1677,14 @@ class FolderDetailViewModel @Inject constructor(
                         val enrichedItem = _uiState.value.tabs
                             .firstNotNullOfOrNull { tab -> tab.catalogRow?.items?.firstOrNull { it.id == item.id } }
                         if (enrichedItem != null) {
-                            _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                            publishEnrichedPreview(item.id, enrichedItem)
                         }
                     } else if (result is com.nuvio.tv.core.network.NetworkResult.Error && result.code == com.nuvio.tv.core.network.NetworkResult.SOURCE_SUFFICIENT_CODE) {
                         enrichedItemIds.add(item.id)
                         val enrichedItem = _uiState.value.tabs
                             .firstNotNullOfOrNull { tab -> tab.catalogRow?.items?.firstOrNull { it.id == item.id } }
                         if (enrichedItem != null) {
-                            _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                            publishEnrichedPreview(item.id, enrichedItem)
                         }
                     }
                 }
@@ -1658,7 +1708,7 @@ class FolderDetailViewModel @Inject constructor(
                                 tab.catalogRow?.items?.firstOrNull { it.id == item.id }
                             }
                         if (enrichedItem != null) {
-                            _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                            publishEnrichedPreview(item.id, enrichedItem)
                         }
                         enrichedItemIds.add(item.id)
                         rebuildFollowLayoutState()

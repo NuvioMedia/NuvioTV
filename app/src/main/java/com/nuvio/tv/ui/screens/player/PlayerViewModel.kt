@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.repository.AddonEventDispatcher
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import com.nuvio.tv.core.debrid.DirectDebridStreamPreparer
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
+import com.nuvio.tv.core.party.PartyMedia
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
@@ -58,6 +60,7 @@ class PlayerViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val parentalGuideRepository: ParentalGuideRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
+    private val addonEventDispatcher: AddonEventDispatcher,
     private val traktEpisodeMappingService: TraktEpisodeMappingService,
     private val skipIntroRepository: SkipIntroRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -97,6 +100,9 @@ class PlayerViewModel @Inject constructor(
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
+    private val serverPlayback: com.nuvio.tv.data.mediaserver.ServerPlayback,
+    private val serverStreams: com.nuvio.tv.data.mediaserver.ServerStreams,
+    partyRepository: com.nuvio.tv.core.party.PartyRepository,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -117,6 +123,7 @@ class PlayerViewModel @Inject constructor(
         subtitleRepository = subtitleRepository,
         parentalGuideRepository = parentalGuideRepository,
         trackingScrobbleCoordinator = trackingScrobbleCoordinator,
+        addonEventDispatcher = addonEventDispatcher,
         traktEpisodeMappingService = traktEpisodeMappingService,
         skipIntroRepository = skipIntroRepository,
         playerSettingsDataStore = playerSettingsDataStore,
@@ -143,11 +150,38 @@ class PlayerViewModel @Inject constructor(
         streamBadgePresentation = streamBadgePresentation,
         playbackIssueReportRepository = playbackIssueReportRepository,
         tvRecommendationManager = tvRecommendationManager,
+        serverPlayback = serverPlayback,
+        serverStreams = serverStreams,
+        party = partyRepository,
         profileId = savedStateHandle.get<String>("profileId")?.toIntOrNull()
             ?: profileManager.activeProfileId.value,
         savedStateHandle = savedStateHandle,
         scope = viewModelScope
     )
+
+    init {
+        controller.bindParty()
+    }
+
+    val party: com.nuvio.tv.core.party.PartyRepository
+        get() = controller.party
+
+    val canUseParty: Boolean
+        get() = controller.canUseParty
+
+    val partyKey: String
+        get() = controller.partyKey
+
+    fun startParty() = controller.startParty()
+
+    fun catchUpParty() = controller.catchUpParty()
+
+    val partyMedia: PartyMedia
+        get() = controller.currentPartyMedia()
+
+    fun switchParty() = controller.party.publishMedia(controller.currentPartyMedia(), controller.currentPlaybackPositionMs() ?: 0L)
+
+    fun currentPartyStream() = controller.currentPartyStream()
 
     private val postPlayRecommendationController = PostPlayRecommendationController(
         playbackController = controller,
@@ -249,6 +283,10 @@ class PlayerViewModel @Inject constructor(
         controller.pauseForLifecycle()
     }
 
+    fun releaseForBackground() {
+        controller.releaseForBackground()
+    }
+
     fun resumeForLifecycle() {
         controller.resumeForLifecycle()
     }
@@ -260,6 +298,10 @@ class PlayerViewModel @Inject constructor(
     fun onEvent(event: PlayerEvent) {
         controller.onEvent(event)
     }
+
+    fun playerMediaInfo(): PlayerMediaInfo = controller.playerMediaInfo()
+
+    fun playerStreamFilename(): String? = controller.currentFilename
 
     fun bindExoSubtitleView(subtitleView: androidx.media3.ui.SubtitleView?) {
         controller.bindExoSubtitleView(subtitleView)

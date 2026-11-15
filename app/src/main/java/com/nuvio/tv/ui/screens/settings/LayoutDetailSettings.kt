@@ -5,6 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
@@ -22,6 +25,7 @@ internal fun LayoutDetailPageSection(
     var showOverlayStyleDialog by rememberSaveable { mutableStateOf(false) }
     var showRatingsDialog by rememberSaveable { mutableStateOf(false) }
 
+    SettingsSectionLabel(text = stringResource(R.string.layout_detail_group_episodes))
     SettingsActionRow(
         title = stringResource(R.string.layout_episode_options_overlay),
         subtitle = stringResource(R.string.layout_episode_options_overlay_sub),
@@ -46,6 +50,8 @@ internal fun LayoutDetailPageSection(
         value = episodeRatingsVisibilityLabel(uiState.detailImdbRatingsVisibility),
         onClick = { showRatingsDialog = true }
     )
+
+    SettingsSectionLabel(text = stringResource(R.string.layout_detail_group_trailers))
     if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
         SettingsToggleRow(
             title = stringResource(R.string.audio_autoplay_trailers),
@@ -56,6 +62,24 @@ internal fun LayoutDetailPageSection(
             }
         )
         if (uiState.detailPageTrailerAutoplayEnabled) {
+            SettingsToggleRow(
+                title = stringResource(R.string.layout_trailer_play_in_background),
+                subtitle = stringResource(R.string.layout_trailer_play_in_background_sub),
+                checked = uiState.detailPageTrailerPlayInBackground,
+                onToggle = {
+                    onEvent(LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground(!uiState.detailPageTrailerPlayInBackground))
+                }
+            )
+            if (uiState.detailPageTrailerPlayInBackground) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.layout_trailer_pause_on_scroll),
+                    subtitle = stringResource(R.string.layout_trailer_pause_on_scroll_sub),
+                    checked = uiState.detailPageTrailerPauseOnScroll,
+                    onToggle = {
+                        onEvent(LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll(!uiState.detailPageTrailerPauseOnScroll))
+                    }
+                )
+            }
             SliderSettingsItem(
                 title = stringResource(R.string.audio_trailer_delay),
                 value = uiState.detailPageTrailerAutoplayDelaySeconds,
@@ -68,6 +92,12 @@ internal fun LayoutDetailPageSection(
                 }
             )
         }
+        SettingsToggleRow(
+            title = stringResource(R.string.layout_trailer_4k),
+            subtitle = stringResource(R.string.layout_trailer_4k_sub),
+            checked = uiState.trailer4kEnabled,
+            onToggle = { onEvent(LayoutSettingsEvent.SetTrailer4kEnabled(!uiState.trailer4kEnabled)) }
+        )
     }
     SettingsToggleRow(
         title = stringResource(R.string.layout_trailer_button),
@@ -77,6 +107,8 @@ internal fun LayoutDetailPageSection(
             onEvent(LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled(!uiState.detailPageTrailerButtonEnabled))
         }
     )
+
+    SettingsSectionLabel(text = stringResource(R.string.layout_detail_group_metadata))
     SettingsToggleRow(
         title = stringResource(R.string.layout_prefer_external_meta),
         subtitle = stringResource(R.string.layout_prefer_external_meta_sub),
@@ -120,9 +152,13 @@ internal fun LayoutStreamsSection(
     onShowFileSizeBadgesChange: (Boolean) -> Unit,
     onShowAddonLogoChange: (Boolean) -> Unit,
     onBadgePlacementSelected: (StreamBadgePlacement) -> Unit,
-    onConfigureBadges: () -> Unit
+    onConfigureBadges: () -> Unit,
+    onShowInPlayerChange: (Boolean) -> Unit,
+    onPlayerBadgeSourceSelected: (String) -> Unit,
+    configureBadgesFocusRequester: FocusRequester
 ) {
     var showPositionDialog by rememberSaveable { mutableStateOf(false) }
+    var showPlayerBadgesDialog by rememberSaveable { mutableStateOf(false) }
 
     SettingsSectionLabel(text = stringResource(R.string.settings_stream_badges_section))
     SettingsToggleRow(
@@ -140,8 +176,23 @@ internal fun LayoutStreamsSection(
     SettingsActionRow(
         title = stringResource(R.string.settings_stream_badge_urls_title),
         subtitle = streamBadgeRulesPreview(streamBadgeUiState),
-        onClick = onConfigureBadges
+        onClick = onConfigureBadges,
+        modifier = Modifier.focusRequester(configureBadgesFocusRequester)
     )
+    SettingsToggleRow(
+        title = stringResource(R.string.settings_stream_badges_in_player_title),
+        subtitle = stringResource(R.string.settings_stream_badges_in_player_description),
+        checked = streamBadgeUiState.showInPlayer,
+        enabled = streamBadgeUiState.rules.hasImport,
+        onToggle = { onShowInPlayerChange(!streamBadgeUiState.showInPlayer) }
+    )
+    if (streamBadgeUiState.showInPlayer && streamBadgeUiState.rules.hasImport) {
+        SettingsActionRow(
+            title = stringResource(R.string.settings_stream_player_badges_title),
+            subtitle = playerBadgesLabel(streamBadgeUiState),
+            onClick = { showPlayerBadgesDialog = true }
+        )
+    }
 
     SettingsSectionLabel(text = stringResource(R.string.settings_stream_display_section))
     SettingsToggleRow(
@@ -150,6 +201,17 @@ internal fun LayoutStreamsSection(
         checked = streamBadgeUiState.showAddonLogo,
         onToggle = { onShowAddonLogoChange(!streamBadgeUiState.showAddonLogo) }
     )
+
+    if (showPlayerBadgesDialog) {
+        PlayerBadgesDialog(
+            streamBadgeUiState = streamBadgeUiState,
+            onSourceSelected = { source ->
+                onPlayerBadgeSourceSelected(source)
+                showPlayerBadgesDialog = false
+            },
+            onDismiss = { showPlayerBadgesDialog = false }
+        )
+    }
 
     if (showPositionDialog) {
         StreamBadgePositionDialog(
@@ -186,6 +248,36 @@ private fun streamBadgePlacementLabel(placement: StreamBadgePlacement): String =
         StreamBadgePlacement.TOP -> stringResource(R.string.settings_stream_badge_position_top)
         StreamBadgePlacement.BOTTOM -> stringResource(R.string.settings_stream_badge_position_bottom)
     }
+
+@Composable
+private fun playerBadgesLabel(uiState: StreamBadgeSettingsUiState): String =
+    uiState.rules.imports.firstOrNull { it.sourceUrl.equals(uiState.playerBadgeSource, ignoreCase = true) }?.sourceUrl
+        ?: stringResource(R.string.settings_stream_player_badges_same)
+
+@Composable
+private fun PlayerBadgesDialog(
+    streamBadgeUiState: StreamBadgeSettingsUiState,
+    onSourceSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val imports = streamBadgeUiState.rules.normalized().imports
+    val selected = imports.firstOrNull {
+        it.sourceUrl.equals(streamBadgeUiState.playerBadgeSource, ignoreCase = true)
+    }?.sourceUrl.orEmpty()
+    val options = listOf(
+        SettingsPickerOption("", stringResource(R.string.settings_stream_player_badges_same))
+    ) + imports.map { SettingsPickerOption(it.sourceUrl, it.sourceUrl) }
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.settings_stream_player_badges_title),
+        subtitle = stringResource(R.string.settings_stream_player_badges_description),
+        options = options,
+        selectedValue = selected,
+        onOptionSelected = onSourceSelected,
+        onDismiss = onDismiss,
+        width = 640.dp
+    )
+}
 
 @Composable
 private fun streamBadgeRulesPreview(uiState: StreamBadgeSettingsUiState): String {

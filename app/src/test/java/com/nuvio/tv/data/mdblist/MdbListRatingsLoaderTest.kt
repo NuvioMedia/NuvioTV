@@ -197,5 +197,5 @@ class MdbListRatingsLoaderTest {
         assertEquals(2, harness.engine.requests.size)
     }
 
-    private fun TestScope.loader() = MdbListRatingsLoader(client, backgroundScope) { now }
+    private fun TestScope.loader() = MdbListRatingsLoader(client, scope = backgroundScope) { now }
 }

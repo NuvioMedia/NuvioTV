@@ -5,14 +5,16 @@ import com.nuvio.tv.core.tracking.TrackingMediaReference
 
 internal fun SimklSyncSnapshot.applyMutationReceipt(
     receipt: SimklMutationReceipt,
-    committedAtEpochMs: Long
+    committedAtEpochMs: Long,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     val committedAt = committedAtEpochMs.epochMsToUtcIso() ?: return this
     return when (val mutation = receipt.mutation) {
-        is SimklCommittedMutation.MoveToList -> withListMutations(mutation.items, committedAt)
+        is SimklCommittedMutation.MoveToList -> withListMutations(mutation.items, committedAt, entryIndex)
         is SimklCommittedMutation.AddToHistory -> withHistoryMutations(
             mutation.items,
-            committedAtEpochMs
+            committedAtEpochMs,
+            entryIndex
         )
         is SimklCommittedMutation.RemoveFromHistory -> withoutHistory(mutation.items)
     }.reconcileWatchedPlayback()
@@ -20,14 +22,19 @@ internal fun SimklSyncSnapshot.applyMutationReceipt(
 
 private fun SimklSyncSnapshot.withListMutations(
     mutations: List<SimklResolvedListMutation>,
-    committedAt: String
+    committedAt: String,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     if (mutations.isEmpty()) return this
     val updated = entries.toMutableList()
-    mutations.forEach { mutation ->
+    mutations.forEachIndexed { idx, mutation ->
         val requestMedia = mutation.request.toSimklMedia()
         val media = mutation.responseMedia.mergeMissing(requestMedia)
-        val index = updated.indexOfMatchingMedia(media)
+        val index = if (idx == 0 && entryIndex != null) {
+            entryIndex.indexOfMatchingMedia(entries, media)
+        } else {
+            updated.indexOfMatchingMediaLinear(media)
+        }
         val existing = updated.getOrNull(index)
         val mediaType = existing?.mediaType
             ?: mutation.resolvedMediaType
@@ -54,10 +61,11 @@ private fun SimklSyncSnapshot.withListMutations(
 
 private fun SimklSyncSnapshot.withHistoryMutations(
     mutations: List<SimklResolvedHistoryMutation>,
-    committedAtEpochMs: Long
+    committedAtEpochMs: Long,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     var updated = this
-    mutations.forEach { mutation ->
+    mutations.forEachIndexed { idx, mutation ->
         val request = mutation.request
         val mediaType = mutation.mediaType ?: request.media.kind.toSimklMediaType()
         updated = updated.applyScrobbleResult(
@@ -76,7 +84,8 @@ private fun SimklSyncSnapshot.withHistoryMutations(
                 },
                 watchedAt = request.watchedAtEpochMs?.epochMsToUtcIso()
             ),
-            committedAtEpochMs = committedAtEpochMs
+            committedAtEpochMs = committedAtEpochMs,
+            entryIndex = if (idx == 0) entryIndex else null
         )
         updated = updated.withResolvedHistoryStatus(mutation)
     }
@@ -87,7 +96,7 @@ private fun SimklSyncSnapshot.withResolvedHistoryStatus(
     mutation: SimklResolvedHistoryMutation
 ): SimklSyncSnapshot {
     val target = mutation.request.media.toSimklMedia()
-    val index = entries.indexOfMatchingMedia(target)
+    val index = entries.indexOfMatchingMediaLinear(target)
     val existing = entries.getOrNull(index) ?: return this
     val mediaType = mutation.mediaType ?: existing.mediaType
     val media = existing.media ?: target
@@ -108,11 +117,16 @@ private fun SimklSyncSnapshot.withoutHistory(
     var updated = entries
     mutations.forEach { mutation ->
         val target = mutation.toSimklMedia()
+        val targetIds = target.toTrackingExternalIds()
         if (mutation.kind == TrackingMediaKind.MOVIE || mutation.episode == null) {
-            updated = updated.filterNot { entry -> entry.media?.matchesTarget(target) == true }
+            updated = updated.filterNot { entry ->
+                val media = entry.media ?: return@filterNot false
+                media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)
+            }
         } else {
             updated = updated.map { entry ->
-                if (entry.media?.matchesTarget(target) == true) {
+                val media = entry.media
+                if (media != null && media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)) {
                     entry.withoutWatchedEpisode(
                         season = mutation.episode.season,
                         number = mutation.episode.number
@@ -150,5 +164,13 @@ private fun SimklLibraryEntry.withoutWatchedEpisode(
     )
 }
 
-private fun List<SimklLibraryEntry>.indexOfMatchingMedia(target: SimklMedia): Int =
-    indexOfFirst { entry -> entry.media?.matchesTarget(target) == true }
+internal fun List<SimklLibraryEntry>.indexOfMatchingMediaLinear(target: SimklMedia): Int {
+    val targetIds = target.toTrackingExternalIds()
+    for (index in indices) {
+        val media = this[index].media ?: continue
+        if (media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)) {
+            return index
+        }
+    }
+    return -1
+}

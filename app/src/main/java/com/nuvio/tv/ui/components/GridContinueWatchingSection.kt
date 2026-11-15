@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.components
 
-import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+import com.nuvio.tv.ui.screens.home.continueWatchingItemKey
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
@@ -50,6 +50,7 @@ fun GridContinueWatchingSection(
     onStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     showManualPlayOption: Boolean = false,
     onPlayManually: (ContinueWatchingItem) -> Unit = {},
+    onMarkWatched: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
     title: String? = null,
     fullWidth: Dp = Dp.Unspecified,
@@ -64,7 +65,9 @@ fun GridContinueWatchingSection(
     blurUnwatchedEpisodes: Boolean = false,
     useEpisodeThumbnails: Boolean = true,
     cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
-    cornerRadius: Dp = NuvioTheme.radii.md
+    cornerRadius: Dp = NuvioTheme.radii.md,
+    posterCardWidth: Dp? = null,
+    posterCardHeight: Dp? = null
 ) {
     if (items.isEmpty()) return
 
@@ -135,14 +138,7 @@ fun GridContinueWatchingSection(
         ) {
             itemsIndexed(
                 items = items,
-                key = { _, item ->
-                    item.shuffleFocusKey ?: when (item) {
-                        is ContinueWatchingItem.InProgress ->
-                            "cw_${item.progress.contentId}_${item.progress.videoId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
-                        is ContinueWatchingItem.NextUp ->
-                            "nextup_${item.info.contentId}_${item.info.videoId}_${item.info.season}_${item.info.episode}"
-                    }
-                }
+                key = { _, item -> continueWatchingItemKey(item) }
             ) { index, progress ->
                 val requester = focusRequesters.getOrPut(index) { FocusRequester() }
                 val focusModifier = Modifier.focusRequester(requester)
@@ -170,12 +166,12 @@ fun GridContinueWatchingSection(
                             }
                         },
                     cardWidth = when (cardStyle) {
-                        ContinueWatchingCardStyle.POSTER -> 120.dp
+                        ContinueWatchingCardStyle.POSTER -> posterCardWidth ?: posterCardHeight?.let { it * (2f / 3f) } ?: 120.dp
                         ContinueWatchingCardStyle.WIDE -> 320.dp
                         ContinueWatchingCardStyle.CARD -> 220.dp
                     },
                     imageHeight = when (cardStyle) {
-                        ContinueWatchingCardStyle.POSTER -> 180.dp
+                        ContinueWatchingCardStyle.POSTER -> posterCardHeight ?: posterCardWidth?.let { it * 1.5f } ?: 180.dp
                         ContinueWatchingCardStyle.WIDE -> 128.dp
                         ContinueWatchingCardStyle.CARD -> 124.dp
                     }
@@ -206,6 +202,11 @@ fun GridContinueWatchingSection(
             showPlayManually = showManualPlayOption,
             onPlayManually = {
                 onPlayManually(menuItem)
+                optionsItem = null
+            },
+            onMarkWatched = {
+                pendingFocusIndex = if (items.size <= 1) null else minOf(lastFocusedIndex.intValue, items.lastIndex)
+                onMarkWatched(menuItem)
                 optionsItem = null
             }
         )

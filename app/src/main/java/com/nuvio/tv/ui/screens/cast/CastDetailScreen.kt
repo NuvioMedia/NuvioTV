@@ -90,6 +90,7 @@ import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.PosterCardDefaults
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
 import com.nuvio.tv.ui.components.rememberShimmerBrush
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import java.text.SimpleDateFormat
@@ -187,14 +188,25 @@ private fun CastDetailContent(
             .sortedByDescending { releaseYearSortKey(it.releaseInfo) }
     }
 
-    val filmographyPosterStyle = remember(posterCardCornerRadiusDp) {
-        PosterCardStyle(
-            width = 112.dp,
-            height = 168.dp,
-            cornerRadius = posterCardCornerRadiusDp.dp,
-            focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
-            focusedScale = PosterCardDefaults.Style.focusedScale
-        )
+    val globalLandscape = LocalLandscapePosterMode.current
+    val filmographyPosterStyle = remember(posterCardCornerRadiusDp, globalLandscape) {
+        if (globalLandscape) {
+            PosterCardStyle(
+                width = 112.dp,
+                height = 240.dp,
+                cornerRadius = posterCardCornerRadiusDp.dp,
+                focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
+                focusedScale = PosterCardDefaults.Style.focusedScale
+            )
+        } else {
+            PosterCardStyle(
+                width = 112.dp,
+                height = 168.dp,
+                cornerRadius = posterCardCornerRadiusDp.dp,
+                focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
+                focusedScale = PosterCardDefaults.Style.focusedScale
+            )
+        }
     }
 
     val firstPosterFocusRequester = remember { FocusRequester() }

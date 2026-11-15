@@ -39,6 +39,8 @@ data class MetaDetailsUiState(
     val trailerUrl: String? = null,
     val trailerAudioUrl: String? = null,
     val isTrailerPlaying: Boolean = false,
+    val isBackgroundTrailerPlaying: Boolean = false,
+    val pauseBackgroundTrailerOnScroll: Boolean = true,
     val isTrailerLoading: Boolean = false,
     val showTrailerControls: Boolean = false,
     val hideLogoDuringTrailer: Boolean = false,
@@ -114,6 +116,8 @@ sealed class MetaDetailsEvent {
     data object OnPlayButtonFocused : MetaDetailsEvent()
     data object OnTrailerButtonClick : MetaDetailsEvent()
     data object OnTrailerEnded : MetaDetailsEvent()
+    /** User pressed Back while the full-screen trailer was showing. */
+    data object OnTrailerBackPress : MetaDetailsEvent()
     data class OnSharedTrailerSelected(val trailer: MetaTrailer) : MetaDetailsEvent()
     data object OnDismissSharedTrailer : MetaDetailsEvent()
     data object OnRetrySharedTrailer : MetaDetailsEvent()
