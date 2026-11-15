@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 private const val TAG = "CatalogOrder"
+private const val PENDING_SAVED_ORDER_TIMEOUT_MS = 2000L
 
 internal fun catalogOrderKeySample(keys: List<String>, limit: Int = 8): String {
     if (keys.isEmpty()) return "[] n=0"
@@ -65,6 +66,7 @@ class CatalogOrderViewModel @Inject constructor(
     private var draftOrderKeys: List<String>? = null
     private var moveBaselineItems: List<CatalogOrderItem>? = null
     private var pendingSavedOrderKeys: List<String>? = null
+    private var pendingSavedOrderKeysAt: Long = 0L
     private var lastManifestAddonKeys: List<String> = emptyList()
     private var persistGeneration: Int = 0
     private val persistMutex = Mutex()
@@ -134,6 +136,8 @@ class CatalogOrderViewModel @Inject constructor(
         persistedItemsCache = confirmedItems
         val generation = ++persistGeneration
         pendingSavedOrderKeys = draft
+        pendingSavedOrderKeysAt = SystemClock.elapsedRealtime()
+        val sessionBaseline = moveBaselineItems
         draftOrderKeys = null
         moveBaselineItems = null
         Log.d(
@@ -174,6 +178,10 @@ class CatalogOrderViewModel @Inject constructor(
                 homeCatalogSettingsSyncService.triggerPush()
             } else if (generation == persistGeneration) {
                 pendingSavedOrderKeys = null
+                sessionBaseline?.let { baseline ->
+                    persistedItemsCache = baseline
+                    _uiState.update { it.copy(items = baseline) }
+                }
             }
         }
     }
@@ -450,7 +458,15 @@ class CatalogOrderViewModel @Inject constructor(
                 Triple(items, followAddons, savedOrderKeys)
             }.collectLatest { (orderedItems, followAddons, diskOrderKeys) ->
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
-                val pendingKeys = pendingSavedOrderKeys
+                var pendingKeys = pendingSavedOrderKeys
+                if (pendingKeys != null && diskOrderKeys != pendingKeys &&
+                    SystemClock.elapsedRealtime() - pendingSavedOrderKeysAt >
+                    PENDING_SAVED_ORDER_TIMEOUT_MS
+                ) {
+                    Log.w(TAG, "pending order timed out, falling back to disk order")
+                    pendingSavedOrderKeys = null
+                    pendingKeys = null
+                }
                 val diskMatchesPending = pendingKeys != null && diskOrderKeys == pendingKeys
                 Log.d(
                     TAG,

@@ -170,6 +170,7 @@ private fun CatalogOrderHeader(
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { followRowFocused = it.isFocused }
+            .padding(NuvioTheme.spacing.xs)
             .then(
                 if (followRowFocused) {
                     Modifier.border(

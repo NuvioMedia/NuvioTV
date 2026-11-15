@@ -408,7 +408,7 @@ fun <T> TvReorderList(
     fun confirmFromUi(source: String) {
         val activeKey = movingKey ?: return
         pinScroll(source)
-        suppressStartMove = true
+        suppressStartMove = source == "ok-confirm"
         Log.d(LIST_TAG, "list confirm source=$source suppressStartMove ${visualSnapshot(source)}")
         onConfirmMove(activeKey)
     }
@@ -483,9 +483,7 @@ fun <T> TvReorderList(
         restorePinnedScroll("exitMove")
         val exitItemKeys = latestItems.map(key)
         val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
-        if (exitItemKeys != animatedOrder ||
-            dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }
-        ) {
+        if (exitItemKeys != animatedOrder) {
             Log.d(LIST_TAG, "list JUMP? exitMove beforeReset ${visualSnapshot("exitMove-before")}")
             clearOffsets()
             animatedIndices.clear()
@@ -509,10 +507,10 @@ fun <T> TvReorderList(
         val returnOrderKeys = runtime.cancelReturnOrderKeys ?: slotOrderKeys
         if (returnSlot != null && returnSlot in returnOrderKeys.indices) {
             val tops = slotTopsFor(returnOrderKeys)
-            val target = (headerHeightPx[0] + tops[returnSlot])
+            val target = tops[returnSlot]
                 .roundToInt()
                 .coerceIn(0, scrollState.maxValue)
-            scope.launch {
+            runtime.neighborScrollJob = scope.launch {
                 scrollState.animateScrollTo(target, ReorderTravelSpec)
             }
         }
@@ -537,7 +535,9 @@ fun <T> TvReorderList(
                                 val native = event.nativeKeyEvent
                                 val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
                                     native.keyCode == KeyEvent.KEYCODE_ENTER ||
-                                    native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+                                    native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                                    native.keyCode == KeyEvent.KEYCODE_SPACE ||
+                                    native.keyCode == KeyEvent.KEYCODE_BUTTON_A
                                 when {
                                     isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
                                         if (suppressStartMove) {
