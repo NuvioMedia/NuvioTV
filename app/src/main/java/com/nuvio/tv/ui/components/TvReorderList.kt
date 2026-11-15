@@ -365,17 +365,16 @@ fun <T> TvReorderList(
 
     fun handleMoveKey(nativeKeyCode: Int, action: Int, repeatCount: Int): Boolean {
         if (movingKey == null) return false
-        if (action == KeyEvent.ACTION_UP) {
-            stopRepeat()
-            return true
-        }
-        if (action != KeyEvent.ACTION_DOWN) return false
-
         val direction = when (nativeKeyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> -1
             KeyEvent.KEYCODE_DPAD_DOWN -> 1
             else -> return false
         }
+        if (action == KeyEvent.ACTION_UP) {
+            stopRepeat()
+            return true
+        }
+        if (action != KeyEvent.ACTION_DOWN) return false
 
         if (repeatCount == 0) {
             performMove(direction)
@@ -484,14 +483,6 @@ fun <T> TvReorderList(
                                     movingKey != null && isConfirmKey &&
                                         native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
                                         confirmFromUi("ok-confirm")
-                                        true
-                                    }
-
-                                    movingKey != null && native.keyCode == KeyEvent.KEYCODE_BACK &&
-                                        native.action == KeyEvent.ACTION_DOWN -> {
-                                        pinScroll("back-cancel")
-                                        Log.d(LIST_TAG, "list BACK cancel ${visualSnapshot("back-cancel")}")
-                                        onCancelMove()
                                         true
                                     }
 
