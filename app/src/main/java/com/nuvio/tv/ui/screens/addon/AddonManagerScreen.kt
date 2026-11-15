@@ -1606,15 +1606,6 @@ private fun AddonCardContent(
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
         Text(
-            text = addon.baseUrl,
-            style = MaterialTheme.typography.bodySmall.copy(
-                textDirection = addon.baseUrl.contentTextDirection()
-            ),
-            color = NuvioTheme.colors.TextTertiary
-        )
-
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-        Text(
             text = stringResource(R.string.addon_catalogs_types, addon.catalogs.size, addon.rawTypes.joinToString()),
             style = MaterialTheme.typography.bodySmall,
             color = NuvioTheme.colors.TextTertiary
