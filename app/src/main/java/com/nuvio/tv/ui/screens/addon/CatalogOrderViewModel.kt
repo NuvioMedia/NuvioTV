@@ -172,6 +172,8 @@ class CatalogOrderViewModel @Inject constructor(
             if (wrote && generation == persistGeneration) {
                 Log.d(TAG, "confirmMove triggerPush gen=$generation")
                 homeCatalogSettingsSyncService.triggerPush()
+            } else if (generation == persistGeneration) {
+                pendingSavedOrderKeys = null
             }
         }
     }
@@ -358,6 +360,7 @@ class CatalogOrderViewModel @Inject constructor(
         val updatedDisabled = disabledKeysCache.toMutableSet().apply {
             if (disableKey in this) remove(disableKey) else add(disableKey)
         }
+        disabledKeysCache = updatedDisabled
         viewModelScope.launch {
             withContext(NonCancellable) {
                 layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
