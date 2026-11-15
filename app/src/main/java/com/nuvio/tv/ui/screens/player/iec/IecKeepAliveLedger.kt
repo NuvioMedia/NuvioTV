@@ -47,6 +47,25 @@ internal class IecKeepAliveLedger {
         ends.clear()
     }
 
+    fun markFiller(startFrame: Long, endFrame: Long) {
+        if (endFrame <= startFrame) return
+        val ranges = ArrayList<LongArray>(starts.size + 1)
+        for (i in 0 until starts.size) ranges.add(longArrayOf(starts[i], ends[i]))
+        ranges.add(longArrayOf(startFrame, endFrame))
+        ranges.sortBy { it[0] }
+        starts.clear()
+        ends.clear()
+        for (range in ranges) {
+            val last = starts.size - 1
+            if (last >= 0 && range[0] <= ends[last]) {
+                if (range[1] > ends[last]) ends[last] = range[1]
+            } else {
+                starts.add(range[0])
+                ends.add(range[1])
+            }
+        }
+    }
+
     private class ArrayListLong(private var values: LongArray) {
         var size: Int = 0
             private set

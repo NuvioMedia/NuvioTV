@@ -20,6 +20,7 @@ internal class IecPassthroughAudioSink(
     private val onDiagnosticEvent: ((String) -> Unit)? = null,
     private val keepAliveEnabled: Boolean = true,
     private val keepAliveThreadEnabled: Boolean = true,
+    private val dtsKeepAliveEnabled: Boolean = true,
     private val audioOutputReady: () -> Boolean = { true },
     private val onIecBecameReady: (() -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
@@ -30,6 +31,9 @@ internal class IecPassthroughAudioSink(
     private var iecOutputSampleRate: Int = IEC_SAMPLE_RATE
     private var mode: Mode = Mode.FORWARD
     private val pendingFrames = ArrayDeque<ByteArray>()
+    private val writtenHistory = ArrayDeque<WrittenFrame>()
+    private var replayFramesPending = 0
+    private var reportedHeadFrames = NO_REPORTED_HEAD
     private val uncommitted = ArrayDeque<UncommittedAu>()
     private val sourcesOnFrame = ArrayDeque<Int>()
     private var sourcesSinceFrame: Int = 0
@@ -53,6 +57,7 @@ internal class IecPassthroughAudioSink(
     private var dtsCarrierOverride: Int? = null
     private var dtsCarrierKnown = false
     private var dtsCarrierLossless = false
+    private var dtsFillerCore: DtsSilence.CoreHeader? = null
     private val dtsDuration = DtsHdFrameDurationEstimator()
     private val uhdAudioChunkId = AtomicInteger()
     private var configuredFormat: Format? = null
@@ -110,7 +115,8 @@ internal class IecPassthroughAudioSink(
 
     /** The track plays on through pauses and seeks; see [keepAliveTick]. */
     val isKeepAliveActive: Boolean
-        get() = keepAliveEnabled && mode == Mode.TRUEHD && iecTrack != null && trackStarted
+        get() = keepAliveEnabled && iecTrack != null && trackStarted &&
+            (mode == Mode.TRUEHD || (mode == Mode.DTS_HD && fillerFrame.isNotEmpty()))
 
     fun claimsHbr(format: Format): Boolean {
         return hbrIecEnabled && !iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)
@@ -232,7 +238,9 @@ internal class IecPassthroughAudioSink(
         val sample: IecAudioTimestampSample?
         synchronized(writeLock) {
             val realEnd = realEndFrames
-            val played = minOf(track.playbackHeadFrames(), realEnd)
+            val rawHead = track.playbackHeadFrames()
+            if (playing) reportedHeadFrames = rawHead
+            val played = minOf(rawHead, realEnd)
             head = fillerLedger.contentFrames(played) - headAnchorFrames
             written = (fillerLedger.contentFrames(realEnd) - headAnchorFrames).coerceAtLeast(0L)
             sample = track.timestamp()?.let { stamp ->
@@ -284,6 +292,7 @@ internal class IecPassthroughAudioSink(
             if (isKeepAliveActive) {
                 synchronized(writeLock) {
                     finishPartialFrame()
+                    requeueUnplayedContent()
                     heldSinceNanos = nanoTime()
                 }
                 onDiagnosticEvent?.invoke("iec_keepalive_hold reason=pause ${keepAliveState()}")
@@ -324,6 +333,7 @@ internal class IecPassthroughAudioSink(
             clearUncommitted()
             matPacker.reset()
             while (pendingFrames.isNotEmpty()) recycleFrame(pendingFrames.removeFirst())
+            clearWrittenHistory()
             pendingOffset = 0
             leftover = ByteArray(0)
             startPtsUs = C.TIME_UNSET
@@ -695,6 +705,7 @@ internal class IecPassthroughAudioSink(
             0
         }
         val burstBytes = Iec61937Packer.dtsCoreBurstBytes(sampleCount)
+        noteDtsFillerLayout(buffer)
         if (littleEndian == null || burstBytes == 0) {
             return fallbackToWrappedSink("dts_core_unsupported samples=$sampleCount")
         }
@@ -719,12 +730,36 @@ internal class IecPassthroughAudioSink(
         buffer.get(head)
         buffer.position(position)
         val sampleCount = resolveDtsSampleCount(head, buffer, presentationTimeUs)
+        noteDtsFillerLayout(buffer)
         val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, sampleCount)
         val burst = acquireDtsBurst(period shl 2)
         Iec61937Packer.packDtsHdInto(buffer, period, burst)
         pendingFrames.add(burst)
         noteFrameQueued()
         return true
+    }
+
+    private fun noteDtsFillerLayout(buffer: ByteBuffer) {
+        if (dtsFillerCore != null) return
+        val position = buffer.position()
+        val head = ByteArray(buffer.remaining().coerceAtMost(16))
+        buffer.get(head)
+        buffer.position(position)
+        dtsFillerCore = DtsSilence.parseCore(head) ?: return
+        val track = iecTrack ?: return
+        if (trackStarted) synchronized(writeLock) { armKeepAlive(track) }
+    }
+
+    private fun dtsSilenceBurst(): ByteArray? {
+        if (!dtsKeepAliveEnabled) return null
+        val frame = DtsSilence.frameFor(dtsFillerCore ?: return null) ?: return null
+        if (dtsCore) {
+            val burst = ByteArray(Iec61937Packer.dtsCoreBurstBytes(DtsSilence.SAMPLE_COUNT))
+            val packed = Iec61937Packer.packDtsCoreInto(ByteBuffer.wrap(frame), DtsSilence.SAMPLE_COUNT, false, burst)
+            return if (packed) burst else null
+        }
+        val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, DtsSilence.SAMPLE_COUNT)
+        return Iec61937Packer.packDtsHd(frame, period)
     }
 
     private fun resolveDtsSampleCount(head: ByteArray, buffer: ByteBuffer, ptsUs: Long): Int {
@@ -840,9 +875,7 @@ internal class IecPassthroughAudioSink(
                 }
                 writeStallStartedNanos = WRITE_STALL_NOT_STARTED
             }
-            recycleFrame(pendingFrames.removeFirst())
-            pendingOffset = 0
-            noteFrameWritten()
+            completeContentFrame(track)
         }
         return true
     }
@@ -852,11 +885,21 @@ internal class IecPassthroughAudioSink(
         if (trackStarted || track.isPlayHeld()) return
         trackStarted = true
         awaitHeadMove()
-        if (!keepAliveEnabled || mode != Mode.TRUEHD) return
-        val frame = TrueHdMatPacker.paddingOnlyFrame()
-        fillerFrame = if (track.payload == HbrPayload.MAT) frame else Iec61937Packer.packTrueHdInPlace(frame)
+        armKeepAlive(track)
+    }
+
+    private fun armKeepAlive(track: IecAudioTrack) {
+        if (!keepAliveEnabled || fillerFrame.isNotEmpty()) return
+        fillerFrame = when (mode) {
+            Mode.TRUEHD -> {
+                val frame = TrueHdMatPacker.paddingOnlyFrame()
+                if (track.payload == HbrPayload.MAT) frame else Iec61937Packer.packTrueHdInPlace(frame)
+            }
+            Mode.DTS_HD -> dtsSilenceBurst() ?: return
+            Mode.FORWARD -> return
+        }
         fillerOffset = 0
-        onDiagnosticEvent?.invoke("iec_keepalive_armed payload=${track.payload} capMs=$KEEP_ALIVE_CAP_MS")
+        onDiagnosticEvent?.invoke("iec_keepalive_armed mode=$mode payload=${track.payload} capMs=$KEEP_ALIVE_CAP_MS")
         if (keepAliveThreadEnabled) startKeepAliveThread()
     }
 
@@ -905,11 +948,15 @@ internal class IecPassthroughAudioSink(
             }
             // A content frame half written by the playback thread must not be split by filler.
             if (pendingOffset > 0) return
-            if (fillerOffset == 0) {
-                val queued = writtenFrames - track.playbackHeadFrames()
-                if (queued >= keepAliveLowWaterFrames(track)) return
-            }
-            writeFiller(track, whole = true)
+            var written = 0
+            do {
+                if (fillerOffset == 0) {
+                    val queued = writtenFrames - track.playbackHeadFrames()
+                    if (queued >= keepAliveLowWaterFrames(track)) return
+                }
+                if (!writeFiller(track, whole = true)) return
+                written++
+            } while (written < FILLER_FRAMES_PER_TICK)
         }
     }
 
@@ -925,9 +972,50 @@ internal class IecPassthroughAudioSink(
             writtenBytes += count
         }
         realEndBytes = writtenBytes
-        recycleFrame(pendingFrames.removeFirst())
+        completeContentFrame(track)
+    }
+
+    private fun completeContentFrame(track: IecAudioTrack) {
+        val frame = pendingFrames.removeFirst()
         pendingOffset = 0
-        noteFrameWritten()
+        writtenHistory.addLast(WrittenFrame(frame, realEndBytes - frame.size, realEndBytes))
+        val headBytes = replayFromFrames(track) * track.frameSizeBytes
+        while (writtenHistory.isNotEmpty() &&
+            (writtenHistory.first().endByte <= headBytes || writtenHistory.size > WRITTEN_HISTORY_LIMIT)
+        ) {
+            recycleFrame(writtenHistory.removeFirst().bytes)
+        }
+        if (replayFramesPending > 0) replayFramesPending-- else noteFrameWritten()
+    }
+
+    private fun requeueUnplayedContent() {
+        val track = iecTrack ?: return
+        val frameSize = track.frameSizeBytes
+        val headBytes = replayFromFrames(track) * frameSize
+        val replay = ArrayList<WrittenFrame>()
+        while (writtenHistory.isNotEmpty() && writtenHistory.last().endByte > headBytes) {
+            replay.add(0, writtenHistory.removeLast())
+        }
+        if (replay.isEmpty()) return
+        val startByte = replay.first().startByte
+        fillerLedger.markFiller(startByte / frameSize, realEndBytes / frameSize)
+        for (frame in replay.asReversed()) pendingFrames.addFirst(frame.bytes)
+        replayFramesPending += replay.size
+        val line = "iec_keepalive_replay frames=${replay.size} ms=${(realEndBytes - startByte) / frameSize * 1000L / track.sampleRate}"
+        android.util.Log.i("IecPassthrough", line)
+        onDiagnosticEvent?.invoke(line)
+    }
+
+    private fun replayFromFrames(track: IecAudioTrack): Long {
+        val head = track.playbackHeadFrames()
+        val reported = reportedHeadFrames
+        return if (reported == NO_REPORTED_HEAD) head else minOf(head, reported)
+    }
+
+    private fun clearWrittenHistory() {
+        while (writtenHistory.isNotEmpty()) recycleFrame(writtenHistory.removeFirst().bytes)
+        replayFramesPending = 0
+        reportedHeadFrames = NO_REPORTED_HEAD
     }
 
     /** Writes the rest of a started filler frame, or a whole one. False while a frame is still partly written. */
@@ -1122,6 +1210,7 @@ internal class IecPassthroughAudioSink(
         clearUncommitted()
         matPacker.reset()
         while (pendingFrames.isNotEmpty()) recycleFrame(pendingFrames.removeFirst())
+        clearWrittenHistory()
         pendingOffset = 0
         leftover = ByteArray(0)
         startPtsUs = C.TIME_UNSET
@@ -1185,9 +1274,12 @@ internal class IecPassthroughAudioSink(
         resetIecState(keepTrack = false)
         mode = Mode.FORWARD
         dtsCore = false
+        dtsFillerCore = null
     }
 
     private class UncommittedAu(val bytes: ByteArray, val ptsUs: Long, val count: Int)
+
+    private class WrittenFrame(val bytes: ByteArray, val startByte: Long, val endByte: Long)
 
     private enum class Mode { FORWARD, TRUEHD, DTS_HD }
 
@@ -1208,10 +1300,13 @@ internal class IecPassthroughAudioSink(
         private const val FRAME_POOL_LIMIT = 8
         private const val NOT_HELD = Long.MIN_VALUE
         // Content queued in the track while playing; what is left of it after a seek plays out first.
-        internal const val KEEP_ALIVE_CAP_MS = 240L
+        internal const val KEEP_ALIVE_CAP_MS = 120L
         // Below this the keep-alive adds a padding-only MAT frame (20 ms) so the output never runs dry.
         internal const val KEEP_ALIVE_LOW_WATER_MS = 80L
         internal const val KEEP_ALIVE_TICK_MS = 10L
+        internal const val FILLER_FRAMES_PER_TICK = 16
+        internal const val WRITTEN_HISTORY_LIMIT = 64
+        private const val NO_REPORTED_HEAD = -1L
         internal const val KEEP_ALIVE_MAX_HOLD_NANOS = 30L * 60L * 1_000_000_000L
         internal const val KEEP_ALIVE_HEAD_IDLE_NANOS = 200_000_000L
         private const val HEAD_NOT_MOVED = Long.MIN_VALUE

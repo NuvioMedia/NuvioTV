@@ -68,7 +68,6 @@ internal class IecAudioTimestampClock(
             headUs
         }
         positionUs = minOf(positionUs, framesToUs(safeWritten, sampleRate))
-        positionUs = smooth(systemTimeUs, positionUs, speed, playing)
         val presentedUs = if (fromTimestamp) {
             positionUs.coerceAtLeast(0L)
         } else if (positionUs <= 0L) {
@@ -76,7 +75,7 @@ internal class IecAudioTimestampClock(
         } else {
             (positionUs - latencyUs.coerceAtLeast(0L)).coerceAtLeast(0L)
         }
-        return startPtsUs + presentedUs
+        return startPtsUs + smooth(systemTimeUs, presentedUs, speed, playing)
     }
 
     private fun resetPoller() {
