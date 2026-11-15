@@ -96,7 +96,7 @@ class AsrMatchingTest {
     }
 
     @Test
-    fun recognitionWaitsForAReferenceAndStopsListeningWhenUseless() {
+    fun recognitionRunsAheadOfExpectedReferencesAndStopsListeningWhenUseless() {
         val cues = script(Random(12), 30)
         val recognised = java.util.concurrent.atomic.AtomicInteger()
         val engine = AsrSyncEngine(SpeechTimeline(), onLock = {})
@@ -105,11 +105,14 @@ class AsrMatchingTest {
         fun segment(frame: Int) = FloatArray(SileroVad.CHUNK_SAMPLES * 10) { frame.toFloat() }
         engine.offerSegment(100, segment(100))
         Thread.sleep(300)
-        assertEquals(0, recognised.get(), "nothing to match against: not recognised yet")
-        engine.addReference(ReferenceSubtitle("en", cues, null))
+        assertEquals(0, recognised.get(), "no reference and none expected: not recognised")
+        // The references of a translated subtitle are downloading: words are recognised meanwhile,
+        // so they are ready the moment one arrives.
+        engine.expectReferences(60_000L)
         val deadline = System.currentTimeMillis() + 5_000
         while (recognised.get() < 1 && System.currentTimeMillis() < deadline) Thread.sleep(10)
-        assertEquals(1, recognised.get(), "recognised once a reference arrived")
+        assertEquals(1, recognised.get(), "recognised without waiting for a reference")
+        engine.addReference(ReferenceSubtitle("en", cues, null))
         engine.setListening(false)
         engine.offerSegment(200, segment(200))
         Thread.sleep(300)
@@ -120,6 +123,66 @@ class AsrMatchingTest {
         while (recognised.get() < 2 && System.currentTimeMillis() < again) Thread.sleep(10)
         engine.release()
         assertEquals(2, recognised.get())
+    }
+
+    @Test
+    fun wordsHeardBeforeTheReferenceArrivesLockOnceItDoes() {
+        val english = script(Random(31), 250)
+        val translation = english.map { (a, b, _) -> Triple(a + 2_000, b + 2_000, "linie") }
+        val target = SubtitleSpeechTrack.fromCues(translation)
+        val bridge = assertNotNull(SubtitleBridge.align(target, SubtitleSpeechTrack.fromCues(english)))
+        val locks = java.util.Collections.synchronizedList(ArrayList<com.nuvio.tv.ui.screens.player.audiosync.asr.AsrLock>())
+        val engine = AsrSyncEngine(speech(english), onLock = { locks += it })
+        engine.startSession(target, emptyList())
+        engine.expectReferences(60_000L)
+        val frameMs = SpeechTimeline.FRAME_DURATION_MS
+        val heardLines = english.indices.filter { english[it].first / 1_000 in 30..150 || english[it].first / 1_000 in 500..700 }
+        heardLines.forEach { line ->
+            engine.offerSegment((english[line].first / frameMs).toInt(), FloatArray(SileroVad.CHUNK_SAMPLES * 10) { line.toFloat() }, spread = true)
+        }
+        val recognised = java.util.concurrent.atomic.AtomicInteger()
+        engine.setRecognizer { samples ->
+            recognised.incrementAndGet()
+            val (start, end, text) = english[samples[0].toInt()]
+            val segmentStartSec = (start / frameMs).toInt() * frameMs / 1_000.0
+            val words = text.split(' ')
+            words.mapIndexed { k, word -> ((start + (end - start) * k / words.size) / 1_000.0 - segmentStartSec) to word }
+        }
+        val deadline = System.currentTimeMillis() + 30_000
+        while (recognised.get() < heardLines.size && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(heardLines.size, recognised.get(), "all speech recognised before any reference")
+        assertTrue(locks.isEmpty(), "nothing to match against yet: $locks")
+        val heard = engine.heardWordCount
+        engine.addReference(ReferenceSubtitle("en", english, bridge))
+        val lockDeadline = System.currentTimeMillis() + 10_000
+        while (locks.none { it.final } && System.currentTimeMillis() < lockDeadline) Thread.sleep(20)
+        engine.release()
+        val final = assertNotNull(locks.lastOrNull { it.final }, "no lock from words heard earlier: $locks")
+        assertEquals(heardLines.size, recognised.get(), "nothing recognised again: the earlier words were used")
+        assertTrue(heard > 100, "words $heard")
+        assertTrue(abs(final.segments.first().shiftMs + 2_000.0) < 300.0, "lock $final")
+    }
+
+    @Test
+    fun recognitionStopsWhenExpectedReferencesNeverArrive() {
+        val recognised = java.util.concurrent.atomic.AtomicInteger()
+        val engine = AsrSyncEngine(SpeechTimeline(), onLock = {})
+        engine.setRecognizer { recognised.incrementAndGet(); emptyList() }
+        engine.startSession(SubtitleSpeechTrack.fromCues(script(Random(13), 30)), emptyList())
+        fun segment(frame: Int) = FloatArray(SileroVad.CHUNK_SAMPLES * 10) { frame.toFloat() }
+        // The downloads failed: past the expected time, speech is no longer recognised.
+        engine.expectReferences(200L)
+        Thread.sleep(400)
+        engine.offerSegment(100, segment(100))
+        Thread.sleep(300)
+        assertEquals(0, recognised.get(), "recognised although no reference is coming")
+        // Every reference finished without a match: expectation withdrawn at once.
+        engine.expectReferences(60_000L)
+        engine.expectReferences(0L)
+        engine.offerSegment(200, segment(200))
+        Thread.sleep(300)
+        engine.release()
+        assertEquals(0, recognised.get())
     }
 
     @Test

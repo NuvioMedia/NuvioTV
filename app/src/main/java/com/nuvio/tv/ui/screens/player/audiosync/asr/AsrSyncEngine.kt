@@ -91,6 +91,7 @@ internal class AsrSyncEngine(
     /** Nearest upcoming speech first: that is what will be on screen soonest. */
     private val queue = PriorityQueue<Segment>(compareBy { segmentPriority(it) })
     private var queuedSamples = 0L
+    private var expectingUntilNanos = 0L
     private val covered = ArrayList<IntRange>()
     private val heard = ArrayList<HeardWord>()
     private var segmentCounter = 0
@@ -188,6 +189,7 @@ internal class AsrSyncEngine(
         synchronized(lock) {
             target = targetTrack
             references = referenceSubtitles
+            expectingUntilNanos = 0L
             locked = false
             provisional = null
             pendingMove = null
@@ -195,6 +197,20 @@ internal class AsrSyncEngine(
         }
         evaluate()
     }
+
+    /**
+     * References for the current session are on their way and should arrive within [forMs]: until
+     * then (or until called with 0), speech is recognised ahead of them. A download that fails
+     * never arrives, hence the limit. Cleared by [startSession] and [stopSession].
+     */
+    fun expectReferences(forMs: Long) {
+        synchronized(lock) {
+            expectingUntilNanos = if (forMs > 0) System.nanoTime() + forMs * 1_000_000L else 0L
+            lock.notifyAll()
+        }
+    }
+
+    private fun expectingReferences(): Boolean = expectingUntilNanos != 0L && System.nanoTime() < expectingUntilNanos
 
     /** Adds a reference that finished downloading after the session started. */
     fun addReference(reference: ReferenceSubtitle) {
@@ -210,6 +226,7 @@ internal class AsrSyncEngine(
         synchronized(lock) {
             target = null
             references = emptyList()
+            expectingUntilNanos = 0L
             locked = false
             provisional = null
             pendingMove = null
@@ -286,8 +303,11 @@ internal class AsrSyncEngine(
         runCatching(workerSetup)
         while (true) {
             val (segment, recognizer) = synchronized(lock) {
-                // Nothing to match words against yet: recognising now would be wasted work.
-                while (!released && (queue.isEmpty() || stt == null || target == null || references.isEmpty())) lock.wait()
+                // No reference to match words against: recognising is wasted work, unless one is
+                // still downloading (a translated subtitle's English references). Words heard
+                // meanwhile are kept and matched the moment one is added.
+                while (!released && (queue.isEmpty() || stt == null || target == null ||
+                        (references.isEmpty() && !expectingReferences()))) lock.wait()
                 if (released) return
                 nextSegment().also { queuedSamples -= it.samples.size } to stt!!
             }
