@@ -1566,6 +1566,12 @@ private fun AddonCardContent(
                                 focusedContainerColor = if (isMoving) NuvioTheme.colors.Primary else NuvioTheme.colors.FocusBackground,
                                 focusedContentColor = if (isMoving) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.Primary
                             ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                )
+                            ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                         ) {
                             Text(
@@ -1584,6 +1590,12 @@ private fun AddonCardContent(
                             contentColor = NuvioTheme.colors.TextSecondary,
                             focusedContainerColor = NuvioTheme.colors.FocusBackground,
                             focusedContentColor = NuvioTheme.colors.Error
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                     ) {
