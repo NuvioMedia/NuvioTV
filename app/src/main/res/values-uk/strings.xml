@@ -1628,11 +1628,6 @@
     <string name="library_watchlist">Список для перегляду</string>
     <string name="library_syncing_library">Синхронізація бібліотеки\u2026</string>
     <string name="library_type_all">Всі</string>
-    <string name="library_type_items">елементів</string>
-    <string name="library_empty_local_title">Поки що немає %1$s</string>
-    <string name="library_empty_trakt_title">У цьому списку немає %1$s</string>
-    <string name="library_empty_local_subtitle">Починайте зберігати улюблене, щоб побачити це тут</string>
-    <string name="library_empty_trakt_subtitle">Використайте + на сторінці деталей, щоб додати до списку перегляду або списків</string>
     <string name="library_empty_trakt_not_auth_title">Trakt не підключено</string>
     <string name="library_empty_trakt_not_auth_subtitle">Підключіть акаунт Trakt у Налаштуваннях для перегляду бібліотеки Trakt</string>
     <string name="library_list_create_dialog_title">Створити список</string>

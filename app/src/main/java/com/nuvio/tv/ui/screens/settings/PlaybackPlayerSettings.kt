@@ -31,12 +31,21 @@ internal fun PlaybackPlayerSection(
         enabled = !usesExternalPlayer,
         onClick = { onOpenDialog(PlaybackDialog.INTERNAL_ENGINE) }
     )
+    // Excludes falling back to the next source: both react to the same failure. Only the switch
+    // that is off is locked, so both stay reachable if both ended up on.
+    val blockedBySourceFallback = settings.streamAutoPlayFallbackActive && !settings.autoSwitchInternalPlayerOnError
     SettingsToggleRow(
         title = stringResource(R.string.playback_auto_switch_internal_player_on_error),
-        subtitle = stringResource(R.string.playback_auto_switch_internal_player_on_error_sub),
+        subtitle = stringResource(
+            if (blockedBySourceFallback) {
+                R.string.playback_auto_switch_internal_player_blocked_by_fallback
+            } else {
+                R.string.playback_auto_switch_internal_player_on_error_sub
+            }
+        ),
         checked = settings.autoSwitchInternalPlayerOnError,
         onToggle = { onUpdate { setAutoSwitchInternalPlayerOnError(!settings.autoSwitchInternalPlayerOnError) } },
-        enabled = !usesExternalPlayer
+        enabled = !usesExternalPlayer && !blockedBySourceFallback
     )
     if (!usesExternalPlayer) {
         SettingsToggleRow(
