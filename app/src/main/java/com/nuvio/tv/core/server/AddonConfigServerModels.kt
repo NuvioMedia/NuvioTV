@@ -165,6 +165,7 @@ data class PendingAddonChange(
     val proposedCollectionsJson: String? = null,
     val proposedDisabledCollectionKeys: List<String> = emptyList(),
     val proposedFollowAddonsOrder: Boolean? = null,
+    val trackingConsentUrls: List<String> = emptyList(),
     var status: AddonChangeStatus = AddonChangeStatus.PENDING
 )
 

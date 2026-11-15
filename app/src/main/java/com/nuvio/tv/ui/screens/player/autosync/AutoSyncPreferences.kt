@@ -24,11 +24,11 @@ internal object AutoSyncPreferences {
     private var lastStartupSessionKey: Int? = null
     private var lastStartupPlaybackKey: String? = null
 
-    private val _enabled = MutableStateFlow(false)
+    private val _enabled = MutableStateFlow(true)
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
 
     /** [enabled] as Compose state, so the settings list can show the dependent rows only when on. */
-    private val _enabledState = mutableStateOf(false)
+    private val _enabledState = mutableStateOf(true)
     val enabledState: State<Boolean> get() = _enabledState
 
     /** Thorough search: stop only on a stronger match; the applied match is gated the same. */
@@ -45,7 +45,7 @@ internal object AutoSyncPreferences {
         synchronized(lock) {
             if (initialized) return
             val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            _enabled.value = prefs.getBoolean(KEY_ENABLED, false)
+            _enabled.value = prefs.getBoolean(KEY_ENABLED, true)
             _enabledState.value = _enabled.value
             _aggressiveMode.value = prefs.getBoolean(KEY_AGGRESSIVE_MODE, true)
             _syncToleranceMs.value = prefs.getInt(KEY_SYNC_TOLERANCE_MS, 0)

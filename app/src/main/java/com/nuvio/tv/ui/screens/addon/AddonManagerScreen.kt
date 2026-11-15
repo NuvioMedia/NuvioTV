@@ -108,6 +108,7 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.ui.components.TrackingAddonConsentDialog
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -131,6 +132,22 @@ private enum class AddonManagerFocusTarget {
     CatalogOrder,
     Collections
 }
+
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+internal fun Modifier.addonManagerFocusRestorer(
+    pendingRequester: FocusRequester?,
+    fallbackRequester: FocusRequester
+): Modifier = this
+    .then(
+        if (pendingRequester != null) {
+            Modifier.focusProperties {
+                onEnter = { pendingRequester.requestFocus() }
+            }
+        } else {
+            Modifier
+        }
+    )
+    .focusRestorer(pendingRequester ?: fallbackRequester)
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -178,6 +195,7 @@ fun AddonManagerScreen(
     var isEditing by remember { mutableStateOf(false) }
     var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
     var restoreManageFromPhoneFocus by remember { mutableStateOf(false) }
+    var hasHandledInitialFocusState by remember { mutableStateOf(false) }
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
         uiState.installedAddons.any { addon ->
             addon.enabled && addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
@@ -229,13 +247,25 @@ fun AddonManagerScreen(
     val requestManageFromPhoneFocus = {
         coroutineScope.launch {
             repeat(2) { withFrameNanos { } }
-            runCatching { manageFromPhoneFocusRequester.requestFocus() }
+            if (pendingFocusRestore == null &&
+                restoreManageFromPhoneFocus &&
+                !uiState.isQrModeActive &&
+                uiState.pendingChange == null &&
+                !isEditing &&
+                addonUrlPendingDeletion == null
+            ) {
+                runCatching { manageFromPhoneFocusRequester.requestFocus() }
+            }
         }
     }
 
     LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange, addonUrlPendingDeletion) {
         if (uiState.isQrModeActive) {
             restoreManageFromPhoneFocus = true
+        }
+        if (!hasHandledInitialFocusState) {
+            hasHandledInitialFocusState = true
+            return@LaunchedEffect
         }
         if (pendingFocusRestore == null &&
             !uiState.isQrModeActive &&
@@ -249,6 +279,18 @@ fun AddonManagerScreen(
                 requestInputBarFocus()
             }
         }
+    }
+
+    // Claim focus as soon as the list is laid out so the default initial focus
+    // (URL field / Manage) never flashes before ON_RESUME restores it.
+    LaunchedEffect(Unit) {
+        val earlyFocusRequester = when (pendingFocusRestore) {
+            AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
+            AddonManagerFocusTarget.Collections -> collectionsFocusRequester
+            null -> return@LaunchedEffect
+        }
+        repeat(2) { withFrameNanos { } }
+        runCatching { earlyFocusRequester.requestFocus() }
     }
 
     LaunchedEffect(addonUrlPendingDeletion) {
@@ -287,16 +329,13 @@ fun AddonManagerScreen(
                         }
                     }
                 } else if (
+                    restoreManageFromPhoneFocus &&
                     !uiState.isQrModeActive &&
                     uiState.pendingChange == null &&
                     !isEditing &&
                     addonUrlPendingDeletion == null
                 ) {
-                    if (restoreManageFromPhoneFocus) {
-                        requestManageFromPhoneFocus()
-                    } else {
-                        requestInputBarFocus()
-                    }
+                    requestManageFromPhoneFocus()
                 }
             }
         }
@@ -321,12 +360,13 @@ fun AddonManagerScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .focusRestorer(
-                    when (pendingFocusRestore) {
+                .addonManagerFocusRestorer(
+                    pendingRequester = when (pendingFocusRestore) {
                         AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
                         AddonManagerFocusTarget.Collections -> collectionsFocusRequester
-                        null -> surfaceFocusRequester
-                    }
+                        null -> null
+                    },
+                    fallbackRequester = surfaceFocusRequester
                 ),
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -505,6 +545,7 @@ fun AddonManagerScreen(
                 item {
                     CatalogOrderEntryCard(
                         onClick = {
+                            restoreManageFromPhoneFocus = false
                             pendingFocusRestore = AddonManagerFocusTarget.CatalogOrder
                             onNavigateToCatalogOrder()
                         },
@@ -517,6 +558,7 @@ fun AddonManagerScreen(
                 item {
                     CollectionsEntryCard(
                         onClick = {
+                            restoreManageFromPhoneFocus = false
                             pendingFocusRestore = AddonManagerFocusTarget.Collections
                             onNavigateToCollections()
                         },
@@ -612,9 +654,16 @@ fun AddonManagerScreen(
             uiState.pendingChange?.let { pending ->
                 ConfirmAddonChangesDialog(
                     pendingChange = pending,
-                    onConfirm = viewModel::confirmPendingChange,
+                    onConfirm = { viewModel.confirmPendingChange() },
                     onReject = viewModel::rejectPendingChange
                 )
+                if (pending.awaitingTrackingConsent) {
+                    TrackingAddonConsentDialog(
+                        addonName = pending.trackingAddonNames.orEmpty().joinToString(", "),
+                        onInstall = { viewModel.confirmPendingChange(trackingConsentGiven = true) },
+                        onDismiss = viewModel::dismissPendingTrackingConsent
+                    )
+                }
             }
         }
 
@@ -1087,8 +1136,10 @@ internal fun ConfirmAddonChangesDialog(
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(pendingChange.isApplying, pendingChange.awaitingTrackingConsent) {
+        if (!pendingChange.isApplying && !pendingChange.awaitingTrackingConsent) {
+            runCatching { focusRequester.requestFocus() }
+        }
     }
 
     BackHandler { onReject() }

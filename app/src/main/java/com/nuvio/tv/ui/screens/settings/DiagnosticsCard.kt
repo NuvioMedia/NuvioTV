@@ -7,6 +7,8 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.keepLtr
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -19,8 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,7 +48,7 @@ import java.util.Locale
  * Emits the diagnostics content as 3 dense read-only sections.
  *
  * Goal: minimize scrolling by packing related fields tightly per section.
- * Each section groups 6-10 rows of related info and is not a D-pad stop.
+ * Each section groups 6-10 rows of related info and is one D-pad stop.
  */
 internal fun LazyListScope.diagnosticsCardItems(
     diagnostics: LastPlaybackDiagnostics,
@@ -222,14 +229,30 @@ internal fun LazyListScope.diagnosticsCardItems(
 private fun DiagnosticsSectionCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(10.dp)
+
     // Read-only: it carries no action, so it is a plain Surface rather than a clickable Card,
-    // which would be a dead focus stop announced as a button. The text stays in the tree, and
-    // the (unreachable) focus border drops away with the click.
+    // which would be announced as a button. It still takes focus, because the D-pad can only
+    // scroll the list by moving focus and nothing else sits below the cache section.
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .then(
+                if (isFocused) {
+                    Modifier.border(
+                        NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs, alpha = 0.5f),
+                        shape
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        shape = shape,
         colors = SurfaceDefaults.colors(
-            containerColor = NuvioTheme.colors.BackgroundCard,
+            containerColor = if (isFocused) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
             contentColor = NuvioTheme.colors.TextPrimary
         )
     ) {

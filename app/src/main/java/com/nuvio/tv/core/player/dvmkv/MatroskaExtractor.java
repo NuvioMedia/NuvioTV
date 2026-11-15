@@ -189,6 +189,18 @@ public class MatroskaExtractor implements Extractor {
     }
 
     /**
+     * Optionally rewrites an AV1 sample payload (a temporal unit of OBUs).
+     *
+     * <p>Same contract as {@link #transformHevcSample}: reads the first
+     * {@code sampleLength} bytes; a non-null result uses
+     * {@link #lastTransformedSampleLength()} as its valid length.
+     */
+    @Nullable
+    default byte[] transformAv1Sample(byte[] sample, int sampleLength) {
+      return null;
+    }
+
+    /**
      * Optionally rewrites Dolby Vision codec signaling for output {@link Format}.
      *
      * <p>This is used when sample-level metadata conversion changes the effective Dolby Vision
@@ -233,6 +245,10 @@ public class MatroskaExtractor implements Extractor {
           };
 
   private static final String TAG = "MatroskaExtractor";
+
+  // Encoders repeat the alternative transfer SEI on random access points, so a few leading
+  // samples cover streams whose first sample doesn't carry it.
+  private static final int MAX_HEVC_ALTERNATIVE_TRANSFER_SAMPLES = 8;
 
   private static final int UNSET_ENTRY_ID = -1;
 
@@ -2136,6 +2152,18 @@ public class MatroskaExtractor implements Extractor {
       maybeEndTracks();
     }
 
+    if (track.isHevc
+        && track.hevcAlternativeTransferSamplesToCheck > 0
+        && !track.requiresDolbyVisionTransform
+        && !sampleEncodingHandled
+        && sampleBytesRead == 0
+        && zlibSampleSource == null
+        && !track.hasContentEncryption
+        && track.sampleStrippedBytes == null) {
+      track.hevcAlternativeTransferSamplesToCheck--;
+      maybeApplyHevcAlternativeTransfer(input, track, size);
+    }
+
     TrackOutput output = track.output;
     if (!sampleEncodingHandled) {
       if (track.hasContentEncryption) {
@@ -2237,7 +2265,9 @@ public class MatroskaExtractor implements Extractor {
         // If there is supplemental data, the structure of the sample data is:
         // encryption data (if any) || sample size (4 bytes) || sample data || supplemental data
         deferSupplementalMainSampleSizePrefix =
-            track.isHevc && track.requiresDolbyVisionTransform && dolbyVisionSampleTransformer != null;
+            (track.isHevc || CODEC_ID_AV1.equals(track.codecId))
+                && track.requiresDolbyVisionTransform
+                && dolbyVisionSampleTransformer != null;
         if (!deferSupplementalMainSampleSizePrefix) {
           int sampleSize = size + sampleStrippedBytes.limit() - sampleBytesRead;
           writeSupplementalMainSampleSizePrefix(output, sampleSize);
@@ -2336,6 +2366,40 @@ public class MatroskaExtractor implements Extractor {
           sampleCurrentNalBytesRemaining -= bytesWritten;
         }
       }
+    } else if (CODEC_ID_AV1.equals(track.codecId)
+        && track.requiresDolbyVisionTransform
+        && dolbyVisionSampleTransformer != null
+        && sampleStrippedBytes.limit() == 0) {
+      int remainingSampleBytes = size - sampleBytesRead;
+      if (dolbyVisionSampleBuffer.length < remainingSampleBytes) {
+        int newSize = Math.max(remainingSampleBytes, dolbyVisionSampleBuffer.length * 2);
+        newSize = (newSize + 262143) & ~262143;
+        dolbyVisionSampleBuffer = new byte[newSize];
+      }
+      byte[] sampleData = dolbyVisionSampleBuffer;
+      writeToTarget(input, sampleData, /* offset= */ 0, remainingSampleBytes);
+      sampleBytesRead += remainingSampleBytes;
+
+      byte[] payloadToWrite = sampleData;
+      int payloadLength = remainingSampleBytes;
+      try {
+        byte[] transformedPayload =
+            dolbyVisionSampleTransformer.transformAv1Sample(sampleData, remainingSampleBytes);
+        if (transformedPayload != null) {
+          payloadToWrite = transformedPayload;
+          payloadLength = dolbyVisionSampleTransformer.lastTransformedSampleLength();
+        }
+      } catch (RuntimeException e) {
+        Log.w(TAG, "DolbyVisionSampleTransformer.transformAv1Sample failed: " + e.getMessage());
+      }
+
+      if (deferSupplementalMainSampleSizePrefix) {
+        writeSupplementalMainSampleSizePrefix(output, payloadLength);
+        sampleBytesWritten += 4;
+      }
+      ParsableByteArray payload = new ParsableByteArray(payloadToWrite, payloadLength);
+      output.sampleData(payload, payloadLength);
+      sampleBytesWritten += payloadLength;
     } else {
       if (track.trueHdSampleRechunker != null) {
         checkState(sampleStrippedBytes.limit() == 0);
@@ -2363,6 +2427,34 @@ public class MatroskaExtractor implements Extractor {
     }
 
     return finishWriteSampleData();
+  }
+
+  /**
+   * Applies the HDR transfer from an HEVC alternative transfer SEI when the container and VUI
+   * declare none, so the decoder and display get HLG for streams that signal it only there.
+   */
+  private void maybeApplyHevcAlternativeTransfer(ExtractorInput input, Track track, int size)
+      throws IOException {
+    Format format = checkNotNull(track.format);
+    if (HevcAlternativeTransferSei.declaresHdrTransfer(format)) {
+      track.hevcAlternativeTransferSamplesToCheck = 0;
+      return;
+    }
+    int preferredTransfer =
+        HevcAlternativeTransferSei.peekPreferredTransfer(
+            input, size, track.nalUnitLengthFieldLength);
+    if (preferredTransfer == Format.NO_VALUE) {
+      return;
+    }
+    track.hevcAlternativeTransferSamplesToCheck = 0;
+    @C.ColorTransfer
+    int colorTransfer = ColorInfo.isoTransferCharacteristicsToColorTransfer(preferredTransfer);
+    if (!HevcAlternativeTransferSei.isHdrTransfer(colorTransfer)) {
+      return;
+    }
+    track.format = HevcAlternativeTransferSei.withColorTransfer(format, colorTransfer);
+    checkNotNull(track.output).format(track.format);
+    Log.i(TAG, "HEVC alternative transfer SEI: preferred transfer " + preferredTransfer);
   }
 
   private int writeLengthDelimitedSampleAsAnnexB(
@@ -3143,6 +3235,8 @@ public class MatroskaExtractor implements Extractor {
     public int nalUnitLengthFieldLength;
     public boolean requiresDolbyVisionTransform;
     public boolean isHevc;
+    // Leading HEVC samples still to scan for an alternative transfer SEI.
+    public int hevcAlternativeTransferSamplesToCheck = MAX_HEVC_ALTERNATIVE_TRANSFER_SAMPLES;
 
     /** Builds the {@link Format} for the track. */
     @RequiresNonNull("codecId")
@@ -3421,6 +3515,13 @@ public class MatroskaExtractor implements Extractor {
         // in the conversion path), so we use the self-contained codec mapping.
         mimeType = MimeTypes.VIDEO_H265;
         codecs = DolbyVisionCompatibility.chooseHevcCodecsString(codecs, null);
+      }
+      if (MimeTypes.VIDEO_DOLBY_VISION.equals(mimeType)
+          && codecs != null) {
+        String lowerCodecs = codecs.toLowerCase(Locale.ROOT);
+        if (lowerCodecs.startsWith("dav1.") || lowerCodecs.startsWith("dva1.")) {
+          initializationData = null;
+        }
       }
 
       @C.SelectionFlags int selectionFlags = 0;

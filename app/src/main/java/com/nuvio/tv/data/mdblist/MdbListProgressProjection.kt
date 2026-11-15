@@ -91,6 +91,19 @@ internal class MdbListProgressProjection private constructor(
     fun episodeProgress(contentId: String): Map<Pair<Int, Int>, WatchProgress> =
         episodeProgressById[contentId].orEmpty().associateBy { it.season!! to it.episode!! }
 
+    fun hasEpisodes(contentId: String): Boolean =
+        watchedById.containsKey(contentId) || episodeProgressById.containsKey(contentId)
+
+    /** Watched episodes of [contentId] as completed progress entries. */
+    fun watchedEpisodeProgress(contentId: String): List<WatchProgress> =
+        watchedById[contentId].orEmpty().mapNotNull { record ->
+            if (record.season == null || record.episode == null) return@mapNotNull null
+            progress(
+                record.type, record.media, record.season, record.episode, record.episodeTitle,
+                100f, record.watchedAt, null, WatchProgress.SOURCE_REMOTE_HISTORY
+            )
+        }
+
     companion object {
         const val COMPLETION_PERCENT = 80f
         val Empty = MdbListProgressProjection(MdbListSyncSnapshot(0))

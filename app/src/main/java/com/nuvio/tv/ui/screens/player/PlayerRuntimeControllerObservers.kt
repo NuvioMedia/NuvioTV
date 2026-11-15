@@ -74,7 +74,10 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
                         sources = currentTorrentSources,
                         bingeGroup = currentStreamBingeGroup,
                         contentLanguage = contentLanguage,
-                        year = year
+                        year = year,
+                        addonName = currentAddonName,
+                        addonLogo = currentAddonLogo,
+                        streamDescription = currentStreamDescription
                     )
                 } else if (currentStreamUrl.isNotBlank() && !isServerStream) {
                     streamLinkCacheDataStore.save(
@@ -85,9 +88,14 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
                         filename = currentFilename,
                         videoHash = currentVideoHash,
                         videoSize = currentVideoSize,
+                        infoHash = state.currentStreamInfoHash,
+                        fileIdx = state.currentStreamFileIdx,
                         bingeGroup = currentStreamBingeGroup,
                         contentLanguage = contentLanguage,
-                        year = year
+                        year = year,
+                        addonName = currentAddonName,
+                        addonLogo = currentAddonLogo,
+                        streamDescription = currentStreamDescription
                     )
                 }
             }
@@ -151,6 +159,8 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     autoSubtitleSelected = true
                     selectAddonSubtitle(match)
                     _uiState.update { it.copy(selectedAddonSubtitle = match, selectedSubtitleTrackIndex = -1) }
+                    // After a player rebuild this reapplies the earlier result without analysing again.
+                    runSelectedAutomaticSubtitleSync(match) // AutoSync hook
                     return@launch
                 }
             }
@@ -300,6 +310,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
             currentPlayerSettingsForReport = settings
+            hasObservedPlayerSettings = true
             val currentState = _uiState.value
             val showOnlyPreferredLanguagesChanged =
                 currentState.subtitleStyle.showOnlyPreferredLanguages != settings.subtitleStyle.showOnlyPreferredLanguages
@@ -352,6 +363,11 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     },
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
+                    chaptersEnabled = settings.exoChaptersEnabled,
+                    showChapterTitle = settings.chapterTitleEnabled,
+                    // Turning chapters off hides them at once; skip intro keeps its own copy.
+                    chapters = if (settings.exoChaptersEnabled) state.chapters else emptyList(),
+                    showChaptersPanel = state.showChaptersPanel && settings.exoChaptersEnabled,
                     internalPlayerEngine = resolvedInternalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&
@@ -363,11 +379,17 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 )
             }
 
+            if (settings.subtitleStyle.usesStyledRenderer != currentState.subtitleStyle.usesStyledRenderer) {
+                refreshStyledSubtitles()
+            }
             if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
                 applyAudioAmplification(resolvedAudioAmplificationDb)
             }
             if (resolvedCenterMixLevelDb != currentState.centerMixLevelDb) {
                 applyCenterMixLevel(resolvedCenterMixLevelDb)
+            }
+            if (settings.nightMode != currentState.nightMode) {
+                applyNightMode(settings.nightMode)
             }
 
             if (settings.rememberAudioDelayPerDevice && !wasRememberingAudioDelayPerDevice) {
@@ -394,6 +416,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             autoSwitchInternalPlayerOnErrorEnabled = settings.autoSwitchInternalPlayerOnError
             currentInternalPlayerEngine = resolvedInternalPlayerEngine
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
+            streamAutoPlayFallbackActive = settings.streamAutoPlayFallbackActive
+            streamAutoPlayFallbackMaxSources = settings.streamAutoPlayFallbackMaxSources
+            streamAutoPlayFallbackStartupTimeoutSeconds = settings.streamAutoPlayFallbackStartupTimeoutSeconds
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
             streamAutoPlayTimeoutSecondsSetting = settings.streamAutoPlayTimeoutSeconds
             preloadNextEpisodeSourcesSetting = settings.preloadNextEpisodeSources
@@ -984,7 +1009,7 @@ internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
         yield()
         runCatching {
             releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
-            initializePlayer(currentStreamUrl, currentHeaders)
+            reinitializeCurrentStream()
         }.onFailure { e ->
             _uiState.update {
                 it.copy(
@@ -1057,5 +1082,13 @@ internal fun PlayerRuntimeController.observeDeviceLocalTunneledSurfaceFill() {
                     _uiState.update { it.copy(tunneledSurfaceFill = fill) }
                 }
             }
+    }
+}
+
+internal fun PlayerRuntimeController.observeDeviceLocalReleaseDecoderOnBackground() {
+    scope.launch {
+        deviceLocalPlayerPreferences.releaseDecoderOnBackground
+            .distinctUntilChanged()
+            .collect { enabled -> releaseDecoderOnBackground = enabled }
     }
 }

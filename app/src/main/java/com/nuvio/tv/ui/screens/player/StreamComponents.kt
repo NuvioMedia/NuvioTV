@@ -34,8 +34,10 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -250,6 +252,19 @@ internal fun StreamItem(
     }
 }
 
+/**
+ * Chips sit in a LazyRow, so a chip scrolled out of view has no focus node and
+ * requestFocus() on it fails without moving focus. Scroll it into the row first.
+ */
+internal suspend fun LazyListState.focusChip(index: Int, chipFocusRequesters: List<FocusRequester>): Boolean {
+    val requester = chipFocusRequesters.getOrNull(index) ?: return false
+    if (layoutInfo.visibleItemsInfo.none { it.index == index }) {
+        scrollToItem(index)
+        withFrameNanos {}
+    }
+    return runCatching { requester.requestFocus() }.getOrDefault(false)
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun AddonFilterChips(
@@ -263,6 +278,7 @@ internal fun AddonFilterChips(
     externalOrderedNames: List<String>? = null,
     onUpKey: (() -> Unit)? = null,
     onFocusIndexChanged: (Int) -> Unit = {},
+    chipListState: LazyListState = rememberLazyListState(),
     debugTag: String = "AddonFilterChips"
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -318,9 +334,7 @@ internal fun AddonFilterChips(
         // move actual focus to the correct chip so highlight doesn't stick on the wrong one.
         if (chipRowHasFocus) {
             withFrameNanos {}
-            if (idx in focusRequesters.indices) {
-                runCatching { focusRequesters[idx].requestFocus() }
-            }
+            chipListState.focusChip(idx, focusRequesters)
         }
     }
     val scope = rememberCoroutineScope()
@@ -331,7 +345,7 @@ internal fun AddonFilterChips(
             refreshHasFocus = true
             scope.coroutineLaunch {
                 withFrameNanos {}
-                try { focusRequesters[0].requestFocus() } catch (_: Exception) {}
+                chipListState.focusChip(0, focusRequesters)
             }
             return
         }
@@ -345,17 +359,18 @@ internal fun AddonFilterChips(
         onAddonSelected(selectedFilter)
         scope.coroutineLaunch {
             withFrameNanos {}
-            if (targetIndex in focusRequesters.indices) {
-                try { focusRequesters[targetIndex].requestFocus() } catch (_: Exception) {}
-            }
+            chipListState.focusChip(targetIndex, focusRequesters)
         }
     }
 
-    val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
-
+    // While focus is in the results, keep the selected chip in view so the row
+    // shows it and it can take focus again.
     LaunchedEffect(focusedChipIndex) {
-        if (focusedChipIndex >= 0 && !chipRowHasFocus) {
-            chipListState.scrollToItem(0)
+        val visibleItems = chipListState.layoutInfo.visibleItemsInfo
+        if (focusedChipIndex >= 0 && !chipRowHasFocus &&
+            visibleItems.isNotEmpty() && visibleItems.none { it.index == focusedChipIndex }
+        ) {
+            chipListState.scrollToItem(focusedChipIndex)
         }
     }
 
@@ -377,7 +392,7 @@ internal fun AddonFilterChips(
                 if (hasFocus && !chipRowHasFocus && isRtl) {
                     scope.coroutineLaunch {
                         withFrameNanos {}
-                        focusRequesters.getOrNull(focusedChipIndex)?.requestFocus()
+                        chipListState.focusChip(focusedChipIndex, focusRequesters)
                     }
                 }
                 chipRowHasFocus = hasFocus

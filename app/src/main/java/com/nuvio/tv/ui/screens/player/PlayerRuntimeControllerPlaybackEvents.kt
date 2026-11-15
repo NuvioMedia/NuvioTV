@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.repository.AddonPlayerAction
+import com.nuvio.tv.data.repository.AddonPlayerEventTarget
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.Player
@@ -14,7 +16,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticIdentity
 import com.nuvio.tv.data.local.InternalPlayerEngine
-import com.nuvio.tv.data.local.SubtitleStyleSettings
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackSettingsInput
@@ -250,6 +252,20 @@ internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
     }
 }
 
+internal fun PlayerRuntimeController.applyNightMode(mode: NightMode) {
+    _uiState.update { it.copy(nightMode = mode) }
+    if (isUsingMpvEngine()) return
+    val wasActive = nightModeAudioProcessor.isNightModeEnabled()
+    nightModeAudioProcessor.setMode(mode)
+
+    if (wasActive != nightModeAudioProcessor.isNightModeEnabled()) {
+        playbackSpeedAwareAudioSink?.notifyAudioProcessingRequirementChanged()
+        _exoPlayer?.let { player ->
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().build()
+        }
+    }
+}
+
 internal fun PlayerRuntimeController.applyCenterMixLevel(db: Int) {
     val clampedDb = db.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
     ffmpegAudioRenderer?.setCenterMixLevelDb(clampedDb)
@@ -274,7 +290,8 @@ internal fun PlayerRuntimeController.updateAudioControlAvailability(
     _uiState.update { state ->
         state.copy(
             isAudioAmplificationAvailable = isAudioAmplificationAvailable,
-            isCenterMixAvailable = isCenterMixAvailable
+            isCenterMixAvailable = isCenterMixAvailable,
+            isNightModeAvailable = _exoPlayer != null && !isUsingMpvEngine()
         )
     }
 }
@@ -503,6 +520,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         durationMs = playerDuration.coerceAtLeast(0L)
                     )
                 }
+                checkExoPlaybackOverrun(player, pos, playerDuration)
 
                 if (player.isPlaying) {
                     val now = System.currentTimeMillis()
@@ -532,6 +550,64 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
             delay(500)
         }
     }
+}
+
+internal const val EXO_END_OVERRUN_GRACE_MS = 1_000L
+
+/** Whether at least one audio renderer is enabled and every enabled one has ended. */
+private fun exoAudioRendererEnded(player: androidx.media3.exoplayer.ExoPlayer): Boolean =
+    runCatching {
+        val audio = (0 until player.rendererCount)
+            .filter { player.getRendererType(it) == androidx.media3.common.C.TRACK_TYPE_AUDIO }
+            .map { player.getRenderer(it) }
+            .filter { it.state != androidx.media3.exoplayer.Renderer.STATE_DISABLED }
+        audio.isNotEmpty() && audio.all { it.isEnded }
+    }.getOrDefault(false)
+
+/**
+ * ExoPlayer only reaches STATE_ENDED once every enabled renderer reports isEnded().
+ * Some hardware decoders never let the video renderer read the end-of-stream
+ * marker, so it never ends: audio finishes, the screen goes black and the
+ * standalone clock keeps ticking past the duration forever.
+ * Once audio has ended past the duration, finish naturally instead.
+ */
+internal fun PlayerRuntimeController.checkExoPlaybackOverrun(
+    player: androidx.media3.exoplayer.ExoPlayer,
+    positionMs: Long,
+    durationMs: Long
+) {
+    if (durationMs <= 0L || player.isCurrentMediaItemLive) return
+    if (player.playbackState == Player.STATE_ENDED) return
+    val overrunMs = positionMs - durationMs
+    if (overrunMs <= 0L) {
+        if (exoEndOverrunHandled) {
+            // User seeked back after a forced end; allow detection again.
+            exoEndOverrunHandled = false
+            _uiState.update { it.copy(playbackEnded = false) }
+        }
+        return
+    }
+    if (exoEndOverrunHandled || overrunMs < EXO_END_OVERRUN_GRACE_MS) return
+    if (!endDetectionArmed || !hasRenderedFirstFrame) return
+    // Audio still running past duration means the duration is wrong, not the player.
+    if (!exoAudioRendererEnded(player)) return
+
+    exoEndOverrunHandled = true
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "EXO_END_OVERRUN: forcing natural end positionMs=$positionMs durationMs=$durationMs"
+    )
+    val naturalEnded = shouldTreatAsNaturalPlaybackCompletion(
+        hasRenderedFirstFrame = hasRenderedFirstFrame,
+        hasFatalError = !_uiState.value.error.isNullOrBlank(),
+        durationMs = maxOf(durationMs, lastKnownDuration)
+    )
+    if (!naturalEnded) return
+    // Stop the runaway clock. The completion scrobble below clears the active
+    // scrobble, so the pause that follows does not send a Trakt pause.
+    _uiState.update { it.copy(playbackEnded = true, isBuffering = false) }
+    handleNaturalPlaybackEnded()
+    player.pause()
 }
 
 internal fun PlayerRuntimeController.stopProgressUpdates() {
@@ -802,7 +878,7 @@ internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long 
     val isEnded = if (isUsingMpvEngine()) {
         position >= (effectiveDuration - 500L)
     } else {
-        _exoPlayer?.playbackState == Player.STATE_ENDED
+        _exoPlayer?.playbackState == Player.STATE_ENDED || exoEndOverrunHandled
     }
     if (!isEnded && effectiveDuration < position) return 0L
 
@@ -842,6 +918,7 @@ internal fun PlayerRuntimeController.handleNaturalPlaybackEnded() {
         return
     }
 
+    emitAddonPlayerEvent(AddonPlayerAction.STOP)
     emitCompletionScrobbleStop(progressPercent = 99.5f)
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = true)
@@ -994,7 +1071,38 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TrackingMediaReference
     }
 }
 
+internal fun PlayerRuntimeController.emitAddonPlayerEvent(
+    action: AddonPlayerAction,
+    resend: Boolean = false
+) {
+    if (isShortPlaceholderStream()) return
+    val positionMs = currentPlaybackPositionMs() ?: 0L
+    val durationMs = currentPlaybackDurationMs().takeIf { it > 0 } ?: lastKnownDuration
+    val active = activeAddonPlayerEventTarget
+    if (action == AddonPlayerAction.STOP) {
+        if (active == null) return
+        activeAddonPlayerEventTarget = null
+        lastAddonPlayerAction = null
+        addonEventDispatcher.player(active, AddonPlayerAction.STOP, positionMs, durationMs)
+        return
+    }
+    val type = contentType ?: return
+    val videoId = currentVideoId?.takeIf { it.isNotBlank() } ?: contentId ?: return
+    val target = AddonPlayerEventTarget(type = type, videoId = videoId)
+    if (active != null && active != target) {
+        addonEventDispatcher.player(active, AddonPlayerAction.STOP, positionMs, durationMs)
+        activeAddonPlayerEventTarget = null
+        lastAddonPlayerAction = null
+    }
+    if (action == AddonPlayerAction.PAUSE && activeAddonPlayerEventTarget == null) return
+    if (!resend && action == lastAddonPlayerAction && activeAddonPlayerEventTarget == target) return
+    activeAddonPlayerEventTarget = target
+    lastAddonPlayerAction = action
+    addonEventDispatcher.player(target, action, positionMs, durationMs)
+}
+
 internal fun PlayerRuntimeController.emitScrobbleStart() {
+    emitAddonPlayerEvent(AddonPlayerAction.START)
     logScrobbleDiagnostic("start_evaluated")
     if (isShortPlaceholderStream()) {
         logScrobbleDiagnostic("start_skipped", "reason=short_placeholder")
@@ -1127,6 +1235,7 @@ internal fun PlayerRuntimeController.emitCompletionScrobbleStop(progressPercent:
 }
 
 internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
+    emitAddonPlayerEvent(AddonPlayerAction.STOP)
     val progressPercent = currentPlaybackProgressPercent()
     if (!shouldSendStopScrobble(hasRequestedScrobbleStartForCurrentItem, progressPercent)) {
         logScrobbleDiagnostic(
@@ -1143,6 +1252,7 @@ internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
 }
 
 internal fun PlayerRuntimeController.emitPauseScrobbleForCurrentProgress() {
+    emitAddonPlayerEvent(AddonPlayerAction.PAUSE)
     emitScrobblePause(progressPercent = currentPlaybackProgressPercent())
 }
 
@@ -1189,6 +1299,7 @@ internal fun PlayerRuntimeController.scheduleProgressSyncAfterSeek() {
     seekProgressSyncJob = scope.launch {
         delay(seekProgressSyncDebounceMs)
         saveWatchProgress()
+        lastAddonPlayerAction?.let { action -> emitAddonPlayerEvent(action, resend = true) }
 
         val progressPercent = currentPlaybackProgressPercent()
         emitSeekScrobbleRestart(progressPercent = progressPercent)
@@ -1364,6 +1475,8 @@ fun PlayerRuntimeController.onEvent(
                     stopProgressUpdates()
                     stopWatchProgressSaving()
                     emitPauseScrobbleForCurrentProgress()
+                    // Same as Exo's pause: a paused player left alone can be killed by the system.
+                    saveWatchProgress()
                     schedulePauseOverlay()
                 } else {
                     userPausedManually = false
@@ -1535,6 +1648,12 @@ fun PlayerRuntimeController.onEvent(
                     dbToPersist = if (event.enabled) currentDb else null,
                     centerMixDbToPersist = if (event.enabled) currentCenterMixDb else null
                 )
+            }
+        }
+        is PlayerEvent.OnSetNightMode -> {
+            applyNightMode(event.mode)
+            scope.launch {
+                playerSettingsDataStore.setNightMode(event.mode)
             }
         }
         is PlayerEvent.OnSetCenterMixLevelDb -> {
@@ -1853,6 +1972,7 @@ fun PlayerRuntimeController.onEvent(
             hasRenderedFirstFrame = false
             endDetectionArmed = false
             mpvEofSeenClear = false
+            exoEndOverrunHandled = false
             hasRetriedCurrentStreamAfter416 = false
             playbackIssueReportRequestVersion.incrementAndGet()
             resetErrorRetryState()
@@ -1894,7 +2014,7 @@ fun PlayerRuntimeController.onEvent(
                 )
             } else {
                 releasePlayer()
-                initializePlayer(currentStreamUrl, currentHeaders)
+                reinitializeCurrentStream()
             }
         }
         PlayerEvent.OnReportPlaybackIssue -> {
@@ -1969,24 +2089,27 @@ fun PlayerRuntimeController.onEvent(
         is PlayerEvent.OnSetSubtitleVerticalOffset -> {
             scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset) }
         }
+        is PlayerEvent.OnSetSubtitleFont -> {
+            scope.launch { playerSettingsDataStore.setSubtitleFontId(event.fontId) }
+        }
+        is PlayerEvent.OnSetSubtitleBackgroundColor -> {
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundColor(event.color) }
+        }
+        is PlayerEvent.OnSetSubtitleBackgroundRadius -> {
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundRadius(event.radius) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowEnabled -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowEnabled(event.enabled) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowOpacity -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowOpacity(event.opacity) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowSize -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowSize(event.size) }
+        }
         PlayerEvent.OnResetSubtitleDefaults -> {
             val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
-            scope.launch {
-                val defaults = SubtitleStyleSettings()
-                playerSettingsDataStore.setSubtitleSize(defaults.size)
-                if (editingHdr) {
-                    playerSettingsDataStore.setSubtitleHdrTextColor(defaults.hdrTextColor)
-                    playerSettingsDataStore.setSubtitleHdrBrightness(defaults.hdrBrightness)
-                } else {
-                    playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
-                }
-                playerSettingsDataStore.setSubtitleBold(defaults.bold)
-                playerSettingsDataStore.setSubtitleOutlineEnabled(defaults.outlineEnabled)
-                playerSettingsDataStore.setSubtitleOutlineColor(defaults.outlineColor)
-                playerSettingsDataStore.setSubtitleOutlineWidth(defaults.outlineWidth)
-                playerSettingsDataStore.setSubtitleVerticalOffset(defaults.verticalOffset)
-                playerSettingsDataStore.setSubtitleBackgroundColor(defaults.backgroundColor)
-            }
+            scope.launch { playerSettingsDataStore.resetSubtitleAppearance(resetHdrText = editingHdr) }
         }
         PlayerEvent.OnToggleAspectRatio -> {
             val state = _uiState.value
