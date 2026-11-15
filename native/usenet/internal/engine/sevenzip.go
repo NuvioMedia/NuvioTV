@@ -34,6 +34,8 @@ var (
 	Err7zPasswordMissing = errors.New("encrypted 7z needs a password, but the NZB has none")
 	Err7zWrongPassword   = errors.New("the NZB password does not open this 7z archive")
 	err7zVolumeLayout    = errors.New("7z volume sizes are not uniform")
+	// Not permanent: the set is remembered and the next open reads every volume's name.
+	err7zVolumeOrder = errors.New("7z volume is not the one its NZB subject position predicts")
 )
 
 var sevenZipMagic = []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}
@@ -170,6 +172,10 @@ func (a *sevenZipArchive) ReadAt(p []byte, off int64) (int, error) {
 					a.layout = err7zVolumeLayout
 					return n, a.layout
 				}
+				if err := volumeOrderError(v.file); err != nil {
+					a.layout = err
+					return n, err
+				}
 				v.verified = true
 			}
 		}
@@ -221,7 +227,7 @@ func open7zSet(ctx context.Context, files []*File) (*sevenZipSet, error) {
 		return nil, err
 	}
 	set, err := open7zLayout(ctx, files, vols)
-	if err == nil || ctx.Err() != nil {
+	if err == nil || ctx.Err() != nil || errors.Is(err, err7zVolumeOrder) {
 		return set, err
 	}
 	for _, v := range vols {
@@ -431,6 +437,9 @@ func (c *Content) verifyVolume(ctx context.Context, off int64) error {
 	if size, ok := exactSize(f); !ok || size != want {
 		return err7zVolumeLayout
 	}
+	if err := volumeOrderError(f); err != nil {
+		return err
+	}
 	c.mu.Lock()
 	delete(c.pending, f)
 	c.mu.Unlock()
@@ -608,8 +617,17 @@ var sevenZipVolumeName = regexp.MustCompile(`(?i)^(.*)\.7z\.(\d+)$`)
 // interleave them, and their yEnc headers often keep the real volume names.
 // Every candidate's first article is read (a few at a time): PAR2 files are
 // dropped by signature, and when yEnc names number the volumes they decide
-// membership and order. Otherwise release order stands.
+// membership and order. Otherwise release order stands. A large set that its
+// NZB subjects already number skips that read (subjectOrdered7zVolumes).
 func obfuscated7zVolumes(ctx context.Context, files []*File) ([]*File, error) {
+	if vols, ok := subjectOrdered7zVolumes(ctx, files); ok {
+		return vols, nil
+	}
+	return obfuscated7zVolumesByName(ctx, files)
+}
+
+func obfuscated7zVolumesByName(ctx context.Context, files []*File) ([]*File, error) {
+	forgetSubjectOrder(files)
 	heads := make([][]byte, len(files))
 	errs := make([]error, len(files))
 	var wg sync.WaitGroup
