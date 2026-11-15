@@ -1,5 +1,8 @@
 package com.nuvio.tv.core.player
 
+import com.nuvio.tv.data.repository.AddonEventDispatcher
+import com.nuvio.tv.data.repository.AddonPlayerAction
+import com.nuvio.tv.data.repository.AddonPlayerEventTarget
 import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackResult
@@ -186,6 +189,7 @@ class ExternalPlaybackTracker @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val watchProgressRepository: WatchProgressRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
+    private val addonEventDispatcher: AddonEventDispatcher,
     private val metaRepository: MetaRepository,
     private val episodeShufflePlayback: EpisodeShufflePlayback,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -1468,6 +1472,18 @@ class ExternalPlaybackTracker @Inject constructor(
                 (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
             } else {
                 0f
+            }
+            val reportedCompletion = explicitPercent != null && explicitPercent >= 100f
+            if (progressPercent > 0f || reportedCompletion) {
+                addonEventDispatcher.player(
+                    target = AddonPlayerEventTarget(
+                        type = metadata.contentType,
+                        videoId = metadata.videoId.ifBlank { metadata.contentId }
+                    ),
+                    action = AddonPlayerAction.STOP,
+                    currentTimeMs = if (positionMs <= 0L && reportedCompletion) effectiveDuration else positionMs,
+                    durationMs = effectiveDuration
+                )
             }
             if (progressPercent > 0f) {
                 val scrobbleItem = buildScrobbleItem(metadata)
