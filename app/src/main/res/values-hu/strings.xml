@@ -2159,15 +2159,8 @@
     <string name="library_status_dropped">Abbahagyott</string>
     <string name="library_syncing_library">Könyvtár szinkronizálása\u2026</string>
     <string name="library_type_all">Összes</string>
-    <string name="library_type_items">elem</string>
-    <string name="library_empty_local_title">Még nincs %1$s</string>
-    <string name="library_empty_trakt_title">Nincs %1$s ebben a listában</string>
-    <string name="library_empty_local_subtitle">Mentsd el a kedvenc tartalmaidat, hogy itt láthasd őket</string>
-    <string name="library_empty_trakt_subtitle">Használd a + gombot a részletek oldalon, hogy elemeket adj a várólistádhoz vagy más listákhoz</string>
     <string name="library_empty_trakt_not_auth_title">A Trakt nincs csatlakoztatva</string>
     <string name="library_empty_trakt_not_auth_subtitle">Csatlakoztasd a Trakt fiókodat a Beállításokban a Trakt könyvtárad megtekintéséhez</string>
-    <string name="library_empty_simkl_title">Nincs %1$s ebben az állapotban</string>
-    <string name="library_empty_simkl_subtitle">A részletek oldalon a + gombbal állíthatod be a tartalom megtekintési állapotát a Simklben</string>
     <string name="library_empty_simkl_not_auth_title">A Simkl nincs csatlakoztatva</string>
     <string name="library_empty_simkl_not_auth_subtitle">Csatlakoztasd a Simkl fiókodat a Beállításokban a Simkl könyvtárad megtekintéséhez</string>
     <string name="library_list_create_dialog_title">Lista létrehozása</string>

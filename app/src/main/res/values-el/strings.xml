@@ -1423,8 +1423,6 @@
   <string name="action_remove_anyway">Αφαίρεση ούτως ή άλλως</string>
   <string name="cd_simkl_qr">QR ενεργοποίησης Simkl</string>
   <string name="cd_simkl_logo">Λογότυπο Simkl</string>
-  <string name="library_empty_simkl_title">Δεν υπάρχουν %1$s σε αυτή την κατάσταση</string>
-  <string name="library_empty_simkl_subtitle">Χρησιμοποιήστε το + στις λεπτομέρειες για προσθήκη στοιχείων σε κατάσταση Simkl</string>
   <string name="library_empty_simkl_not_auth_title">Το Simkl δεν είναι συνδεδεμένο</string>
   <string name="library_empty_simkl_not_auth_subtitle">Συνδέστε τον λογαριασμό Simkl στις Ρυθμίσεις για να δείτε τη βιβλιοθήκη Simkl</string>
   <!-- DebugSettingsScreen -->
@@ -1980,11 +1978,6 @@
   <string name="library_status_dropped">Εγκαταλείφθηκαν</string>
   <string name="library_syncing_library">Συγχρονισμός βιβλιοθήκης…</string>
   <string name="library_type_all">Όλα</string>
-  <string name="library_type_items">στοιχεία</string>
-  <string name="library_empty_local_title">Δεν υπάρχουν ακόμα %1$s</string>
-  <string name="library_empty_trakt_title">Δεν υπάρχουν %1$s σε αυτή τη λίστα</string>
-  <string name="library_empty_local_subtitle">Αποθηκεύστε τα αγαπημένα σας για να τα δείτε εδώ</string>
-  <string name="library_empty_trakt_subtitle">Χρησιμοποιήστε το + στις λεπτομέρειες για προσθήκη στη watchlist ή σε λίστες</string>
   <string name="library_empty_trakt_not_auth_title">Το Trakt δεν είναι συνδεδεμένο</string>
   <string name="library_empty_trakt_not_auth_subtitle">Συνδέστε τον λογαριασμό Trakt στις Ρυθμίσεις για να δείτε τη βιβλιοθήκη Trakt</string>
   <string name="cloud_library_connect_action">Σύνδεση λογαριασμού</string>

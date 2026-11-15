@@ -1726,11 +1726,6 @@
     <string name="library_watchlist">Watchlist</string>
     <string name="library_syncing_library">Synchronizace knihovny…</string>
     <string name="library_type_all">Vše</string>
-    <string name="library_type_items">položky</string>
-    <string name="library_empty_local_title">Zatím žádné %1$s</string>
-    <string name="library_empty_trakt_title">Žádné %1$s v tomto seznamu</string>
-    <string name="library_empty_local_subtitle">Začněte ukládat své oblíbené, abyste je zde viděli</string>
-    <string name="library_empty_trakt_subtitle">Použijte + v podrobnostech pro přidání položek do watchlistu nebo seznamů</string>
     <string name="library_empty_trakt_not_auth_title">Trakt není připojen</string>
     <string name="library_empty_trakt_not_auth_subtitle">Pro zobrazení své knihovny Trakt připojte svůj účet Trakt v Nastavení</string>
     <string name="library_list_create_dialog_title">Vytvořit seznam</string>

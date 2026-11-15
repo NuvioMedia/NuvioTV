@@ -2069,15 +2069,8 @@
     <string name="library_status_dropped">Odustajem</string>
     <string name="library_syncing_library">Sinkronizacija biblioteke\u2026</string>
     <string name="library_type_all">Sve</string>
-    <string name="library_type_items">stavke</string>
-    <string name="library_empty_local_title">Još nema: %1$s</string>
-    <string name="library_empty_trakt_title">Na ovom popisu nema: %1$s</string>
-    <string name="library_empty_local_subtitle">Počni spremati omiljene naslove kako bi se prikazali ovdje</string>
-    <string name="library_empty_trakt_subtitle">Koristi + u detaljima za dodavanje stavki na popis za gledanje ili popise</string>
     <string name="library_empty_trakt_not_auth_title">Trakt nije povezan</string>
     <string name="library_empty_trakt_not_auth_subtitle">Poveži svoj Trakt račun u Postavkama za prikaz Trakt biblioteke</string>
-    <string name="library_empty_simkl_title">U ovom statusu nema: %1$s</string>
-    <string name="library_empty_simkl_subtitle">Koristi + u detaljima za dodavanje stavki u Simkl status</string>
     <string name="library_empty_simkl_not_auth_title">Simkl nije povezan</string>
     <string name="library_empty_simkl_not_auth_subtitle">Poveži svoj Simkl račun u Postavkama za prikaz Simkl biblioteke</string>
     <string name="library_list_create_dialog_title">Stvori popis</string>

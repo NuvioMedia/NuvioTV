@@ -1572,11 +1572,6 @@
     <string name="library_watchlist">Daftar Tonton</string>
     <string name="library_syncing_library">Menyinkronkan pustaka\u2026</string>
     <string name="library_type_all">Semua</string>
-    <string name="library_type_items">item</string>
-    <string name="library_empty_local_title">Belum ada %1$s</string>
-    <string name="library_empty_trakt_title">Tidak ada %1$s di daftar ini</string>
-    <string name="library_empty_local_subtitle">Mulai simpan favorit Anda untuk melihatnya di sini</string>
-    <string name="library_empty_trakt_subtitle">Gunakan + di detail untuk menambahkan item ke daftar tonton atau daftar</string>
     <string name="library_empty_trakt_not_auth_title">Trakt belum terhubung</string>
     <string name="library_empty_trakt_not_auth_subtitle">Hubungkan akun Trakt Anda di Pengaturan untuk melihat pustaka Trakt Anda</string>
     <string name="cloud_library_connect_action">Hubungkan akun</string>
@@ -3081,8 +3076,6 @@
     <string name="library_status_on_hold">Ditunda</string>
     <string name="library_status_completed">Selesai</string>
     <string name="library_status_dropped">Dihentikan</string>
-    <string name="library_empty_simkl_title">Tidak ada %1$s dengan status ini</string>
-    <string name="library_empty_simkl_subtitle">Gunakan + di detail untuk menambahkan item ke status Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl tidak terhubung</string>
     <string name="library_empty_simkl_not_auth_subtitle">Hubungkan akun Simkl Anda di Pengaturan untuk melihat pustaka Simkl</string>
     <string name="cloud_library_search_clear">Kosongkan pencarian</string>

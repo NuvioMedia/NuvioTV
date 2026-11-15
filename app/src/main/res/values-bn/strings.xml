@@ -2009,15 +2009,8 @@
     <string name="library_status_dropped">বাদ দেওয়া হয়েছে</string>
     <string name="library_syncing_library">লাইব্রেরি সিঙ্ক হচ্ছে\u2026</string>
     <string name="library_type_all">সব</string>
-    <string name="library_type_items">আইটেম</string>
-    <string name="library_empty_local_title">এখনও কোনো %1$s নেই</string>
-    <string name="library_empty_trakt_title">এই লিস্টে কোনো %1$s নেই</string>
-    <string name="library_empty_local_subtitle">এখানে দেখতে আপনার পছন্দেরগুলো সেভ করা শুরু করুন</string>
-    <string name="library_empty_trakt_subtitle">ওয়াচলিস্ট বা লিস্টে আইটেম যোগ করতে বিস্তারিততে + ব্যবহার করুন</string>
     <string name="library_empty_trakt_not_auth_title">Trakt কানেক্ট করা নেই</string>
     <string name="library_empty_trakt_not_auth_subtitle">আপনার Trakt লাইব্রেরি দেখতে সেটিংসে আপনার Trakt অ্যাকাউন্ট কানেক্ট করুন</string>
-    <string name="library_empty_simkl_title">এই স্ট্যাটাসে কোনো %1$s নেই</string>
-    <string name="library_empty_simkl_subtitle">Simkl স্ট্যাটাসে আইটেম যোগ করতে বিস্তারিততে + ব্যবহার করুন</string>
     <string name="library_empty_simkl_not_auth_title">Simkl কানেক্ট করা নেই</string>
     <string name="library_empty_simkl_not_auth_subtitle">আপনার Simkl লাইব্রেরি দেখতে সেটিংসে আপনার Simkl অ্যাকাউন্ট কানেক্ট করুন</string>
     <string name="library_list_create_dialog_title">লিস্ট তৈরি করুন</string>

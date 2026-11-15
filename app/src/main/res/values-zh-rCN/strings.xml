@@ -2012,15 +2012,8 @@
     <string name="library_status_dropped">已放弃</string>
     <string name="library_syncing_library">正在同步媒体库…</string>
     <string name="library_type_all">全部</string>
-    <string name="library_type_items">项目</string>
-    <string name="library_empty_local_title">暂无 %1$s</string>
-    <string name="library_empty_trakt_title">此列表中没有 %1$s</string>
-    <string name="library_empty_local_subtitle">开始保存您的最爱，在此显示</string>
-    <string name="library_empty_trakt_subtitle">在详情中使用 + 将项目添加至观看列表或列表</string>
     <string name="library_empty_trakt_not_auth_title">Trakt 未连接</string>
     <string name="library_empty_trakt_not_auth_subtitle">在设置中连接您的 Trakt 账户以查看您的 Trakt 媒体库</string>
-    <string name="library_empty_simkl_title">此状态中没有 %1$s</string>
-    <string name="library_empty_simkl_subtitle">在详情中使用 + 将项目添加至 Simkl 状态</string>
     <string name="library_empty_simkl_not_auth_title">Simkl 未连接</string>
     <string name="library_empty_simkl_not_auth_subtitle">在设置中连接您的 Simkl 账户以查看您的 Simkl 媒体库</string>
     <string name="library_list_create_dialog_title">创建列表</string>

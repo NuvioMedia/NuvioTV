@@ -2170,15 +2170,8 @@
     <string name="library_status_dropped">Bırakıldı</string>
     <string name="library_syncing_library">Kütüphane senkronize ediliyor\u2026</string>
     <string name="library_type_all">Tümü</string>
-    <string name="library_type_items">içerik bulundu</string>
-    <string name="library_empty_local_title">Henüz %1$s yok</string>
-    <string name="library_empty_trakt_title">Bu listede %1$s yok</string>
-    <string name="library_empty_local_subtitle">İçerik eklemek için içerik detaylarındaki + tuşunu kullanın</string>
-    <string name="library_empty_trakt_subtitle">İçerikleri izleme listenize eklemek için içerik detaylarındaki + tuşunu kullanın</string>
     <string name="library_empty_trakt_not_auth_title">Trakt bağlı değil</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt kütüphanenizi görüntülemek için Ayarlar\'dan Trakt hesabınızı bağlayın</string>
-    <string name="library_empty_simkl_title">Bu durumda %1$s yok</string>
-    <string name="library_empty_simkl_subtitle">Bir Simkl durumuna eklemek için detaylarda + tuşunu kullan</string>
     <string name="library_empty_simkl_not_auth_title">Simkl bağlı değil</string>
     <string name="library_empty_simkl_not_auth_subtitle">Simkl kütüphaneni görmek için Ayarlar\'dan Simkl hesabını bağla</string>
     <string name="cloud_library_connect_action">Hesabı bağla</string>

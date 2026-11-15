@@ -1924,15 +1924,8 @@
 <string name="library_status_dropped">Abbandonato</string>
 <string name="library_syncing_library">Sincronizzazione libreria\u2026</string>
 <string name="library_type_all">Tutto</string>
-<string name="library_type_items">elementi</string>
-<string name="library_empty_local_title">Ancora nessun %1$s</string>
-<string name="library_empty_trakt_title">Nessun %1$s in questa lista</string>
-<string name="library_empty_local_subtitle">Inizia a salvare i tuoi preferiti per vederli qui</string>
-<string name="library_empty_trakt_subtitle">Usa il tasto + nei dettagli per aggiungere elementi alla lista da guardare o alle tue liste</string>
 <string name="library_empty_trakt_not_auth_title">Trakt non connesso</string>
 <string name="library_empty_trakt_not_auth_subtitle">Connetti il tuo account Trakt nelle Impostazioni per visualizzare la tua libreria Trakt</string>
-<string name="library_empty_simkl_title">Nessun elemento in %1$s</string>
-<string name="library_empty_simkl_subtitle">Usa + nei dettagli per aggiungere elementi a uno stato Simkl</string>
 <string name="library_empty_simkl_not_auth_title">Simkl non connesso</string>
 <string name="library_empty_simkl_not_auth_subtitle">Collega il tuo account Simkl nelle Impostazioni per visualizzare la tua libreria Simkl</string>
 <string name="library_list_create_dialog_title">Crea lista</string>
