@@ -148,15 +148,10 @@ fun <T> TvReorderList(
         }
     }
 
-    var repeatJob by remember { mutableStateOf<Job?>(null) }
-    var neighborScrollJob by remember { mutableStateOf<Job?>(null) }
-    val previousItemKeys = remember { mutableStateOf(items.map(key)) }
-    val previousMovingKey = remember { mutableStateOf(movingKey) }
-    var hadMoveSession by remember { mutableStateOf(false) }
-    var latestMovingKey by remember { mutableStateOf(movingKey) }
+    val runtime = remember { TvReorderListRuntime(items.map(key), movingKey) }
     var suppressStartMove by remember { mutableStateOf(false) }
     var pinnedScrollPx by remember { mutableIntStateOf(-1) }
-    latestMovingKey = movingKey
+    runtime.latestMovingKey = movingKey
     val bringIntoViewSpec = if (movingKey != null || pinnedScrollPx >= 0) {
         freezeScrollBringIntoView
     } else {
@@ -196,10 +191,20 @@ fun <T> TvReorderList(
             "indicesMatchItems=${itemKeys == animatedOrder} liveOffsets=[$offsetSample]"
     }
 
+    fun clearOffsets() {
+        val hadOffsets = dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }
+        if (hadOffsets) {
+            Log.d(LIST_TAG, "list JUMP? snapOffsets ${visualSnapshot("clearOffsets")}")
+        }
+        offsetJobs.values.forEach { it.cancel() }
+        offsetJobs.clear()
+        dragOffsets.clear()
+    }
+
     SideEffect {
         val itemKeys = items.map(key)
-        val movingChanged = previousMovingKey.value != movingKey
-        val itemsChanged = previousItemKeys.value != itemKeys
+        val movingChanged = runtime.previousMovingKey != movingKey
+        val itemsChanged = runtime.previousItemKeys != itemKeys
         if (itemsChanged && movingKey == null) {
             clearOffsets()
             val nextIndices = indicesFrom(items)
@@ -213,35 +218,25 @@ fun <T> TvReorderList(
             Log.d(
                 LIST_TAG,
                 "list JUMP? composition ${visualSnapshot(
-                    "moving ${previousMovingKey.value}→$movingKey itemsChanged=$itemsChanged",
+                    "moving ${runtime.previousMovingKey}→$movingKey itemsChanged=$itemsChanged",
                 )}",
             )
-            previousMovingKey.value = movingKey
-            previousItemKeys.value = itemKeys
+            runtime.previousMovingKey = movingKey
+            runtime.previousItemKeys = itemKeys
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            repeatJob?.cancel()
-            neighborScrollJob?.cancel()
+            runtime.repeatJob?.cancel()
+            runtime.neighborScrollJob?.cancel()
             offsetJobs.values.forEach { it.cancel() }
         }
     }
 
     fun stopRepeat() {
-        repeatJob?.cancel()
-        repeatJob = null
-    }
-
-    fun clearOffsets() {
-        val hadOffsets = dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }
-        if (hadOffsets) {
-            Log.d(LIST_TAG, "list JUMP? snapOffsets ${visualSnapshot("clearOffsets")}")
-        }
-        offsetJobs.values.forEach { it.cancel() }
-        offsetJobs.clear()
-        dragOffsets.clear()
+        runtime.repeatJob?.cancel()
+        runtime.repeatJob = null
     }
 
     fun animateOffsetToZero(itemKey: String) {
@@ -302,13 +297,13 @@ fun <T> TvReorderList(
         val viewport = viewportHeightPx[0]
         if (stride <= 0f || viewport <= 0f) return
         if (newIndex <= 0) {
-            neighborScrollJob?.cancel()
+            runtime.neighborScrollJob?.cancel()
             Log.d(
                 LIST_TAG,
                 "list scrollTo keepNeighbor header dir=$direction newIndex=$newIndex " +
                     "from=${scrollState.value} to=0 ${visualSnapshot("keepNeighbor")}",
             )
-            neighborScrollJob = scope.launch {
+            runtime.neighborScrollJob = scope.launch {
                 scrollState.animateScrollTo(0, ReorderTravelSpec)
             }
             return
@@ -324,13 +319,13 @@ fun <T> TvReorderList(
             desiredBottom > current + viewport -> desiredBottom - viewport
             else -> return
         }.coerceIn(0f, scrollState.maxValue.toFloat())
-        neighborScrollJob?.cancel()
+        runtime.neighborScrollJob?.cancel()
         Log.d(
             LIST_TAG,
             "list scrollTo keepNeighbor dir=$direction newIndex=$newIndex " +
                 "from=${current.toInt()} to=${target.toInt()} ${visualSnapshot("keepNeighbor")}",
         )
-        neighborScrollJob = scope.launch {
+        runtime.neighborScrollJob = scope.launch {
             scrollState.animateScrollTo(
                 value = target.roundToInt(),
                 animationSpec = ReorderTravelSpec,
@@ -379,7 +374,7 @@ fun <T> TvReorderList(
         if (repeatCount == 0) {
             performMove(direction)
             stopRepeat()
-            repeatJob = scope.launch {
+            runtime.repeatJob = scope.launch {
                 delay(MOVE_REPEAT_INITIAL_DELAY_MS)
                 while (isActive) {
                     if (!performMove(direction)) break
@@ -401,27 +396,27 @@ fun <T> TvReorderList(
 
     LaunchedEffect(movingKey) {
         if (movingKey != null) {
-            hadMoveSession = true
+            runtime.hadMoveSession = true
             val movingIndex = animatedIndices[movingKey]
             if (movingIndex == 0 && scrollState.value != 0) {
-                neighborScrollJob?.cancel()
+                runtime.neighborScrollJob?.cancel()
                 scrollState.animateScrollTo(0, ReorderTravelSpec)
             }
             return@LaunchedEffect
         }
-        if (!hadMoveSession) {
+        if (!runtime.hadMoveSession) {
             stopRepeat()
             return@LaunchedEffect
         }
         delay(1)
-        if (latestMovingKey != null) {
+        if (runtime.latestMovingKey != null) {
             Log.d(
                 LIST_TAG,
-                "list skip stale exitMove latest=$latestMovingKey ${visualSnapshot("stale-exit")}",
+                "list skip stale exitMove latest=$runtime.latestMovingKey ${visualSnapshot("stale-exit")}",
             )
             return@LaunchedEffect
         }
-        neighborScrollJob?.cancel()
+        runtime.neighborScrollJob?.cancel()
         stopRepeat()
         restorePinnedScroll("exitMove")
         val itemKeys = items.map(key)
@@ -440,7 +435,7 @@ fun <T> TvReorderList(
         restorePinnedScroll("exitMove-afterLayout")
         delay(32)
         restorePinnedScroll("exitMove-late")
-        if (latestMovingKey == null) {
+        if (runtime.latestMovingKey == null) {
             pinnedScrollPx = -1
         }
     }
@@ -634,6 +629,18 @@ fun <T> TvReorderList(
             }
         }
     }
+}
+
+private class TvReorderListRuntime(
+    initialItemKeys: List<String>,
+    initialMovingKey: String?,
+) {
+    var repeatJob: Job? = null
+    var neighborScrollJob: Job? = null
+    var previousItemKeys: List<String> = initialItemKeys
+    var previousMovingKey: String? = initialMovingKey
+    var hadMoveSession: Boolean = false
+    var latestMovingKey: String? = initialMovingKey
 }
 
 private class CachedRowContent<T>(
