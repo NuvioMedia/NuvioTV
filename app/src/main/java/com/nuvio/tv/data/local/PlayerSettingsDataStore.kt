@@ -161,7 +161,8 @@ data class SubtitleStyleSettings(
     val backgroundRadius: Int = 0,
     val shadowEnabled: Boolean = false,
     val shadowOpacity: Int = SHADOW_OPACITY_DEFAULT,
-    val shadowSize: Int = SHADOW_SIZE_DEFAULT
+    val shadowSize: Int = SHADOW_SIZE_DEFAULT,
+    val fileColorBrightness: Float = 1f
 ) {
     /**
      * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
@@ -173,7 +174,8 @@ data class SubtitleStyleSettings(
         return copy(
             textColor = scaleColorBrightness(hdrTextColor, factor),
             backgroundColor = scaleColorBrightness(backgroundColor, factor),
-            outlineColor = scaleColorBrightness(outlineColor, factor)
+            outlineColor = scaleColorBrightness(outlineColor, factor),
+            fileColorBrightness = factor
         )
     }
 

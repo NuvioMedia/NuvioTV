@@ -31,11 +31,6 @@ internal data class StyledSubtitleBlock(
 
 internal data class StyledSubtitleCues(val blocks: List<StyledSubtitleBlock> = emptyList()) {
     val isEmpty: Boolean get() = blocks.all { it.text.isEmpty() }
-    val top: AnnotatedString get() = textAt(SubtitleVerticalPosition.TOP)
-    val bottom: AnnotatedString get() = textAt(SubtitleVerticalPosition.BOTTOM)
-
-    private fun textAt(vertical: SubtitleVerticalPosition): AnnotatedString =
-        blocks.filter { it.vertical == vertical }.map { it.text }.joinLines()
 }
 
 internal fun styledSubtitleCues(blocks: List<StyledSubtitleBlock>): StyledSubtitleCues =
@@ -110,7 +105,10 @@ internal class StyledCueTextOutput(
 }
 
 private fun Cue.verticalPosition(): SubtitleVerticalPosition = when {
-    line == Cue.DIMEN_UNSET || lineType != Cue.LINE_TYPE_FRACTION -> SubtitleVerticalPosition.BOTTOM
+    line == Cue.DIMEN_UNSET -> SubtitleVerticalPosition.BOTTOM
+    lineType == Cue.LINE_TYPE_NUMBER ->
+        if (line >= 0f) SubtitleVerticalPosition.TOP else SubtitleVerticalPosition.BOTTOM
+    lineType != Cue.LINE_TYPE_FRACTION -> SubtitleVerticalPosition.BOTTOM
     line < 1f / 3f -> SubtitleVerticalPosition.TOP
     line <= 2f / 3f -> SubtitleVerticalPosition.MIDDLE
     else -> SubtitleVerticalPosition.BOTTOM

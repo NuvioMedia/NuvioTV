@@ -11,7 +11,7 @@ import androidx.compose.ui.text.withStyle
 
 private val assOverrideBlock = Regex("""\{[^}]*\}""")
 private val assAlignment = Regex("""\\an([1-9])(?!\d)""")
-private val assStyleTag = Regex("""\\(?:([ibu])(\d*)(?![a-z])|1?c&H([0-9A-Fa-f]{1,8})&|r(?![a-z]))""")
+private val assStyleTag = Regex("""\\(?:([ibu])(\d*)(?![a-z])|(1?c)(?:&H([0-9A-Fa-f]{1,8})&?|(?![a-z]))|r(?![a-z]))""")
 
 internal fun parseMpvSubtitleText(text: String): StyledSubtitleCues =
     styledSubtitleCues(
@@ -66,7 +66,7 @@ private fun String.toAnnotatedEvent(): AnnotatedString = buildAnnotatedString {
     assOverrideBlock.findAll(this@toAnnotatedEvent).forEach { block ->
         appendPlain(substring(cursor, block.range.first))
         assStyleTag.findAll(block.value).forEach { tag ->
-            val (style, value, bgr) = tag.destructured
+            val (style, value, colorTag, bgr) = tag.destructured
             when {
                 style.isNotEmpty() -> {
                     val enabled = value != "0"
@@ -76,7 +76,7 @@ private fun String.toAnnotatedEvent(): AnnotatedString = buildAnnotatedString {
                         "u" -> underline = enabled
                     }
                 }
-                bgr.isNotEmpty() -> color = assBgrColor(bgr)
+                colorTag.isNotEmpty() -> color = bgr.takeIf { it.isNotEmpty() }?.let(::assBgrColor)
                 else -> {
                     italic = false
                     bold = false

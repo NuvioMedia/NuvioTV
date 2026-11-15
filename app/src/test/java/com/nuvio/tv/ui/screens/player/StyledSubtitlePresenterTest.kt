@@ -31,7 +31,7 @@ class StyledSubtitlePresenterTest {
         val bitmap = Cue.Builder().setBitmap(mockk<Bitmap>(relaxed = true)).build()
 
         assertEquals(listOf(bitmap), presenter.present(listOf(caption, bitmap), styled = true))
-        assertEquals("First caption", presenter.cues.value.bottom.text)
+        assertEquals("First caption", presenter.cues.value.bottomText.text)
     }
 
     @Test
@@ -40,8 +40,8 @@ class StyledSubtitlePresenterTest {
 
         presenter.present(listOf(caption, sign), styled = true)
 
-        assertEquals("Sign", presenter.cues.value.top.text)
-        assertEquals("First caption", presenter.cues.value.bottom.text)
+        assertEquals("Sign", presenter.cues.value.topText.text)
+        assertEquals("First caption", presenter.cues.value.bottomText.text)
     }
 
     @Test
@@ -67,12 +67,42 @@ class StyledSubtitlePresenterTest {
     }
 
     @Test
+    fun `line number cues use the top for non-negative lines`() {
+        val presenter = StyledSubtitlePresenter()
+        val top = Cue.Builder().setText("Top row").setLine(0f, Cue.LINE_TYPE_NUMBER).build()
+        val bottom = Cue.Builder().setText("Bottom row").setLine(-1f, Cue.LINE_TYPE_NUMBER).build()
+
+        presenter.present(listOf(top, bottom), styled = true)
+
+        assertEquals("Top row", presenter.cues.value.topText.text)
+        assertEquals("Bottom row", presenter.cues.value.bottomText.text)
+    }
+
+    @Test
+    fun `file colors follow the hdr brightness and the text opacity`() {
+        val dimmed = subtitleFileColor(Color.Yellow, brightness = 0.5f, textAlpha = 0.8f)
+
+        assertEquals(0.5f, dimmed.red, 0.01f)
+        assertEquals(0.5f, dimmed.green, 0.01f)
+        assertEquals(0f, dimmed.blue, 0.01f)
+        assertEquals(0.8f, dimmed.alpha, 0.01f)
+    }
+
+    @Test
+    fun `hdr style passes its brightness to file colors`() {
+        val style = SubtitleStyleSettings(hdrStyleEnabled = true, hdrBrightness = 0)
+
+        assertEquals(1f, style.forVideo(isHdrVideo = false).fileColorBrightness, 0f)
+        assertTrue(style.forVideo(isHdrVideo = true).fileColorBrightness < 1f)
+    }
+
+    @Test
     fun `switching styling re-routes the cues already on screen`() {
         val presenter = StyledSubtitlePresenter()
         presenter.present(listOf(caption), styled = false)
 
         assertTrue(presenter.refresh(styled = true).isEmpty())
-        assertEquals("First caption", presenter.cues.value.bottom.text)
+        assertEquals("First caption", presenter.cues.value.bottomText.text)
         assertEquals(listOf(caption), presenter.refresh(styled = false))
         assertTrue(presenter.cues.value.isEmpty)
     }
@@ -92,7 +122,7 @@ class StyledSubtitlePresenterTest {
         val presenter = StyledSubtitlePresenter()
 
         presenter.showMpvText(" Hello\nthere ")
-        assertEquals("Hello\nthere", presenter.cues.value.bottom.text)
+        assertEquals("Hello\nthere", presenter.cues.value.bottomText.text)
         presenter.showMpvText(null)
         assertTrue(presenter.cues.value.isEmpty)
     }
