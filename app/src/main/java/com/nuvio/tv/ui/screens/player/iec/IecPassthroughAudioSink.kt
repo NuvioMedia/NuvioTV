@@ -1290,7 +1290,7 @@ internal class IecPassthroughAudioSink(
         private const val FRAME_POOL_LIMIT = 8
         private const val NOT_HELD = Long.MIN_VALUE
         // Content queued in the track while playing; what is left of it after a seek plays out first.
-        internal const val KEEP_ALIVE_CAP_MS = 240L
+        internal const val KEEP_ALIVE_CAP_MS = 120L
         // Below this the keep-alive adds a padding-only MAT frame (20 ms) so the output never runs dry.
         internal const val KEEP_ALIVE_LOW_WATER_MS = 80L
         internal const val KEEP_ALIVE_TICK_MS = 10L
