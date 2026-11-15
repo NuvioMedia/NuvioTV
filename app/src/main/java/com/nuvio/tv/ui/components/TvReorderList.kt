@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -100,6 +101,9 @@ fun <T> TvReorderList(
     }
 
     fun defaultRowHeightPx(): Float {
+        if (measuredRowHeights.isNotEmpty()) {
+            return measuredRowHeights.values.average().toFloat()
+        }
         return if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
     }
 
@@ -168,6 +172,7 @@ fun <T> TvReorderList(
     }
 
     val runtime = remember { TvReorderListRuntime(items.map(key), movingKey) }
+    val latestItems by rememberUpdatedState(items)
     var suppressStartMove by remember { mutableStateOf(false) }
     var pinnedScrollPx by remember { mutableIntStateOf(-1) }
     runtime.latestMovingKey = movingKey
@@ -238,6 +243,17 @@ fun <T> TvReorderList(
             }
             slotOrderKeys = itemKeys
             measuredRowHeights.keys.retainAll(itemKeys.toSet())
+        } else if (itemsChanged) {
+            val validKeys = itemKeys.toSet()
+            val kept = slotOrderKeys.filter { it in validKeys }
+            val keptSet = kept.toSet()
+            slotOrderKeys = kept + itemKeys.filter { it !in keptSet }
+            animatedIndices.keys.retainAll(validKeys)
+            slotOrderKeys.forEachIndexed { index, itemKey ->
+                animatedIndices[itemKey] = index
+            }
+            dragOffsets.keys.retainAll(validKeys)
+            measuredRowHeights.keys.retainAll(validKeys)
         }
         if (movingChanged || itemsChanged) {
             Log.d(
@@ -441,6 +457,8 @@ fun <T> TvReorderList(
     LaunchedEffect(movingKey) {
         if (movingKey != null) {
             runtime.hadMoveSession = true
+            runtime.cancelReturnSlot = animatedIndices[movingKey]
+            runtime.cancelReturnOrderKeys = slotOrderKeys
             val movingIndex = animatedIndices[movingKey]
             if (movingIndex == 0 && scrollState.value != 0) {
                 runtime.neighborScrollJob?.cancel()
@@ -463,19 +481,19 @@ fun <T> TvReorderList(
         runtime.neighborScrollJob?.cancel()
         stopRepeat()
         restorePinnedScroll("exitMove")
-        val itemKeys = items.map(key)
+        val exitItemKeys = latestItems.map(key)
         val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
-        if (itemKeys != animatedOrder || dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }) {
+        if (exitItemKeys != animatedOrder ||
+            dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }
+        ) {
             Log.d(LIST_TAG, "list JUMP? exitMove beforeReset ${visualSnapshot("exitMove-before")}")
             clearOffsets()
             animatedIndices.clear()
-            animatedIndices.putAll(indicesFrom(items))
-            slotOrderKeys = itemKeys
+            animatedIndices.putAll(latestItems.mapIndexed { index, item -> key(item) to index }.toMap())
+            slotOrderKeys = exitItemKeys
             Log.d(LIST_TAG, "list JUMP? exitMove afterReset ${visualSnapshot("exitMove-after")}")
         } else {
-            offsetJobs.values.forEach { it.cancel() }
-            offsetJobs.clear()
-            slotOrderKeys = itemKeys
+            slotOrderKeys = exitItemKeys
             Log.d(LIST_TAG, "list exitMove keepSlots ${visualSnapshot("exitMove-keep")}")
         }
         restorePinnedScroll("exitMove-afterLayout")
@@ -487,7 +505,17 @@ fun <T> TvReorderList(
     }
 
     BackHandler(enabled = movingKey != null) {
-        pinScroll("cancel")
+        val returnSlot = runtime.cancelReturnSlot
+        val returnOrderKeys = runtime.cancelReturnOrderKeys ?: slotOrderKeys
+        if (returnSlot != null && returnSlot in returnOrderKeys.indices) {
+            val tops = slotTopsFor(returnOrderKeys)
+            val target = (headerHeightPx[0] + tops[returnSlot])
+                .roundToInt()
+                .coerceIn(0, scrollState.maxValue)
+            scope.launch {
+                scrollState.animateScrollTo(target, ReorderTravelSpec)
+            }
+        }
         onCancelMove()
     }
 
@@ -522,8 +550,15 @@ fun <T> TvReorderList(
                                     }
 
                                     movingKey != null && isConfirmKey &&
-                                        native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
-                                        confirmFromUi("ok-confirm")
+                                        native.action == KeyEvent.ACTION_DOWN -> {
+                                        if (native.repeatCount == 0) {
+                                            confirmFromUi("ok-confirm")
+                                        }
+                                        true
+                                    }
+
+                                    movingKey != null &&
+                                        native.keyCode == KeyEvent.KEYCODE_TAB -> {
                                         true
                                     }
 
@@ -697,6 +732,8 @@ private class TvReorderListRuntime(
     var previousMovingKey: String? = initialMovingKey
     var hadMoveSession: Boolean = false
     var latestMovingKey: String? = initialMovingKey
+    var cancelReturnSlot: Int? = null
+    var cancelReturnOrderKeys: List<String>? = null
 }
 
 private class CachedRowContent<T>(
