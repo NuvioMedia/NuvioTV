@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.math.abs
 import java.nio.ByteBuffer
 
 class IecAudioTimestampClockTest {
@@ -59,14 +60,15 @@ class IecAudioTimestampClockTest {
 
     @Test
     fun latencyIsSubtractedAfterTheHead_andClampedToTheAnchor() {
-        val clock = ClockRig()
-        clock.latencyUs = 10_000L
         val head = 192_000L
-        assertEquals(ANCHOR + us(head) - 10_000L, clock.pos(head = head, written = head))
-        clock.latencyUs = 5_000_000L
-        assertEquals(ANCHOR, clock.pos(head = head, written = head))
-        clock.latencyUs = -20L
-        assertEquals(ANCHOR + us(head), clock.pos(head = head, written = head))
+        fun positionWithLatency(latencyUs: Long): Long {
+            val clock = ClockRig()
+            clock.latencyUs = latencyUs
+            return clock.pos(head = head, written = head)
+        }
+        assertEquals(ANCHOR + us(head) - 10_000L, positionWithLatency(10_000L))
+        assertEquals(ANCHOR, positionWithLatency(5_000_000L))
+        assertEquals(ANCHOR + us(head), positionWithLatency(-20L))
     }
 
     @Test
@@ -79,6 +81,30 @@ class IecAudioTimestampClockTest {
         clock.timestamp = clock.stamp(head)
         val position = clock.pos(head = head, written = head + 19_200_000L)
         assertNear(ANCHOR + us(head), position, slopUs = 3_000L)
+    }
+
+    @Test
+    fun switchingFromTheHeadToATimestamp_easesTheLatencyInsteadOfJumping() {
+        val clock = ClockRig()
+        clock.latencyUs = 85_000L
+        val stepUs = 20_000L
+        var head = 0L
+        var last = C.TIME_UNSET
+        var maxStepErrorUs = 0L
+        var t = 0L
+        while (t <= 14_000_000L) {
+            clock.timestamp = if (t >= 9_000_000L) clock.stamp(head) else null
+            val position = clock.pos(head = head, written = head + 192_000L)
+            if (t > 200_000L && last != C.TIME_UNSET) {
+                maxStepErrorUs = maxOf(maxStepErrorUs, abs(position - last - stepUs))
+            }
+            last = position
+            clock.advanceUs(stepUs)
+            head += clock.framesFor(stepUs)
+            t += stepUs
+        }
+        assertTrue("largest step error ${maxStepErrorUs}us", maxStepErrorUs <= stepUs / 10 + 500L)
+        assertNear(ANCHOR + us(head - clock.framesFor(stepUs)), last, slopUs = 3_000L)
     }
 
     @Test
