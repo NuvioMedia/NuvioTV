@@ -10,4 +10,10 @@
     <string name="rating_removed">Beoordeling verwijderd</string>
     <string name="rating_failed">Je beoordeling kon niet worden bijgewerkt op %1$s</string>
     <string name="rating_remove">Verwijderen</string>
+    <string name="tracking_ratings_title">Beoordelingen</string>
+    <string name="tracking_ratings_subtitle">Kies bij welke dienst je beoordelingen worden opgeslagen en opgehaald</string>
+    <string name="tracking_ratings_dialog_subtitle">Beoordeel titels op hun detailpagina. Je beoordelingen worden opgeslagen bij en opgehaald van de dienst die je kiest.</string>
+    <string name="tracking_ratings_off_description">Verberg de knop om te beoordelen.</string>
+    <string name="tracking_ratings_simkl_description">Beoordeel films en series. Als je een titel beoordeelt die nog niet in je Simkl-lijsten staat, wordt die eraan toegevoegd.</string>
+    <string name="tracking_ratings_mdblist_description">Beoordeel films, series en afleveringen.</string>
 </resources>

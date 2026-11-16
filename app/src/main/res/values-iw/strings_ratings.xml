@@ -10,4 +10,10 @@
     <string name="rating_removed">הדירוג הוסר</string>
     <string name="rating_failed">לא ניתן לעדכן את הדירוג ב-%1$s</string>
     <string name="rating_remove">הסרה</string>
+    <string name="tracking_ratings_title">דירוגים</string>
+    <string name="tracking_ratings_subtitle">המקום שבו הדירוגים שלך נשמרים ומוצגים</string>
+    <string name="tracking_ratings_dialog_subtitle">דירוג כותרות מדף הפרטים שלהן. הדירוגים שלך נשמרים בשירות שנבחר ומוצגים ממנו.</string>
+    <string name="tracking_ratings_off_description">הסתרת כפתור הדירוג.</string>
+    <string name="tracking_ratings_simkl_description">דירוג סרטים וסדרות. דירוג כותרת שאינה ברשימות Simkl שלך מוסיף אותה אליהן.</string>
+    <string name="tracking_ratings_mdblist_description">דירוג סרטים, סדרות ופרקים.</string>
 </resources>

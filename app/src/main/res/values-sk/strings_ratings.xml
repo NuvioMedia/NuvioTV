@@ -10,4 +10,10 @@
     <string name="rating_removed">Hodnotenie odstránené</string>
     <string name="rating_failed">Nepodarilo sa aktualizovať vaše hodnotenie v %1$s</string>
     <string name="rating_remove">Odstrániť</string>
+    <string name="tracking_ratings_title">Hodnotenia</string>
+    <string name="tracking_ratings_subtitle">Kde sa vaše hodnotenia ukladajú a odkiaľ sa zobrazujú</string>
+    <string name="tracking_ratings_dialog_subtitle">Hodnoťte tituly priamo z ich detailov. Vaše hodnotenia sa ukladajú do služby, ktorú si vyberiete, a z nej sa aj zobrazujú.</string>
+    <string name="tracking_ratings_off_description">Skryť tlačidlo hodnotenia.</string>
+    <string name="tracking_ratings_simkl_description">Hodnoťte filmy a seriály. Ak ohodnotíte titul, ktorý nie je vo vašich zoznamoch Simkl, automaticky sa do nich pridá.</string>
+    <string name="tracking_ratings_mdblist_description">Hodnoťte filmy, seriály a epizódy.</string>
 </resources>
