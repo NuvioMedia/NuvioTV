@@ -32,6 +32,8 @@ import com.nuvio.tv.data.local.SentrySettingsDataStore
 import com.nuvio.tv.data.mediaserver.ServerUserStateProjection
 import com.nuvio.tv.data.mediaserver.plex.PlexArtworkInterceptor
 import com.nuvio.tv.data.mediaserver.plex.PlexArtworkSigner
+import com.nuvio.tv.data.mediaserver.silo.SiloArtworkInterceptor
+import com.nuvio.tv.data.mediaserver.silo.SiloArtworkRefresher
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreferenceHolder
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import dagger.hilt.android.HiltAndroidApp
@@ -53,6 +55,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     @Inject lateinit var simklAnimeIdPreferenceHolder: SimklAnimeIdPreferenceHolder
     @Inject lateinit var serverUserStateProjection: ServerUserStateProjection
     @Inject lateinit var plexArtworkSigner: PlexArtworkSigner
+    @Inject lateinit var siloArtworkRefresher: SiloArtworkRefresher
 
     companion object {
         /**
@@ -116,6 +119,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 .callTimeout(8, TimeUnit.SECONDS)
                 .addInterceptor(PlexArtworkInterceptor { if (::plexArtworkSigner.isInitialized) plexArtworkSigner else null })
                 .addNetworkInterceptor(PlexArtworkInterceptor.Token { if (::plexArtworkSigner.isInitialized) plexArtworkSigner else null })
+                .addInterceptor(SiloArtworkInterceptor({ if (::siloArtworkRefresher.isInitialized) siloArtworkRefresher else null }))
                 .addInterceptor { chain ->
                     try {
                         chain.proceed(chain.request())
