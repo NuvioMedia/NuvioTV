@@ -1,0 +1,284 @@
+# Built-in Usenet sources
+
+In **Settings → Integrations → Usenet streaming**, enable **Search built-in indexers**, add an NNTP
+provider, and add a Newznab-compatible indexer. No stream addon is needed for
+this source. Existing addon sources can still be used alongside it.
+
+The first time a profile turns it on, here or on its row among the addons, a
+notice explains that searches and downloads go directly from the device with
+the user's own accounts: indexers and providers see the device's IP address,
+keys and logins stay in the profile, and every search uses API hits on each
+enabled indexer. **Turn on** accepts it and enables the source; **Cancel**
+leaves it off. It is not shown again in that profile, and switching off never
+asks.
+
+Providers accept a host, port, TLS setting, username, password and connection
+allowance. Add multiple providers for missing-article failover. The existing
+global maximum-connections setting can further limit their combined allowance.
+When it does, providers of the highest priority get the limit first; each
+lower-priority provider keeps one connection for failover, plus whatever the
+higher ones cannot use.
+For a private/local NNTP server, enable **Allow self-hosted servers** in the
+performance settings.
+
+## Set up from phone
+
+**Set up from phone** shows a QR code. Scanning it with a phone on the same
+network opens a page served by the TV, where providers and indexers can be added
+or edited, and tested, with the phone's keyboard. Each save is applied on the TV
+immediately; the QR screen names the last source saved.
+
+- The link carries a random token created for that QR code. Requests without
+  it are refused, and the server stops when the QR screen is closed or Usenet
+  settings are left.
+- Saved passwords and API keys are never sent to the phone, and neither is the
+  query part of an indexer URL, which can hold keys. Leave a password or key
+  blank when editing to keep the saved one. It is kept only for the server it
+  was saved for: after changing a provider's host, port, TLS setting or
+  username, or an indexer's URL or API path, enter it again, so a saved secret
+  is never sent to another server.
+- The page edits the profile that was active when the code was shown; it stops
+  saving if the TV switches profile.
+- Like the app's other phone setup pages, it uses plain HTTP on the local
+  network, so use it on a trusted network.
+
+Enabling, deleting and reordering sources stay on the TV.
+
+## Source hierarchy
+
+Every provider and indexer has a priority from 1 (highest) to 5. The list is
+always ordered by priority; **Move up/down** changes the order within one
+priority.
+
+- **Providers with the same priority are load balanced.** Article traffic is
+  shared by available connection capacity, then fails over through the rest of
+  that priority in list order.
+- **Lower-priority providers are backups.** They only receive articles that
+  every higher-priority provider is missing or failed to serve, so a block
+  account behind an unlimited one is only charged for those articles. They
+  open no idle connections in advance.
+- **Indexers are all searched by default**, and their results merged. Their
+  priority only matters through two options, both off by default:
+  - **Hide repeated releases** shows a release found by several indexers once:
+    the copy from the highest priority (then list order) that passes the
+    filters. Names are compared ignoring case and punctuation.
+  - **Search lower priorities only as fallback** searches equal priorities
+    together and queries lower ones only when the higher ones produced no
+    result that passes the filters (including when they failed). This saves
+    API hits on limited indexers.
+
+For providers, keep everything at priority 1 to balance them, or give each its
+own priority for a strict preference order. Providers pass their priority to the
+engine as `?priority=N` on the server URL. Lower values are preferred, and a
+server without one counts as 0. Addon-supplied servers can use the same
+parameter.
+
+Indexers take a URL, an API path and an API key. The API path is appended to
+the URL to form the Newznab endpoint; new indexers start with `/api`, which most
+indexers use. A URL that already ends with the path is used as is, so a pasted
+complete endpoint still works. Indexers saved before the field existed have an
+empty path, since their URL is already the complete endpoint. Examples:
+
+- `https://api.nzbgeek.info/` with path `/api`
+- `http://hydra.local:5076` with path `/api`
+- `http://prowlarr.local:9696/1` with path `/api` (the individual indexer's
+  Newznab endpoint)
+- An endpoint that is not under a path, such as a query-only URL: leave the
+  path empty and enter the complete URL.
+
+Usenet settings have separate **Search/API User-Agent** and **NZB download
+User-Agent** fields. The first identifies built-in indexer searches, capability
+checks and connection tests; the second identifies NZB downloads (grabs).
+Both default to `Nuvio/<version>`, built from the installed version so it follows
+every app update. Custom overrides are saved independently, for an indexer that
+asks for one; **Reset to default**, or saving a field blank, resets only that
+field. An existing shared override is carried over to both fields on upgrade.
+NZBs from addons use the download setting unless the addon supplies its own
+User-Agent. The engine keeps the User-Agent
+when an indexer redirects the download to another host, and the NZB cache
+ignores it, so a new version or User-Agent keeps cached NZBs.
+
+Use **Test provider** to connect, negotiate TLS and sign in with the entered
+settings before saving. It applies the same local-address rule as playback, and
+reports unreachable hosts, TLS failures, rejected credentials and refused
+connections (such as a reached connection limit) separately. Use **Test
+indexer** to check an indexer's capabilities and API key: after the
+capabilities, it makes a one-result search (one API hit), because many indexers
+serve capabilities without checking the key. Each source can be edited,
+disabled, deleted, reprioritized or reordered. Credentials are stored as AES-GCM
+ciphertext protected by Android Keystore, separately for each profile. They
+are device-local and are not included in account/profile synchronization.
+
+Searches use advertised movie/TV capabilities, preferring IMDb, then TVDB (TV
+only, looked up through TMDB) and TMDB IDs.
+Title searches are used when the indexer does not support an available ID, and
+when an ID search finds nothing (some indexers have thin ID coverage); this
+costs one more API hit only in that case. They require TMDB metadata. Titles
+are queried and compared the way release names spell them: without accents
+(umlauts match both `Koenig` and `Konig`), without apostrophes, and with `&`
+equal to `and`. A movie's release year may differ from TMDB's by one year,
+which is common between festival and release dates.
+
+A release must be named after the title, not after another title containing
+it: *The Science of Interstellar* is not *Interstellar*, and *The Rookie Feds*
+is not *The Rookie*. Only articles may come before a movie title, and nothing
+may follow a series title before its episode or tags (country tags such as
+`US` are allowed). Series names may keep a prefix the metadata title drops
+(`Marvels.Daredevil`), except an article before a one-word title. A movie may
+carry a subtitle before its year, which the year check then judges.
+
+TMDB's original title is accepted as well, since foreign releases are often
+posted under it. When the title search finds nothing either, the original title
+is searched too (one more API hit, only in that case), unless it is written in
+a non-Latin script.
+
+Series searches require a season and episode, including season zero for
+specials. Contradictory episode filenames are removed; season packs remain
+playable through the engine's episode selection. Unsupported media identifiers
+without a TMDB mapping cannot be searched.
+
+The **Built-in Usenet** result group appears once every indexer answered,
+independently of addon/plugin searches; if an indexer is slow, it shows what came
+after 5 seconds and fills in from there. **Show results as each indexer answers**
+(off by default, under Search results) updates the list as each indexer finishes
+instead. Each result is named after its resolution and indexer, such as
+`Usenet • 4K • geek`. Sort by resolution, size, age or indexer priority. Native Balanced, Best Quality, Smaller Files and 1080p / SDR profiles add quality tiers, release-group scores and conditional rules. Choose a preset and an optional preferred language on the TV, or edit and preview a custom profile from the phone setup page. Sorting applies only to this built-in Usenet group; addon-supplied NZBs and other sources keep their existing order. See [Native sorting profiles](docs/USENET_SORTING.md).
+Filters cover minimum resolution, maximum size, maximum age, CAM/screener
+releases, full Blu-ray/DVD discs (off by default: a Blu-ray disc plays from its feature clip; remuxes always show) and result count. Passworded NZBs are always excluded. Unknown sizes
+or dates are excluded when their corresponding maximum filter is enabled.
+Duplicate download URLs are removed while alternative indexer URLs remain
+available for playback fallback. Each result shows its release name above its
+size, age and indexer; **Show release names** (on by default) can hide it.
+A season pack is labelled `SEASON PACK` and its size reads "(whole season)" (or
+"(whole pack)" for several seasons): the episode that plays is one file of it.
+For a single-season pack the season's episode count on TMDB, asked once per
+search and only when such a pack is found, gives an episode's share: the size
+badge shows it, the details read "9.60 GB whole season (~1.60 GB per episode)",
+and the maximum size filter and size sorting use it. The list never waits for
+the count; it is arranged again when the count comes, and without it the whole
+size is used.
+
+Searches have a 25-second timeout per request and read 200 results per
+indexer, or as many as **Maximum results** when it is higher (500); with no
+limit, up to 1000. More results than are listed are read so the filters and
+the sort choose among them. A page with fewer results than asked does not end
+a search while the indexer reports more; each page is one API hit. NZBs are
+fetched only when the existing playback or
+opt-in prefetch path needs them. Failed indexers do not cancel successful
+sources. Configuration changes invalidate the stream search session cache.
+
+### Unplayable and available releases
+
+A release whose articles are gone from the providers (NNTP 430), damaged, or
+past the missing-article limit fails every attempt the same way, and only after
+its NZB has been downloaded again. The app remembers such releases, whether the
+failure came from opening, a prefetch or playback, and then lists them last in
+the **Built-in Usenet** group with an `UNAVAILABLE` label. They stay selectable,
+and automatic fallback skips them. A list already on screen or in the search
+cache is rearranged as soon as a release is added.
+
+Releases that showed their first frame are kept as well, for two weeks, and
+labelled `AVAILABLE`: their articles were there with these providers, and their
+NZB is usually cached, so they open in about a second. For a season pack this
+also labels the pack in its other episodes. **Show available releases first**
+(off by default, under Search results) lists them before the others whatever the
+sort, so a click on the first result and automatic fallback reach them first;
+off, they keep their place. A later failure replaces the label with
+`UNAVAILABLE`, and a release played again within a day is not written again.
+
+The list is stored on the device, shared by all profiles, and cleared by an
+account reset. An entry is keyed by a hash of the NZB URL, exact within one
+indexer, and by a hash of the title and the size in megabytes, so the same upload
+from another indexer is recognised even when one indexer rounds sizes. No URL,
+key or credential is stored. Another provider may still hold the articles: an
+entry only applies with the same provider addresses, and expires after 30 days.
+Logcat shows one `UsenetPrepare` line per source preparation (source, release,
+time, failure) and a `UsenetUnplayable` line per remembered release; URLs in
+messages keep only their host.
+
+## Saving indexer API hits
+
+- **Search results** are reused for 15 minutes by the stream search session
+  cache. They are not kept longer, so new releases show up.
+- **Seasons:** an episode searched by ID is always searched on its own
+  (`season` and `ep`), since a long-running series has more releases per
+  season than a search reads. Its whole season (no `ep`) is also searched, at
+  the same time, once for the following episodes, which reuse that result for
+  2 hours, in memory only: it finds the season packs, which episode searches
+  do not return. Only explicitly numbered releases (`S01E02`, `1x02`, season
+  packs) are taken from it, since an obfuscated name could be any episode. An
+  indexer that rejects season-only searches is not asked again for 2 hours.
+- **Capabilities** (`t=caps`) are stored on the device for 7 days and survive
+  restarts. An edited URL or API key fetches them again. When a refresh fails,
+  the expired copy is used. **Test indexer** always makes a live request.
+- **Limits:** an indexer that throttles (HTTP 429) or reports a spent quota
+  (Newznab error 500/501) is paused without further requests: for its
+  `Retry-After`, otherwise 60 seconds for throttling (at most 15 minutes) and
+  30 minutes for a spent quota. A response announcing zero remaining API hits
+  or grabs (`X-RateLimit-Daily-Remaining`, `x-api-remaining`,
+  `X-DNZBLimit-Daily-Remaining`, `x-grab-remaining`) pauses it for 15 minutes.
+  Pauses survive restarts. A paused indexer counts as failed; with fallback
+  search on, lower priorities are searched instead.
+- **Status:** each indexer row in settings shows a pause ("Paused until 18:30")
+  or the category of the last failed request: API key rejected (Newznab
+  100-102, HTTP 401/403), could not reach the indexer, or unexpected response.
+  The next successful request clears it, and so does editing the URL or key.
+  Raw error messages are never shown, since they could contain the key.
+  Otherwise, when the indexer reports them in those headers, the row shows the
+  API hits and grabs left for today and when they were reported ("42 API hits
+  left, 8 grabs left (as of 14:05)"). Counts older than 24 hours are hidden,
+  since the indexer's daily quota has reset since then. Only searches update
+  the counts: NZBs are downloaded by the engine, so grabs made since the last
+  search are not yet subtracted.
+- **NZBs** are cached by the engine for 14 days, so playing a release again does
+  not grab it again.
+
+This state is device-local, keyed by a hash of the endpoint and key, and holds
+no credentials.
+
+### Source statistics
+
+**Diagnostics** shows a card per indexer: searches (failed, or skipped while
+paused), how often an answered search found releases and how many on average,
+API requests sent (all of them: searches, further pages, capabilities, key
+checks) and how many were refused for a limit or failed, the average response
+time, NZB downloads that opened, and how many of its releases played or failed
+for good. An NZB served from the NZB cache is not a download, and neither is one
+for a release that fails to open; a release that fails for good counts as
+unavailable. The grabs left that the indexer itself reports are on its row in
+the sources list. A release counts for the indexer whose search listed it in
+this session, or whose key its reused link names, and a release's played or
+unavailable result counts at most once every 12 hours.
+
+A card per provider shows the articles it served, its completion (the share of
+the articles asked of it that it had, with the missing ones), other errors, the
+data downloaded, its average time to first byte, and the sessions that used it
+and how many of them failed to open because of it; with **Statistics content**
+on movies or shows, these are the movies or episodes it served. The engine
+reports these when a session closes, and with the failure of an open it refuses,
+so the articles missing from a release that could not open count against the
+provider's completion. Such an open failed because of a provider only when that
+provider lacked or broke an article and the release failed for missing or
+damaged articles; a password, a compressed archive or a blank release is no
+provider's failure, and an open refused before any article was asked for, such
+as for an NZB too large to read, does not count for any provider. A session the
+engine never closes, because the engine itself stopped, is not counted.
+
+Bars compare the indexers' releases played and NZB downloads, and the providers'
+articles served. **Statistics period** chooses the last 7 days, the last 30 days
+(default) or all time; **Statistics content** chooses all, movies or shows.
+Capabilities requests and key checks belong to neither, so they count under all
+only.
+
+Counts are kept per day for 30 days and in total, are stored on the device in
+one place for all profiles, and are cleared by **Reset statistics** or an
+account reset. Each source's counts are kept under its id, so an edited source,
+such as an indexer with a new API key or a provider with another server or
+username, keeps them; no URL, key, password or name is stored. A source unused
+for 180 days is forgotten. Counts are written at most every 5 seconds and when
+the app leaves the foreground.
+
+Protocol references (implementation is native Kotlin):
+
+- [Newznab Web API](https://newznab.readthedocs.io/en/latest/misc/api.html)
+- [AIOStreams Newznab source](https://github.com/Viren070/AIOStreams/blob/main/packages/core/src/builtins/newznab/addon.ts)
