@@ -11,6 +11,7 @@ import com.nuvio.tv.data.mediaserver.ServerRepository
 import com.nuvio.tv.data.mediaserver.emby.EmbyProvider
 import com.nuvio.tv.data.mediaserver.jellyfin.JellyfinProvider
 import com.nuvio.tv.data.mediaserver.mediabrowser.ServerClientIdentity
+import com.nuvio.tv.data.mediaserver.plex.PlexProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -48,7 +49,11 @@ object MediaServerModule {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val repository = ServerRepository(
             persistence = persistence,
-            providers = listOf(JellyfinProvider(http, clientIdentity), EmbyProvider(http, clientIdentity)),
+            providers = listOf(
+                JellyfinProvider(http, clientIdentity),
+                EmbyProvider(http, clientIdentity),
+                PlexProvider(http, clientIdentity)
+            ),
             scope = scope
         )
         scope.launch { profileDataStore.activeProfileId.collect(repository::selectProfile) }

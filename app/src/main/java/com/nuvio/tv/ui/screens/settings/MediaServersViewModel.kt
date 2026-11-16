@@ -37,6 +37,8 @@ class MediaServersViewModel @Inject constructor(
     private val mutableRefreshing = MutableStateFlow<String?>(null)
     val refreshing: StateFlow<String?> = mutableRefreshing.asStateFlow()
 
+    val plexSignIn: PlexSignInFlow by lazy { PlexSignInFlow(repository, viewModelScope) }
+
     init {
         repository.ensureLoaded()
     }
@@ -98,4 +100,8 @@ class MediaServersViewModel @Inject constructor(
         repository.setLibrarySelected(connectionId, libraryId, selected)
 
     fun remove(connectionId: String) = repository.remove(connectionId)
+
+    override fun onCleared() {
+        plexSignIn.close()
+    }
 }

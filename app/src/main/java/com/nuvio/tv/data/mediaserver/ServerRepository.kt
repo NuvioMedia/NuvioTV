@@ -108,11 +108,15 @@ class ServerRepository(
         }
     }
 
-    suspend fun connect(provider: ServerProvider, address: String, username: String, password: String): ServerConnection {
+    suspend fun connect(provider: ServerProvider, address: String, username: String, password: String): ServerConnection =
+        connect(provider) { provider.signIn(address, username, password) }
+
+    /** Saves the connection [signIn] returns, for servers that sign in some other way than with a password. */
+    suspend fun connect(provider: ServerProvider, signIn: suspend () -> ServerSignIn): ServerConnection {
         ensureLoaded()
         val startedGeneration = generation
         val profileId = loadedProfileId ?: activeProfileId
-        val signIn = provider.signIn(address, username, password)
+        val signIn = signIn()
         val existing = mutableState.value.connections.firstOrNull {
             it.providerId == provider.id &&
                 it.remoteServerId == signIn.serverId &&
@@ -206,7 +210,7 @@ class ServerRepository(
         return ServerSyncSnapshot(
             profileId = profileId,
             version = localVersion,
-            servers = mutableState.value.connections.mapNotNull { connection ->
+            servers = mutableState.value.connections.filter(::syncsSignIn).mapNotNull { connection ->
                 currentTokens[connection.credentialRef]?.let(connection::toSynced)
             },
             pendingPush = pendingPush,
@@ -230,16 +234,24 @@ class ServerRepository(
             if (local != null && currentTokens[credentialRef] != server.token) setFailure(local.id, null)
             server.toConnection(id, credentialRef)
         }
-        (current.map { it.id } - usedIds).forEach { setFailure(it, null) }
+        val deviceOnly = current.filterNot { syncsSignIn(it) || it.id in usedIds }
+        deviceOnly.forEach { connection ->
+            currentTokens[connection.credentialRef]?.let { updatedTokens[connection.credentialRef] = it }
+        }
+        val kept = connections.toMutableList()
+        deviceOnly.forEach { connection -> kept.add(current.indexOf(connection).coerceAtMost(kept.size), connection) }
+        (current.map { it.id } - usedIds - deviceOnly.map { it.id }.toSet()).forEach { setFailure(it, null) }
         pendingPush = false
         syncedKeys = keys
-        if (connections == current && updatedTokens == currentTokens) {
+        if (kept == current && updatedTokens == currentTokens) {
             persist(current, currentTokens)
         } else {
-            save(connections, updatedTokens, local = false)
+            save(kept, updatedTokens, local = false)
         }
         return true
     }
+
+    private fun syncsSignIn(connection: ServerConnection): Boolean = provider(connection)?.syncsSignIn != false
 
     fun markPushed(snapshot: ServerSyncSnapshot) {
         if (loadedProfileId != snapshot.profileId) return
