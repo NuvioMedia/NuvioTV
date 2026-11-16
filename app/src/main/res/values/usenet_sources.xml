@@ -27,6 +27,9 @@
     <string name="usenet_max_size">Maximum release size</string>
     <string name="usenet_max_age">Maximum release age in days</string>
     <string name="usenet_result_limit">Maximum results</string>
+    <string name="usenet_indexer_results">Results per indexer</string>
+    <string name="usenet_indexer_results_description">How many results each search reads from every indexer. Indexers send up to 100 per page and most count each page as an API hit: 100 keeps every search to one page, at the cost of older releases on busy shows. Auto: 200, or the maximum results when higher.</string>
+    <string name="usenet_indexer_results_auto">Auto (%1$d)</string>
     <string name="usenet_no_limit">No limit</string>
     <string name="usenet_exclude_low_quality">Exclude CAM, telesync and screener releases</string>
     <string name="usenet_exclude_full_disc">Exclude full Blu-ray and DVD discs</string>
