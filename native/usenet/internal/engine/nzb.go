@@ -168,8 +168,6 @@ func parseNZB(r io.Reader, store *Store, spill nzbSpill) ([]*File, bool, error) 
 	// full-document parser sorts files and retains a second complete XML model,
 	// which changes addon fileIdx semantics and wastes season-pack RAM.
 	inner := &nzbLimitReader{r: input, remaining: heldNZBBytes, extend: extend}
-	decoder := xml.NewDecoder(inner)
-	decoder.CharsetReader = charset.NewReaderLabel
 	tooLarge := func(err error) error {
 		if errors.Is(err, errNZBTooLarge) && spilled {
 			return errIndexedNZBTooLarge
@@ -179,84 +177,49 @@ func parseNZB(r io.Reader, store *Store, spill nzbSpill) ([]*File, bool, error) 
 	root := false
 	index := 0
 	password := ""
-	for {
-		token, err := decoder.Token()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, spilled, fmt.Errorf("invalid NZB: %w", tooLarge(err))
-		}
-		start, ok := token.(xml.StartElement)
-		if !ok {
-			continue
-		}
-		if !root {
-			if start.Name.Local != "nzb" {
-				return nil, spilled, errors.New("invalid NZB root")
+	// Indexers publish the archive password of protected releases in the head.
+	addHead := func(metas []nzbMeta) {
+		for _, m := range metas {
+			if value := strings.TrimSpace(m.Value); strings.EqualFold(m.Type, "password") && value != "" && len(value) <= 1024 {
+				password = value
 			}
-			root = true
-			continue
 		}
-		if start.Name.Local == "head" {
-			// Indexers publish the archive password of protected releases here.
-			var head struct {
-				Meta []struct {
-					Type  string `xml:"type,attr"`
-					Value string `xml:",chardata"`
-				} `xml:"meta"`
-			}
-			if err := decoder.DecodeElement(&head, &start); err != nil {
-				return nil, spilled, fmt.Errorf("invalid NZB head: %w", tooLarge(err))
-			}
-			for _, m := range head.Meta {
-				if value := strings.TrimSpace(m.Value); strings.EqualFold(m.Type, "password") && value != "" && len(value) <= 1024 {
-					password = value
-				}
-			}
-			continue
-		}
-		if start.Name.Local != "file" {
-			if err := decoder.Skip(); err != nil {
-				return nil, spilled, tooLarge(err)
-			}
-			continue
-		}
+	}
+	fileLimit := func() error {
 		if index >= 10000 {
-			return nil, spilled, errors.New("NZB exceeds file limit")
+			return errors.New("NZB exceeds file limit")
 		}
-		var nf struct {
-			Subject  string             `xml:"subject,attr"`
-			Segments boundedNZBSegments `xml:"segments"`
+		return nil
+	}
+	budget := func() int {
+		if spilled {
+			return min(maxNZBSegments, maxIndexedNZBSegments-total)
 		}
-		budget := func() int {
-			if spilled {
-				return min(maxNZBSegments, maxIndexedNZBSegments-total)
-			}
-			return int(heldNZBSegments - held)
+		return int(heldNZBSegments - held)
+	}
+	newSegments := func() boundedNZBSegments {
+		return boundedNZBSegments{
+			remaining: budget(),
+			// Past the in-memory bound, this file continues with the indexed one.
+			more: func(read int) int {
+				if spilled || !spillAll() {
+					return 0
+				}
+				return max(0, budget()-read)
+			},
 		}
-		nf.Segments.remaining = budget()
-		// Past the in-memory bound, this file continues with the indexed one.
-		nf.Segments.more = func(read int) int {
-			if spilled || !spillAll() {
-				return 0
-			}
-			return max(0, budget()-read)
-		}
-		if err := decoder.DecodeElement(&nf, &start); err != nil {
-			return nil, spilled, fmt.Errorf("invalid NZB file: %w", tooLarge(err))
-		}
+	}
+	addFile := func(subjectText string, segments []nzbSegment) error {
 		i := index
 		index++
-		segments := nf.Segments.items
 		if len(segments) == 0 {
-			continue
+			return nil
 		}
 		total += len(segments)
 		sort.Slice(segments, func(i, j int) bool { return segments[i].Number < segments[j].Number })
-		subject, err := nzbparser.ParseSubject(nf.Subject)
+		subject, err := nzbparser.ParseSubject(subjectText)
 		if err != nil {
-			return nil, spilled, errors.New("invalid NZB subject")
+			return errors.New("invalid NZB subject")
 		}
 		f := &File{Name: strings.Trim(subject.Filename, "\" '"), Index: i, store: store, prefix: make([]int64, len(segments)+1),
 			segments: make([]segment, 0, len(segments)), password: password}
@@ -264,14 +227,14 @@ func parseNZB(r io.Reader, store *Store, spill nzbSpill) ([]*File, bool, error) 
 			f.order = subject.File
 		}
 		for j, s := range segments {
-			id := strings.Trim(strings.TrimSpace(s.ID), "<>")
-			if s.Number != j+1 || id == "" || len(id) > 998 || strings.ContainsAny(id, "\r\n\x00<>") || s.Bytes <= 0 {
+			id := nzbMessageID(s.ID)
+			if s.Number != j+1 || id == "" || len(id) > 998 || nzbForbiddenInID(id) || s.Bytes <= 0 {
 				f.markDamaged(segments[j:])
 				break
 			}
 			f.segments = append(f.segments, segment{id: id, wire: int64(s.Bytes)})
 			if s.Bytes > (1<<63-1)-f.prefix[j] {
-				return nil, spilled, errors.New("NZB size overflow")
+				return errors.New("NZB size overflow")
 			}
 			f.prefix[j+1] = f.prefix[j] + int64(s.Bytes)
 		}
@@ -282,11 +245,75 @@ func parseNZB(r io.Reader, store *Store, spill nzbSpill) ([]*File, bool, error) 
 			held += int64(len(segments))
 		} else if f.damaged == nil {
 			if !spill.appendIndexed(f) {
-				return nil, true, errNZBTooLargeToHold
+				return errNZBTooLargeToHold
 			}
 			f.release()
 		}
 		files = append(files, f)
+		return nil
+	}
+	// The plain shape of almost every NZB is read without encoding/xml, which
+	// costs seconds on weak boxes for a large remux; anything else goes to it.
+	var rest io.Reader = inner
+	if fastNZBReader {
+		var err error
+		if rest, root, err = readNZBFast(inner, nzbFastHooks{head: addHead, fileLimit: fileLimit, segments: newSegments, file: addFile}); err != nil {
+			return nil, spilled, err
+		}
+	}
+	if rest != nil {
+		decoder := xml.NewDecoder(rest)
+		decoder.CharsetReader = charset.NewReaderLabel
+		for {
+			token, err := decoder.Token()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, spilled, fmt.Errorf("invalid NZB: %w", tooLarge(err))
+			}
+			start, ok := token.(xml.StartElement)
+			if !ok {
+				continue
+			}
+			if !root {
+				if start.Name.Local != "nzb" {
+					return nil, spilled, errors.New("invalid NZB root")
+				}
+				root = true
+				continue
+			}
+			if start.Name.Local == "head" {
+				var head struct {
+					Meta []nzbMeta `xml:"meta"`
+				}
+				if err := decoder.DecodeElement(&head, &start); err != nil {
+					return nil, spilled, fmt.Errorf("invalid NZB head: %w", tooLarge(err))
+				}
+				addHead(head.Meta)
+				continue
+			}
+			if start.Name.Local != "file" {
+				if err := decoder.Skip(); err != nil {
+					return nil, spilled, tooLarge(err)
+				}
+				continue
+			}
+			if err := fileLimit(); err != nil {
+				return nil, spilled, err
+			}
+			var nf struct {
+				Subject  string             `xml:"subject,attr"`
+				Segments boundedNZBSegments `xml:"segments"`
+			}
+			nf.Segments = newSegments()
+			if err := decoder.DecodeElement(&nf, &start); err != nil {
+				return nil, spilled, fmt.Errorf("invalid NZB file: %w", tooLarge(err))
+			}
+			if err := addFile(nf.Subject, nf.Segments.items); err != nil {
+				return nil, spilled, err
+			}
+		}
 	}
 	if len(files) == 0 {
 		return nil, spilled, errors.New("NZB has no files")
@@ -311,6 +338,18 @@ type boundedNZBSegments struct {
 	more      func(read int) int
 }
 
+// take admits one more segment, or reports the document over its segment bound.
+func (s *boundedNZBSegments) take() error {
+	if s.remaining == 0 && s.more != nil {
+		s.remaining, s.more = s.more(len(s.items)), nil
+	}
+	if s.remaining == 0 {
+		return errors.New("NZB exceeds segment metadata limit")
+	}
+	s.remaining--
+	return nil
+}
+
 func (s *boundedNZBSegments) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	for {
 		token, err := d.Token()
@@ -325,18 +364,14 @@ func (s *boundedNZBSegments) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 				}
 				continue
 			}
-			if s.remaining == 0 && s.more != nil {
-				s.remaining, s.more = s.more(len(s.items)), nil
-			}
-			if s.remaining == 0 {
-				return errors.New("NZB exceeds segment metadata limit")
+			if err := s.take(); err != nil {
+				return err
 			}
 			var item nzbSegment
 			if err := d.DecodeElement(&item, &token); err != nil {
 				return err
 			}
 			s.items = append(s.items, item)
-			s.remaining--
 		case xml.EndElement:
 			if token.Name == start.Name {
 				return nil
