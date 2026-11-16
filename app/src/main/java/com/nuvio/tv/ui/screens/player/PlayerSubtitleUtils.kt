@@ -271,7 +271,18 @@ internal object PlayerSubtitleUtils {
         } else {
             validTexts.distinct().joinToString("\n")
         }
-        return listOf(cues[0].buildUpon().setText(mergedText).build())
+        val first = cues[0]
+        val sharesPosition = cues.all { it.position == first.position && it.positionAnchor == first.positionAnchor }
+        val base = when {
+            sharesPosition -> first
+            else -> cues.firstOrNull { it.position == Cue.DIMEN_UNSET }
+                ?: first.buildUpon()
+                    .setPosition(Cue.DIMEN_UNSET)
+                    .setPositionAnchor(Cue.TYPE_UNSET)
+                    .setTextAlignment(null)
+                    .build()
+        }
+        return listOf(base.buildUpon().setText(mergedText).build())
     }
 
     fun normalizeBottomCuePosition(cue: Cue): Cue {
