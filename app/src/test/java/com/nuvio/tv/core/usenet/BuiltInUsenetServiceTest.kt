@@ -2,7 +2,10 @@ package com.nuvio.tv.core.usenet
 
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.remote.api.TmdbAlternativeTitlesResponse
 import com.nuvio.tv.data.remote.api.TmdbDetailsResponse
+import com.nuvio.tv.data.remote.api.TmdbMovieNamesResponse
+import com.nuvio.tv.data.remote.api.TmdbTranslationsResponse
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -445,10 +448,8 @@ class BuiltInUsenetServiceTest {
         coEvery { client.search(indexer, match { it.imdbId != null }, any()) } returns emptyList()
         coEvery { client.search(indexer, match { it.imdbId == null }, any()) } returns listOf(release(indexer, "The.Movie.2020.1080p"))
         coEvery { tmdb.ensureTmdbId("tt1", "movie") } returns "10"
-        coEvery { tmdbApi.getMovieDetails(10, any(), any()) } returns Response.success(mockk<TmdbDetailsResponse>(relaxed = true) {
-            every { title } returns "The Movie"
-            every { releaseDate } returns "2020-05-01"
-        })
+        coEvery { tmdbApi.getMovieNames(10, any()) } returns
+            Response.success(TmdbMovieNamesResponse(title = "The Movie", releaseDate = "2020-05-01"))
         val service = BuiltInUsenetService(client, tmdb, tmdbApi)
         val streams = service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
         assertEquals(listOf("The.Movie.2020.1080p"), streams.map { it.title })
@@ -471,12 +472,9 @@ class BuiltInUsenetServiceTest {
         coEvery { client.search(indexer, match { it.title == "La casa de papel" }, any()) } returns
             listOf(release(indexer, "La.Casa.de.Papel.2017.1080p"))
         coEvery { tmdb.ensureTmdbId("tt1", "movie") } returns "10"
-        fun details(original: String) = Response.success(mockk<TmdbDetailsResponse>(relaxed = true) {
-            every { title } returns "Money Heist"
-            every { originalTitle } returns original
-            every { releaseDate } returns "2017-05-02"
-        })
-        coEvery { tmdbApi.getMovieDetails(10, any(), any()) } returns details("La casa de papel")
+        fun details(original: String) = Response.success(TmdbMovieNamesResponse(title = "Money Heist",
+            originalTitle = original, releaseDate = "2017-05-02"))
+        coEvery { tmdbApi.getMovieNames(10, any()) } returns details("La casa de papel")
         val service = BuiltInUsenetService(client, tmdb, tmdbApi)
         val streams = service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
         assertEquals(listOf("La.Casa.de.Papel.2017.1080p"), streams.map { it.title })
@@ -485,8 +483,62 @@ class BuiltInUsenetServiceTest {
         coVerify { client.search(indexer, match { it.title == "La casa de papel" && it.originalTitle == "Money Heist" }, any()) }
 
         // Indexers search Latin text, so an original title in another script is not searched.
-        coEvery { tmdbApi.getMovieDetails(10, any(), any()) } returns details("ペーパー・ハウス")
+        coEvery { tmdbApi.getMovieNames(10, any()) } returns details("ペーパー・ハウス")
         assertTrue(service.search(config, "movie", "tt1", null, null).toList().none { it.group != null })
         coVerify(exactly = 0) { client.search(indexer, match { it.title == "ペーパー・ハウス" }, any()) }
+    }
+
+    @Test fun `a movie's id results named after another year are dropped unless its year is unknown`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities(movieParams = setOf("imdbid", "q"))
+        // An indexer filed Deathly Hallows Part 2 under the 2001 film.
+        coEvery { client.search(indexer, match { it.imdbId != null }, any()) } returns listOf(
+            release(indexer, "Harry.Potter.and.the.Sorcerers.Stone.2001.1080p"),
+            release(indexer, "Harry.Potter.und.die.Heiligtuemer.des.Todes.Teil.2.2011.German.1080p"))
+        coEvery { tmdb.ensureTmdbId("tt0241527", "movie") } returns "671"
+        coEvery { tmdbApi.getMovieNames(671, any()) } returns Response.success(TmdbMovieNamesResponse(
+            title = "Harry Potter and the Sorcerer's Stone", releaseDate = "2001-11-16"))
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        suspend fun titles() = service.search(config, "movie", "tt0241527", null, null).toList()
+            .mapNotNull { it.group }.lastOrNull()?.streams.orEmpty().map { it.title }.toSet()
+        assertEquals(setOf("Harry.Potter.and.the.Sorcerers.Stone.2001.1080p"), titles())
+
+        // Without the film's year, the indexer's tags are trusted.
+        coEvery { tmdbApi.getMovieNames(671, any()) } throws IllegalStateException("offline")
+        assertEquals(2, titles().size)
+    }
+
+    @Test fun `a movie's id results named after another film are dropped unless its names are unknown`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities(movieParams = setOf("imdbid", "q"))
+        coEvery { client.search(indexer, match { it.imdbId != null }, any()) } returns listOf(
+            release(indexer, "The.Lord.of.the.Rings.The.Two.Towers.2002.1080p"), release(indexer, "The.Ring.2002.1080p"))
+        coEvery { tmdb.ensureTmdbId("tt0167261", "movie") } returns "121"
+        coEvery { tmdbApi.getMovieNames(121, any()) } returns Response.success(TmdbMovieNamesResponse(
+            title = "The Lord of the Rings: The Two Towers", releaseDate = "2002-12-18",
+            alternativeTitles = TmdbAlternativeTitlesResponse(movieTitles = emptyList()),
+            translations = TmdbTranslationsResponse(emptyList())))
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        suspend fun titles() = service.search(config, "movie", "tt0167261", null, null).toList()
+            .mapNotNull { it.group }.lastOrNull()?.streams.orEmpty().map { it.title }.toSet()
+        assertEquals(setOf("The.Lord.of.the.Rings.The.Two.Towers.2002.1080p"), titles())
+
+        // An ID search that found only other films is asked again by title.
+        coEvery { client.search(indexer, match { it.imdbId != null }, any()) } returns listOf(release(indexer, "The.Ring.2002.1080p"))
+        coEvery { client.search(indexer, match { it.imdbId == null }, any()) } returns
+            listOf(release(indexer, "The.Lord.of.the.Rings.The.Two.Towers.2002.720p"))
+        assertEquals(setOf("The.Lord.of.the.Rings.The.Two.Towers.2002.720p"), titles())
+
+        // Without the film's names and year, the indexer's tags are trusted.
+        coEvery { tmdbApi.getMovieNames(121, any()) } throws IllegalStateException("offline")
+        assertEquals(setOf("The.Ring.2002.1080p"), titles())
     }
 }
