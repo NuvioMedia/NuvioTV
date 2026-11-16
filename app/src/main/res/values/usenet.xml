@@ -104,6 +104,12 @@
     <string name="usenet_reason_blank_content">Empty release</string>
     <string name="usenet_reason_timed_out">Took too long to open</string>
     <string name="usenet_reason_playback_failed">Playback failed</string>
+    <!-- Error screen, after the HTTP status line, for a stream the Usenet engine gave up on. -->
+    <string name="player_error_usenet_missing_parts">\n\nThis release is missing parts on your Usenet provider (removed or incomplete upload). Try a different release.</string>
+    <string name="player_error_usenet_damaged_parts">\n\nParts of this release are damaged on your Usenet provider, or packed in a way that cannot be streamed. Try a different release.</string>
+    <string name="player_error_usenet_provider_login">\n\nYour Usenet provider refused the login. Check the provider\'s username and password in the Usenet settings.</string>
+    <string name="player_error_usenet_provider_quota">\n\nYour Usenet provider\'s download quota is used up. Check your account with the provider.</string>
+    <string name="player_error_usenet_empty_release">\n\nThis release has no real video in it. Try a different release.</string>
     <string name="usenet_indexer_search_paused">%1$s: indexer limit reached, paused until %2$s.</string>
     <string name="usenet_indexer_search_failed">%1$s: indexer search failed. Check the API URL, key and limits.</string>
     <string name="usenet_size_season_share">%1$s whole season (~%2$s per episode)</string>
