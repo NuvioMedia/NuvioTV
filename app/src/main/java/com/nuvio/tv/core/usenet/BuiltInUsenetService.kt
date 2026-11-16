@@ -417,7 +417,7 @@ class BuiltInUsenetService @Inject constructor(
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                         arranged.map {
                             val outcome = outcomes.getValue(it.nzbUrl)
-                            it.toStream(config, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
+                            it.toStream(config, series, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
                                 seasonEpisodes = seasonCounts(), sibling = outcome.sibling)
                         })))
                 }
@@ -562,7 +562,7 @@ class BuiltInUsenetService @Inject constructor(
             otherTitles = others, year = (movie?.releaseDate ?: details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
-    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
+    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, series: Boolean, failed: Boolean = false,
         played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
         // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
@@ -589,7 +589,7 @@ class BuiltInUsenetService @Inject constructor(
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it, and the upload's binge group.
-            behaviorHints = usenetHints(bingeGroup(title), (episodeShare ?: size).takeIf { it > 0 }),
+            behaviorHints = usenetHints(bingeGroup(title, series), (episodeShare ?: size).takeIf { it > 0 }),
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
@@ -618,10 +618,12 @@ class BuiltInUsenetService @Inject constructor(
         /**
          * One upload's episodes share a binge group, so the next episode plays from the same upload
          * when binge groups are preferred: its title without the episode's number and name. A
-         * season pack is its own group. Movies have none.
+         * season pack is its own group. A movie's release is its own group too, so reusing the
+         * binge group opens the same release again.
          */
-        fun bingeGroup(title: String?): String? {
+        fun bingeGroup(title: String?, series: Boolean = true): String? {
             val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return null
+            if (!series) return "$GROUP_NAME|$name"
             val upload = NewznabProtocol.episodeTemplate(name)?.first
                 ?: name.takeIf { NewznabProtocol.packSeasons(it).isNotEmpty() } ?: return null
             return "$GROUP_NAME|$upload"
@@ -685,12 +687,12 @@ class BuiltInUsenetService @Inject constructor(
          * no provider is enabled.
          */
         fun restoredStream(nzbUrl: String, name: String, title: String?, size: Long?, publishedAt: Long?,
-            config: UsenetSourceConfiguration): Stream? {
+            config: UsenetSourceConfiguration, series: Boolean = true): Stream? {
             val servers = config.servers().ifEmpty { return null }
             val download = withApiKeys(nzbUrl, config) ?: return null
             return Stream(name = name, title = title, description = null, url = null, ytId = null, infoHash = null,
                 fileIdx = null, externalUrl = null,
-                behaviorHints = usenetHints(bingeGroup(title), size),
+                behaviorHints = usenetHints(bingeGroup(title, series), size),
                 addonName = GROUP_NAME, addonLogo = null, nzbUrl = download, servers = servers, publishedAt = publishedAt)
         }
 
