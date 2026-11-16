@@ -340,6 +340,8 @@ class BuiltInUsenetService @Inject constructor(
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { null }
             }
+            // A movie's ID results are checked against its year, asked for alongside the indexers.
+            if (!series) metadata.start()
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
             // Each season's episode count lets season packs, of one season or several, be filtered and
@@ -395,6 +397,7 @@ class BuiltInUsenetService @Inject constructor(
                             val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
                             val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
                             val found = client.search(indexer, search, caps, config.indexerResults)
+                                .let { if (canSearchId && !series) confirmed(indexer, it) { metadata.await() } else it }
                             Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, config.indexerResults) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
@@ -515,6 +518,21 @@ class BuiltInUsenetService @Inject constructor(
         return null
     }
 
+    /**
+     * A movie's ID results that its year confirms, once its metadata comes within
+     * [ID_CHECK_WAIT_MS] of the indexer's answer; without it, the indexer's tags are trusted.
+     */
+    private suspend fun confirmed(indexer: UsenetIndexer, releases: List<UsenetRelease>,
+        metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease> {
+        if (releases.isEmpty()) return releases
+        val movie = withTimeoutOrNull(ID_CHECK_WAIT_MS) { metadata() } ?: return releases
+        return NewznabProtocol.idResultsOf(movie, releases).also { kept ->
+            if (kept.size < releases.size) runCatching {
+                android.util.Log.i("UsenetSearch", "${indexer.name}: ${releases.size - kept.size} ID results of another film")
+            }
+        }
+    }
+
     private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String): UsenetSearchRequest {
         val id = request.tmdbId ?: tmdb.ensureTmdbId(videoId, type)
         val imdb = request.imdbId ?: id?.toIntOrNull()?.let { tmdb.tmdbToImdb(it, type) }
@@ -584,6 +602,8 @@ class BuiltInUsenetService @Inject constructor(
         private val SEASON_COUNTED = Any()
         /** How long a search may use for a season's episode count; the list never waits for it. */
         private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
+        /** How long a movie's ID results wait for its metadata before they are listed unchecked. */
+        private const val ID_CHECK_WAIT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */
         const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"

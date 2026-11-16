@@ -489,4 +489,28 @@ class BuiltInUsenetServiceTest {
         assertTrue(service.search(config, "movie", "tt1", null, null).toList().none { it.group != null })
         coVerify(exactly = 0) { client.search(indexer, match { it.title == "ペーパー・ハウス" }, any()) }
     }
+
+    @Test fun `a movie's id results named after another year are dropped unless its year is unknown`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities(movieParams = setOf("imdbid", "q"))
+        // An indexer filed Deathly Hallows Part 2 under the 2001 film.
+        coEvery { client.search(indexer, match { it.imdbId != null }, any()) } returns listOf(
+            release(indexer, "Harry.Potter.and.the.Sorcerers.Stone.2001.1080p"),
+            release(indexer, "Harry.Potter.und.die.Heiligtuemer.des.Todes.Teil.2.2011.German.1080p"))
+        coEvery { tmdb.ensureTmdbId("tt0241527", "movie") } returns "671"
+        coEvery { tmdbApi.getMovieDetails(671, any(), any()) } returns Response.success(TmdbDetailsResponse(id = 671,
+            title = "Harry Potter and the Sorcerer's Stone", releaseDate = "2001-11-16"))
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        suspend fun titles() = service.search(config, "movie", "tt0241527", null, null).toList()
+            .mapNotNull { it.group }.lastOrNull()?.streams.orEmpty().map { it.title }.toSet()
+        assertEquals(setOf("Harry.Potter.and.the.Sorcerers.Stone.2001.1080p"), titles())
+
+        // Without the film's year, the indexer's tags are trusted.
+        coEvery { tmdbApi.getMovieDetails(671, any(), any()) } throws IllegalStateException("offline")
+        assertEquals(2, titles().size)
+    }
 }

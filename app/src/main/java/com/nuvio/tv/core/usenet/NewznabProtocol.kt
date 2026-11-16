@@ -239,6 +239,13 @@ object NewznabProtocol {
     }
 
     /**
+     * The [releases] of a movie's ID search that are of [movie], by the year their names give.
+     * Indexers mis-tag IDs: a sequel filed under the first film shows up in its ID search.
+     */
+    fun idResultsOf(movie: UsenetSearchRequest, releases: List<UsenetRelease>): List<UsenetRelease> =
+        releases.filter { matches(it, movie, idSearch = true) }
+
+    /**
      * Whether release [name] is named after [title] rather than after another title that contains it:
      * The Science of Interstellar is not Interstellar, and The Rookie Feds is not The Rookie. Before
      * the title only articles may come; after it, the year, the episode or release tags.
