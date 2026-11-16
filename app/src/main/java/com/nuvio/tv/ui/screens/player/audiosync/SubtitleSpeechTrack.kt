@@ -10,6 +10,18 @@ internal class SubtitleSpeechTrack private constructor(
     val size: Int get() = startsMs.size
 
     /**
+     * Where lines start, as short intervals around each start: matched against where detected speech
+     * rises (see [SubtitleAudioAligner.speechStarts]). Overlap with speech alone is ambiguous when
+     * dialogue is dense; the starts of lines are much sharper.
+     */
+    val starts: SubtitleSpeechTrack by lazy {
+        SubtitleSpeechTrack(
+            startsMs = LongArray(size) { startsMs[it] - START_HALF_WIDTH_MS },
+            endsMs = LongArray(size) { startsMs[it] + START_HALF_WIDTH_MS },
+        )
+    }
+
+    /**
      * Fractional on-screen coverage per 32 ms frame for frames [fromFrame, toFrame) after mapping
      * subtitle time t to media time t * [scale].
      */
@@ -74,5 +86,8 @@ internal class SubtitleSpeechTrack private constructor(
         }
 
         private const val MAX_CUE_DURATION_MS = 20_000L
+
+        /** Each line start counts within about 2.5 speech frames either side. */
+        private const val START_HALF_WIDTH_MS = 80L
     }
 }

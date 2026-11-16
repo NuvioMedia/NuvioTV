@@ -463,6 +463,24 @@ internal object SubtitleAudioAligner {
         )
     }
 
+    /**
+     * Where speech starts in [segments]: how much the speech probability rises across about 100 ms
+     * either side of each frame (0 where it falls or stays), unknown where either side is unknown.
+     * Correlated with a track's [SubtitleSpeechTrack.starts].
+     */
+    fun speechStarts(segments: List<SpeechSegment>): List<SpeechSegment> = segments.map { segment ->
+        val p = segment.probabilities
+        val rises = FloatArray(p.size) { i ->
+            val before = p.getOrNull(i - START_SPAN_FRAMES) ?: Float.NaN
+            val after = p.getOrNull(i + START_SPAN_FRAMES) ?: Float.NaN
+            if (before.isNaN() || after.isNaN() || p[i].isNaN()) Float.NaN else maxOf(after - before, 0f)
+        }
+        SpeechSegment(segment.fromFrame, rises)
+    }
+
+    /** Frames either side of a frame compared by [speechStarts]: about 100 ms. */
+    private const val START_SPAN_FRAMES = 3
+
     /** Rises on a peak's slope smaller than this are noise, not the start of another peak. */
     private const val LOBE_TOLERANCE = 0.02
 }

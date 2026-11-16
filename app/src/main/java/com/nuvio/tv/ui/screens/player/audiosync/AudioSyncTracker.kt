@@ -556,10 +556,38 @@ internal class AudioSyncTracker(
                 estimate.cueCount < MIN_CUES -> "Too few overlapping dialogue lines (need $MIN_CUES)"
                 !(estimate.speechSeconds >= MIN_SPEECH_SECONDS) -> "Too little detected speech (need ${MIN_SPEECH_SECONDS.toInt()}s)"
                 estimate.atSearchEdge -> "Best timing is at the 60s search boundary; match is unreliable"
-                !(estimate.separation >= requiredSeparation) -> "Several timings match similarly; waiting for a clearer match"
+                !(estimate.separation >= requiredSeparation) &&
+                    !(knownFrames >= START_MIN_KNOWN_FRAMES && startsAgree(segments, estimate, track, requiredSeparation - ACCEPT_SEPARATION)) ->
+                    "Several timings match similarly; waiting for a clearer match"
                 !confirmedByBothHalves(segments, estimate, track) -> "Timing does not agree across both halves of the analysed audio"
                 else -> null
             }
+        }
+
+        /**
+         * Overlap with speech is ambiguous in dense dialogue: offsets a few seconds apart score
+         * alike. Where lines start is much sharper, and an unrelated subtitle's starts almost never
+         * peak at the same offset as its overlap does. So an ambiguous [estimate] still counts as
+         * clear when matching line starts against speech onsets alone finds the same offset, and
+         * stands out there by [ACCEPT_START_SEPARATION] (plus [penalty] for a rate other than 1.0
+         * or a far offset). Only computed when the overlap is ambiguous.
+         */
+        private fun startsAgree(
+            segments: List<SpeechSegment>,
+            estimate: SubtitleAudioAligner.Estimate,
+            track: SubtitleSpeechTrack,
+            penalty: Double,
+        ): Boolean {
+            val starts = SubtitleAudioAligner.estimate(
+                segments = SubtitleAudioAligner.speechStarts(segments),
+                track = track.starts,
+                scales = doubleArrayOf(estimate.scale),
+                minShiftMs = -MAX_SHIFT_MS,
+                maxShiftMs = MAX_SHIFT_MS,
+            ) ?: return false
+            return !starts.atSearchEdge &&
+                abs(starts.shiftMs - estimate.shiftMs) <= STARTS_AGREEMENT_MS &&
+                starts.separation >= ACCEPT_START_SEPARATION + penalty / 2
         }
 
         private fun hasEnoughEvidence(
@@ -643,6 +671,19 @@ internal class AudioSyncTracker(
         const val ACCEPT_PROMINENCE = 0.12
         /** Lock threshold on [SubtitleAudioAligner.Estimate.separation]. */
         const val ACCEPT_SEPARATION = 0.12
+
+        /**
+         * How far matching line starts alone must stand out to settle an ambiguous overlap. Measured
+         * on 98 subtitles from 34 releases and 102 from other films: with 90 s or more of audio
+         * known, no subtitle from another film had both offsets agree and pass this.
+         */
+        private const val ACCEPT_START_SEPARATION = 0.07
+
+        /** Audio known before line starts may settle an ambiguous overlap; with less, one chance match passed. */
+        private val START_MIN_KNOWN_FRAMES = (90 * FRAMES_PER_SECOND).toInt()
+
+        /** Line starts and overlap agree on the offset within this. */
+        private const val STARTS_AGREEMENT_MS = 250.0
         /** Offsets within this are the common case; beyond it a lock needs [FAR_SHIFT_PENALTY] more separation. */
         private const val NEAR_SHIFT_MS = 8_000.0
         private const val FAR_SHIFT_PENALTY = 0.04
