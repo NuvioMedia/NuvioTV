@@ -938,6 +938,7 @@
     <string name="sub_outline">Contour</string>
     <string name="sub_outline_sub">Ajouter un contour autour du texte des sous-titres pour une meilleure lisibilité</string>
     <string name="sub_outline_color">Couleur du contour</string>
+    <string name="sub_outline_width">Épaisseur du contour</string>
     <string name="sub_hdr_style">Style HDR / Dolby Vision distinct</string>
     <string name="sub_hdr_style_sub">Utiliser une autre couleur de texte et une luminosité plus faible pour les sous-titres des vidéos HDR et Dolby Vision</string>
     <string name="sub_hdr_text_color">Couleur du texte HDR</string>
@@ -1789,6 +1790,13 @@
     <string name="addon_installing">Installation en cours</string>
     <string name="addon_install_btn">Installer</string>
     <string name="addon_install_success">%1$s installé</string>
+    <string name="addon_tracking_consent_title">Addon de suivi</string>
+    <string name="addon_tracking_consent_body">%1$s est un addon de suivi. Nuvio lui enverra votre activité&#160;: ce que vous lancez, mettez en pause et arrêtez avec la position de lecture, ce que vous ajoutez à votre bibliothèque ou en retirez, et ce que vous marquez comme vu ou non vu. Ces données quittent Nuvio et sont traitées par le développeur de l’addon et par le service auquel il se connecte.</string>
+    <string name="addon_tracking_consent_checkbox">J’accepte de partager mon activité de visionnage et ma bibliothèque avec cet addon</string>
+    <string name="addon_tracking_consent_checked">Coché</string>
+    <string name="addon_tracking_consent_unchecked">Non coché</string>
+    <string name="addon_tracking_consent_cancel">Annuler</string>
+    <string name="addon_tracking_consent_install">Installer</string>
     <string name="addon_error_invalid_url">Saisissez une URL d’addon valide</string>
     <string name="addon_error_invalid_scheme">L’URL de l’addon doit commencer par http ou https</string>
     <string name="addon_installed_section">Installés</string>
