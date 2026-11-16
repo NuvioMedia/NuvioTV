@@ -340,7 +340,7 @@ class BuiltInUsenetService @Inject constructor(
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { null }
             }
-            // A movie's ID results are checked against its year, asked for alongside the indexers.
+            // A movie's ID results are checked against its names and year, asked for alongside the indexers.
             if (!series) metadata.start()
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
@@ -519,7 +519,7 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     /**
-     * A movie's ID results that its year confirms, once its metadata comes within
+     * A movie's ID results that its names and year confirm, once its metadata comes within
      * [ID_CHECK_WAIT_MS] of the indexer's answer; without it, the indexer's tags are trusted.
      */
     private suspend fun confirmed(indexer: UsenetIndexer, releases: List<UsenetRelease>,
@@ -536,22 +536,30 @@ class BuiltInUsenetService @Inject constructor(
     private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String): UsenetSearchRequest {
         val id = request.tmdbId ?: tmdb.ensureTmdbId(videoId, type)
         val imdb = request.imdbId ?: id?.toIntOrNull()?.let { tmdb.tmdbToImdb(it, type) }
-        val details = try {
-            id?.toIntOrNull()?.let {
-                if (request.series) tmdbApi.getTvDetails(it, BuildConfig.TMDB_API_KEY).body()
-                else tmdbApi.getMovieDetails(it, BuildConfig.TMDB_API_KEY).body()
-            }
+        val details = if (!request.series) null else try {
+            id?.toIntOrNull()?.let { tmdbApi.getTvDetails(it, BuildConfig.TMDB_API_KEY).body() }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+        // A movie comes with its other names, which its ID results are checked against.
+        val movie = if (request.series) null else try {
+            id?.toIntOrNull()?.let { tmdbApi.getMovieNames(it, BuildConfig.TMDB_API_KEY).body() }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
         val tvdb = if (!request.series) null else try {
             id?.toIntOrNull()?.let { tmdbApi.getTvExternalIds(it, BuildConfig.TMDB_API_KEY).body()?.tvdbId?.toString() }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
-        val title = details?.title ?: details?.name
-        val original = (details?.originalTitle ?: details?.originalName)
+        val title = movie?.title ?: details?.title ?: details?.name
+        val original = (movie?.originalTitle ?: details?.originalTitle ?: details?.originalName)
             ?.takeIf { it.isNotBlank() && !it.equals(title, ignoreCase = true) }
+        // Unknown unless both lists came: the movie's own titles alone would turn away its foreign releases.
+        val others = movie?.let { names ->
+            val alternative = names.alternativeTitles?.movieTitles ?: return@let null
+            val translated = names.translations?.translations ?: return@let null
+            (alternative.mapNotNull { it.title } + translated.mapNotNull { it.data?.title }).filter { it.isNotBlank() }.distinct()
+        }
         return request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = title, originalTitle = original,
-            year = (details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
+            otherTitles = others, year = (movie?.releaseDate ?: details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,

@@ -24,6 +24,8 @@ data class UsenetSearchRequest(
     val title: String? = null,
     /** Set when it differs from [title]: releases of foreign titles are often posted under it. */
     val originalTitle: String? = null,
+    /** A movie's other names, its alternative titles and translations; null when unknown. */
+    val otherTitles: List<String>? = null,
     val year: Int? = null,
     val season: Int? = null,
     val episode: Int? = null,
@@ -239,11 +241,45 @@ object NewznabProtocol {
     }
 
     /**
-     * The [releases] of a movie's ID search that are of [movie], by the year their names give.
-     * Indexers mis-tag IDs: a sequel filed under the first film shows up in its ID search.
+     * The [releases] of a movie's ID search that are of [movie], by the year and the title their
+     * names give. Indexers mis-tag IDs, sometimes with a film of the same year: The Ring (2002)
+     * came back for The Two Towers (2002). Releases are named in many languages and shortened
+     * (LOTR The Two Towers), so a release passes when most of its title's words are in the
+     * movie's title or original title, or when its title holds most of the words of any of the
+     * movie's names, translations among them (Der Herr der Ringe Die zwei Tuerme). Only the
+     * movie's own titles count the first way: a short title would otherwise pass on one word of
+     * a long translation (The Ring, In de ban van de ring). A name with no year (obfuscated) or
+     * no title before it (1917) passes, and every name passes when the movie's names are unknown.
      */
-    fun idResultsOf(movie: UsenetSearchRequest, releases: List<UsenetRelease>): List<UsenetRelease> =
-        releases.filter { matches(it, movie, idSearch = true) }
+    fun idResultsOf(movie: UsenetSearchRequest, releases: List<UsenetRelease>): List<UsenetRelease> {
+        val ofYear = releases.filter { matches(it, movie, idSearch = true) }
+        val others = movie.otherTitles ?: return ofYear
+        val own = nameWords(listOfNotNull(movie.title, movie.originalTitle)).ifEmpty { return ofYear }
+        val names = (own + nameWords(others)).distinct()
+        return ofYear.filter { release ->
+            val title = titleWords(release.title)
+            title.isEmpty() || names.any { name -> title.count { it in name } * 2 > name.size } ||
+                own.any { name -> title.count { it in name } * 2 > title.size }
+        }
+    }
+
+    /**
+     * The words of each of [names] as releases spell them, articles left out: umlauts both ways,
+     * and without the letters some posts lose (Amélie posted as Amlie).
+     */
+    private fun nameWords(names: List<String>): List<Set<String>> = names.flatMap { name ->
+        listOf(words(name), words(name, umlauts = false), words(name.filter { it.code < 128 || !it.isLetter() }))
+    }.map { name -> name.split(' ').filter { it.isNotEmpty() && it !in ARTICLES }.toSet() }
+        .filter { name -> name.any { word -> word.any(Char::isLetter) } }.distinct()
+
+    /**
+     * The words of the title a release name gives before its year or first tag, articles left out.
+     * None when the name gives no year, as obfuscated names do: their ID is trusted.
+     */
+    private fun titleWords(release: String): Set<String> =
+        if (!RELEASE_YEAR.containsMatchIn(release)) emptySet() else words(release).split(' ')
+            .takeWhile { it.isNotEmpty() && it !in RELEASE_TAGS && !RELEASE_MARKER.matches(it) }
+            .filter { it !in ARTICLES }.toSet()
 
     /**
      * Whether release [name] is named after [title] rather than after another title that contains it:

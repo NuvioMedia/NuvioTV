@@ -232,6 +232,45 @@ class NewznabProtocolTest {
             UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 1, year = 2010), idSearch = true))
     }
 
+    @Test fun `id search results named after another film of the same year are another film`() {
+        // Some of the names TMDB lists for the film, in other languages among them.
+        val towers = UsenetSearchRequest(imdbId = "tt0167261", title = "The Lord of the Rings: The Two Towers", year = 2002,
+            otherTitles = listOf("Der Herr der Ringe - Die zwei Türme", "Il Signore degli Anelli - Le due torri",
+                "LOTR2 - The Two Towers", "In de ban van de ring: De twee torens", "ロード・オブ・ザ・リング／二つの塔", "Властелин колец 2"))
+        fun kept(movie: UsenetSearchRequest, vararg releases: String) =
+            NewznabProtocol.idResultsOf(movie, releases.map { UsenetRelease(it, it) }).map { it.title }
+        // An indexer filed The Ring (2002) under the film.
+        assertEquals(emptyList<String>(), kept(towers, "The.Ring.2002.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC.DTS-HD.MA.5.1-TRiToN",
+            "The Ring 2002 1080p PCOK WEB-DL DDP 5 1 H 264-PiRaTeS", "The.Ring.2002.MULTi.COMPLETE.BLURAY-OLDHAM"))
+        val named = arrayOf(
+            "The.Lord.of.the.Rings.The.Two.Towers.2002.Extended.2160p.UHD.BluRay.x265",
+            "The Lord of the Rings-The Two Towers 2002 2160p 35mm HDR v1.1",
+            "Lord.of.the.Rings.Two.Towers.2002.1080p.BluRay.x264", // Articles left out.
+            "LOTR The Two Towers 2002 1080p BluRay", // Shortened.
+            "The Lord of thee Rings The Two Towers 2002 720p", // Misspelled.
+            "Der.Herr.der.Ringe.Die.zwei.Tuerme.2002.German.DL.1080p", // Translated.
+            "Der Herr der Ringe II Die zwei Tuerme 2002 German 1080p",
+            "Il.Signore.degli.Anelli.Le.Due.Torri.2002.iTALiAN.1080p",
+            "{ Der.Herr.der.Ringe.die.zwei.Tuerme.2002.German.AC3.DVDRiP.XViD } }ghost-of-usenet.org{",
+            "a8f3c1e9d2b7", "d-pate-1080p") // No year, as obfuscated names: the ID is trusted.
+        assertEquals(named.toList(), kept(towers, *named))
+        // The year still judges a name of the film's.
+        assertEquals(emptyList<String>(), kept(towers, "The.Lord.of.the.Rings.The.Two.Towers.2012.1080p"))
+        // Unknown names leave the title unjudged.
+        assertEquals(listOf("The.Ring.2002.1080p"), kept(towers.copy(otherTitles = null), "The.Ring.2002.1080p"))
+
+        // Posts that lost a title's accented letters, a subtitle after the title, year-like titles.
+        val amelie = UsenetSearchRequest(title = "Amélie", originalTitle = "Le Fabuleux Destin d'Amélie Poulain", year = 2001, otherTitles = emptyList())
+        assertEquals(listOf("Amlie.2001.DVDRiP.XviD", "Le.Fabuleux.Destin.D.Amelie.Poulain.2001.1080p"),
+            kept(amelie, "Amlie.2001.DVDRiP.XviD", "Le.Fabuleux.Destin.D.Amelie.Poulain.2001.1080p", "Soul.Assassin.2001.WEBRip.x264"))
+        val starWars = UsenetSearchRequest(title = "Star Wars", year = 1977, otherTitles = emptyList())
+        assertEquals(listOf("Star.Wars.Episode.IV.A.New.Hope.1977.1080p"),
+            kept(starWars, "Star.Wars.Episode.IV.A.New.Hope.1977.1080p", "Scum.1977.1080p.BluRay.x264-GHOULS"))
+        assertEquals(listOf("Blade.Runner.2049.2017.2160p", "1917.2019.1080p"), kept(
+            UsenetSearchRequest(title = "Blade Runner 2049", year = 2017, otherTitles = emptyList()), "Blade.Runner.2049.2017.2160p") +
+            kept(UsenetSearchRequest(title = "1917", year = 2019, otherTitles = emptyList()), "1917.2019.1080p"))
+    }
+
     @Test fun `full disc releases are recognised and hidden unless allowed`() {
         listOf("The.Drama.2026.COMPLETE.UHD.BLURAY-GRP", "Movie.2020.Complete.Bluray-GRP", "Movie 2020 BD50",
             "Movie.2020.1080p.BDMV.AVC.DTS-HD.MA", "Movie.2020.DVD9-GRP", "Movie.2020.ISO", "[Movie 2020 BD25]",
