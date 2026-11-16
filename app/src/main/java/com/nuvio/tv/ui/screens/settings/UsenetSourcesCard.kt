@@ -192,6 +192,11 @@ internal fun UsenetSourcesCard(
             SettingsActionRow(title = stringResource(R.string.usenet_result_limit), subtitle = null,
                 value = if (configuration.maxResults == UsenetSourceConfiguration.UNLIMITED_RESULTS) unlimited
                     else configuration.maxResults.toString(), onClick = { picker = "limit" })
+            SettingsActionRow(title = stringResource(R.string.usenet_indexer_results),
+                subtitle = stringResource(R.string.usenet_indexer_results_description),
+                value = if (configuration.indexerResultsLimit == UsenetSourceConfiguration.AUTO_INDEXER_RESULTS)
+                    stringResource(R.string.usenet_indexer_results_auto, configuration.indexerResults)
+                    else configuration.indexerResultsLimit.toString(), onClick = { picker = "indexerResults" })
             SettingsToggleRow(title = stringResource(R.string.usenet_exclude_low_quality), subtitle = null,
                 checked = configuration.excludeLowQuality,
                 onToggle = { update(configuration.copy(excludeLowQuality = !configuration.excludeLowQuality)) })
@@ -221,6 +226,16 @@ internal fun UsenetSourcesCard(
         "sort" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_sort_results), options = sortOptions,
             selectedValue = configuration.sort, onOptionSelected = { update(configuration.copy(sort = it)); picker = null },
             onDismiss = { picker = null })
+        "indexerResults" -> {
+            val auto = stringResource(R.string.usenet_indexer_results_auto,
+                configuration.copy(indexerResultsLimit = UsenetSourceConfiguration.AUTO_INDEXER_RESULTS).indexerResults)
+            SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_indexer_results),
+                options = listOf(SettingsPickerOption(UsenetSourceConfiguration.AUTO_INDEXER_RESULTS, auto)) +
+                    UsenetSourceConfiguration.INDEXER_RESULT_CHOICES.map { SettingsPickerOption(it, it.toString()) },
+                selectedValue = configuration.indexerResultsLimit,
+                onOptionSelected = { update(configuration.copy(indexerResultsLimit = it)); picker = null },
+                onDismiss = { picker = null })
+        }
         "resolution", "size", "age", "limit" -> {
             val key = picker
             val values = when (key) {

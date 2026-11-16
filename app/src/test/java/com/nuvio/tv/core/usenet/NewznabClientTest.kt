@@ -428,4 +428,20 @@ class NewznabClientTest {
             assertEquals(2, server.requestCount)
         }
     }
+
+    @Test fun `results per indexer bound the pages an episode search reads`() = runBlocking {
+        for ((results, pagesEach) in listOf(100 to 1, 200 to 2)) {
+            MockWebServer().use { server ->
+                // Every page holds one release and reports 500 in all, so only the bound stops the reading.
+                val asked = server.answer { url ->
+                    val offset = url.queryParameter("offset") ?: "0"
+                    MockResponse().setBody(server.page("Show.S01E01.1080p.$offset.${url.queryParameter("ep")}", offset.toInt(), total = 500))
+                }
+                val request = UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 1)
+                NewznabClient(MemoryStorage()).search(server.indexer(), request, NewznabCapabilities(), results = results)
+                assertEquals("episode pages for $results", pagesEach, asked.count { it.queryParameter("ep") == "1" })
+                assertEquals("season pages for $results", pagesEach, asked.count { it.queryParameter("ep") == null })
+            }
+        }
+    }
 }
