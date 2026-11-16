@@ -177,10 +177,10 @@ internal class AudioSyncTracker(
             return Outcome.NotEnoughEvidence
         }
         val current = model
-        return if (current == null) search(timeline) else follow(timeline, known, current, playbackPositionMs)
+        return if (current == null) search(timeline, playbackPositionMs) else follow(timeline, known, current, playbackPositionMs)
     }
 
-    private fun search(timeline: SpeechTimeline): Outcome {
+    private fun search(timeline: SpeechTimeline, playbackPositionMs: Long): Outcome {
         // All known audio up to the analysis budget: the look-ahead buffer and any sampled spots.
         val segments = timeline.segments(maxFrames = MAX_ANALYSIS_FRAMES)
         val knownFrames = segments.sumOf { it.knownFrames }
@@ -213,6 +213,7 @@ internal class AudioSyncTracker(
             revalidatedFrames = knownFrames
             return Outcome.Locked(locked, estimate)
         }
+        localLock(timeline, segments, playbackPositionMs)?.let { return it }
         waitingReason = blocker
         val candidate = if (!provisionalPolicy.unitScaleOnly || estimate.scale == 1.0) {
             estimate
@@ -248,6 +249,49 @@ internal class AudioSyncTracker(
         retraction(best, estimate)?.let { return it }
         if (provisionalBlocked) return Outcome.Searching(estimate)
         return provisional(best, near = useNear) ?: Outcome.Searching(estimate)
+    }
+
+    /**
+     * A subtitle made for another cut of the film follows different offsets in different parts, so
+     * sampled spots far from the playhead and the audio around it disagree and no whole-film lock
+     * passes. What is on screen is the part being played: lock on the audio around the playhead
+     * alone when it passes every lock check by itself. Later parts are then followed as playback
+     * reaches them (see [follow]). Only tried when the known audio reaches beyond that stretch,
+     * only with line starts agreeing (see [startsAgree]) and only when the frame rate clearly beats
+     * its 0.1% neighbour.
+     */
+    private fun localLock(
+        timeline: SpeechTimeline,
+        all: List<SpeechSegment>,
+        playbackPositionMs: Long,
+    ): Outcome.Locked? {
+        val playheadFrame = (playbackPositionMs / SpeechTimeline.FRAME_DURATION_MS).toInt()
+        val from = (playheadFrame - LOCAL_BACK_FRAMES).coerceAtLeast(0)
+        val to = playheadFrame + LOCAL_AHEAD_FRAMES
+        val local = timeline.segments(fromFrame = from, toFrame = to, maxFrames = MAX_ANALYSIS_FRAMES)
+        val localFrames = local.sumOf { it.knownFrames }
+        if (localFrames < MIN_LOCAL_FRAMES || localFrames >= all.sumOf { it.knownFrames }) return null
+        val speech = SubtitleAudioAligner.prepare(local, -MAX_SHIFT_MS, MAX_SHIFT_MS) ?: return null
+        val estimate = speech.estimate(track) ?: return null
+        if (lockBlocker(estimate, local, localFrames, track) != null) return null
+        // A few minutes can't tell a rate from its 0.1% neighbour (23.976 vs 24, or 25/24 vs
+        // 25/23.976): over a whole film that is seconds of drift. Wait until the rate is clear.
+        val neighbour = speech.estimate(track, doubleArrayOf(estimate.scale * NEAR_RATE, estimate.scale / NEAR_RATE))
+        if (neighbour != null && neighbour.peak > estimate.peak - LOCAL_RATE_MARGIN) return null
+        // A few minutes of audio can match an unrelated subtitle by chance; line starts and overlap
+        // agreeing on the offset almost never do, so a local lock always needs both.
+        val penalty = (if (estimate.scale != 1.0) NON_STANDARD_RATE_PENALTY else 0.0) +
+            (if (abs(estimate.shiftMs) > NEAR_SHIFT_MS) FAR_SHIFT_PENALTY else 0.0)
+        if (!startsAgree(local, estimate, track, penalty)) return null
+        val locked = SubtitleSyncModel(listOf(SubtitleSyncSegment(0L, estimate.scale, estimate.shiftMs)))
+        model = locked
+        lastEstimate = estimate
+        provisionalModel = null
+        waitingReason = ""
+        // Heard around the playhead itself: a later offset change there is a cut, not a wrong lock.
+        liveConfirmed = true
+        revalidatedFrames = timeline.knownFrameCount()
+        return Outcome.Locked(locked, estimate)
     }
 
     /**
@@ -681,6 +725,13 @@ internal class AudioSyncTracker(
 
         /** Audio known before line starts may settle an ambiguous overlap; with less, one chance match passed. */
         private val START_MIN_KNOWN_FRAMES = (90 * FRAMES_PER_SECOND).toInt()
+
+        /**
+         * A playhead-only lock's rate must beat its 0.1% neighbour by this much correlation. Swept
+         * on 4 corpora (about 140 subtitles): 0 let two locks drift by a rate 0.1% off, 0.004 blocked
+         * every playhead lock, 0.001 kept five fixes with no regression.
+         */
+        private const val LOCAL_RATE_MARGIN = 0.001
 
         /** Line starts and overlap agree on the offset within this. */
         private const val STARTS_AGREEMENT_MS = 250.0
