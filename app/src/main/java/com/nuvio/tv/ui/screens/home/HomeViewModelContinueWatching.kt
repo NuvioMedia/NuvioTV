@@ -9,6 +9,7 @@ import com.nuvio.tv.core.player.PlayerSessionTracker
 import com.nuvio.tv.core.util.isEpisodeReleaseAired
 import com.nuvio.tv.core.util.parseEpisodeReleaseInstant
 import com.nuvio.tv.core.util.selectEpisodeReleaseValue
+import com.nuvio.tv.data.repository.AddonEpisodeAirDate
 import com.nuvio.tv.data.simkl.SimklLibraryEntry
 import com.nuvio.tv.data.simkl.SimklSyncSnapshot
 import com.nuvio.tv.data.simkl.mediaReference
@@ -2094,7 +2095,7 @@ private suspend fun HomeViewModel.enrichInProgressItem(
             val tmdbIdInt = tmdbIdStr?.toIntOrNull()
             if (imdbId != null || tmdbIdInt != null) {
                 runCatching {
-                    imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt)
+                    imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt, meta.videos.map { AddonEpisodeAirDate(it.season, it.episode, it.released) })
                 }.getOrNull()?.get(item.progress.season!! to item.progress.episode!!)?.toFloat()
             } else null
         }
@@ -2198,7 +2199,7 @@ private suspend fun HomeViewModel.enrichNextUpItem(
             val tmdbIdInt = tmdbIdStr?.toIntOrNull()
             if (imdbId != null || tmdbIdInt != null) {
                 runCatching {
-                    imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt)
+                    imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt, meta.videos.map { AddonEpisodeAirDate(it.season, it.episode, it.released) })
                 }.getOrNull()?.get(s to e)?.toFloat()
             } else null
         }

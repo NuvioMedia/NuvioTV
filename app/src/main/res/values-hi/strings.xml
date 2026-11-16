@@ -816,11 +816,6 @@
     <string name="library_delete_confirm">हटाएँ</string>
     <string name="library_source_local">लोकल</string>
     <string name="library_type_all">सभी</string>
-    <string name="library_type_items">आइटम</string>
-    <string name="library_empty_local_title">अभी कोई %1$s नहीं</string>
-    <string name="library_empty_trakt_title">इस लिस्ट में कोई %1$s नहीं</string>
-    <string name="library_empty_local_subtitle">यहाँ देखने के लिए अपने पसंदीदा सेव करना शुरू करें</string>
-    <string name="library_empty_trakt_subtitle">वॉचलिस्ट या लिस्ट में आइटम जोड़ने के लिए डिटेल्स में + उपयोग करें</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">लोड हो रहा है\u2026</string>

@@ -7,9 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 
 private const val TOP_SUBTITLE_INSET_FRACTION = 0.08f
+private const val SIDE_SUBTITLE_INSET_FRACTION = 0.05f
 
 internal data class SubtitleBottomPlacement(val paddingPx: Int, val fraction: Float) {
     fun insetPx(heightPx: Int): Float = paddingPx + (heightPx - paddingPx) * fraction
@@ -40,28 +42,46 @@ internal fun StyledSubtitleOverlay(
     val density = LocalDensity.current
     BoxWithConstraints(modifier.fillMaxSize()) {
         val heightPx = constraints.maxHeight
-        if (cues.top.isNotEmpty()) {
+        val sideInset = with(density) { (constraints.maxWidth * SIDE_SUBTITLE_INSET_FRACTION).toDp() }
+        val bottomInset = with(density) {
+            subtitleBottomPlacement(heightPx, style.verticalOffset, liftPx).insetPx(heightPx).toDp()
+        }
+        val topInset = with(density) { (heightPx * TOP_SUBTITLE_INSET_FRACTION).toDp() }
+        cues.blocks.forEach { block ->
+            val sidePadding = if (block.horizontal == SubtitleHorizontalPosition.CENTER) 0.dp else sideInset
             StyledSubtitleText(
-                text = cues.top,
+                text = block.text,
                 style = style,
                 textSizePx = textSizePx,
                 fontFamily = fontFamily,
+                horizontal = block.horizontal,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = with(density) { (heightPx * TOP_SUBTITLE_INSET_FRACTION).toDp() })
+                    .align(block.alignment())
+                    .padding(
+                        start = sidePadding,
+                        end = sidePadding,
+                        top = if (block.vertical == SubtitleVerticalPosition.TOP) topInset else 0.dp,
+                        bottom = if (block.vertical == SubtitleVerticalPosition.BOTTOM) bottomInset else 0.dp
+                    )
             )
         }
-        if (cues.bottom.isNotEmpty()) {
-            val insetPx = subtitleBottomPlacement(heightPx, style.verticalOffset, liftPx).insetPx(heightPx)
-            StyledSubtitleText(
-                text = cues.bottom,
-                style = style,
-                textSizePx = textSizePx,
-                fontFamily = fontFamily,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = with(density) { insetPx.toDp() })
-            )
-        }
+    }
+}
+
+private fun StyledSubtitleBlock.alignment(): Alignment = when (vertical) {
+    SubtitleVerticalPosition.TOP -> when (horizontal) {
+        SubtitleHorizontalPosition.START -> Alignment.TopStart
+        SubtitleHorizontalPosition.CENTER -> Alignment.TopCenter
+        SubtitleHorizontalPosition.END -> Alignment.TopEnd
+    }
+    SubtitleVerticalPosition.MIDDLE -> when (horizontal) {
+        SubtitleHorizontalPosition.START -> Alignment.CenterStart
+        SubtitleHorizontalPosition.CENTER -> Alignment.Center
+        SubtitleHorizontalPosition.END -> Alignment.CenterEnd
+    }
+    SubtitleVerticalPosition.BOTTOM -> when (horizontal) {
+        SubtitleHorizontalPosition.START -> Alignment.BottomStart
+        SubtitleHorizontalPosition.CENTER -> Alignment.BottomCenter
+        SubtitleHorizontalPosition.END -> Alignment.BottomEnd
     }
 }

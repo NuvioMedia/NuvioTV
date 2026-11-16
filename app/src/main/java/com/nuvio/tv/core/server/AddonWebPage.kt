@@ -86,6 +86,18 @@ ${tabButtons}
         <button class="btn" id="addBtn" onclick="addAddon()">${context.getString(R.string.web_btn_add)}</button>
       </div>
       <div class="add-error" id="addError"></div>
+      <div class="tracking-consent" id="trackingConsent">
+        <div class="tracking-consent-title">${context.getString(R.string.addon_tracking_consent_title)}</div>
+        <div class="tracking-consent-body" id="trackingConsentBody"></div>
+        <label class="tracking-consent-check">
+          <input type="checkbox" id="trackingConsentCheck" onchange="updateTrackingConsentButton()">
+          <span>${context.getString(R.string.addon_tracking_consent_checkbox)}</span>
+        </label>
+        <div class="tracking-consent-actions">
+          <button class="btn" onclick="cancelTrackingConsent()">${context.getString(R.string.addon_tracking_consent_cancel)}</button>
+          <button class="btn" id="trackingConsentInstall" onclick="confirmTrackingConsent()" disabled>${context.getString(R.string.addon_tracking_consent_install)}</button>
+        </div>
+      </div>
     </div>
 
     <div class="section-label">${context.getString(R.string.web_installed_addons)}</div>
@@ -226,6 +238,54 @@ ${tabButtons}
   }
   .add-row input::placeholder {
     color: rgba(255, 255, 255, 0.2);
+  }
+  .tracking-consent {
+    display: none;
+    margin-top: 1rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+  }
+  .tracking-consent-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+  .tracking-consent-body {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1rem;
+  }
+  .add-section .tracking-consent-check {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #fff;
+    letter-spacing: normal;
+    text-transform: none;
+    margin-bottom: 1rem;
+    cursor: pointer;
+  }
+  .tracking-consent-check input {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+  }
+  .tracking-consent-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+  .tracking-consent-actions .btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
   }
   .add-error {
     color: rgba(207, 102, 121, 0.9);
@@ -1148,6 +1208,7 @@ var POLL_TIMEOUT = 120000;
 var POLL_INTERVAL = 1500;
 
 var i18n = {
+  trackingConsentBody: '${jsString(R.string.addon_tracking_consent_body)}',
   newCollection: '${context.getString(R.string.collections_new).replace("'", "\\'")}',
   backdrop: '${context.getString(R.string.collections_editor_backdrop).replace("'", "\\'")}',
   pinAbove: '${context.getString(R.string.collections_editor_pin_above).replace("'", "\\'")}',
@@ -1931,8 +1992,68 @@ async function addAddon() {
   }
 
   errorEl.style.display = 'none';
-  addons.push({ url: url, name: url, description: null, isNew: true });
+  var addBtn = document.getElementById('addBtn');
+  addBtn.disabled = true;
+  var manifest = null;
+  try {
+    var manifestRes = await fetchWithTimeout(manifestUrlFor(url), {}, 8000);
+    if (manifestRes.ok) manifest = await manifestRes.json();
+  } catch (e) {
+    manifest = null;
+  }
+  addBtn.disabled = false;
+  var name = (manifest && manifest.name) || url;
+  if (isTrackingManifest(manifest)) {
+    showTrackingConsent({ url: url, name: name });
+    return;
+  }
+  addons.push({ url: url, name: name, description: null, isNew: true });
   input.value = '';
+  renderAddons();
+}
+
+var pendingTrackingAddon = null;
+
+function manifestUrlFor(url) {
+  var queryStart = url.indexOf('?');
+  if (queryStart < 0) return url + '/manifest.json';
+  return url.substring(0, queryStart).replace(/\/+$/, '') + '/manifest.json' + url.substring(queryStart);
+}
+
+function isTrackingManifest(manifest) {
+  if (!manifest || !Array.isArray(manifest.resources)) return false;
+  return manifest.resources.some(function(resource) {
+    var name = typeof resource === 'string' ? resource : (resource && resource.name);
+    return name === 'player' || name === 'library';
+  });
+}
+
+function showTrackingConsent(addon) {
+  pendingTrackingAddon = addon;
+  document.getElementById('trackingConsentBody').textContent = i18n.trackingConsentBody.replace('%1${'$'}s', addon.name);
+  document.getElementById('trackingConsentCheck').checked = false;
+  updateTrackingConsentButton();
+  document.getElementById('trackingConsent').style.display = 'block';
+}
+
+function updateTrackingConsentButton() {
+  document.getElementById('trackingConsentInstall').disabled = !document.getElementById('trackingConsentCheck').checked;
+}
+
+function cancelTrackingConsent() {
+  pendingTrackingAddon = null;
+  document.getElementById('trackingConsent').style.display = 'none';
+}
+
+function confirmTrackingConsent() {
+  if (!pendingTrackingAddon || !document.getElementById('trackingConsentCheck').checked) return;
+  var addon = pendingTrackingAddon;
+  pendingTrackingAddon = null;
+  document.getElementById('trackingConsent').style.display = 'none';
+  if (!addons.some(function(a) { return a.url === addon.url; })) {
+    addons.push({ url: addon.url, name: addon.name, description: null, isNew: true, trackingConsent: true });
+  }
+  document.getElementById('addonUrl').value = '';
   renderAddons();
 }
 
@@ -1961,7 +2082,10 @@ async function saveChanges() {
         disabledCatalogKeys: disabledCatalogKeys,
         collections: collections,
         disabledCollectionKeys: disabledCollectionKeys,
-        followAddonsOrder: followAddonsOrder
+        followAddonsOrder: followAddonsOrder,
+        trackingConsentUrls: addons
+          .filter(function(a) { return a.trackingConsent; })
+          .map(function(a) { return a.url; })
       })
     }, 8000);
     var data = await res.json();

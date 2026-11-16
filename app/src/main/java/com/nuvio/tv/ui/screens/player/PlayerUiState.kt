@@ -162,6 +162,7 @@ data class PlayerUiState(
     val watchedEpisodeKeys: Set<Pair<Int, Int>> = emptySet(),
     val showEpisodeStreams: Boolean = false,
     val isLoadingEpisodeStreams: Boolean = false,
+    val isEpisodeAutoPlaySearching: Boolean = false,
     val episodeStreamsError: String? = null,
     val episodeAllStreams: List<Stream> = emptyList(),
     val episodeSelectedAddonFilter: String? = null, // null means "All"
@@ -275,6 +276,20 @@ internal fun PlayerUiState.clearFrameRateDetection(): PlayerUiState = copy(
     detectedFrameRate = 0f,
     detectedFrameRateSource = null
 )
+
+internal val PlayerUiState.showEpisodeAutoPlayLoadingOverlay: Boolean
+    get() = isEpisodeAutoPlaySearching && loadingOverlayEnabled
+
+internal fun PlayerUiState.finishEpisodeAutoPlaySearch(showStreamPicker: Boolean = false): PlayerUiState =
+    copy(
+        isEpisodeAutoPlaySearching = false,
+        showEpisodeStreams = showEpisodeStreams || (isEpisodeAutoPlaySearching && showStreamPicker),
+        isLoadingEpisodeStreams = if (isEpisodeAutoPlaySearching && showStreamPicker) {
+            false
+        } else {
+            isLoadingEpisodeStreams
+        }
+    )
 
 data class PlaybackTimelineState(
     val currentPosition: Long = 0L,

@@ -320,7 +320,7 @@ fun StreamScreen(
             viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return@LaunchedEffect
         }
-        val playbackInfo = viewModel.resolveStreamForPlayback(
+        val playbackInfo = viewModel.resolveAutoPlayStreamForPlayback(
             stream = stream,
             progressPercent = (resumePercent?.toDouble() ?: 0.0) * 100.0
         )

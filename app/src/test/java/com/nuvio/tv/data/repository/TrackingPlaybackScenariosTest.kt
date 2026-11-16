@@ -270,7 +270,8 @@ class TrackingPlaybackScenariosTest {
             trackingProgressProviders = TrackingProgressProviderRegistry(emptySet()),
             trackingHistoryWriters = TrackingHistoryWriterRegistry(emptySet()),
             mutationStore = mockk<WatchStateMutationStore>(relaxed = true),
-            serverWatched = mockk(relaxed = true)
+            serverWatched = mockk(relaxed = true),
+            addonEventDispatcher = mockk(relaxed = true)
         )
 
         // Profile 1 saves its progress

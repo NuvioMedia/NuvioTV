@@ -85,7 +85,8 @@ class WatchProgressMetadataRetryTest {
             trackingProgressProviders = TrackingProgressProviderRegistry(setOf(provider)),
             trackingHistoryWriters = TrackingHistoryWriterRegistry(emptySet()),
             mutationStore = mockk<WatchStateMutationStore>(relaxed = true),
-            serverWatched = mockk(relaxed = true)
+            serverWatched = mockk(relaxed = true),
+            addonEventDispatcher = mockk(relaxed = true)
         )
         repository.metadataRetryWindowMs = 0L
 
@@ -167,7 +168,8 @@ class WatchProgressMetadataRetryTest {
             trackingProgressProviders = TrackingProgressProviderRegistry(setOf(provider)),
             trackingHistoryWriters = TrackingHistoryWriterRegistry(emptySet()),
             mutationStore = mockk<WatchStateMutationStore>(relaxed = true),
-            serverWatched = mockk(relaxed = true)
+            serverWatched = mockk(relaxed = true),
+            addonEventDispatcher = mockk(relaxed = true)
         )
         repository.metadataRetryWindowMs = 0L
 
