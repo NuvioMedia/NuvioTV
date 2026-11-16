@@ -121,6 +121,18 @@ internal object PlayerPlaybackNetworking {
         }
         return builder
             .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
+            .let {
+                // Playback stays on HTTP/1.1 by default (see applyNetworkOptimizations), but some
+                // CDNs reject HTTP/1.1 requests with 403 while accepting HTTP/2 with identical
+                // headers. Streams that carry addon proxyHeaders therefore advertise h2 via ALPN
+                // and still fall back to HTTP/1.1 when the server (or a cleartext URL) does not
+                // negotiate it.
+                if (proxyHeaders.isNotEmpty()) {
+                    it.protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+                } else {
+                    it
+                }
+            }
             .build()
     }
 
