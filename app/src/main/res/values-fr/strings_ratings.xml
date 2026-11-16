@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rating_rate">Noter</string>
+    <string name="rating_your_rating">Votre note</string>
+    <string name="rating_rate_episode">Noter l’épisode</string>
+    <string name="rating_rated">Noté %1$s/10</string>
+    <string name="rating_value">%1$s sur 10</string>
+    <string name="rating_syncs_to">Synchronisé avec %1$s</string>
+    <string name="rating_saved">Note enregistrée</string>
+    <string name="rating_removed">Note supprimée</string>
+    <string name="rating_failed">Impossible de mettre à jour votre note sur %1$s</string>
+    <string name="rating_remove">Supprimer</string>
+</resources>

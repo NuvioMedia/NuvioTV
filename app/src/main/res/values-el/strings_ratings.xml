@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rating_rate">Βαθμολόγηση</string>
+    <string name="rating_your_rating">Η βαθμολογία σας</string>
+    <string name="rating_rate_episode">Βαθμολόγηση επεισοδίου</string>
+    <string name="rating_rated">Βαθμολογήθηκε %1$s/10</string>
+    <string name="rating_value">%1$s στα 10</string>
+    <string name="rating_syncs_to">Συγχρονίζεται με %1$s</string>
+    <string name="rating_saved">Η βαθμολογία αποθηκεύτηκε</string>
+    <string name="rating_removed">Η βαθμολογία αφαιρέθηκε</string>
+    <string name="rating_failed">Δεν ήταν δυνατή η ενημέρωση της βαθμολογίας σας στο %1$s</string>
+    <string name="rating_remove">Αφαίρεση</string>
+</resources>
