@@ -99,7 +99,7 @@ class BuiltInUsenetServiceTest {
         assertEquals(e01, group("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
         assertNotEquals(e01, group("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-FLUX"))
         assertNotEquals(e01, group("Silo.S02E01.The.Engineer.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
-        // A season pack plays every episode: it is its own group. Movies have none.
+        // A season pack plays every episode: it is its own group. An episode-less series release has none.
         assertEquals(group("Silo.S01.2160p.ATVp.WEB-DL-NTb"), group("silo.s01.2160p.atvp.web-dl-ntb"))
         assertNull(group("Movie.2020.1080p.WEB-DL-GRP"))
 
@@ -194,7 +194,7 @@ class BuiltInUsenetServiceTest {
         val remux = streams.single { it.title!!.contains("REMUX") }
         assertTrue(remux.badges.isEmpty())
         // No size known: no size badge.
-        assertNull(remux.behaviorHints)
+        assertNull(remux.behaviorHints?.videoSize)
     }
 
     @Test fun `a release that failed for good goes last, labelled, and stays selectable`() = runTest {
@@ -540,5 +540,27 @@ class BuiltInUsenetServiceTest {
         // Without the film's names and year, the indexer's tags are trusted.
         coEvery { tmdbApi.getMovieNames(121, any()) } throws IllegalStateException("offline")
         assertEquals(setOf("The.Ring.2002.1080p"), titles())
+    }
+
+    @Test fun `a movie's release is its own binge group, so reusing the group opens it again`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            release(indexer, "Movie.2020.2160p.WEB-DL-GRP"), release(indexer, "Movie.2020.1080p.BluRay-OTHER"))
+        val streams = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
+            .search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
+        val played = streams.single { it.title == "Movie.2020.1080p.BluRay-OTHER" }
+        assertEquals("${BuiltInUsenetService.GROUP_NAME}|movie.2020.1080p.bluray-other", played.behaviorHints?.bingeGroup)
+        // Opened again with the binge group reused, the release that played is picked, not the first listed.
+        val picked = com.nuvio.tv.core.player.StreamAutoPlaySelector.selectAutoPlayStream(streams,
+            com.nuvio.tv.data.local.StreamAutoPlayMode.MANUAL, "", com.nuvio.tv.data.local.StreamAutoPlaySource.ALL_SOURCES,
+            emptySet(), emptySet(), emptySet(), preferredBingeGroup = played.behaviorHints?.bingeGroup,
+            preferBingeGroupInSelection = true, bingeGroupOnly = true)
+        assertEquals(played.title, picked?.title)
+        // A kept link opened again carries the same group.
+        assertEquals(played.behaviorHints?.bingeGroup, BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "A",
+            played.title, null, null, config, series = false)?.behaviorHints?.bingeGroup)
     }
 }
