@@ -109,7 +109,7 @@ val buildTasks = abis.map { (abi, target) ->
                 environment("CC", "\"${File(toolchain, "${target.second}24-clang${if (windows) ".cmd" else ""}").absolutePath}\"")
                 environment("CXX", "\"${File(toolchain, "${target.second}24-clang++${if (windows) ".cmd" else ""}").absolutePath}\"")
                 commandLine(goBinary.get(), "build", "-trimpath", "-buildvcs=false", "-buildmode=pie",
-                    "-ldflags=-s -w -extldflags=-Wl,-z,max-page-size=16384", "-o", output.get().asFile, "./cmd/nuvio-usenet")
+                    "-ldflags=-s -w -buildid= -extldflags=-Wl,-z,max-page-size=16384", "-o", output.get().asFile, "./cmd/nuvio-usenet")
             }
 
         }

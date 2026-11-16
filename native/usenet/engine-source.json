@@ -1,6 +1,6 @@
 {
-  "repository": "https://github.com/haaihond/nuvio-usenet-engine",
-  "commit": "d31dda68f08ee898beea2bfc86cb5b033e899c5b",
+  "repository": "https://github.com/NuvioMedia/nuvio-usenet-engine",
+  "commit": "e4b0717ae5bfe44e76ca8c7662022bff326f3806",
   "protocol": 1,
   "importedFromAppCommit": "671f1b1d76d6d19333892ed339dad3c9f0a66320"
 }
