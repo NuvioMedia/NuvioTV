@@ -1118,6 +1118,8 @@
     <string name="layout_cw_enabled_sub">Show the Continue Watching row on the home screen.</string>
     <string name="layout_use_episode_thumbnails_cw">Use Episode Thumbnails in Continue Watching</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Use episode thumbnails as default image. When disabled, uses backdrop.</string>
+    <string name="layout_season_posters">Season Posters</string>
+    <string name="layout_season_posters_sub">Show seasons as posters instead of text tabs when available.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>
     <string name="layout_blur_unwatched_sub">Blur episode thumbnails until watched to avoid spoilers.</string>
     <string name="layout_episode_options_overlay">Episode Options Overlay</string>
@@ -1547,6 +1549,8 @@
     <string name="tmdb_networks_subtitle">Networks with logos from TMDB</string>
     <string name="tmdb_episodes_title">Episodes</string>
     <string name="tmdb_episodes_subtitle">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
+    <string name="tmdb_season_posters_title">Season Posters</string>
+    <string name="tmdb_season_posters_subtitle">Season posters from TMDB for the season tabs on the details page</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="tmdb_more_like_this_title">More Like This</string>

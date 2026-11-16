@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.mapper
 
+import com.nuvio.tv.data.remote.dto.AppExtrasDto
 import com.nuvio.tv.data.remote.dto.MetaDto
 import com.nuvio.tv.data.remote.dto.MetaLinkDto
 import com.nuvio.tv.data.remote.dto.VideoDto
@@ -18,6 +19,7 @@ fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
         .ifEmpty { writerMembers.map { it.name } }
     val castList = coerceStringList(cast).ifEmpty { castMembers.map { it.name } }
     val trailersList = mapTrailers(trailers, trailerStreams)
+    val videoList = videos?.map { it.toDomain(episodeLabel) } ?: emptyList()
 
     return Meta(
         id = id,
@@ -42,7 +44,7 @@ fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
         writer = writersList,
         cast = castList,
         castMembers = directorMembers + writerMembers + castMembers,
-        videos = videos?.map { it.toDomain(episodeLabel) } ?: emptyList(),
+        videos = videoList,
         productionCompanies = emptyList(),
         networks = emptyList(),
         ageRating = listOf(
@@ -65,7 +67,8 @@ fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
         hasLandscapePoster = hasLandscapePoster,
         hasLogo = hasLogo,
         hasLinks = hasLinks,
-        hasVideos = hasVideos
+        hasVideos = hasVideos,
+        seasonPosters = mapSeasonPosters(appExtras, videoList)
     )
 }
 
@@ -81,7 +84,8 @@ fun VideoDto.toDomain(episodeLabel: String = "Episode"): Video {
         overview = overview ?: description,
         runtime = parseEpisodeRuntimeMinutes(runtime),
         rating = rating?.trim()?.toDoubleOrNull()?.takeIf { it > 0.0 },
-        available = available
+        available = available,
+        seasonPoster = (seasonPoster ?: seasonPosterPath)?.trim()?.takeIf { it.isNotBlank() }
     )
 }
 
@@ -93,6 +97,45 @@ fun MetaLinkDto.toDomain(): MetaLink? {
             url = it
         )
     }
+}
+
+private fun mapSeasonPosters(appExtras: AppExtrasDto?, videos: List<Video>): Map<Int, String> {
+    val keyed = parseKeyedSeasonPosters(appExtras?.seasonPosters)
+        .ifEmpty { parseKeyedSeasonPosters(appExtras?.seasonPosterByNumber) }
+    if (keyed.isNotEmpty()) return keyed
+
+    val posters = appExtras?.seasonPosters as? List<*> ?: return emptyMap()
+    val seasons = videos
+        .mapNotNull { it.season }
+        .filter { it >= 0 }
+        .distinct()
+        .sorted()
+    val positiveSeasons = seasons.filter { it > 0 }
+    val posterSeasons = when {
+        seasons.size == posters.size -> seasons
+        positiveSeasons.size == posters.size -> positiveSeasons
+        positiveSeasons.isNotEmpty() &&
+            posters.size == positiveSeasons.size + 1 &&
+            posters.first() == null -> listOf(0) + positiveSeasons
+        else -> List(posters.size) { index -> index + 1 }
+    }
+    return posters.mapIndexedNotNull { index, element ->
+        (element as? String)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { posterSeasons[index] to it }
+    }.toMap()
+}
+
+private fun parseKeyedSeasonPosters(value: Any?): Map<Int, String> {
+    val posters = value as? Map<*, *> ?: return emptyMap()
+    return posters.entries.mapNotNull { (key, poster) ->
+        val season = key?.toString()?.trim()?.toIntOrNull() ?: return@mapNotNull null
+        (poster as? String)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { season to it }
+    }.toMap()
 }
 
 private fun parseEpisodeRuntimeMinutes(runtime: String?): Int? {

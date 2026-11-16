@@ -39,6 +39,12 @@ internal fun LayoutDetailPageSection(
         onToggle = { onEvent(LayoutSettingsEvent.SetRandomEpisodeEnabled(!uiState.randomEpisodeEnabled)) }
     )
     SettingsToggleRow(
+        title = stringResource(R.string.layout_season_posters),
+        subtitle = stringResource(R.string.layout_season_posters_sub),
+        checked = uiState.detailSeasonPostersEnabled,
+        onToggle = { onEvent(LayoutSettingsEvent.SetDetailSeasonPostersEnabled(!uiState.detailSeasonPostersEnabled)) }
+    )
+    SettingsToggleRow(
         title = stringResource(R.string.layout_blur_unwatched),
         subtitle = stringResource(R.string.layout_blur_unwatched_sub),
         checked = uiState.blurUnwatchedEpisodes,

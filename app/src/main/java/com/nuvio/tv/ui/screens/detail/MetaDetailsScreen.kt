@@ -880,6 +880,7 @@ fun MetaDetailsScreen(
                     watchedEpisodes = uiState.watchedEpisodes,
                     episodeWatchedPendingKeys = uiState.episodeWatchedPendingKeys,
                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                    seasonPostersEnabled = uiState.seasonPostersEnabled,
                     randomEpisodeEnabled = uiState.randomEpisodeEnabled,
                     episodeShuffle = uiState.episodeShuffle,
                     shufflePoolEmpty = uiState.shufflePoolEmpty,
@@ -1223,6 +1224,7 @@ private fun MetaDetailsContent(
     watchedEpisodes: Set<Pair<Int, Int>>,
     episodeWatchedPendingKeys: Set<String>,
     blurUnwatchedEpisodes: Boolean,
+    seasonPostersEnabled: Boolean,
     randomEpisodeEnabled: Boolean,
     episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffleSettings,
     shufflePoolEmpty: Boolean,
@@ -2006,6 +2008,17 @@ private fun MetaDetailsContent(
     }
     var activePeopleTab by rememberSaveable(meta.id) { mutableStateOf(initialPeopleTab) }
     var seasonOptionsDialogSeason by remember { mutableStateOf<Int?>(null) }
+    val seasonPosterStyle = remember(seasonPostersEnabled, meta, seasons) {
+        if (!seasonPostersEnabled) {
+            null
+        } else {
+            resolveSeasonPosters(meta, seasons)?.let { posters ->
+                SeasonPosterTabsStyle(
+                    posters = seasons.associateWith { season -> posters[season] ?: meta.poster }
+                )
+            }
+        }
+    }
     // Tracks whether the initial auto-scroll to the "next to play" episode has fired.
     // Once it fires, no more auto-scrolls happen for the lifetime of this detail screen.
     var initialEpisodeScrollDone by remember(meta.id) { mutableStateOf(false) }
@@ -2573,7 +2586,8 @@ private fun MetaDetailsContent(
                             selectedTabFocusRequester = selectedSeasonFocusRequester,
                             upFocusRequester = heroPlayFocusRequester,
                             downFocusRequester = seasonDownFocusRequester,
-                            isFocusEnabled = pendingRestoreType != RestoreTarget.EPISODE
+                            isFocusEnabled = pendingRestoreType != RestoreTarget.EPISODE,
+                            posterStyle = seasonPosterStyle
                         )
                     }
                 }
