@@ -7,7 +7,6 @@ import android.util.TypedValue
 import android.view.SurfaceHolder
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
-import `is`.xyz.mpv.BaseMPVView
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.Utils
 import java.util.Locale
@@ -26,7 +25,7 @@ private val MPV_STYLED_SUBTITLE_CODECS = setOf(
 class NuvioMpvSurfaceView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
-) : BaseMPVView(context, attrs) {
+) : NuvioBaseMpvView(context, attrs) {
 
     private var initialized = false
     private var hasQueuedInitialMedia = false
@@ -780,7 +779,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     }
 
     override fun initOptions() {
-        mpv.setOptionString("profile", "fast")
+        mpv.command("apply-profile", "fast")
         mpv.setOptionString("msg-level", "ffmpeg=warn,vd=warn,ad=warn,vo=warn,ao=warn,demux=warn,lavf=warn,cplayer=warn,autoconvert=warn,hwupload=warn")
         setVo(if (hi10pGnextSoftwareFallbackActive) MPV_VIDEO_OUTPUT_GPU_NEXT else MPV_VIDEO_OUTPUT_GPU)
         mpv.setOptionString("gpu-context", "android")
