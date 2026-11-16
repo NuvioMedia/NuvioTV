@@ -605,12 +605,18 @@ fun AdvancedSettingsContent(
                 )
                 val isStreamRunning = streamTestState != "Idle" && streamTestState != "Done" && streamTestState != "Error"
                 val hasStream = !lastStreamUrl.isNullOrBlank()
+                // A link served from this device, such as a built-in Usenet
+                // session, closes with its playback: there is no server to test.
+                val localStream = hasStream && android.net.Uri.parse(lastStreamUrl).host in
+                    setOf("127.0.0.1", "localhost", "::1", "[::1]")
                 SettingsActionRow(
                     title = stringResource(
                         if (isStreamRunning) R.string.stream_test_btn_running
                         else R.string.stream_test_card_title
                     ),
-                    subtitle = if (hasStream) {
+                    subtitle = if (localStream) {
+                        stringResource(R.string.stream_test_local_stream)
+                    } else if (hasStream) {
                         stringResource(R.string.stream_test_server_label, lastStreamUrl.let { android.net.Uri.parse(it).host } ?: stringResource(R.string.stream_quality_unknown))
                     } else {
                         stringResource(R.string.stream_test_no_stream)
@@ -625,8 +631,8 @@ fun AdvancedSettingsContent(
                             else -> stringResource(R.string.stream_test_btn_running)
                         }
                     } else null,
-                    enabled = hasStream && !isStreamRunning,
-                    onClick = { if (hasStream && !isStreamRunning) runStreamDiagnostics() }
+                    enabled = hasStream && !localStream && !isStreamRunning,
+                    onClick = { if (hasStream && !localStream && !isStreamRunning) runStreamDiagnostics() }
                 )
             }
         }

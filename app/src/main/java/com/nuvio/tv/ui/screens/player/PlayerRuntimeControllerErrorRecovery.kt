@@ -7,6 +7,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.usenetFailureExplanation
+import com.nuvio.tv.core.player.usenetFailureKind
 import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
@@ -172,7 +174,9 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     if (responseException != null) {
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
-        val providerHint = httpStatusExplanation(context, code)
+        // A stream the Usenet engine gave up on says why instead of reading as an expired link.
+        val providerHint = usenetFailureExplanation(usenetFailureKind(responseException.headerFields))
+            ?.let(context::getString) ?: httpStatusExplanation(context, code)
         return buildString {
             append("HTTP $code")
             statusText?.let { append(" $it") }
@@ -548,6 +552,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 return@launch
             }
             val userFacingError = error.toDisplayMessage(context)
+            if (tryNextStream(userFacingError)) return@launch
             _uiState.update {
                 it.copy(
                     error = userFacingError,
