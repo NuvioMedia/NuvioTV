@@ -184,6 +184,12 @@ internal class AudioSyncDecoder(
         }
     }
 
+    private fun stayInBackground() {
+        val current = Process.getThreadPriority(Process.myTid())
+        if (current == Process.THREAD_PRIORITY_BACKGROUND) return
+        Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+    }
+
     private fun runLoop() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
         try {
@@ -219,6 +225,7 @@ internal class AudioSyncDecoder(
                         liveAnalyzer.accept(item.samples, item.samples.size, item.sampleRate, item.timeUs)
                     }
                 }
+                stayInBackground()
             }
         } catch (_: InterruptedException) {
         } catch (error: Throwable) {
