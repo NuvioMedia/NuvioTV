@@ -497,6 +497,9 @@ class PlayerRuntimeController(
     internal var sourceStreamsFetchCompleted: Boolean = false
     internal var hostActivityRef: WeakReference<Activity>? = null
     internal var initialPlaybackStarted: Boolean = false
+    // Players this controller started building, in either engine; every one after the first is a
+    // rebuild of a player that was just released.
+    internal var playerInitializations: Int = 0
     internal var lastPlaybackDiagnosticsForReport: LastPlaybackDiagnostics =
         LastPlaybackDiagnostics.EMPTY
     internal var lastPlaybackIssueError: PlaybackIssueErrorInput? = null

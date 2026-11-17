@@ -295,6 +295,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     init {
+        com.nuvio.tv.ui.screens.player.PlayerStartupPrewarm.start(context)
         viewModelScope.launch {
             _uiState
                 .map { state -> state.directAutoPlayMessage to state.directAutoPlayProgress }
