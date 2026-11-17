@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.semantics
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,8 +32,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +70,7 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.TvReorderList
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
@@ -255,7 +254,9 @@ fun CollectionManagementScreen(
 
         if (uiState.collections.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -265,30 +266,32 @@ fun CollectionManagementScreen(
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-            ) {
-                itemsIndexed(
-                    items = uiState.collections,
-                    key = { _, item -> item.id }
-                ) { index, collection ->
-                    val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
-                    CollectionListItem(
-                        collection = collection,
-                        isFirst = index == 0,
-                        isLast = index == uiState.collections.size - 1,
-                        editFocusRequester = editFocusRequester,
-                        onEdit = {
-                            lastFocusedId = collection.id
-                            onNavigateToEditor(collection.id)
-                        },
-                        onDelete = { collectionToDelete = collection },
-                        onMoveUp = { viewModel.moveUp(index) },
-                        onMoveDown = { viewModel.moveDown(index) }
-                    )
-                }
+            TvReorderList(
+                items = uiState.collections,
+                key = { it.id },
+                canMove = { true },
+                movingKey = uiState.movingCollectionKey,
+                onStartMove = viewModel::enterCollectionMoveMode,
+                onMoveBy = viewModel::moveCollectionDuringDrag,
+                onConfirmMove = { viewModel.confirmCollectionMove() },
+                onCancelMove = viewModel::cancelCollectionMove,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) { collection, isMoving, onStartMove, onConfirmMove ->
+                val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
+                CollectionListItem(
+                    collection = collection,
+                    isMoving = isMoving,
+                    editFocusRequester = editFocusRequester,
+                    onEdit = {
+                        lastFocusedId = collection.id
+                        onNavigateToEditor(collection.id)
+                    },
+                    onDelete = { collectionToDelete = collection },
+                    onStartMove = onStartMove,
+                    onConfirmMove = onConfirmMove
+                )
             }
         }
     }
@@ -600,17 +603,34 @@ private fun ImportContent(
 @Composable
 private fun CollectionListItem(
     collection: Collection,
-    isFirst: Boolean,
-    isLast: Boolean,
+    isMoving: Boolean,
     editFocusRequester: FocusRequester? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    onStartMove: () -> Unit,
+    onConfirmMove: () -> Unit
 ) {
+    val cardColor by animateColorAsState(
+        targetValue = if (isMoving) {
+            NuvioTheme.colors.FocusBackground
+        } else {
+            NuvioTheme.colors.BackgroundCard
+        },
+        animationSpec = com.nuvio.tv.ui.theme.NuvioMotion.focusTween(),
+        label = "collectionCardColor",
+    )
+    val cardBorder = if (isMoving) {
+        Border(
+            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+            shape = RoundedCornerShape(NuvioTheme.radii.md)
+        )
+    } else {
+        Border.None
+    }
     Surface(
         shape = RoundedCornerShape(NuvioTheme.radii.md),
-        colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
+        colors = SurfaceDefaults.colors(containerColor = cardColor),
+        border = cardBorder,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -637,13 +657,12 @@ private fun CollectionListItem(
 
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
                 Button(
-                    onClick = onMoveUp,
-                    enabled = !isFirst,
+                    onClick = if (isMoving) onConfirmMove else onStartMove,
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
+                        containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                        contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
@@ -653,31 +672,16 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
-                    Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up))
-                }
-
-                Button(
-                    onClick = onMoveDown,
-                    enabled = !isLast,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
-                    ),
-                    border = ButtonDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                ) {
-                    Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down))
+                    Text(
+                        text = stringResource(
+                            if (isMoving) R.string.catalog_order_done else R.string.catalog_order_move,
+                        ),
+                    )
                 }
 
                 Button(
                     onClick = onEdit,
+                    enabled = !isMoving,
                     modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
@@ -698,6 +702,7 @@ private fun CollectionListItem(
 
                 Button(
                     onClick = onDelete,
+                    enabled = !isMoving,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextSecondary,

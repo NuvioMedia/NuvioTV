@@ -34,7 +34,8 @@ data class CollectionManagementUiState(
     val validationResult: ValidationResult? = null,
     val validatedJson: String? = null,
     val isLoadingImport: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val movingCollectionKey: String? = null
 )
 
 @HiltViewModel
@@ -47,11 +48,14 @@ class CollectionManagementViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CollectionManagementUiState())
     val uiState: StateFlow<CollectionManagementUiState> = _uiState.asStateFlow()
 
+    private var collectionMoveBaseline: List<Collection>? = null
+    private var collectionDraftOrder: List<String>? = null
+
     init {
         viewModelScope.launch {
             collectionsDataStore.collections.collectLatest { collections ->
                 _uiState.update {
-                    it.copy(collections = collections, isLoading = false)
+                    it.copy(collections = applyCollectionDraftOrder(collections), isLoading = false)
                 }
             }
         }
@@ -64,27 +68,83 @@ class CollectionManagementViewModel @Inject constructor(
         }
     }
 
-    fun moveUp(index: Int) {
-        if (index <= 0) return
-        viewModelScope.launch {
-            val current = _uiState.value.collections.toMutableList()
-            val item = current.removeAt(index)
-            current.add(index - 1, item)
-            collectionsDataStore.setCollections(current)
-            collectionSyncService.triggerPush()
+    fun enterCollectionMoveMode(collectionId: String) {
+        val current = _uiState.value.collections
+        if (current.none { it.id == collectionId }) return
+        collectionMoveBaseline = current
+        collectionDraftOrder = current.map { it.id }
+        _uiState.update { it.copy(movingCollectionKey = collectionId) }
+    }
+
+    fun moveCollectionDuringDrag(collectionId: String, direction: Int): Int? {
+        val draft = collectionDraftOrder ?: return null
+        val fromIndex = draft.indexOf(collectionId)
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+        collectionDraftOrder = reordered
+        applyCollectionDraftOrder()
+        return toIndex
+    }
+
+    fun confirmCollectionMove() {
+        val draft = collectionDraftOrder
+        collectionDraftOrder = null
+        collectionMoveBaseline = null
+        _uiState.update { it.copy(movingCollectionKey = null) }
+        if (draft != null) {
+            viewModelScope.launch {
+                val current = _uiState.value.collections
+                val byId = current.associateBy { it.id }
+                val ordered = draft.mapNotNull { byId[it] } +
+                    current.filter { it.id !in draft.toSet() }
+                collectionsDataStore.setCollections(ordered)
+                collectionSyncService.triggerPush()
+            }
         }
     }
 
-    fun moveDown(index: Int) {
-        val current = _uiState.value.collections
-        if (index >= current.size - 1) return
-        viewModelScope.launch {
-            val mutableList = current.toMutableList()
-            val item = mutableList.removeAt(index)
-            mutableList.add(index + 1, item)
-            collectionsDataStore.setCollections(mutableList)
-            collectionSyncService.triggerPush()
+    fun cancelCollectionMove() {
+        val baseline = collectionMoveBaseline
+        collectionDraftOrder = null
+        collectionMoveBaseline = null
+        _uiState.update {
+            it.copy(
+                movingCollectionKey = null,
+                collections = baseline ?: it.collections
+            )
         }
+    }
+
+    private fun applyCollectionDraftOrder() {
+        val draft = collectionDraftOrder ?: return
+        _uiState.update { state ->
+            state.copy(collections = orderCollectionsByIds(state.collections, draft))
+        }
+    }
+
+    private fun applyCollectionDraftOrder(collections: List<Collection>): List<Collection> {
+        val draft = collectionDraftOrder ?: return collections
+        return orderCollectionsByIds(collections, draft)
+    }
+
+    private fun orderCollectionsByIds(
+        collections: List<Collection>,
+        orderIds: List<String>
+    ): List<Collection> {
+        val byId = collections.associateBy { it.id }
+        val seen = LinkedHashSet<String>()
+        val ordered = ArrayList<Collection>(collections.size)
+        for (id in orderIds) {
+            val collection = byId[id] ?: continue
+            if (seen.add(id)) ordered.add(collection)
+        }
+        for (collection in collections) {
+            if (seen.add(collection.id)) ordered.add(collection)
+        }
+        return ordered
     }
 
     fun exportCollections(): String {
