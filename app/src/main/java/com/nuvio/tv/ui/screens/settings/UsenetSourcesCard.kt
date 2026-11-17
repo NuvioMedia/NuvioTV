@@ -189,7 +189,8 @@ internal fun UsenetSourcesCard(
                 value = if (configuration.maxSizeGb == 0) unlimited else "${configuration.maxSizeGb} GB", onClick = { picker = "size" })
             SettingsActionRow(title = stringResource(R.string.usenet_max_age), subtitle = null,
                 value = if (configuration.maxAgeDays == 0) unlimited else "${configuration.maxAgeDays}d", onClick = { picker = "age" })
-            SettingsActionRow(title = stringResource(R.string.usenet_result_limit), subtitle = null,
+            SettingsActionRow(title = stringResource(R.string.usenet_result_limit),
+                subtitle = stringResource(R.string.usenet_result_limit_description),
                 value = if (configuration.maxResults == UsenetSourceConfiguration.UNLIMITED_RESULTS) unlimited
                     else configuration.maxResults.toString(), onClick = { picker = "limit" })
             SettingsActionRow(title = stringResource(R.string.usenet_indexer_results),
@@ -460,12 +461,27 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
     var url by remember { mutableStateOf(item.apiUrl) }
     var path by remember { mutableStateOf(item.apiPath) }
     var key by remember { mutableStateOf(item.apiKey) }
+    var fetchLimit by remember { mutableStateOf(item.fetchResultsLimit) }
+    var choosingFetchLimit by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
     // Keyed by the tested values, so a result that arrives after an edit is not shown for the new values.
     var tested by remember { mutableStateOf<Pair<UsenetIndexer, Boolean>?>(null) }
     val scope = rememberCoroutineScope()
-    fun value() = item.copy(name = name.trim(), apiUrl = url.trim(), apiPath = path.trim(), apiKey = key.trim())
+    fun value() = item.copy(name = name.trim(), apiUrl = url.trim(), apiPath = path.trim(), apiKey = key.trim(),
+        fetchResultsLimit = fetchLimit)
+    val fetchOptions = listOf(
+        SettingsPickerOption(-1, stringResource(R.string.usenet_fetch_default)),
+        SettingsPickerOption(0, stringResource(R.string.usenet_fetch_unlimited))
+    ) + UsenetSourceConfiguration.INDEXER_RESULT_CHOICES.map { SettingsPickerOption(it, it.toString()) }
+    if (choosingFetchLimit) {
+        SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_fetch_limit),
+            subtitle = stringResource(R.string.usenet_fetch_limit_description), options = fetchOptions,
+            selectedValue = fetchLimit ?: -1,
+            onOptionSelected = { fetchLimit = it.takeUnless { value -> value == -1 }; choosingFetchLimit = false },
+            onDismiss = { choosingFetchLimit = false })
+        return
+    }
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_indexer else R.string.usenet_edit_indexer), subtitle = stringResource(R.string.usenet_indexer_hint), onDismiss = onDismiss) {
         // Scrolls, so the buttons below stay on screen.
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -473,6 +489,10 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
             SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it })
             SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it })
             SourceField(stringResource(R.string.usenet_indexer_key), key, { key = it }, secret = true)
+            SettingsActionRow(title = stringResource(R.string.usenet_fetch_limit),
+                subtitle = stringResource(R.string.usenet_fetch_limit_description),
+                value = fetchOptions.firstOrNull { it.value == (fetchLimit ?: -1) }?.title ?: fetchLimit.toString(),
+                onClick = { choosingFetchLimit = true })
         }
         if (error) Text(stringResource(R.string.usenet_indexer_invalid), color = NuvioTheme.colors.TextSecondary)
         val result = tested?.takeIf { it.first == value() }?.second

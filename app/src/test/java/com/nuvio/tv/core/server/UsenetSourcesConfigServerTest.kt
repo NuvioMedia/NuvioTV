@@ -87,6 +87,27 @@ class UsenetSourcesConfigServerTest {
         assertEquals(listOf("Renamed", "Indexer", "Indexer"), setup.saved)
     }
 
+    @Test fun `phone fetch limits round trip without exposing or replacing credentials`() {
+        fun save(extra: String) = call("/api/indexers",
+            """{"id":"i1","name":"Indexer","apiUrl":"https://indexer.example/api"$extra}""").first
+        assertEquals(200, save(",\"fetchResultsLimit\":0"))
+        assertEquals(indexer.copy(fetchResultsLimit = 0), setup.configuration.indexers.single())
+        val body = call("/api/sources").second
+        assertTrue(body.contains("\"fetchResultsLimit\":0"))
+        assertFalse(body.contains("api-secret"))
+        // A form from an older app version does not reset a saved override.
+        assertEquals(200, save(""))
+        assertEquals(0, setup.configuration.indexers.single().fetchResultsLimit)
+        assertEquals(200, save(",\"fetchResultsLimit\":500"))
+        assertEquals(500, setup.configuration.indexers.single().fetchResultsLimit)
+        assertEquals(400, save(",\"fetchResultsLimit\":-2"))
+        assertEquals(400, save(",\"fetchResultsLimit\":1001"))
+        assertEquals(500, setup.configuration.indexers.single().fetchResultsLimit)
+        assertEquals(200, save(",\"fetchResultsLimit\":-1"))
+        assertEquals(indexer, setup.configuration.indexers.single())
+        assertEquals(50, setup.configuration.maxResults)
+    }
+
     @Test fun `new sources are added and invalid ones are rejected without saving`() {
         val (code, body) = call("/api/providers", """{"name":"Backup","host":"backup.example","password":"pw","priority":2}""")
         assertEquals(200, code)

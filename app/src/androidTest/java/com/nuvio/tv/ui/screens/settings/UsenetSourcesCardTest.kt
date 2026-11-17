@@ -32,6 +32,30 @@ class UsenetSourcesCardTest {
         assertIsFocused().performKeyInput { pressKey(Key.DirectionCenter) }
     }
 
+    @Test fun indexerFormSavesUnlimitedFetchingSeparatelyFromDisplayedResults() {
+        var saved = UsenetSourceConfiguration()
+        compose.setContent {
+            var configuration by remember { mutableStateOf(saved) }
+            NuvioTheme {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    UsenetSourcesCard(configuration, { saved = it; configuration = it }, { true },
+                        { ProviderTestResult.SUCCESS }, remember { FocusRequester() })
+                }
+            }
+        }
+        compose.onNodeWithText(label(R.string.usenet_add_indexer)).performScrollTo().pressRemote()
+        compose.onNodeWithTag(label(R.string.usenet_source_name)).performTextInput("Hydra")
+        compose.onNodeWithTag(label(R.string.usenet_indexer_url)).performTextInput("https://hydra.test")
+        compose.onNodeWithText(label(R.string.usenet_fetch_limit)).performScrollTo().pressRemote()
+        compose.onNodeWithText(label(R.string.usenet_fetch_unlimited)).performScrollTo().pressRemote()
+        compose.onNodeWithText(label(R.string.action_save)).pressRemote()
+        compose.runOnIdle {
+            assertEquals(0, saved.indexers.single().fetchResultsLimit)
+            assertEquals("Hydra", saved.indexers.single().name)
+            assertEquals(50, saved.maxResults)
+        }
+    }
+
     @Test fun providerFormSavesCredentialsAndConnectionAllowance() {
         var saved = UsenetSourceConfiguration()
         compose.setContent {

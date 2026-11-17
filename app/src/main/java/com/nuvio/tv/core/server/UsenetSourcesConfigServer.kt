@@ -268,7 +268,9 @@ internal data class PhoneIndexer(
     val priority: Int = 1,
     val enabled: Boolean = true,
     /** Shown in the list only: the URL with its API path. */
-    val endpoint: String = ""
+    val endpoint: String = "",
+    /** Missing preserves an existing choice; -1 selects the global default, zero means unlimited. */
+    val fetchResultsLimit: Int? = null
 ) {
     /**
      * Edits [existing] like [PhoneProvider.merge]. The phone gets the URL without its query, which can
@@ -278,7 +280,12 @@ internal data class PhoneIndexer(
     fun merge(existing: UsenetIndexer?): UsenetIndexer? {
         val url = apiUrl.trim().let { if (existing != null && it == withoutQuery(existing.apiUrl)) existing.apiUrl else it }
         val edited = (existing ?: UsenetIndexer()).copy(name = name.trim(), apiUrl = url, apiPath = apiPath.trim(),
-            apiKey = apiKey.trim(), priority = priority)
+            apiKey = apiKey.trim(), priority = priority,
+            fetchResultsLimit = when (fetchResultsLimit) {
+                null -> existing?.fetchResultsLimit
+                -1 -> null
+                else -> fetchResultsLimit
+            })
         if (edited.apiKey.isNotEmpty() || existing == null || existing.apiKey.isEmpty()) return edited
         return if (edited.endpoint == existing.endpoint) edited.copy(apiKey = existing.apiKey) else null
     }
@@ -286,7 +293,7 @@ internal data class PhoneIndexer(
     companion object {
         fun of(indexer: UsenetIndexer) = PhoneIndexer(indexer.id, indexer.name, withoutQuery(indexer.apiUrl),
             indexer.apiPath, hasKey = indexer.apiKey.isNotEmpty(), priority = indexer.priority,
-            enabled = indexer.enabled, endpoint = withoutQuery(indexer.endpoint))
+            enabled = indexer.enabled, endpoint = withoutQuery(indexer.endpoint), fetchResultsLimit = indexer.fetchResultsLimit ?: -1)
 
         private fun withoutQuery(url: String) = url.substringBefore('?')
     }

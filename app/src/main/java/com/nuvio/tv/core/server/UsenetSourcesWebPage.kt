@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import com.nuvio.tv.R
 import com.nuvio.tv.core.usenet.DEFAULT_API_PATH
+import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import java.util.Locale
 
 object UsenetSourcesWebPage {
@@ -26,6 +27,14 @@ object UsenetSourcesWebPage {
                 else -> p.toString()
             }
             """<option value="$p">${label.html()}</option>"""
+        }
+        val fetchLimits = (listOf(-1, 0) + UsenetSourceConfiguration.INDEXER_RESULT_CHOICES).joinToString("") { limit ->
+            val label = when (limit) {
+                -1 -> s(R.string.usenet_fetch_default)
+                0 -> s(R.string.usenet_fetch_unlimited)
+                else -> limit.toString()
+            }
+            """<option value="$limit">$label</option>"""
         }
         return """
 <!DOCTYPE html>
@@ -133,6 +142,9 @@ ${UsenetRankingWebPage.style}
       <input id="iPath" autocapitalize="none" spellcheck="false" placeholder="/api">
       <label for="iKey">${s(R.string.usenet_indexer_key)}</label>
       <input id="iKey" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+      <label for="iFetchLimit">${s(R.string.usenet_fetch_limit)}</label>
+      <select id="iFetchLimit">$fetchLimits</select>
+      <div class="hint">${s(R.string.usenet_fetch_limit_description)}</div>
       <label for="iPriority">${s(R.string.usenet_priority)}</label>
       <select id="iPriority">$priorities</select>
       <div class="hint">${s(R.string.usenet_indexer_priority_hint)}</div>
@@ -225,6 +237,7 @@ function openIndexer(x) {
   $('iPath').value = x ? (x.apiPath || '') : '${DEFAULT_API_PATH}';
   secretHint($('iKey'), x && x.hasKey);
   $('iPriority').value = x ? x.priority : 1;
+  $('iFetchLimit').value = x ? (x.fetchResultsLimit ?? -1) : -1;
   $('indexerForm').classList.add('open');
   setStatus('');
   $('iName').focus();
@@ -236,7 +249,7 @@ function providerValue() {
 }
 function indexerValue() {
   return { id: editing.indexer, name: $('iName').value, apiUrl: $('iUrl').value, apiPath: $('iPath').value, apiKey: $('iKey').value,
-    priority: parseInt($('iPriority').value, 10) };
+    priority: parseInt($('iPriority').value, 10), fetchResultsLimit: parseInt($('iFetchLimit').value, 10) };
 }
 async function run(button, pending, action) {
   button.disabled = true;
