@@ -44,6 +44,8 @@ private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
 private const val TMDB_TRAILER_FALLBACK_LANGUAGE = "en-US"
 private const val TMDB_SEASON_REQUEST_CONCURRENCY = 4
 private val YOUTUBE_VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
+private const val TMDB_TALK_GENRE_ID = 10767
+private val TALK_SHOW_HOST_CHARACTER_REGEX = Regex("\\b(co-?)?host(s|ess)?\\b", RegexOption.IGNORE_CASE)
 
 @Singleton
 class TmdbMetadataService(
@@ -1494,7 +1496,7 @@ class TmdbMetadataService(
     ): List<MetaPreview> {
         val seenTvIds = mutableSetOf<Int>()
         return cast
-            .filter { it.mediaType == "tv" && it.posterPath != null }
+            .filter { it.mediaType == "tv" && it.posterPath != null && !it.isTalkShowGuestAppearance() }
             .sortedByDescending { it.voteAverage ?: 0.0 }
             .mapNotNull { credit ->
                 if (!seenTvIds.add(credit.id)) return@mapNotNull null
@@ -1787,6 +1789,11 @@ private fun englishCreditTitlesById(credits: TmdbPersonCreditsResponse?): Map<In
     credits.cast.orEmpty().forEach { putTitle(it.id, it.title, it.name) }
     credits.crew.orEmpty().forEach { putTitle(it.id, it.title, it.name) }
     return titles
+}
+
+private fun TmdbPersonCreditCast.isTalkShowGuestAppearance(): Boolean {
+    if (genreIds.orEmpty().none { it == TMDB_TALK_GENRE_ID }) return false
+    return character?.let { TALK_SHOW_HOST_CHARACTER_REGEX.containsMatchIn(it) } != true
 }
 
 private fun collectionPartsContainCjkTitles(parts: List<TmdbCollectionPart>): Boolean {
