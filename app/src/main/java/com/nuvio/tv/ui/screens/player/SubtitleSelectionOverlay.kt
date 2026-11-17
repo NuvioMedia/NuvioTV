@@ -175,7 +175,10 @@ internal fun SubtitleSelectionOverlay(
     val sessionInitialSubtitleOptions = remember(
         visible,
         sessionInitialLanguageKey,
-        sessionInitialSelectedOptionId
+        sessionInitialSelectedOptionId,
+        sessionInternalTracks,
+        sessionAddonSubtitles,
+        sessionInstalledSubtitleAddonOrder
     ) {
         buildSessionOptions(sessionInitialLanguageKey, sessionInitialSelectedOptionId)
     }
@@ -197,7 +200,11 @@ internal fun SubtitleSelectionOverlay(
         sessionAddonSubtitles,
         sessionInstalledSubtitleAddonOrder
     ) {
-        buildSessionOptions(selectedLanguageKey, selectedOptionId)
+        if (selectedLanguageKey == sessionInitialLanguageKey && selectedOptionId == sessionInitialSelectedOptionId) {
+            sessionInitialSubtitleOptions
+        } else {
+            buildSessionOptions(selectedLanguageKey, selectedOptionId)
+        }
     }
     var lastFocusedLanguageKey by remember(visible) {
         mutableStateOf(sessionInitialLanguageKey.takeIf { key -> languageItems.any { it.key == key } })
