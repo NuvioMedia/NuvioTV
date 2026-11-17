@@ -60,6 +60,15 @@
 -keep class com.nuvio.engine.** { *; }
 -keep interface com.nuvio.engine.** { *; }
 
+# ── Rust core (UniFFI over JNA) ───────────────────────────────────────────────
+# The generated bindings are called by name from the native library, and JNA
+# reflects into its own structures, so neither can be renamed or stripped.
+-keep class com.nuvio.tv.core.rust.** { *; }
+-keepclassmembers class com.nuvio.tv.core.rust.** { *; }
+-keep class com.sun.jna.** { *; }
+-keepclassmembers class * extends com.sun.jna.** { public *; }
+-dontwarn com.sun.jna.**
+
 #── QuickJS ────────────────────────────────────────────────────────────────────
 # Keep quickjs-kt library classes for proper type conversion
 -keep class com.dokar.quickjs.** { *; }

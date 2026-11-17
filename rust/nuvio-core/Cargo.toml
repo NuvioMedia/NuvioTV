@@ -1,0 +1,15 @@
+[package]
+name = "nuvio-core"
+description = "Shared Rust core for Nuvio: FFI facade over addon, plugin, tracking and progress logic."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "nuvio_core"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+uniffi = { workspace = true, features = ["tokio"] }
+tokio = { workspace = true }

@@ -596,6 +596,11 @@ dependencies {
 
     add("fullImplementation", "org.webjars.npm:crypto-js:4.2.0")
 
+    // Rust core (UniFFI). The generated bindings under core/rust call the native
+    // library through JNA, so both flavors need it on the classpath.
+    implementation("net.java.dev.jna:jna:5.14.0@aar")
+    testImplementation("net.java.dev.jna:jna:5.14.0")
+
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
@@ -606,4 +611,104 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// ── Rust core (UniFFI) ────────────────────────────────────────────────────────
+// The shared logic core lives in ./rust: cargo-ndk cross-compiles it into
+// src/main/jniLibs, and uniffi-bindgen produces the Kotlin bindings committed
+// under com/nuvio/tv/core/rust. The Android build is wired only when
+// -PnuvioRustCore=true, so a plain checkout still builds without a Rust
+// toolchain and NDK on PATH (CI enables it).
+val rustCoreDir = rootProject.layout.projectDirectory.dir("rust")
+val rustJniLibsDir = layout.projectDirectory.dir("src/main/jniLibs").asFile
+val rustBindingsSrcRoot = layout.projectDirectory.dir("src/main/java").asFile
+val rustAndroidAbis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+val hostCdylibName = when {
+    System.getProperty("os.name").lowercase().contains("win") -> "nuvio_core.dll"
+    System.getProperty("os.name").lowercase().contains("mac") -> "libnuvio_core.dylib"
+    else -> "libnuvio_core.so"
+}
+
+fun uniffiBindgenArgs(outDir: File) = listOf(
+    "cargo", "run", "-q", "-p", "uniffi-bindgen", "--", "generate",
+    "--library", "target/debug/$hostCdylibName",
+    "--crate", "nuvio_core",
+    "--language", "kotlin",
+    "--no-format",
+    "--out-dir", outDir.absolutePath,
+)
+
+val cargoBuildAndroid = tasks.register<Exec>("cargoBuildAndroid") {
+    group = "rust"
+    description = "Cross-compiles nuvio-core for all four Android ABIs into src/main/jniLibs."
+    workingDir = rustCoreDir.asFile
+    commandLine(
+        buildList {
+            add("cargo")
+            add("ndk")
+            rustAndroidAbis.forEach { abi ->
+                add("-t")
+                add(abi)
+            }
+            add("-o")
+            add(rustJniLibsDir.absolutePath)
+            add("build")
+            add("-p")
+            add("nuvio-core")
+            add("--release")
+        }
+    )
+}
+
+val cargoBuildHost = tasks.register<Exec>("cargoBuildHost") {
+    group = "rust"
+    description = "Builds nuvio-core for the host; used only to generate Kotlin bindings."
+    workingDir = rustCoreDir.asFile
+    commandLine("cargo", "build", "-p", "nuvio-core")
+}
+
+val generateRustBindings = tasks.register<Exec>("generateRustBindings") {
+    group = "rust"
+    description = "Regenerates the committed UniFFI Kotlin bindings."
+    dependsOn(cargoBuildHost)
+    workingDir = rustCoreDir.asFile
+    commandLine(uniffiBindgenArgs(rustBindingsSrcRoot))
+}
+
+val rustBindingsCheckDir = layout.buildDirectory.dir("rust-bindings").get().asFile
+val generateRustBindingsForCheck = tasks.register<Exec>("generateRustBindingsForCheck") {
+    group = "rust"
+    description = "Generates UniFFI bindings into build/ for drift checking."
+    dependsOn(cargoBuildHost)
+    workingDir = rustCoreDir.asFile
+    commandLine(uniffiBindgenArgs(rustBindingsCheckDir))
+}
+
+val checkRustBindings = tasks.register("checkRustBindings") {
+    group = "rust"
+    description = "Fails when the committed UniFFI bindings no longer match the Rust source."
+    dependsOn(generateRustBindingsForCheck)
+
+    // Captured as plain Files so the configuration cache can serialize this task.
+    val generatedRoot = layout.buildDirectory.dir("rust-bindings").get().asFile
+    val committedRoot = layout.projectDirectory.dir("src/main/java").asFile
+    val relativePath = "com/nuvio/tv/core/rust/nuvio_core.kt"
+
+    doLast {
+        val generated = File(generatedRoot, relativePath)
+        val committed = File(committedRoot, relativePath)
+        require(generated.exists()) {
+            "Binding generation wrote no file at $generated. Check the uniffi-bindgen invocation."
+        }
+        require(committed.exists()) {
+            "Committed bindings are missing at $committed. Run :app:generateRustBindings."
+        }
+        require(generated.readText() == committed.readText()) {
+            "UniFFI bindings are stale. Run ./gradlew :app:generateRustBindings and commit the result."
+        }
+    }
+}
+
+if (parseBooleanProperty(providers.gradleProperty("nuvioRustCore").orNull)) {
+    tasks.named("preBuild").configure { dependsOn(cargoBuildAndroid) }
 }

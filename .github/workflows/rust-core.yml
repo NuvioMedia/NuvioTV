@@ -1,0 +1,138 @@
+name: Rust Core
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - "rust/**"
+      - "app/src/main/java/com/nuvio/tv/core/rust/**"
+      - "app/build.gradle.kts"
+      - "app/proguard-rules.pro"
+      - ".github/workflows/rust-core.yml"
+  push:
+    branches: [dev]
+    paths:
+      - "rust/**"
+      - "app/src/main/java/com/nuvio/tv/core/rust/**"
+      - ".github/workflows/rust-core.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-core-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_TOOLCHAIN: "1.88.0"
+  NDK_VERSION: "27.0.12077973"
+
+jobs:
+  test:
+    name: Test + binding drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Format
+        working-directory: rust
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        working-directory: rust
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        working-directory: rust
+        run: cargo test --workspace
+
+      # Regenerates the Kotlin bindings from the Rust source and fails if the
+      # committed copy no longer matches. Requires an empty local.properties, which
+      # is produced below so Gradle can configure without signing secrets.
+      - name: Prepare local properties
+        run: touch local.properties
+
+      - name: Binding drift check
+        run: ./gradlew :app:checkRustBindings --console=plain
+
+  android:
+    name: Android ABIs (16 KB aligned)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Rust with Android targets
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager --install "ndk;${{ env.NDK_VERSION }}" "cmake;3.22.1"
+
+      - name: Build core for all ABIs
+        run: ./gradlew :app:cargoBuildAndroid --console=plain
+
+      - name: Verify 16 KB page alignment
+        run: |
+          set -euo pipefail
+          READELF="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          for so in app/src/main/jniLibs/*/libnuvio_core.so; do
+            echo "checking $so"
+            test -f "$so" || { echo "missing $so"; exit 1; }
+            # Every PT_LOAD segment must be 0x4000 aligned.
+            if "$READELF" -l "$so" | grep ' LOAD ' | grep -vq '0x4000'; then
+              echo "not 16 KB aligned: $so"
+              "$READELF" -l "$so" | grep ' LOAD '
+              exit 1
+            fi
+          done
+
+      - name: Upload native libraries
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuvio-core-jniLibs
+          path: app/src/main/jniLibs
+          if-no-files-found: error
+          retention-days: 7

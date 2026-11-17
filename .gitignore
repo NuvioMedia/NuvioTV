@@ -13,6 +13,7 @@ __pycache__/
 *.py[cod]
 /build
 **/build/
+/rust/target/
 !app/src/**/java/**/core/build/
 !app/src/**/java/**/core/build/*.kt
 /captures
