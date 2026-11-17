@@ -720,6 +720,7 @@ internal class AudioSubtitleSyncController(
      * playback starts, they are ready instead of downloading then. Each file downloads once.
      */
     private fun prefetchReferences() {
+        if (!AsrModel.isReady(appContext)) return
         englishCandidates().take(MAX_REFERENCES).forEach { fetchReference(it, urgent = true, onReady = null) }
     }
 
@@ -761,6 +762,7 @@ internal class AudioSubtitleSyncController(
             }
         }
         // English references the recognised words can pin to the audio.
+        if (!AsrModel.isReady(appContext)) return
         englishCandidates().take(MAX_REFERENCES).forEach { reference ->
             if (reference.url != current.key && poolRequested.add(reference.url)) {
                 fetchReference(reference) { dialogue -> if (pool === active) active.addReference(reference.url, dialogue) }
