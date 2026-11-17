@@ -96,6 +96,9 @@ internal class AsrSyncEngine(
     private val heard = ArrayList<HeardWord>()
     private var segmentCounter = 0
 
+    /** Bumped when heard words are forgotten, so a recognition already running is discarded. */
+    private var heardGeneration = 0L
+
     @Volatile
     private var target: SubtitleSpeechTrack? = null
 
@@ -244,6 +247,7 @@ internal class AsrSyncEngine(
             queuedSamples = 0
             covered.clear()
             heard.clear()
+            heardGeneration++
         }
     }
 
@@ -254,6 +258,7 @@ internal class AsrSyncEngine(
             queuedSamples = 0
             covered.clear()
             heard.clear()
+            heardGeneration++
             locked = false
             provisional = null
             pendingMove = null
@@ -302,7 +307,9 @@ internal class AsrSyncEngine(
     private fun runWorker() {
         runCatching(workerSetup)
         while (true) {
+            var generation = 0L
             val (segment, recognizer) = synchronized(lock) {
+                generation = heardGeneration
                 // No reference to match words against: recognising is wasted work, unless one is
                 // still downloading (a translated subtitle's English references). Words heard
                 // meanwhile are kept and matched the moment one is added.
@@ -322,6 +329,8 @@ internal class AsrSyncEngine(
             }
             val startSec = segment.startFrame * SpeechTimeline.FRAME_DURATION_MS / 1_000.0
             synchronized(lock) {
+                // Heard on a track or stream that has since been forgotten.
+                if (heardGeneration != generation) return@synchronized
                 covered += segment.startFrame until segment.endFrame
                 val id = segmentCounter++
                 words.forEach { (offsetSec, text) -> heard += HeardWord(startSec + offsetSec, text, id) }
