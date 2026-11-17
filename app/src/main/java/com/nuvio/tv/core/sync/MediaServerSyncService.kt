@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.mediaserver.RefusedServerTypes
 import com.nuvio.tv.data.mediaserver.ServerRepository
 import com.nuvio.tv.data.mediaserver.ServerSyncSnapshot
 import com.nuvio.tv.data.mediaserver.SyncedServer
@@ -44,6 +45,7 @@ class MediaServerSyncService @Inject constructor(
     private val syncMutex = Mutex()
     private var foregroundPullJob: Job? = null
     private var lastForegroundPullAtMs = 0L
+    private val refusedTypes = RefusedServerTypes(SystemClock::elapsedRealtime)
 
     init {
         observeLocalChanges()
@@ -120,7 +122,7 @@ class MediaServerSyncService @Inject constructor(
         val merged = mergeSyncedServers(local.servers, remote, local.syncedKeys)
         val remoteKeys = remote.mapTo(mutableSetOf()) { it.key }
         if (!repository.applySync(local, merged, remoteKeys)) return false
-        if (merged.any { it.key !in remoteKeys }) {
+        if (merged.any { it.key !in remoteKeys && !refusedTypes.isRefused(it.providerId) }) {
             repository.syncSnapshot(profileId)?.let { push(it) }
         }
         Log.d(TAG, "Synchronized ${merged.size} media servers for profile $profileId")
@@ -137,16 +139,21 @@ class MediaServerSyncService @Inject constructor(
     }
 
     private suspend fun push(snapshot: ServerSyncSnapshot) {
-        val params = buildJsonObject {
-            put("p_profile_id", snapshot.profileId)
-            put("p_servers", snapshot.servers.toSyncPayload())
-            putSyncOriginClientId(syncClientIdentity)
+        val uploaded = refusedTypes.upload(snapshot) { allowed ->
+            val params = buildJsonObject {
+                put("p_profile_id", allowed.profileId)
+                put("p_servers", allowed.servers.toSyncPayload())
+                putSyncOriginClientId(syncClientIdentity)
+            }
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_media_servers", params)
+            }
         }
-        withJwtRefreshRetry {
-            postgrest.rpc("sync_push_media_servers", params)
+        repository.markPushed(uploaded)
+        if (uploaded.servers.size < snapshot.servers.size) {
+            Log.i(TAG, "Backend refused ${snapshot.servers.size - uploaded.servers.size} media servers; keeping them on this device")
         }
-        repository.markPushed(snapshot)
-        Log.d(TAG, "Pushed ${snapshot.servers.size} media servers for profile ${snapshot.profileId}")
+        Log.d(TAG, "Pushed ${uploaded.servers.size} media servers for profile ${uploaded.profileId}")
     }
 
     private fun canSync(profileId: Int): Boolean =

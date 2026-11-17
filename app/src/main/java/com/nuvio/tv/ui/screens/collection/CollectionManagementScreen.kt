@@ -347,6 +347,12 @@ private fun ImportContent(
     onPickFile: () -> Unit,
     onConfirmImport: () -> Unit
 ) {
+    val fileTabFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        repeat(3) { withFrameNanos { } }
+        fileTabFocusRequester.requestFocus()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -391,10 +397,15 @@ private fun ImportContent(
                             ImportMode.FILE -> stringResource(R.string.collections_mode_file)
                             ImportMode.URL -> stringResource(R.string.collections_mode_url)
                         }
+                        val tabModifier = if (mode == ImportMode.FILE) {
+                            Modifier.focusRequester(fileTabFocusRequester)
+                        } else {
+                            Modifier
+                        }
                         if (mode == importMode) {
                             Button(
                                 onClick = { onModeChange(mode) },
-                                modifier = Modifier.semantics {
+                                modifier = tabModifier.semantics {
                                     role = Role.Tab
                                     this.selected = true
                                 },
@@ -417,7 +428,7 @@ private fun ImportContent(
                         } else {
                             NuvioButton(
                                 onClick = { onModeChange(mode) },
-                                modifier = Modifier.semantics {
+                                modifier = tabModifier.semantics {
                                     role = Role.Tab
                                     this.selected = false
                                 }

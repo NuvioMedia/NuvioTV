@@ -2,8 +2,10 @@ package com.nuvio.tv.ui.screens.player
 
 import android.graphics.Typeface
 import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -17,11 +19,35 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-internal data class StyledSubtitleCues(
-    val top: AnnotatedString = AnnotatedString(""),
-    val bottom: AnnotatedString = AnnotatedString("")
-) {
-    val isEmpty: Boolean get() = top.isEmpty() && bottom.isEmpty()
+internal enum class SubtitleVerticalPosition { TOP, MIDDLE, BOTTOM }
+
+internal enum class SubtitleHorizontalPosition { START, CENTER, END }
+
+internal data class StyledSubtitleBlock(
+    val text: AnnotatedString,
+    val vertical: SubtitleVerticalPosition = SubtitleVerticalPosition.BOTTOM,
+    val horizontal: SubtitleHorizontalPosition = SubtitleHorizontalPosition.CENTER
+)
+
+internal data class StyledSubtitleCues(val blocks: List<StyledSubtitleBlock> = emptyList()) {
+    val isEmpty: Boolean get() = blocks.all { it.text.isEmpty() }
+}
+
+internal fun styledSubtitleCues(blocks: List<StyledSubtitleBlock>): StyledSubtitleCues =
+    StyledSubtitleCues(
+        blocks
+            .filter { it.text.isNotEmpty() }
+            .groupBy { it.vertical to it.horizontal }
+            .map { (position, grouped) ->
+                StyledSubtitleBlock(grouped.map { it.text }.joinLines(), position.first, position.second)
+            }
+    )
+
+internal fun List<AnnotatedString>.joinLines(): AnnotatedString = buildAnnotatedString {
+    this@joinLines.forEachIndexed { index, line ->
+        if (index > 0) append('\n')
+        append(line)
+    }
 }
 
 internal class StyledSubtitlePresenter {
@@ -50,10 +76,14 @@ internal class StyledSubtitlePresenter {
             mutableCues.value = StyledSubtitleCues()
             return lastCues
         }
-        val textCues = lastCues.filter { !it.text.isNullOrBlank() }
-        mutableCues.value = StyledSubtitleCues(
-            top = textCues.filter { it.isTopAnchored() }.joinToAnnotatedString(),
-            bottom = textCues.filterNot { it.isTopAnchored() }.joinToAnnotatedString()
+        mutableCues.value = styledSubtitleCues(
+            lastCues.filter { !it.text.isNullOrBlank() }.map { cue ->
+                StyledSubtitleBlock(
+                    text = cue.text?.toSubtitleAnnotatedString() ?: AnnotatedString(""),
+                    vertical = cue.verticalPosition(),
+                    horizontal = cue.horizontalPosition()
+                )
+            }
         )
         return lastCues.filter { it.text == null }
     }
@@ -74,14 +104,21 @@ internal class StyledCueTextOutput(
     }
 }
 
-private fun Cue.isTopAnchored(): Boolean =
-    line != Cue.DIMEN_UNSET && lineType == Cue.LINE_TYPE_FRACTION && line < 0.5f
+private fun Cue.verticalPosition(): SubtitleVerticalPosition = when {
+    line == Cue.DIMEN_UNSET -> SubtitleVerticalPosition.BOTTOM
+    lineType == Cue.LINE_TYPE_NUMBER ->
+        if (line >= 0f) SubtitleVerticalPosition.TOP else SubtitleVerticalPosition.BOTTOM
+    lineType != Cue.LINE_TYPE_FRACTION -> SubtitleVerticalPosition.BOTTOM
+    line < 1f / 3f -> SubtitleVerticalPosition.TOP
+    line <= 2f / 3f -> SubtitleVerticalPosition.MIDDLE
+    else -> SubtitleVerticalPosition.BOTTOM
+}
 
-private fun List<Cue>.joinToAnnotatedString(): AnnotatedString = buildAnnotatedString {
-    this@joinToAnnotatedString.forEachIndexed { index, cue ->
-        if (index > 0) append('\n')
-        append(cue.text?.toSubtitleAnnotatedString() ?: AnnotatedString(""))
-    }
+private fun Cue.horizontalPosition(): SubtitleHorizontalPosition = when {
+    position == Cue.DIMEN_UNSET -> SubtitleHorizontalPosition.CENTER
+    position < 1f / 3f -> SubtitleHorizontalPosition.START
+    position > 2f / 3f -> SubtitleHorizontalPosition.END
+    else -> SubtitleHorizontalPosition.CENTER
 }
 
 private fun CharSequence.toSubtitleAnnotatedString(): AnnotatedString {
@@ -91,6 +128,7 @@ private fun CharSequence.toSubtitleAnnotatedString(): AnnotatedString {
         spanned.getSpans(0, spanned.length, Any::class.java).forEach { span ->
             val spanStyle = when {
                 span is UnderlineSpan -> SpanStyle(textDecoration = TextDecoration.Underline)
+                span is ForegroundColorSpan -> SpanStyle(color = Color(span.foregroundColor))
                 span is StyleSpan && span.style == Typeface.BOLD -> SpanStyle(fontWeight = FontWeight.Bold)
                 span is StyleSpan && span.style == Typeface.ITALIC -> SpanStyle(fontStyle = FontStyle.Italic)
                 span is StyleSpan && span.style == Typeface.BOLD_ITALIC ->
