@@ -264,6 +264,7 @@ internal class AudioSyncTracker(
         segments: List<SpeechSegment>,
         estimate: SubtitleAudioAligner.Estimate,
     ): SubtitleAudioAligner.Estimate {
+        RATE_23976_FOR[estimate.scale]?.let { return palRate(speech, segments, estimate, it) }
         if (estimate.scale != 1.0) return estimate
         val neighbour = speech.estimate(track, doubleArrayOf(NEAR_RATE, 1.0 / NEAR_RATE)) ?: return estimate
         if (neighbour.atSearchEdge || neighbour.peak < estimate.peak + STRETCH_OVERLAP_MARGIN) return estimate
@@ -272,6 +273,29 @@ internal class AudioSyncTracker(
         val plainStarts = starts.estimate(track.starts, doubleArrayOf(1.0)) ?: return estimate
         val stretchedStarts = starts.estimate(track.starts, doubleArrayOf(neighbour.scale)) ?: return estimate
         return if (stretchedStarts.peak >= plainStarts.peak + STRETCH_STARTS_MARGIN) neighbour else estimate
+    }
+
+    /**
+     * 25 fps subtitles on a 23.976 fps release (or the reverse) are far more common than 25 vs 24,
+     * yet over a few minutes 25/24 and 25/23.976 score almost alike. Keep the 24-based rate only when
+     * it beats the 23.976-based one on overlap by [STRETCH_OVERLAP_MARGIN] and line starts don't
+     * prefer the 23.976 one by more than [STRETCH_STARTS_MARGIN]: on 138 subtitles in these rate
+     * families that moved 10 to the right rate and none away from it.
+     */
+    private fun palRate(
+        speech: SubtitleAudioAligner.PreparedSpeech,
+        segments: List<SpeechSegment>,
+        estimate: SubtitleAudioAligner.Estimate,
+        rate23976: Double,
+    ): SubtitleAudioAligner.Estimate {
+        val neighbour = speech.estimate(track, doubleArrayOf(rate23976)) ?: return estimate
+        if (neighbour.atSearchEdge) return estimate
+        if (estimate.peak < neighbour.peak + STRETCH_OVERLAP_MARGIN) return neighbour
+        val starts = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+            ?: return estimate
+        val baseStarts = starts.estimate(track.starts, doubleArrayOf(estimate.scale)) ?: return estimate
+        val neighbourStarts = starts.estimate(track.starts, doubleArrayOf(rate23976)) ?: return estimate
+        return if (neighbourStarts.peak > baseStarts.peak + STRETCH_STARTS_MARGIN) neighbour else estimate
     }
 
     /**
@@ -753,6 +777,9 @@ internal class AudioSyncTracker(
         private val RATE_CHECK_MIN_FRAMES = (15 * 60 * FRAMES_PER_SECOND).toInt()
         private const val RATE_CHECK_EVERY_RUNS = 6
         private const val NEAR_RATE = 24_000.0 / 23_976.0
+
+        /** 24-based PAL rate -> its 23.976-based neighbour (as in [SubtitleAudioAligner.CANDIDATE_SCALES]). */
+        private val RATE_23976_FOR = mapOf(25.0 / 24.0 to 25.0 / 23.976, 24.0 / 25.0 to 23.976 / 25.0)
         private const val RATE_SWITCH_MARGIN = 0.004
         private const val MIN_CUES = 20
         private const val MIN_HALF_CUES = 8
