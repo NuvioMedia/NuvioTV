@@ -75,6 +75,28 @@ class AudioSyncLockReliabilityTest {
         assertTrue(abs(delayMs - played.shiftMs) < 100.0, "delay $delayMs")
     }
 
+    @Test
+    fun rateOfAnotherFamilyScoringAlikeWaitsUnlessLineStartsSettleIt() {
+        val cues = syntheticCues(Random(71), durationMs = 30 * 60_000L)
+        val track = SubtitleSpeechTrack.fromCues(cues)
+        val timeline = speechFor(cues, SubtitleSyncSegment(0L, 1.0, 1_200.0), Random(72))
+        val segments = timeline.segments(toFrame = (4 * 60_000 / SpeechTimeline.FRAME_DURATION_MS).toInt())
+        val known = segments.sumOf { it.knownFrames }
+        val speech = assertNotNull(SubtitleAudioAligner.prepare(segments, -60_000.0, 60_000.0))
+        val unit = assertNotNull(speech.estimate(track, doubleArrayOf(1.0)))
+
+        // The PAL rates score far lower here: no change to the lock.
+        val rival = assertNotNull(AudioSyncTracker.rivalRate(speech, track, unit))
+        assertTrue(rival.scale > 1.02 || rival.scale < 0.98, "rival $rival")
+        assertTrue(AudioSyncTracker.isLockable(unit, segments, known, track, rival), "unit $unit rival $rival")
+        // Another rate scoring as well on overlap, line starts clearly preferring this one: locks.
+        val tiedPal = rival.copy(peak = unit.peak)
+        assertTrue(AudioSyncTracker.isLockable(unit, segments, known, track, tiedPal))
+        // A tie that line starts can't settle either (they score the same at both rates): waits.
+        val tiedAlike = unit.copy(peak = unit.peak + 0.01)
+        assertTrue(!AudioSyncTracker.isLockable(unit, segments, known, track, tiedAlike))
+    }
+
     private fun syntheticCues(random: Random, durationMs: Long): List<Triple<Long, Long, String>> {
         val cues = mutableListOf<Triple<Long, Long, String>>()
         var t = 5_000L + random.nextLong(20_000L)

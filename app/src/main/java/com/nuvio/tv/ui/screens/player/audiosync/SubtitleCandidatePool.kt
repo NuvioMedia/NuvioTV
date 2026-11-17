@@ -165,7 +165,11 @@ internal class SubtitleCandidatePool(
         for (candidate in batch) {
             val scales = candidate.scales ?: SubtitleAudioAligner.CANDIDATE_SCALES
             val estimate = speech.estimate(candidate.track, scales)
-            if (estimate != null && AudioSyncTracker.isLockable(estimate, segments, knownFrames, candidate.track)) {
+            if (estimate != null && AudioSyncTracker.isLockable(
+                    estimate, segments, knownFrames, candidate.track,
+                    AudioSyncTracker.rivalRate(speech, candidate.track, estimate, scales),
+                )
+            ) {
                 if (best == null || estimate.prominence > best.second.prominence) best = candidate to estimate
             }
             // VAD is probabilistic. Music, sparse dialogue, or a different opening can make a

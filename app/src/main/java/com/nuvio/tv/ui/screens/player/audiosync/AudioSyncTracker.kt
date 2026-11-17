@@ -218,7 +218,7 @@ internal class AudioSyncTracker(
             return Outcome.NotEnoughEvidence
         }
         lastEstimate = estimate
-        val blocker = lockBlocker(estimate, segments, knownFrames, track)
+        val blocker = lockBlocker(estimate, segments, knownFrames, track, rivalRate(speech, track, estimate))
         if (blocker == null) {
             waitingReason = ""
             val locked = SubtitleSyncModel(listOf(SubtitleSyncSegment(0L, estimate.scale, estimate.shiftMs)))
@@ -335,7 +335,7 @@ internal class AudioSyncTracker(
         if (localFrames < MIN_LOCAL_FRAMES || localFrames >= all.sumOf { it.knownFrames }) return null
         val speech = SubtitleAudioAligner.prepare(local, -MAX_SHIFT_MS, MAX_SHIFT_MS) ?: return null
         val estimate = speech.estimate(track) ?: return null
-        if (lockBlocker(estimate, local, localFrames, track) != null) return null
+        if (lockBlocker(estimate, local, localFrames, track, rivalRate(speech, track, estimate)) != null) return null
         // A few minutes can't tell a rate from its 0.1% neighbour (23.976 vs 24, or 25/24 vs
         // 25/23.976): over a whole film that is seconds of drift. Wait until the rate is clear.
         val neighbour = speech.estimate(track, doubleArrayOf(estimate.scale * NEAR_RATE, estimate.scale / NEAR_RATE))
@@ -548,7 +548,7 @@ internal class AudioSyncTracker(
             if (support != null && support.peak < MIN_LOCK_SUPPORT) return withdrawLock(support)
         }
         val fresh = speech.estimate(track)?.let { stretchedWhenClear(speech, heard, it) } ?: return null
-        if (lockBlocker(fresh, heard, heardFrames, track) != null) return null
+        if (lockBlocker(fresh, heard, heardFrames, track, rivalRate(speech, track, fresh)) != null) return null
         // Compare where the two mappings put a line in the middle of what was heard.
         val midMs = heard[heard.size / 2].let { (it.fromFrame + it.probabilities.size / 2) * SpeechTimeline.FRAME_DURATION_MS }
         val subtitleMs = (midMs - segment.shiftMs) / segment.scale
@@ -661,20 +661,46 @@ internal class AudioSyncTracker(
         /**
          * Whether [estimate] (from [segments] of speech, [knownFrames] of them known)
          * is strong enough to confirm [track]'s mapping: enough dialogue and speech, a clear peak,
-         * and the same answer on both halves of the audio.
+         * and the same answer on both halves of the audio. [rival] is [rivalRate] for it.
          */
         fun isLockable(
             estimate: SubtitleAudioAligner.Estimate,
             segments: List<SpeechSegment>,
             knownFrames: Int,
             track: SubtitleSpeechTrack,
-        ): Boolean = lockBlocker(estimate, segments, knownFrames, track) == null
+            rival: SubtitleAudioAligner.Estimate? = null,
+        ): Boolean = lockBlocker(estimate, segments, knownFrames, track, rival) == null
+
+        /**
+         * Best match of [track] at a rate of another family than [estimate]'s (1.0 and its 0.1%
+         * neighbours, 25 fps over 24 or 23.976, or the reverse), among [scales]. When most of the
+         * audio is one stretch, a 4% rate error is absorbed by the shift and can score like the
+         * right rate: on a translated subtitle such a lock put lines a minute off. Null when no
+         * other family is searched or its best match sits at the search edge.
+         */
+        fun rivalRate(
+            speech: SubtitleAudioAligner.PreparedSpeech,
+            track: SubtitleSpeechTrack,
+            estimate: SubtitleAudioAligner.Estimate,
+            scales: DoubleArray = SubtitleAudioAligner.CANDIDATE_SCALES,
+        ): SubtitleAudioAligner.Estimate? = scales
+            .filter { rateFamily(it) != rateFamily(estimate.scale) }
+            .mapNotNull { speech.estimate(track, doubleArrayOf(it))?.takeIf { rival -> !rival.atSearchEdge } }
+            .maxByOrNull { it.peak }
+
+        /** 0 for 1.0 and its 0.1% neighbours, +1 / -1 for the PAL speed-up / slow-down rates. */
+        private fun rateFamily(scale: Double): Int = when {
+            scale > 1.02 -> 1
+            scale < 0.98 -> -1
+            else -> 0
+        }
 
         private fun lockBlocker(
             estimate: SubtitleAudioAligner.Estimate,
             segments: List<SpeechSegment>,
             knownFrames: Int,
             track: SubtitleSpeechTrack,
+            rival: SubtitleAudioAligner.Estimate? = null,
         ): String? {
             // Separation, not prominence: a true match's own slope 2.5 s away must not count as a
             // competitor. Any rate other than 1.0 (including 23.976/24) and offsets beyond the
@@ -687,6 +713,9 @@ internal class AudioSyncTracker(
                 estimate.cueCount < MIN_CUES -> "Too few overlapping dialogue lines (need $MIN_CUES)"
                 !(estimate.speechSeconds >= MIN_SPEECH_SECONDS) -> "Too little detected speech (need ${MIN_SPEECH_SECONDS.toInt()}s)"
                 estimate.atSearchEdge -> "Best timing is at the 60s search boundary; match is unreliable"
+                rival != null && rival.peak >= estimate.peak - RATE_FAMILY_MARGIN &&
+                    !startsPreferRate(segments, estimate, rival, track) ->
+                    "Another frame rate matches almost as well; waiting for audio that tells them apart"
                 !(estimate.separation >= requiredSeparation) &&
                     !(knownFrames >= START_MIN_KNOWN_FRAMES && startsAgree(segments, estimate, track, requiredSeparation - ACCEPT_SEPARATION)) ->
                     "Several timings match similarly; waiting for a clearer match"
@@ -719,6 +748,25 @@ internal class AudioSyncTracker(
             return !starts.atSearchEdge &&
                 abs(starts.shiftMs - estimate.shiftMs) <= STARTS_AGREEMENT_MS &&
                 starts.separation >= ACCEPT_START_SEPARATION + penalty / 2
+        }
+
+        /**
+         * Settles a rate that overlap alone can't tell from [rival]'s: line starts, matched against
+         * where speech rises, must find [estimate]'s offset at its rate and score higher there than
+         * at the rival rate by [RATE_STARTS_MARGIN]. Only computed when the overlap is ambiguous.
+         */
+        private fun startsPreferRate(
+            segments: List<SpeechSegment>,
+            estimate: SubtitleAudioAligner.Estimate,
+            rival: SubtitleAudioAligner.Estimate,
+            track: SubtitleSpeechTrack,
+        ): Boolean {
+            val starts = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+                ?: return false
+            val own = starts.estimate(track.starts, doubleArrayOf(estimate.scale)) ?: return false
+            val other = starts.estimate(track.starts, doubleArrayOf(rival.scale))?.peak ?: Double.NEGATIVE_INFINITY
+            return !own.atSearchEdge && abs(own.shiftMs - estimate.shiftMs) <= STARTS_AGREEMENT_MS &&
+                own.peak >= other + RATE_STARTS_MARGIN
         }
 
         private fun hasEnoughEvidence(
@@ -799,6 +847,12 @@ internal class AudioSyncTracker(
         /** 24-based PAL rate -> its 23.976-based neighbour (as in [SubtitleAudioAligner.CANDIDATE_SCALES]). */
         private val RATE_23976_FOR = mapOf(25.0 / 24.0 to 25.0 / 23.976, 24.0 / 25.0 to 23.976 / 25.0)
         private const val RATE_SWITCH_MARGIN = 0.004
+
+        /** A lock's rate must beat every rate of another family by this much correlation (see [rivalRate]). */
+        private const val RATE_FAMILY_MARGIN = 0.03
+
+        /** ...unless line starts prefer the lock's rate by this much (see [startsPreferRate]). */
+        private const val RATE_STARTS_MARGIN = 0.03
         private const val MIN_CUES = 20
         private const val MIN_HALF_CUES = 8
         private const val HALF_AGREEMENT_MS = 400.0
