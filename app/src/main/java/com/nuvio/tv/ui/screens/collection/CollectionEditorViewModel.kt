@@ -85,7 +85,8 @@ data class CollectionEditorUiState(
     val traktSearchError: String? = null,
     val genrePickerSourceIndex: Int? = null,
     val showEmojiPicker: Boolean = false,
-    val movingFolderKey: String? = null
+    val movingFolderKey: String? = null,
+    val movingSourceKey: String? = null
 )
 
 data class AvailableCatalog(
@@ -248,6 +249,56 @@ class CollectionEditorViewModel @Inject constructor(
 
     private var folderMoveBaseline: List<CollectionFolder>? = null
     private var folderDraftOrder: List<String>? = null
+    private var sourceMoveBaseline: List<CollectionSource>? = null
+    private var sourceDraftPairs: List<Pair<String, CollectionSource>>? = null
+
+    fun enterSourceMoveMode(sourceKey: String) {
+        val folder = _uiState.value.editingFolder ?: return
+        val keys = collectionSourceKeys(folder.sources)
+        if (keys.none { it == sourceKey }) return
+        sourceMoveBaseline = folder.sources
+        sourceDraftPairs = keys.zip(folder.sources)
+        _uiState.update { it.copy(movingSourceKey = sourceKey) }
+    }
+
+    fun moveSourceDuringDrag(sourceKey: String, direction: Int): Int? {
+        val draft = sourceDraftPairs ?: return null
+        val fromIndex = draft.indexOfFirst { it.first == sourceKey }
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+        sourceDraftPairs = reordered
+        applySourceDraftOrder()
+        return toIndex
+    }
+
+    fun confirmSourceMove() {
+        sourceDraftPairs = null
+        sourceMoveBaseline = null
+        _uiState.update { it.copy(movingSourceKey = null) }
+    }
+
+    fun cancelSourceMove() {
+        val baseline = sourceMoveBaseline
+        sourceDraftPairs = null
+        sourceMoveBaseline = null
+        _uiState.update {
+            it.copy(
+                movingSourceKey = null,
+                editingFolder = it.editingFolder?.copy(sources = baseline ?: it.editingFolder.sources)
+            )
+        }
+    }
+
+    private fun applySourceDraftOrder() {
+        val draft = sourceDraftPairs ?: return
+        _uiState.update { state ->
+            val folder = state.editingFolder ?: return@update state
+            state.copy(editingFolder = folder.copy(sources = draft.map { it.second }))
+        }
+    }
 
     fun enterFolderMoveMode(folderId: String) {
         val current = _uiState.value.folders
@@ -435,28 +486,6 @@ class CollectionEditorViewModel @Inject constructor(
                 genrePickerSourceIndex = state.genrePickerSourceIndex?.takeIf { it != index }
                     ?.let { if (it > index) it - 1 else it }
             )
-        }
-    }
-
-    fun moveCatalogSourceUp(index: Int) {
-        if (index <= 0) return
-        _uiState.update { state ->
-            val folder = state.editingFolder ?: return@update state
-            val sources = folder.sources.toMutableList()
-            val item = sources.removeAt(index)
-            sources.add(index - 1, item)
-            state.copy(editingFolder = folder.copy(sources = sources))
-        }
-    }
-
-    fun moveCatalogSourceDown(index: Int) {
-        _uiState.update { state ->
-            val folder = state.editingFolder ?: return@update state
-            if (index >= folder.sources.size - 1) return@update state
-            val sources = folder.sources.toMutableList()
-            val item = sources.removeAt(index)
-            sources.add(index + 1, item)
-            state.copy(editingFolder = folder.copy(sources = sources))
         }
     }
 

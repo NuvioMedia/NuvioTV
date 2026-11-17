@@ -3,12 +3,12 @@ package com.nuvio.tv.ui.screens.collection
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,10 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -30,8 +26,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -90,6 +84,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.TvReorderList
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
@@ -238,6 +233,9 @@ fun FolderEditorContent(
 
         val catalogFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
         val sourceKeys = remember(folder.sources) { collectionSourceKeys(folder.sources) }
+        val sourceItems = remember(sourceKeys, folder.sources) {
+            sourceKeys.zip(folder.sources).map { (key, source) -> FolderSourceItem(key, source) }
+        }
         var pendingFocusIndex by remember { mutableStateOf(-1) }
 
         LaunchedEffect(pendingFocusIndex, folder.sources.size) {
@@ -252,12 +250,18 @@ fun FolderEditorContent(
             }
         }
 
-        LazyColumn(
+        TvReorderList(
+            items = sourceItems,
+            key = { it.key },
+            canMove = { true },
+            movingKey = uiState.movingSourceKey,
+            onStartMove = viewModel::enterSourceMoveMode,
+            onMoveBy = viewModel::moveSourceDuringDrag,
+            onConfirmMove = { viewModel.confirmSourceMove() },
+            onCancelMove = viewModel::cancelSourceMove,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = NuvioTheme.spacing.xs, end = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
-        ) {
-            item {
+            header = {
+                Column {
                 Text(stringResource(R.string.collections_editor_folder_title), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 NuvioTextField(
@@ -267,9 +271,7 @@ fun FolderEditorContent(
                     placeholder = stringResource(R.string.collections_editor_placeholder_folder),
                     focusRequester = titleFocusRequester
                 )
-            }
 
-            item {
                 val hasEmoji = !folder.coverEmoji.isNullOrBlank()
                 val coverMode = when {
                     folder.coverImageUrl != null -> "image"
@@ -529,9 +531,7 @@ fun FolderEditorContent(
                         }
                     }
                 }
-            }
 
-            item {
                 Text(stringResource(R.string.collections_editor_tile_shape), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 val shapeFocusRequesters = remember { PosterShape.entries.associateWith { FocusRequester() } }
@@ -578,9 +578,7 @@ fun FolderEditorContent(
                         }
                     }
                 }
-            }
 
-            item {
                 Card(
                     onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
                     modifier = Modifier
@@ -635,9 +633,7 @@ fun FolderEditorContent(
                         )
                     }
                 }
-            }
 
-            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -650,173 +646,145 @@ fun FolderEditorContent(
                         color = NuvioTheme.colors.TextTertiary
                     )
                 }
+                }
+            },
+            footer = {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                NuvioButton(onClick = { viewModel.showCatalogPicker() }, enabled = uiState.movingSourceKey == null) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                    Text(stringResource(R.string.collections_editor_add_catalog))
+                }
+                NuvioButton(onClick = { viewModel.showTmdbSourcePicker() }, enabled = uiState.movingSourceKey == null) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                    Text(stringResource(R.string.collections_editor_add_tmdb_source))
+                }
+                NuvioButton(onClick = { viewModel.showTraktSourcePicker() }, enabled = uiState.movingSourceKey == null) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                    Text(stringResource(R.string.collections_editor_add_trakt_source))
+                }
             }
-
-            itemsIndexed(
-                items = folder.sources,
-                key = { index, _ -> sourceKeys[index] }
-            ) { index, source ->
-                val addonSource = source as? AddonCatalogCollectionSource
-                val tmdbSource = source as? TmdbCollectionSource
-                val traktSource = source as? TraktCollectionSource
-                val catalog = addonSource?.let { addon ->
-                    uiState.availableCatalogs.find {
-                        it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
-                    }
-                }
-                val addonCatalogInfo = addonSource?.let { src ->
-                    val exactKey = collectionCatalogKey(src.addonId, src.type, src.catalogId)
-                    uiState.addonCatalogInfoByKey[exactKey]
-                        ?: uiState.addonCatalogInfoByKey[collectionCatalogKey(src.addonId, src.type, src.catalogId.substringBefore(","))]
-                }
-                val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
-                val sourceKey = sourceKeys[index]
-                val removeFocusRequester = catalogFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
-                val genreLabel = addonSource?.genre ?: if (catalog?.genreRequired == true) {
-                    stringResource(R.string.collections_editor_select_genre)
-                } else {
-                    stringResource(R.string.collections_editor_all_genres)
-                }
-                val addonTypeLabel = when (addonSource?.type?.lowercase()) {
-                    "movie" -> stringResource(R.string.type_movie)
-                    "series", "tv" -> stringResource(R.string.type_series)
-                    else -> addonSource?.type.orEmpty()
-                }
-                val hasGenreOptions = addonSource != null && catalog?.genreOptions?.isNotEmpty() == true
-                Surface(
-                    shape = RoundedCornerShape(NuvioTheme.radii.md),
-                    colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                    border = if (isMissing) Border(
-                        border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Error.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                    ) else Border.None,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(NuvioTheme.spacing.md),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+            },
+        ) { item, isMoving, onStartMove, onConfirmMove ->
+        val source = item.source
+        val index = sourceKeys.indexOf(item.key)
+        val reorderActive = uiState.movingSourceKey != null
+        val addonSource = source as? AddonCatalogCollectionSource
+        val tmdbSource = source as? TmdbCollectionSource
+        val traktSource = source as? TraktCollectionSource
+        val catalog = addonSource?.let { addon ->
+            uiState.availableCatalogs.find {
+                it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
+            }
+        }
+        val addonCatalogInfo = addonSource?.let { src ->
+            val exactKey = collectionCatalogKey(src.addonId, src.type, src.catalogId)
+            uiState.addonCatalogInfoByKey[exactKey]
+                ?: uiState.addonCatalogInfoByKey[collectionCatalogKey(src.addonId, src.type, src.catalogId.substringBefore(","))]
+        }
+        val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
+        val sourceKey = item.key
+        val removeFocusRequester = catalogFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val genreLabel = addonSource?.genre ?: if (catalog?.genreRequired == true) {
+            stringResource(R.string.collections_editor_select_genre)
+        } else {
+            stringResource(R.string.collections_editor_all_genres)
+        }
+        val addonTypeLabel = when (addonSource?.type?.lowercase()) {
+            "movie" -> stringResource(R.string.type_movie)
+            "series", "tv" -> stringResource(R.string.type_series)
+            else -> addonSource?.type.orEmpty()
+        }
+        val hasGenreOptions = addonSource != null && catalog?.genreOptions?.isNotEmpty() == true
+        val cardColor by animateColorAsState(
+            targetValue = if (isMoving) {
+                NuvioTheme.colors.FocusBackground
+            } else {
+                NuvioTheme.colors.BackgroundCard
+            },
+            animationSpec = com.nuvio.tv.ui.theme.NuvioMotion.focusTween(),
+            label = "sourceCardColor",
+        )
+        Surface(
+            shape = RoundedCornerShape(NuvioTheme.radii.md),
+            colors = SurfaceDefaults.colors(containerColor = cardColor),
+            border = if (isMoving) {
+                Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                )
+            } else if (isMissing) Border(
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Error.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
+            ) else Border.None,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(NuvioTheme.spacing.md),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = catalog?.catalogName?.replaceFirstChar { it.uppercase() }
+                            ?: tmdbSource?.title
+                            ?: traktSource?.title
+                            ?: addonCatalogInfo?.catalogName?.replaceFirstChar { it.uppercase() }
+                            ?: addonSource?.catalogId
+                            ?: stringResource(R.string.collections_editor_source),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isMissing) NuvioTheme.colors.Error else NuvioTheme.colors.TextPrimary
+                    )
+                    Text(
+                        text = when {
+                            isMissing && addonSource.addonId in uiState.installedAddonIds -> stringResource(R.string.collections_editor_catalog_missing)
+                            isMissing -> stringResource(R.string.collections_editor_addon_missing, addonSource.addonId)
+                            addonSource != null && catalog != null -> "$addonTypeLabel - ${catalog.addonName}"
+                            addonSource != null && addonCatalogInfo != null -> "$addonTypeLabel - ${addonCatalogInfo.addonName}"
+                            tmdbSource != null -> tmdbSourceSubtitle(tmdbSource)
+                            traktSource != null -> traktSourceSubtitle(traktSource)
+                            else -> stringResource(R.string.collections_editor_source)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isMissing) NuvioTheme.colors.Error.copy(alpha = 0.7f) else NuvioTheme.colors.TextTertiary
+                    )
+                    if (hasGenreOptions) {
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(NuvioTheme.colors.BackgroundElevated)
+                                    .padding(horizontal = 10.dp, vertical = NuvioTheme.spacing.xs)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.collections_editor_genre_filter),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NuvioTheme.colors.TextSecondary
+                                )
+                            }
                             Text(
-                                text = catalog?.catalogName?.replaceFirstChar { it.uppercase() }
-                                    ?: tmdbSource?.title
-                                    ?: traktSource?.title
-                                    ?: addonCatalogInfo?.catalogName?.replaceFirstChar { it.uppercase() }
-                                    ?: addonSource?.catalogId
-                                    ?: stringResource(R.string.collections_editor_source),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isMissing) NuvioTheme.colors.Error else NuvioTheme.colors.TextPrimary
-                            )
-                            Text(
-                                text = when {
-                                    isMissing && addonSource.addonId in uiState.installedAddonIds -> stringResource(R.string.collections_editor_catalog_missing)
-                                    isMissing -> stringResource(R.string.collections_editor_addon_missing, addonSource.addonId)
-                                    addonSource != null && catalog != null -> "$addonTypeLabel - ${catalog.addonName}"
-                                    addonSource != null && addonCatalogInfo != null -> "$addonTypeLabel - ${addonCatalogInfo.addonName}"
-                                    tmdbSource != null -> tmdbSourceSubtitle(tmdbSource)
-                                    traktSource != null -> traktSourceSubtitle(traktSource)
-                                    else -> stringResource(R.string.collections_editor_source)
-                                },
+                                text = genreLabel,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (isMissing) NuvioTheme.colors.Error.copy(alpha = 0.7f) else NuvioTheme.colors.TextTertiary
+                                color = NuvioTheme.colors.TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (hasGenreOptions) {
-                                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .background(NuvioTheme.colors.BackgroundElevated)
-                                            .padding(horizontal = 10.dp, vertical = NuvioTheme.spacing.xs)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.collections_editor_genre_filter),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = NuvioTheme.colors.TextSecondary
-                                        )
-                                    }
-                                    Text(
-                                        text = genreLabel,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = NuvioTheme.colors.TextSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Button(
-                                        onClick = { viewModel.showGenrePicker(index) },
-                                        colors = ButtonDefaults.colors(
-                                            containerColor = NuvioTheme.colors.BackgroundElevated,
-                                            contentColor = NuvioTheme.colors.TextSecondary,
-                                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                            focusedContentColor = NuvioTheme.colors.Primary
-                                        ),
-                                        border = ButtonDefaults.border(
-                                            focusedBorder = Border(
-                                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                                shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                            )
-                                        ),
-                                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                                    ) {
-                                        Text(stringResource(R.string.collections_editor_choose_genre))
-                                    }
-                                }
-                            }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
-                            if (tmdbSource != null) {
-                                Button(
-                                    onClick = { viewModel.editTmdbSource(index) },
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = NuvioTheme.colors.BackgroundCard,
-                                        contentColor = NuvioTheme.colors.TextSecondary,
-                                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                        focusedContentColor = NuvioTheme.colors.TextPrimary
-                                    ),
-                                    border = ButtonDefaults.border(
-                                        focusedBorder = Border(
-                                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                        )
-                                    ),
-                                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                                ) {
-                                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
-                                }
-                            }
-                            if (traktSource != null) {
-                                Button(
-                                    onClick = { viewModel.editTraktSource(index) },
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = NuvioTheme.colors.BackgroundCard,
-                                        contentColor = NuvioTheme.colors.TextSecondary,
-                                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                        focusedContentColor = NuvioTheme.colors.TextPrimary
-                                    ),
-                                    border = ButtonDefaults.border(
-                                        focusedBorder = Border(
-                                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                        )
-                                    ),
-                                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                                ) {
-                                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
-                                }
-                            }
                             Button(
-                                onClick = { viewModel.moveCatalogSourceUp(index) },
+                                onClick = { viewModel.showGenrePicker(index) },
+                                        enabled = !reorderActive,
                                 colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
+                                    containerColor = NuvioTheme.colors.BackgroundElevated,
                                     contentColor = NuvioTheme.colors.TextSecondary,
                                     focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.TextPrimary
+                                    focusedContentColor = NuvioTheme.colors.Primary
                                 ),
                                 border = ButtonDefaults.border(
                                     focusedBorder = Border(
@@ -826,72 +794,107 @@ fun FolderEditorContent(
                                 ),
                                 shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                             ) {
-                                Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up), tint = if (index > 0) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary)
-                            }
-                            Button(
-                                onClick = { viewModel.moveCatalogSourceDown(index) },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextSecondary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.TextPrimary
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down), tint = if (index < folder.sources.size - 1) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary)
-                            }
-                            Button(
-                                onClick = {
-                                    pendingFocusIndex = index
-                                    viewModel.removeCatalogSource(index)
-                                },
-                                modifier = Modifier.focusRequester(removeFocusRequester),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextSecondary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.Error
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Icon(Icons.Default.Close, stringResource(R.string.cd_remove))
+                                Text(stringResource(R.string.collections_editor_choose_genre))
                             }
                         }
                     }
                 }
-            }
-
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-                    NuvioButton(onClick = { viewModel.showCatalogPicker() }) {
-                        Icon(Icons.Default.Add, null)
-                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                        Text(stringResource(R.string.collections_editor_add_catalog))
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
+                    if (tmdbSource != null) {
+                        Button(
+                            onClick = { viewModel.editTmdbSource(index) },
+                            enabled = !reorderActive,
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.TextPrimary
+                            ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                )
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
+                        }
                     }
-                    NuvioButton(onClick = { viewModel.showTmdbSourcePicker() }) {
-                        Icon(Icons.Default.Add, null)
-                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                        Text(stringResource(R.string.collections_editor_add_tmdb_source))
+                    if (traktSource != null) {
+                        Button(
+                            onClick = { viewModel.editTraktSource(index) },
+                            enabled = !reorderActive,
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.TextPrimary
+                            ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                )
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
+                        }
                     }
-                    NuvioButton(onClick = { viewModel.showTraktSourcePicker() }) {
-                        Icon(Icons.Default.Add, null)
-                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                        Text(stringResource(R.string.collections_editor_add_trakt_source))
+                    Button(
+                        onClick = if (isMoving) onConfirmMove else onStartMove,
+                        colors = ButtonDefaults.colors(
+                            containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                            contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                            focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (isMoving) R.string.catalog_order_done else R.string.catalog_order_move,
+                            ),
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            pendingFocusIndex = index
+                            viewModel.removeCatalogSource(index)
+                        },
+                        enabled = !reorderActive,
+                        modifier = Modifier.focusRequester(removeFocusRequester),
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextSecondary,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = NuvioTheme.colors.Error
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Icon(Icons.Default.Close, stringResource(R.string.cd_remove))
                     }
                 }
             }
         }
+        }
     }
 }
+
+private data class FolderSourceItem(
+    val key: String,
+    val source: CollectionSource
+)
