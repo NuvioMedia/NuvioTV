@@ -134,6 +134,8 @@ class HomePosterWatchedTest {
             cwEnrichmentCache = cwEnrichmentCache,
             profileManager = profileManager,
             tvRecommendationManager = mockk(relaxed = true),
+            simklSyncRepository = mockk(relaxed = true),
+            simklRewatchWriter = mockk(relaxed = true),
             serverCatalog = mockk(relaxed = true)
         )
         viewModel.startupGracePeriodActive = false

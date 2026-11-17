@@ -28,6 +28,7 @@ interface SimklAuthStorage {
     fun saveIdentity(
         username: String?,
         accountId: Long?,
+        accountType: String? = null,
         settingsActivityWatermark: String? = null,
         scope: SimklAuthScope = currentScope()
     ): Boolean

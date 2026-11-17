@@ -33,7 +33,10 @@ import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.data.local.MoreLikeThisSourcePreference
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
+import com.nuvio.tv.data.simkl.SIMKL_WATCHED_THRESHOLD_MAX_PERCENT
+import com.nuvio.tv.data.simkl.SIMKL_WATCHED_THRESHOLD_MIN_PERCENT
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreference
+import com.nuvio.tv.data.simkl.SimklRewatchMode
 import com.nuvio.tv.data.simkl.SimklConnectionMode
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -75,6 +78,7 @@ fun TrackingSettingsContent(
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
+    val rewatchUpgradeRequested by trackingViewModel.rewatchUpgradeRequested.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
     val simklFocusRequester = remember { FocusRequester() }
@@ -93,6 +97,7 @@ fun TrackingSettingsContent(
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
     var showAnimeIdDialog by remember { mutableStateOf(false) }
+    var showRewatchModeDialog by remember { mutableStateOf(false) }
     var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
 
     val hasOverlay = activeProvider != null ||
@@ -102,6 +107,8 @@ fun TrackingSettingsContent(
         showDaysCapDialog ||
         showMoreLikeThisSourceDialog ||
         showAnimeIdDialog ||
+        showRewatchModeDialog ||
+        rewatchUpgradeRequested ||
         showMdbListLibraryListsDialog
 
     LaunchedEffect(
@@ -216,6 +223,10 @@ fun TrackingSettingsContent(
         },
         onAnimeIdClick = {
             showAnimeIdDialog = true
+        },
+        onWatchedThresholdChange = trackingViewModel::setSimklWatchedThresholdPercent,
+        onRewatchModeClick = {
+            showRewatchModeDialog = true
         },
         mdbListLibraryLists = mdbListLibraryLists,
         onMdbListLibraryListsClick = {
@@ -466,6 +477,26 @@ fun TrackingSettingsContent(
             maxHeight = 360.dp
         )
     }
+
+    if (showRewatchModeDialog) {
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.settings_tracking_rewatch_dialog_title),
+            subtitle = stringResource(R.string.settings_tracking_rewatch_dialog_subtitle),
+            options = simklRewatchModeOptions(),
+            selectedValue = trackingState.simklRewatchMode,
+            onOptionSelected = { mode ->
+                trackingViewModel.setSimklRewatchMode(mode)
+                showRewatchModeDialog = false
+            },
+            onDismiss = { showRewatchModeDialog = false },
+            width = 660.dp,
+            maxHeight = 460.dp
+        )
+    }
+
+    if (rewatchUpgradeRequested) {
+        SimklRewatchUpgradeDialog(onDismiss = trackingViewModel::dismissRewatchUpgrade)
+    }
 }
 
 @Composable
@@ -490,6 +521,8 @@ internal fun TrackingSettingsOverview(
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
+    onWatchedThresholdChange: (Int) -> Unit = {},
+    onRewatchModeClick: () -> Unit = {},
     mdbListLibraryLists: MdbListLibraryListsUiState = MdbListLibraryListsUiState(),
     onMdbListLibraryListsClick: () -> Unit = {}
 ) {
@@ -645,6 +678,35 @@ internal fun TrackingSettingsOverview(
                                 onClick = onAnimeIdClick,
                                 modifier = Modifier.testTag("tracking_simkl_anime_id")
                             )
+                            /*
+                             * The threshold is a `SliderSettingsItem`, the same row the stream
+                             * selection timeout is set with: without plus and minus
+                             * (`showStepper = false`), because on a remote the arrow keys take
+                             * their place, and with a step of 1, so it can stop on every whole
+                             * percent in the range and not only on the default steps.
+                             */
+                            SliderSettingsItem(
+                                title = stringResource(R.string.settings_tracking_completion_title),
+                                subtitle = stringResource(R.string.settings_tracking_completion_subtitle),
+                                value = trackingState.simklWatchedThresholdPercent,
+                                valueText = stringResource(
+                                    R.string.settings_tracking_completion_value,
+                                    trackingState.simklWatchedThresholdPercent.toString()
+                                ),
+                                minValue = SIMKL_WATCHED_THRESHOLD_MIN_PERCENT,
+                                maxValue = SIMKL_WATCHED_THRESHOLD_MAX_PERCENT,
+                                step = 1,
+                                showStepper = false,
+                                onValueChange = onWatchedThresholdChange,
+                                modifier = Modifier.testTag(TrackingSettingsTestTags.WATCHED_THRESHOLD)
+                            )
+                            SettingsActionRow(
+                                title = stringResource(R.string.settings_tracking_rewatch_title),
+                                subtitle = stringResource(R.string.settings_tracking_rewatch_subtitle),
+                                value = simklRewatchModeLabel(trackingState.simklRewatchMode),
+                                onClick = onRewatchModeClick,
+                                modifier = Modifier.testTag(TrackingSettingsTestTags.REWATCH_MODE)
+                            )
                         }
                     }
                 }
@@ -796,6 +858,32 @@ private fun animeIdPreferenceLabel(preference: SimklAnimeIdPreference): String =
     SimklAnimeIdPreference.TVDB -> stringResource(R.string.tracking_simkl_anime_id_tvdb)
 }
 
+@Composable
+private fun simklRewatchModeLabel(mode: SimklRewatchMode): String = when (mode) {
+    SimklRewatchMode.OFF -> stringResource(R.string.settings_tracking_rewatch_off)
+    SimklRewatchMode.SEMI_AUTOMATIC -> stringResource(R.string.settings_tracking_rewatch_semi)
+    SimklRewatchMode.AUTOMATIC -> stringResource(R.string.settings_tracking_rewatch_automatic)
+}
+
+@Composable
+private fun simklRewatchModeOptions(): List<SettingsPickerOption<SimklRewatchMode>> = listOf(
+    SettingsPickerOption(
+        value = SimklRewatchMode.OFF,
+        title = stringResource(R.string.settings_tracking_rewatch_off),
+        description = stringResource(R.string.settings_tracking_rewatch_off_subtitle)
+    ),
+    SettingsPickerOption(
+        value = SimklRewatchMode.SEMI_AUTOMATIC,
+        title = stringResource(R.string.settings_tracking_rewatch_semi),
+        description = stringResource(R.string.settings_tracking_rewatch_semi_subtitle)
+    ),
+    SettingsPickerOption(
+        value = SimklRewatchMode.AUTOMATIC,
+        title = stringResource(R.string.settings_tracking_rewatch_automatic),
+        description = stringResource(R.string.settings_tracking_rewatch_automatic_subtitle)
+    )
+)
+
 private enum class TrackingFocusTarget {
     TRAKT,
     SIMKL,
@@ -817,4 +905,6 @@ internal object TrackingSettingsTestTags {
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
     const val COMMENTS = "tracking_trakt_comments"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
+    const val WATCHED_THRESHOLD = "tracking_simkl_watched_threshold"
+    const val REWATCH_MODE = "tracking_simkl_rewatch_mode"
 }

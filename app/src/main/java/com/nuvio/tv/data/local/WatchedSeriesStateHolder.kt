@@ -163,6 +163,27 @@ class WatchedSeriesStateHolder @Inject constructor(
     }
 
     /**
+     * Clears the revalidation deadline of the given series only.
+     *
+     * A changed rewatch run can put a series back into Continue Watching, and the older-seed path
+     * skips a series whose deadline is still fresh. Expiring only the changed ids keeps the rest of
+     * the row on its deadlines.
+     */
+    @Synchronized
+    fun clearValidationStateFor(
+        contentIds: Set<String>,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        if (contentIds.isEmpty()) return
+        val updated = revalidateAfterMap - contentIds
+        if (updated.size == revalidateAfterMap.size) return
+        revalidateAfterMap = updated
+        scope.launch {
+            store(profileId).edit { prefs -> prefs[REVALIDATE_KEY] = gson.toJson(updated) }
+        }
+    }
+
+    /**
      * Filters the given set to only those series that need re-validation
      * (past their revalidation deadline or never validated).
      */

@@ -92,6 +92,8 @@ internal fun EpisodeOptionsOverlay(
     episode: Video,
     imdbRating: Double? = null,
     isWatched: Boolean,
+    isRewatched: Boolean = false,
+    hasActiveRewatch: Boolean = false,
     blurUnwatchedEpisodes: Boolean = false,
     style: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.ARTWORK,
     isPending: Boolean,
@@ -107,6 +109,8 @@ internal fun EpisodeOptionsOverlay(
     onPlayManually: () -> Unit = {},
     showPlayManually: Boolean = false,
     onToggleWatched: () -> Unit,
+    onMarkRewatched: () -> Unit = {},
+    onUnmarkRewatched: () -> Unit = {},
     onMarkSeasonWatched: () -> Unit = {},
     onMarkSeasonUnwatched: () -> Unit = {},
     onMarkPreviousEpisodesWatched: () -> Unit = {},
@@ -191,17 +195,33 @@ internal fun EpisodeOptionsOverlay(
     }
     val actions = buildList {
         if (showWatchedActions) {
-            add(
-                EpisodeOverlayAction(
-                    label = if (isWatched) {
-                        stringResource(R.string.episodes_mark_unwatched)
-                    } else {
-                        stringResource(R.string.episodes_mark_watched)
-                    },
-                    enabled = !isPending,
-                    onClick = onToggleWatched
+            if (isWatched && hasActiveRewatch) {
+                add(
+                    EpisodeOverlayAction(
+                        label = stringResource(
+                            if (isRewatched) R.string.episodes_mark_not_rewatched
+                            else R.string.episodes_mark_rewatched
+                        ),
+                        enabled = !isPending,
+                        onClick = if (isRewatched) onUnmarkRewatched else onMarkRewatched
+                    )
                 )
-            )
+            }
+            // A recorded rewatch owns the episode until it is removed: only the rewatch action
+            // shows, and the original watch can be cleared after the rewatch is gone.
+            if (!isRewatched) {
+                add(
+                    EpisodeOverlayAction(
+                        label = if (isWatched) {
+                            stringResource(R.string.episodes_mark_unwatched)
+                        } else {
+                            stringResource(R.string.episodes_mark_watched)
+                        },
+                        enabled = !isPending,
+                        onClick = onToggleWatched
+                    )
+                )
+            }
             add(
                 EpisodeOverlayAction(
                     label = if (isSeasonFullyWatched) {
