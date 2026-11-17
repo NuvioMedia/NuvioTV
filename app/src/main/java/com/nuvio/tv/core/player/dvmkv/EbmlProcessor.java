@@ -156,4 +156,26 @@ public interface EbmlProcessor {
    * @throws IOException If an error occurs reading from the input.
    */
   void binaryElement(int id, int contentsSize, ExtractorInput input) throws IOException;
+
+  /**
+   * Offers a master element to the processor whole, before the reader descends into it.
+   *
+   * <p>Returning {@code true} means the processor has dealt with the element: either it consumed
+   * the content, or it arranged for the input to be repositioned before anything else is read.
+   * The reader then moves on as if the element had ended. Returning {@code false} leaves the
+   * input untouched, and the reader reads the element's children one by one.
+   *
+   * @param id The element ID.
+   * @param elementPosition The position of the element's ID in the input.
+   * @param contentPosition The position of the element's content in the input.
+   * @param contentSize The size of the element's content.
+   * @param input The {@link ExtractorInput}, positioned at the element's content.
+   * @throws ParserException If a parsing error occurs.
+   * @throws IOException If an error occurs reading from the input.
+   */
+  default boolean readWholeMasterElement(
+      int id, long elementPosition, long contentPosition, long contentSize, ExtractorInput input)
+      throws IOException {
+    return false;
+  }
 }

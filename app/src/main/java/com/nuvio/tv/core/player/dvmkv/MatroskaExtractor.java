@@ -261,6 +261,10 @@ public class MatroskaExtractor implements Extractor {
   private static final int MAX_EARLY_DTS_FRAME_BYTES = 256 * 1024;
   private static final int MAX_EBML_HEADER_SIZE = 12; // 4-byte id + 8-byte data size.
   private static final int MAX_SEEK_HEAD_FOLLOWS = 4;
+  // Cues up to this size are read in one go and walked in memory (see readWholeCues). Remuxes
+  // carry 1-2 MB of them; larger ones are read element by element as before.
+  private static final int MAX_WHOLE_CUES_BYTES = 16 * 1024 * 1024;
+  private static final int MAX_EBML_ID_BYTES = 4;
 
   private static final String DOC_TYPE_MATROSKA = "matroska";
   private static final String DOC_TYPE_WEBM = "webm";
@@ -638,6 +642,11 @@ public class MatroskaExtractor implements Extractor {
   private boolean seekForSeekHead;
   private int followedSeekHeadCount;
   private long seekPositionAfterBuildingCues = C.INDEX_UNSET;
+  // Cues the in-memory walk turned down, and where to go back to read them element by element.
+  private long wholeCuesRejectedContentPosition = C.INDEX_UNSET;
+  private long pendingWholeCuesRetryPosition = C.INDEX_UNSET;
+  /** Off in tests that compare the in-memory walk with the reader. */
+  boolean readCuesWhole = true;
   // Tracks placed after the Clusters (the SeekHead points at them): read them before any Cluster.
   private long tracksContentPosition = C.INDEX_UNSET;
   private boolean seekForTracks;
@@ -800,6 +809,7 @@ public class MatroskaExtractor implements Extractor {
   public void seek(long position, long timeUs) {
     clusterTimecodeUs = C.TIME_UNSET;
     blockState = BLOCK_STATE_START;
+    pendingWholeCuesRetryPosition = C.INDEX_UNSET;
     reader.reset();
     varintReader.reset();
     resetWriteSampleData();
@@ -2726,6 +2736,11 @@ public class MatroskaExtractor implements Extractor {
    * @return Whether the seek position was updated.
    */
   private boolean maybeSeekForCues(PositionHolder seekPosition, long currentPosition) {
+    if (pendingWholeCuesRetryPosition != C.INDEX_UNSET) {
+      seekPosition.position = pendingWholeCuesRetryPosition;
+      pendingWholeCuesRetryPosition = C.INDEX_UNSET;
+      return true;
+    }
     if (seekForTracks) {
       seekForTracks = false;
       seekedForTracks = true;
@@ -3151,6 +3166,170 @@ public class MatroskaExtractor implements Extractor {
     public void binaryElement(int id, int contentsSize, ExtractorInput input) throws IOException {
       MatroskaExtractor.this.binaryElement(id, contentsSize, input);
     }
+
+    @Override
+    public boolean readWholeMasterElement(
+        int id, long elementPosition, long contentPosition, long contentSize, ExtractorInput input)
+        throws IOException {
+      return id == ID_CUES
+          && MatroskaExtractor.this.readWholeCues(
+              elementPosition, contentPosition, contentSize, input);
+    }
+  }
+
+  /**
+   * Reads a Cues element in one go and passes its cue points to the same handlers the reader
+   * calls. A remux's Cues hold a few hundred thousand tiny elements, and reading each of them
+   * through the input took 0.3-1.4 s on TV boxes before playback could start.
+   *
+   * <p>Only Cues the in-memory walk handles exactly as the reader does are taken: well-formed
+   * elements that stay inside their parent, CuePoint and CueTrackPositions as masters, the four
+   * cue values as integers of up to 8 bytes, and elements this extractor does not know, which the
+   * reader skips too. For anything else the extractor seeks back to the element, and the reader
+   * reads it element by element as before.
+   */
+  private boolean readWholeCues(
+      long elementPosition, long contentPosition, long contentSize, ExtractorInput input)
+      throws IOException {
+    if (!readCuesWhole
+        || sentSeekMap
+        || contentSize <= 0
+        || contentSize > MAX_WHOLE_CUES_BYTES
+        || contentPosition == wholeCuesRejectedContentPosition) {
+      return false;
+    }
+    byte[] cues = new byte[(int) contentSize];
+    // Peeked, so an I/O error leaves the input at the content, where the next attempt starts.
+    input.peekFully(cues, 0, cues.length);
+    // Cue element IDs are one byte, so their types are looked up once per Cues, not per element.
+    int[] oneByteIdTypes = new int[0x80];
+    Arrays.fill(oneByteIdTypes, -1);
+    if (!isWalkableCues(cues, 0, cues.length, oneByteIdTypes)) {
+      // The read position is still the content; the seek drops the peeked bytes with this input.
+      input.resetPeekPosition();
+      wholeCuesRejectedContentPosition = contentPosition;
+      pendingWholeCuesRetryPosition = elementPosition;
+      return true;
+    }
+    input.skipFully(cues.length);
+    startMasterElement(ID_CUES, contentPosition, contentSize);
+    walkCues(cues, 0, cues.length, contentPosition, oneByteIdTypes);
+    endMasterElement(ID_CUES);
+    return true;
+  }
+
+  private boolean isWalkableCues(byte[] data, int start, int end, int[] oneByteIdTypes) {
+    int position = start;
+    while (position < end) {
+      int idLength = varintLength(data[position]);
+      if (idLength > MAX_EBML_ID_BYTES || end - position < idLength) {
+        return false;
+      }
+      int id = (int) assembleVarint(data, position, idLength, /* removeLengthMask= */ false);
+      position += idLength;
+      if (position >= end) {
+        return false;
+      }
+      int sizeLength = varintLength(data[position]);
+      if (sizeLength > 8 || end - position < sizeLength) {
+        return false;
+      }
+      long size = assembleVarint(data, position, sizeLength, /* removeLengthMask= */ true);
+      position += sizeLength;
+      if (size < 0 || size > end - position) {
+        return false;
+      }
+      int contentEnd = position + (int) size;
+      switch (elementType(id, idLength, oneByteIdTypes)) {
+        case EbmlProcessor.ELEMENT_TYPE_MASTER:
+          if ((id != ID_CUE_POINT && id != ID_CUE_TRACK_POSITIONS)
+              || !isWalkableCues(data, position, contentEnd, oneByteIdTypes)) {
+            return false;
+          }
+          break;
+        case EbmlProcessor.ELEMENT_TYPE_UNSIGNED_INT:
+          if (!isCueValue(id) || size > 8) {
+            return false;
+          }
+          break;
+        case EbmlProcessor.ELEMENT_TYPE_UNKNOWN:
+          break;
+        default:
+          return false;
+      }
+      position = contentEnd;
+    }
+    return true;
+  }
+
+  /** Walks Cues accepted by {@link #isWalkableCues}, making the reader's calls in its order. */
+  private void walkCues(
+      byte[] data, int start, int end, long dataPosition, int[] oneByteIdTypes)
+      throws ParserException {
+    int position = start;
+    while (position < end) {
+      int idLength = varintLength(data[position]);
+      int id = (int) assembleVarint(data, position, idLength, /* removeLengthMask= */ false);
+      position += idLength;
+      int sizeLength = varintLength(data[position]);
+      long size = assembleVarint(data, position, sizeLength, /* removeLengthMask= */ true);
+      position += sizeLength;
+      int contentEnd = position + (int) size;
+      switch (elementType(id, idLength, oneByteIdTypes)) {
+        case EbmlProcessor.ELEMENT_TYPE_MASTER:
+          startMasterElement(id, dataPosition + position, size);
+          walkCues(data, position, contentEnd, dataPosition, oneByteIdTypes);
+          endMasterElement(id);
+          break;
+        case EbmlProcessor.ELEMENT_TYPE_UNSIGNED_INT:
+          long value = 0;
+          for (int i = position; i < contentEnd; i++) {
+            value = (value << 8) | (data[i] & 0xFF);
+          }
+          integerElement(id, value);
+          break;
+        default:
+          break;
+      }
+      position = contentEnd;
+    }
+  }
+
+  private @EbmlProcessor.ElementType int elementType(
+      int id, int idLength, int[] oneByteIdTypes) {
+    if (idLength != 1) {
+      return getElementType(id);
+    }
+    int type = oneByteIdTypes[id & 0x7F];
+    if (type < 0) {
+      type = getElementType(id);
+      oneByteIdTypes[id & 0x7F] = type;
+    }
+    return type;
+  }
+
+  /** The length of the varint starting with this byte; 9 when the byte has no length marker. */
+  private static int varintLength(byte firstByte) {
+    return Integer.numberOfLeadingZeros(firstByte & 0xFF) - 23;
+  }
+
+  private static boolean isCueValue(int id) {
+    return id == ID_CUE_TIME
+        || id == ID_CUE_TRACK
+        || id == ID_CUE_CLUSTER_POSITION
+        || id == ID_CUE_RELATIVE_POSITION;
+  }
+
+  private static long assembleVarint(
+      byte[] data, int offset, int length, boolean removeLengthMask) {
+    long value = data[offset] & 0xFFL;
+    if (removeLengthMask) {
+      value &= ~(0x80L >> (length - 1));
+    }
+    for (int i = 1; i < length; i++) {
+      value = (value << 8) | (data[offset + i] & 0xFFL);
+    }
+    return value;
   }
 
   /** Holds data corresponding to a single track. */
