@@ -19,6 +19,24 @@ import org.junit.Test
 import retrofit2.Response
 
 class BuiltInUsenetServiceTest {
+    @Test fun `each indexer uses its own fetch limit and the combined list keeps its display limit`() = runTest {
+        val hydra = UsenetIndexer(id = "hydra", name = "Hydra", apiUrl = "https://hydra.test/api", fetchResultsLimit = 0)
+        val direct = UsenetIndexer(id = "direct", name = "Direct", apiUrl = "https://direct.test/api", fetchResultsLimit = 100)
+        val config = UsenetSourceConfiguration(enabled = true, maxResults = 1,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(hydra, direct))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        for (indexer in config.indexers) {
+            coEvery { client.search(indexer, any(), any(), config.indexerResults(indexer)) } returns listOf(
+                UsenetRelease("Show.S01E03.1080p", "https://${indexer.id}.test/nzb/1", indexerId = indexer.id))
+        }
+        val groups = BuiltInUsenetService(client, mockk(), mockk()).search(config, "series", "tt123:1:3", null, null)
+            .toList().mapNotNull { it.group }
+        assertEquals(1, groups.last().streams.size)
+        coVerify { client.search(hydra, any(), any(), 0) }
+        coVerify { client.search(direct, any(), any(), 100) }
+    }
+
     @Test fun `failed indexer does not cancel good results and episode suffixes are resolved`() = runTest {
         val good = UsenetIndexer(id = "good", name = "Good", apiUrl = "https://good.test/api")
         val bad = UsenetIndexer(id = "bad", name = "Bad", apiUrl = "https://bad.test/api")

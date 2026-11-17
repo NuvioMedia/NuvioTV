@@ -3,6 +3,8 @@ package com.nuvio.tv.core.usenet
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -54,6 +56,127 @@ class NewznabClientTest {
             assertEquals("1", first.queryParameter("custom"))
             assertEquals("0", first.queryParameter("offset"))
             assertEquals("1", server.takeRequest().requestUrl!!.queryParameter("offset"))
+        }
+    }
+
+
+    @Test fun `unlimited reads beyond the old bound and listing still applies its own limit`() = runBlocking {
+        MockWebServer().use { server ->
+            val asked = server.answer { url ->
+                val offset = url.queryParameter("offset")!!.toInt()
+                val limit = url.queryParameter("limit")!!.toInt()
+                val items = (offset until minOf(offset + limit, 1205)).joinToString("") {
+                    """<item><title>Movie.2020.${if (it == 1204) "2160p" else "1080p"}-G$it</title><link>${server.url("/get?id=$it")}</link></item>"""
+                }
+                MockResponse().setBody("""<rss xmlns:n="urn:newznab"><channel><n:response total="1205"/>$items</channel></rss>""")
+            }
+            val indexer = server.indexer().copy(fetchResultsLimit = 0)
+            val config = UsenetSourceConfiguration(indexers = listOf(indexer))
+            val found = NewznabClient(MemoryStorage()).search(indexer, UsenetSearchRequest(imdbId = "tt1"),
+                NewznabCapabilities(), results = config.indexerResults(indexer))
+            assertEquals(1205, found.size)
+            assertEquals((0..1200 step 100).toList(), asked.map { it.queryParameter("offset")!!.toInt() })
+            val shown = NewznabProtocol.arrange(found, config)
+            assertEquals(50, shown.size)
+            assertTrue(shown.first().title.contains("2160p"))
+        }
+    }
+
+    @Test fun `finite fetching uses the remaining allowance for the last page`() = runBlocking {
+        MockWebServer().use { server ->
+            val asked = server.answer { url ->
+                val offset = url.queryParameter("offset")!!.toInt()
+                val limit = url.queryParameter("limit")!!.toInt()
+                val items = (offset until offset + limit).joinToString("") {
+                    """<item><title>Movie.2020.1080p-G$it</title><link>${server.url("/get?id=$it")}</link></item>"""
+                }
+                MockResponse().setBody("""<rss xmlns:n="urn:newznab"><channel><n:response total="1000"/>$items</channel></rss>""")
+            }
+            val found = NewznabClient(MemoryStorage()).search(server.indexer(), UsenetSearchRequest(imdbId = "tt1"),
+                NewznabCapabilities(limit = 75), results = 200)
+            assertEquals(200, found.size)
+            assertEquals(listOf("0", "75", "150"), asked.map { it.queryParameter("offset") })
+            assertEquals(listOf("75", "75", "50"), asked.map { it.queryParameter("limit") })
+        }
+    }
+
+    @Test fun `unlimited follows full pages without a reported total`() = runBlocking {
+        MockWebServer().use { server ->
+            server.answer { url ->
+                val offset = url.queryParameter("offset")!!.toInt()
+                MockResponse().setBody(if (offset >= 3) emptyPage else
+                    server.page("Movie.2020.1080p-G$offset", offset).replace("<n:response total=\"1\"/>", ""))
+            }
+            val found = NewznabClient(MemoryStorage()).search(server.indexer(), UsenetSearchRequest(imdbId = "tt1"),
+                NewznabCapabilities(limit = 1), results = 0)
+            assertEquals(3, found.size)
+            assertEquals(4, server.requestCount)
+        }
+    }
+
+    @Test fun `unlimited stops on a repeated page even when response metadata changes`() = runBlocking {
+        MockWebServer().use { server ->
+            server.answer { url ->
+                MockResponse().setBody(server.page("Movie.2020.1080p", 1, total = 10000) +
+                    "<!-- requested offset ${url.queryParameter("offset")} -->")
+            }
+            val found = NewznabClient(MemoryStorage()).search(server.indexer(), UsenetSearchRequest(imdbId = "tt1"),
+                NewznabCapabilities(), results = 0)
+            assertEquals(1, found.size)
+            assertEquals(2, server.requestCount)
+        }
+    }
+
+    @Test fun `unlimited stops on empty and repeated unusable pages and preserves results on failure`() = runBlocking {
+        for (ending in listOf(emptyPage, """<rss><channel><item><title>No download</title></item></channel></rss>""", null)) {
+            MockWebServer().use { server ->
+                server.answer { url ->
+                    if (url.queryParameter("offset") == "0") MockResponse().setBody(server.page("Movie.1080p", 1, total = 10000))
+                    else if (ending == null) MockResponse().setResponseCode(503)
+                    else MockResponse().setBody(ending.replace("<channel>", "<channel><response total=\"10000\"/>"))
+                }
+                val found = NewznabClient(MemoryStorage()).search(server.indexer(), UsenetSearchRequest(imdbId = "tt1"),
+                    NewznabCapabilities(), results = 0)
+                assertEquals(1, found.size)
+                assertTrue(server.requestCount in 2..3)
+            }
+        }
+    }
+
+    @Test fun `changing the fetch limit refreshes the season cache`() = runBlocking {
+        MockWebServer().use { server ->
+            val asked = server.answer { url ->
+                val offset = url.queryParameter("offset")!!.toInt()
+                MockResponse().setBody(if (url.queryParameter("ep") != null) emptyPage
+                    else server.page("Show.S01E02.1080p-G$offset", offset, total = 3))
+            }
+            val client = NewznabClient(MemoryStorage())
+            val indexer = server.indexer()
+            val request = UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 2)
+            val caps = NewznabCapabilities(limit = 1)
+            assertEquals(1, client.search(indexer, request, caps, results = 1).size)
+            asked.clear()
+            assertEquals(3, client.search(indexer, request, caps, results = 0).size)
+            assertEquals(3, asked.count { it.queryParameter("ep") == null })
+            asked.clear()
+            assertEquals(3, client.search(indexer, request, caps, results = 0).size)
+            assertEquals(0, asked.count { it.queryParameter("ep") == null })
+        }
+    }
+
+    @Test fun `unlimited fetching remains cancellable`() = runBlocking<Unit> {
+        MockWebServer().use { server ->
+            server.answer { url ->
+                MockResponse().setBody(server.page("Movie.1080p", url.queryParameter("offset")!!.toInt(), total = Int.MAX_VALUE))
+            }
+            assertThrows(CancellationException::class.java) {
+                runBlocking {
+                    withTimeout(300) {
+                        NewznabClient(MemoryStorage()).search(server.indexer(), UsenetSearchRequest(imdbId = "tt1"),
+                            NewznabCapabilities(), results = 0)
+                    }
+                }
+            }
         }
     }
 
@@ -248,7 +371,8 @@ class NewznabClientTest {
 
             assertEquals(8, client.search(server.indexer(), movie, caps, results = 100).size)
             assertEquals(listOf(0, 2, 4, 6, 8), offsets())
-            assertEquals(5, client.search(server.indexer(), movie, caps, results = 5).size)
+            // The last request asks for one item, and an oversized answer is truncated.
+            assertEquals(4, client.search(server.indexer(), movie, caps, results = 5).size)
             assertEquals(listOf(0, 2, 4), offsets())
             // A total far above what the indexer holds ends at its first empty page.
             reported.set(10_000)

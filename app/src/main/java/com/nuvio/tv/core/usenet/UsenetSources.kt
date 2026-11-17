@@ -58,7 +58,9 @@ data class UsenetIndexer(
      * Path of the Newznab API under [apiUrl], usually /api. New indexers start with /api; indexers
      * saved before this field existed have none, because their URL is already the complete endpoint.
      */
-    val apiPath: String = ""
+    val apiPath: String = "",
+    /** Null uses the global fetch setting; zero reads all pages. Independent of the display limit. */
+    val fetchResultsLimit: Int? = null
 ) {
     /**
      * The Newznab endpoint: [apiUrl] with [apiPath] appended, keeping the URL's query parameters.
@@ -80,6 +82,9 @@ data class UsenetIndexer(
         val url = endpointUrl()
         require(name.isNotBlank() && url != null) { "A name and valid HTTP(S) API URL are required" }
         require(priority in USENET_PRIORITIES) { "Invalid priority" }
+        require(fetchResultsLimit == null || fetchResultsLimit in 0..UsenetSourceConfiguration.MAX_INDEXER_RESULTS) {
+            "Invalid fetch limit"
+        }
         require(!apiPath.contains(Regex("[?#\\\\\\s]")) && apiPath.split('/').none { it == "." || it == ".." }) {
             "Enter an API path such as /api"
         }
@@ -110,10 +115,10 @@ data class UsenetSourceConfiguration(
     /** [UNLIMITED_RESULTS] lists every result. */
     val maxResults: Int = 50,
     /**
-     * How many results each search asks an indexer for. [AUTO_INDEXER_RESULTS] follows [maxResults]
-     * as before; a number caps the pages read, each an API hit on most indexers.
+     * Default fetch allowance for indexers without an override. [AUTO_INDEXER_RESULTS] follows
+     * [maxResults] as before; a number caps the pages read, each an API hit on most indexers.
      */
-    val indexerResultsLimit: Int = AUTO_INDEXER_RESULTS,
+    val indexerResultsLimit: Int = DEFAULT_INDEXER_RESULTS,
     val excludeLowQuality: Boolean = true,
     /** On: whole Blu-ray and DVD releases are hidden. Off by default: a Blu-ray plays from its feature clip. */
     val excludeFullDisc: Boolean = false,
@@ -139,16 +144,18 @@ data class UsenetSourceConfiguration(
     val resultLimit: Int get() = if (maxResults == UNLIMITED_RESULTS) Int.MAX_VALUE else maxResults
 
     /**
-     * How many results each indexer is asked for. Auto asks for more than are listed, so the filters
-     * and the sort choose among them, and as many as are listed above that. Unlimited still stops at
-     * [MAX_INDEXER_RESULTS]: a search an indexer cannot narrow reports a total in the thousands.
-     * A chosen [indexerResultsLimit] is used as it is, fewer API hits for fewer releases.
+     * Resolves the global fallback. Auto requests at least 200, increasing with the display limit;
+     * with an unlimited display it requests [MAX_INDEXER_RESULTS]. Per-indexer overrides, including
+     * truly unlimited fetching, are resolved by [indexerResults].
      */
     val indexerResults: Int get() = when {
         indexerResultsLimit in 1..MAX_INDEXER_RESULTS -> indexerResultsLimit
         maxResults == UNLIMITED_RESULTS -> MAX_INDEXER_RESULTS
         else -> maxOf(DEFAULT_INDEXER_RESULTS, maxResults)
     }
+
+    /** Zero means unlimited fetching, independently of how many results are listed. */
+    fun indexerResults(indexer: UsenetIndexer): Int = indexer.fetchResultsLimit ?: indexerResults
 
     /** The enabled providers, as the engine is given them. */
     fun servers(): List<String> = providers.filter { it.enabled }.map { it.serverUrl() }

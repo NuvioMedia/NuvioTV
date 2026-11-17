@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
+import java.security.MessageDigest
 import java.text.DateFormat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -25,7 +26,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -84,7 +87,7 @@ class NewznabClient internal constructor(
     }
 
     /**
-     * Reads up to [results] releases of each search. An episode is always searched on its own: a
+     * Reads up to [results] items of each search, or every page when zero. An episode is always searched on its own: a
      * long-running series has more releases per season than a search reads, which are its newest
      * uploads, of any episode. The season search adds what an episode search never returns, the
      * season packs, and the episode's numbered releases that an indexer filed without the episode.
@@ -148,27 +151,44 @@ class NewznabClient internal constructor(
     }
 
     /**
-     * Bounds both API usage and memory to [results]; never downloads NZBs during a search. Indexers
+     * Bounds fetching to [results] items, or reads every page when zero; never downloads NZBs. Indexers
      * leave items out of a page while more follow, so the total they report says whether to ask for
      * the next; without one, a full page does. An empty page ends the search.
      */
     private suspend fun pages(indexer: UsenetIndexer, url: HttpUrl, request: UsenetSearchRequest,
         caps: NewznabCapabilities, results: Int, wholeSeason: Boolean = false): List<UsenetRelease> {
+        require(results >= 0) { "Invalid fetch limit" }
         val limit = caps.limit.coerceIn(1, 100)
         val kind = if (request.series) ContentKind.SHOW else ContentKind.MOVIE
-        var page = request(indexer, url, kind = kind) { NewznabProtocol.releases(it, indexer) }
-        val releases = page.releases.toMutableList()
-        var offset = limit
-        while (offset < results && page.items > 0 && (page.total?.let { offset < it } ?: (page.items >= limit))) {
-            page = try {
-                NewznabProtocol.searchUrl(indexer, request, caps, offset, wholeSeason)?.let { next ->
-                    request(indexer, next, kind = kind) { NewznabProtocol.releases(it, indexer) }
+        val releases = mutableListOf<UsenetRelease>()
+        val seenUrls = hashSetOf<String>()
+        val seenPages = hashSetOf<List<Byte>>()
+        var offset = 0
+        while (results == 0 || offset < results) {
+            currentCoroutineContext().ensureActive()
+            val pageSize = if (results == 0) limit else minOf(limit, results - offset)
+            val next = (if (offset == 0) url else
+                NewznabProtocol.searchUrl(indexer, request, caps, offset, wholeSeason) ?: break)
+                .newBuilder().setQueryParameter("limit", pageSize.toString()).build()
+            val answer = try {
+                request(indexer, next, kind = kind) { xml ->
+                    NewznabProtocol.releases(xml, indexer) to
+                        MessageDigest.getInstance("SHA-256").digest(xml.toByteArray()).toList()
                 }
             } catch (e: CancellationException) { throw e }
-            // The pages read so far still answer the search.
-            catch (_: Exception) { null } ?: break
-            releases += page.releases
-            offset += limit
+            catch (e: Exception) {
+                // A failed first page is still an error; later failures retain the pages already read.
+                if (offset == 0) throw e else break
+            }
+            val (page, fingerprint) = answer
+            if (page.items == 0 || !seenPages.add(fingerprint)) break
+            val fresh = page.releases.filter { seenUrls.add(it.nzbUrl) }
+            // Some indexers ignore offsets or cycle through the same pages with changing metadata.
+            if (page.releases.isNotEmpty() && fresh.isEmpty()) break
+            releases += if (results == 0) fresh else fresh.take(pageSize)
+            if (offset > Int.MAX_VALUE - pageSize) break
+            offset += pageSize
+            if (page.total?.let { offset >= it } ?: (page.items < pageSize)) break
         }
         return releases
     }
@@ -396,9 +416,10 @@ class BuiltInUsenetService @Inject constructor(
                             val caps = client.capabilities(indexer)
                             val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
                             val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
-                            val found = client.search(indexer, search, caps, config.indexerResults)
+                            val fetchLimit = config.indexerResults(indexer)
+                            val found = client.search(indexer, search, caps, fetchLimit)
                                 .let { if (canSearchId && !series) confirmed(indexer, it) { metadata.await() } else it }
-                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, config.indexerResults) { metadata.await() } ?: found else found)
+                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, fetchLimit) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
                         countSearch(indexer, kind, result)

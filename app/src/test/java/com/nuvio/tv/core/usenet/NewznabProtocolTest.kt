@@ -64,7 +64,8 @@ class NewznabProtocolTest {
     }
 
     @Test fun `the result limit lists up to 500 or every result, read from more than are listed`() {
-        val unlimited = UsenetSourceConfiguration(indexers = listOf(indexer), maxResults = UsenetSourceConfiguration.UNLIMITED_RESULTS)
+        val unlimited = UsenetSourceConfiguration(indexers = listOf(indexer), maxResults = UsenetSourceConfiguration.UNLIMITED_RESULTS,
+            indexerResultsLimit = UsenetSourceConfiguration.AUTO_INDEXER_RESULTS)
         assertEquals(200, unlimited.copy(maxResults = 50).indexerResults)
         assertEquals(500, unlimited.copy(maxResults = 500).indexerResults)
         assertEquals(1000, unlimited.indexerResults)
