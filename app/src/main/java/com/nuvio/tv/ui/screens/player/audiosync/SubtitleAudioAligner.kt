@@ -178,6 +178,17 @@ internal object SubtitleAudioAligner {
         private val detectorBiasMs: Double,
     ) {
         private val correlations = HashMap<Pair<SubtitleSpeechTrack, Double>, DoubleArray>()
+        private val scratchBySize = HashMap<Int, Scratch>()
+
+        private val renderBuffers = HashMap<Int, ArrayList<DoubleArray>>()
+
+        private fun scratch(size: Int): Scratch = scratchBySize.getOrPut(size) { Scratch(size) }
+
+        private fun renderBuffers(length: Int, count: Int): List<DoubleArray> {
+            val buffers = renderBuffers.getOrPut(length) { ArrayList() }
+            while (buffers.size < count) buffers += DoubleArray(length)
+            return buffers
+        }
 
         /**
          * Best mapping of [track] onto the prepared speech among [scales], with the shift searched
@@ -246,15 +257,17 @@ internal object SubtitleAudioAligner {
             val cm = List(scales.size) { DoubleArray(lagCount) }
             val cm2 = List(scales.size) { DoubleArray(lagCount) }
             for (part in parts) {
-                val g = scales.map { track.render(part.fromFrame - maxLag, part.fromFrame - maxLag + part.gLength, it) }
+                val reusable = renderBuffers(part.gLength, scales.size)
+                val g = scales.mapIndexed { j, scale -> track.renderInto(reusable[j], part.fromFrame - maxLag, scale) }
+                val buffers = scratch(part.fft.size)
                 if (part.fullyKnown) {
                     for (first in scales.indices step 2) {
                         val second = (first + 1).takeIf { it < scales.size }
-                        accumulateCrossTerms(part, g[first], second?.let(g::get), lagCount, c1[first], second?.let(c1::get))
+                        accumulateCrossTerms(part, g[first], second?.let(g::get), lagCount, c1[first], second?.let(c1::get), buffers)
                     }
-                    for (j in scales.indices) accumulateWindowSums(g[j], part.n, lagCount, cm[j], cm2[j])
+                    for (j in scales.indices) accumulateWindowSums(g[j], part.n, lagCount, cm[j], cm2[j], scratch(g[j].size + 1))
                 } else {
-                    for (j in scales.indices) accumulateTerms(part, g[j], lagCount, c1[j], cm[j], cm2[j])
+                    for (j in scales.indices) accumulateTerms(part, g[j], lagCount, c1[j], cm[j], cm2[j], buffers)
                 }
             }
             for (j in scales.indices) {
@@ -268,6 +281,15 @@ internal object SubtitleAudioAligner {
 
     private fun isNearUnit(scale: Double): Boolean = abs(scale - 1.0) < 0.002
 
+    private class Scratch(val size: Int) {
+        val a by lazy(LazyThreadSafetyMode.NONE) { DoubleArray(size) }
+        val b by lazy(LazyThreadSafetyMode.NONE) { DoubleArray(size) }
+        val c by lazy(LazyThreadSafetyMode.NONE) { DoubleArray(size) }
+        val d by lazy(LazyThreadSafetyMode.NONE) { DoubleArray(size) }
+        val e by lazy(LazyThreadSafetyMode.NONE) { DoubleArray(size) }
+        val f by lazy(LazyThreadSafetyMode.NONE) { DoubleArray(size) }
+    }
+
     /**
      * Adds this stretch's correlation terms per lag: c1 = sum(centered * g), cm = sum(mask * g) and
      * cm2 = sum(mask * g^2), where index k = maxLag - lag.
@@ -279,26 +301,29 @@ internal object SubtitleAudioAligner {
         c1: DoubleArray,
         cm: DoubleArray,
         cm2: DoubleArray,
+        scratch: Scratch,
     ) {
         val fft = part.fft
         val size = fft.size
         val audioRe = part.audioRe
         val audioIm = part.audioIm
         // Subtitle side, packed as (g + i * g^2).
-        val subRe = DoubleArray(size)
-        val subIm = DoubleArray(size)
+        val subRe = scratch.a
+        val subIm = scratch.b
         for (i in g.indices) {
             subRe[i] = g[i]
             subIm[i] = g[i] * g[i]
         }
+        subRe.fill(0.0, g.size, size)
+        subIm.fill(0.0, g.size, size)
         fft.transform(subRe, subIm)
 
         // Unpack X = FFT(centered), M = FFT(mask), G = FFT(g), G2 = FFT(g^2) from the packed spectra
         // and form conj(X) * G + i * conj(M) * G (-> c1 + i * cm) and conj(M) * G2 (-> cm2).
-        val c1cmRe = DoubleArray(size)
-        val c1cmIm = DoubleArray(size)
-        val cm2Re = DoubleArray(size)
-        val cm2Im = DoubleArray(size)
+        val c1cmRe = scratch.c
+        val c1cmIm = scratch.d
+        val cm2Re = scratch.e
+        val cm2Im = scratch.f
         for (k in 0 until size) {
             val j = if (k == 0) 0 else size - k
             val aRe = audioRe[k]; val aIm = audioIm[k]
@@ -341,20 +366,27 @@ internal object SubtitleAudioAligner {
         lagCount: Int,
         c1A: DoubleArray,
         c1B: DoubleArray?,
+        scratch: Scratch,
     ) {
         val fft = part.fft
         val size = fft.size
         val audioRe = part.audioRe
         val audioIm = part.audioIm
         // Subtitle side, packed as (gA + i * gB).
-        val subRe = DoubleArray(size)
-        val subIm = DoubleArray(size)
+        val subRe = scratch.a
+        val subIm = scratch.b
         gA.copyInto(subRe)
-        gB?.copyInto(subIm)
+        subRe.fill(0.0, gA.size, size)
+        if (gB != null) {
+            gB.copyInto(subIm)
+            subIm.fill(0.0, gB.size, size)
+        } else {
+            subIm.fill(0.0)
+        }
         fft.transform(subRe, subIm)
         // Unpack X = FFT(centered), GA and GB, and form conj(X) * GA + i * conj(X) * GB.
-        val outRe = DoubleArray(size)
-        val outIm = DoubleArray(size)
+        val outRe = scratch.c
+        val outIm = scratch.d
         for (k in 0 until size) {
             val j = if (k == 0) 0 else size - k
             val xRe = 0.5 * (audioRe[k] + audioRe[j]); val xIm = 0.5 * (audioIm[k] - audioIm[j])
@@ -379,9 +411,11 @@ internal object SubtitleAudioAligner {
      * Adds sum(mask * g) and sum(mask * g^2) per lag for a stretch without gaps, where the mask is
      * all ones and both are sliding sums over [n] frames: g[k] + ... + g[k + n - 1].
      */
-    private fun accumulateWindowSums(g: DoubleArray, n: Int, lagCount: Int, cm: DoubleArray, cm2: DoubleArray) {
-        val prefix = DoubleArray(g.size + 1)
-        val prefixSquares = DoubleArray(g.size + 1)
+    private fun accumulateWindowSums(g: DoubleArray, n: Int, lagCount: Int, cm: DoubleArray, cm2: DoubleArray, scratch: Scratch) {
+        val prefix = scratch.a
+        val prefixSquares = scratch.b
+        prefix[0] = 0.0
+        prefixSquares[0] = 0.0
         for (i in g.indices) {
             prefix[i + 1] = prefix[i] + g[i]
             prefixSquares[i + 1] = prefixSquares[i] + g[i] * g[i]
