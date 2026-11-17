@@ -127,7 +127,8 @@ internal object SubtitleAudioAligner {
             if (n == 0) continue
             // g covers frames [fromFrame - maxLag, fromFrame + n - minLag).
             val gLength = n + lagCount - 1
-            val size = Fft.sizeFor(n + gLength)
+            // Lags k < lagCount only read g[i + k] with i < n, so i + k < gLength: no wrap-around.
+            val size = Fft.sizeFor(gLength)
             // Audio side, packed as (centered + i * mask), shared by every scale and subtitle.
             val audioRe = DoubleArray(size)
             val audioIm = DoubleArray(size)
@@ -213,8 +214,11 @@ internal object SubtitleAudioAligner {
             var best: Estimate? = null
             var bestPeak = Double.NEGATIVE_INFINITY
             var unitScale: Estimate? = null
-            computeCorrelations(track, scales.filter { (track to it) !in correlations })
-            for (scale in scales) {
+            // A ratio computed as e.g. 1.0 / (24000 / 23976) differs from the listed one in the last
+            // bit; use the listed value so its cached correlation is reused instead of recomputed.
+            val ratios = scales.map { s -> CANDIDATE_SCALES.firstOrNull { abs(it - s) < 1e-12 } ?: s }
+            computeCorrelations(track, ratios.filter { (track to it) !in correlations }.distinct())
+            for (scale in ratios) {
                 val correlation = correlations.getValue(track to scale).copyOfRange(fromIndex, toIndex)
                 val estimate = correlationPeak(correlation, rangeMaxLag, scale, frameMs, detectorBiasMs) ?: continue
                 val cues = parts.sumOf { part ->
