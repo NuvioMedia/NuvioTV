@@ -144,6 +144,10 @@ internal class AudioSyncTracker(
     /** Known audio when the lock was last re-checked against everything heard. */
     private var revalidatedFrames = 0
 
+    /** Known audio and playhead at the last full search, to skip searches that would see almost nothing new. */
+    private var searchedFrames = Int.MIN_VALUE / 2
+    private var searchedPlayheadFrame = 0
+
     sealed interface Outcome {
         data object NotEnoughEvidence : Outcome
         data class Searching(val estimate: SubtitleAudioAligner.Estimate?) : Outcome
@@ -190,6 +194,17 @@ internal class AudioSyncTracker(
             waitingReason = "Collecting audio (need ${(minFrames / FRAMES_PER_SECOND).toInt()}s for a first estimate)"
             return Outcome.NotEnoughEvidence
         }
+        // Over long known audio a search costs the most, and a subtitle that clearly doesn't match
+        // (correct ones score at least 0.23 here) won't lock after a few more seconds of audio.
+        val playheadFrame = (playbackPositionMs / SpeechTimeline.FRAME_DURATION_MS).toInt()
+        if (knownFrames - searchedFrames < SEARCH_MIN_NEW_FRAMES && knownFrames >= SEARCH_SKIP_FROM_FRAMES &&
+            (lastEstimate?.peak ?: 1.0) < SEARCH_SKIP_MAX_PEAK &&
+            abs(playheadFrame - searchedPlayheadFrame) < SEARCH_MIN_NEW_FRAMES
+        ) {
+            return Outcome.Searching(lastEstimate)
+        }
+        searchedFrames = knownFrames
+        searchedPlayheadFrame = playheadFrame
         // One transform of the speech serves every check below; each ratio is correlated once.
         val speech = SubtitleAudioAligner.prepare(segments, -MAX_SHIFT_MS, MAX_SHIFT_MS)
             ?: run {
@@ -771,6 +786,9 @@ internal class AudioSyncTracker(
         val MAX_ANALYSIS_FRAMES = (20 * 60 * FRAMES_PER_SECOND).toInt()
         private val MIN_KNOWN_FRAMES = (60 * FRAMES_PER_SECOND).toInt()
         private val MIN_LOCAL_FRAMES = (120 * FRAMES_PER_SECOND).toInt()
+        private val SEARCH_MIN_NEW_FRAMES = (30 * FRAMES_PER_SECOND).toInt()
+        private val SEARCH_SKIP_FROM_FRAMES = (5 * 60 * FRAMES_PER_SECOND).toInt()
+        private const val SEARCH_SKIP_MAX_PEAK = 0.15
         private val LOCAL_BACK_FRAMES = (180 * FRAMES_PER_SECOND).toInt()
         private val LOCAL_AHEAD_FRAMES = (180 * FRAMES_PER_SECOND).toInt()
         const val MAX_SHIFT_MS = 60_000.0
