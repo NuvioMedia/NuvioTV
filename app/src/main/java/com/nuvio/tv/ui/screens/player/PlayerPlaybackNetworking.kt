@@ -6,11 +6,17 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.nuvio.tv.core.network.IPv4FirstDns
 import com.nuvio.tv.core.network.PlaybackSocketFactory
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
@@ -98,6 +104,49 @@ internal object PlayerPlaybackNetworking {
             .build()
     }
 
+    /**
+     * Hosts that rejected an HTTP/1.1 request with 403 but accepted the same request over HTTP/2.
+     * Kept in memory only (never persisted) so later requests to that host skip the failing
+     * HTTP/1.1 attempt. Bounded so it can never grow without limit.
+     */
+    private val http2Hosts: MutableSet<String> =
+        Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private const val HTTP2_HOSTS_MAX = 64
+
+    /**
+     * Playback stays on HTTP/1.1. Only for streams that carry addon proxyHeaders: if a request
+     * gets 403 over HTTP/1.1, it is repeated once over HTTP/2 (ALPN, falling back to HTTP/1.1).
+     * A successful retry marks the host, so the following requests go straight to HTTP/2.
+     * Cleartext URLs never negotiate HTTP/2 and are left alone. If the retry also fails, the
+     * original 403 is returned unchanged.
+     */
+    private class Http2On403Interceptor(private val http2Client: OkHttpClient) : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request()
+            if (!request.url.isHttps) return chain.proceed(request)
+            val host = request.url.host
+            if (host in http2Hosts) return http2Client.newCall(request).execute()
+
+            val response = chain.proceed(request)
+            if (response.code != 403) return response
+
+            val retry = try {
+                http2Client.newCall(request).execute()
+            } catch (e: IOException) {
+                return response
+            }
+            return if (retry.isSuccessful) {
+                if (http2Hosts.size >= HTTP2_HOSTS_MAX) http2Hosts.clear()
+                http2Hosts.add(host)
+                response.close()
+                retry
+            } else {
+                retry.close()
+                response
+            }
+        }
+    }
+
     fun createHttpClient(
         defaultHeaders: Map<String, String> = emptyMap(),
         useLongReadTimeout: Boolean = false
@@ -119,20 +168,18 @@ internal object PlayerPlaybackNetworking {
                 chain.proceed(next.build())
             }
         }
-        return builder
+        val http1Client = builder
             .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
-            .let {
-                // Playback stays on HTTP/1.1 by default (see applyNetworkOptimizations), but some
-                // CDNs reject HTTP/1.1 requests with 403 while accepting HTTP/2 with identical
-                // headers. Streams that carry addon proxyHeaders therefore advertise h2 via ALPN
-                // and still fall back to HTTP/1.1 when the server (or a cleartext URL) does not
-                // negotiate it.
-                if (proxyHeaders.isNotEmpty()) {
-                    it.protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
-                } else {
-                    it
-                }
-            }
+            .build()
+        if (proxyHeaders.isEmpty()) return http1Client
+
+        // Same client (same proxyHeaders network interceptor, pool and dispatcher) but allowed to
+        // negotiate HTTP/2. It does not contain the retry interceptor below, so it cannot loop.
+        val http2Client = http1Client.newBuilder()
+            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
+            .build()
+        return http1Client.newBuilder()
+            .addInterceptor(Http2On403Interceptor(http2Client))
             .build()
     }
 
