@@ -703,7 +703,11 @@ val checkRustBindings = tasks.register("checkRustBindings") {
         require(committed.exists()) {
             "Committed bindings are missing at $committed. Run :app:generateRustBindings."
         }
-        require(generated.readText() == committed.readText()) {
+        // git may check the bindings out as CRLF on Windows (core.autocrlf=true)
+        // even though uniffi-bindgen always writes LF, which would read as drift.
+        val generatedText = generated.readText().replace("\r\n", "\n")
+        val committedText = committed.readText().replace("\r\n", "\n")
+        require(generatedText == committedText) {
             "UniFFI bindings are stale. Run ./gradlew :app:generateRustBindings and commit the result."
         }
     }

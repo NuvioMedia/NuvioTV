@@ -1,0 +1,4 @@
+# Generated UniFFI bindings must stay byte-identical to uniffi-bindgen output,
+# which always emits LF. Without this, a Windows checkout rewrites them to CRLF
+# and :app:checkRustBindings reports phantom drift.
+app/src/main/java/com/nuvio/tv/core/rust/*.kt text eol=lf
