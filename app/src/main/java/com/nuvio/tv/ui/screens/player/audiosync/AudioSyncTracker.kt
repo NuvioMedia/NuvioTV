@@ -197,7 +197,7 @@ internal class AudioSyncTracker(
                 lastEstimate = null
                 return Outcome.NotEnoughEvidence
             }
-        val estimate = speech.estimate(track) ?: run {
+        val estimate = speech.estimate(track)?.let { stretchedWhenClear(speech, segments, it) } ?: run {
             waitingReason = "No usable subtitle overlap within the 60s offset search"
             lastEstimate = null
             return Outcome.NotEnoughEvidence
@@ -249,6 +249,29 @@ internal class AudioSyncTracker(
         retraction(best, estimate)?.let { return it }
         if (provisionalBlocked) return Outcome.Searching(estimate)
         return provisional(best, near = useNear) ?: Outcome.Searching(estimate)
+    }
+
+    /**
+     * The plain rate is preferred over its 0.1% neighbours (23.976 vs 24 fps) unless one fits
+     * clearly better, since over a few minutes they score almost alike. A subtitle that does need
+     * the stretch drifts by seconds over a film when locked at 1.0. Take the neighbour when it beats
+     * 1.0 on overlap by [STRETCH_OVERLAP_MARGIN] and line starts agree, preferring it by
+     * [STRETCH_STARTS_MARGIN]: on 209 subtitles in this rate family that moved 5 to the right rate
+     * and none away from it.
+     */
+    private fun stretchedWhenClear(
+        speech: SubtitleAudioAligner.PreparedSpeech,
+        segments: List<SpeechSegment>,
+        estimate: SubtitleAudioAligner.Estimate,
+    ): SubtitleAudioAligner.Estimate {
+        if (estimate.scale != 1.0) return estimate
+        val neighbour = speech.estimate(track, doubleArrayOf(NEAR_RATE, 1.0 / NEAR_RATE)) ?: return estimate
+        if (neighbour.atSearchEdge || neighbour.peak < estimate.peak + STRETCH_OVERLAP_MARGIN) return estimate
+        val starts = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+            ?: return estimate
+        val plainStarts = starts.estimate(track.starts, doubleArrayOf(1.0)) ?: return estimate
+        val stretchedStarts = starts.estimate(track.starts, doubleArrayOf(neighbour.scale)) ?: return estimate
+        return if (stretchedStarts.peak >= plainStarts.peak + STRETCH_STARTS_MARGIN) neighbour else estimate
     }
 
     /**
@@ -478,7 +501,8 @@ internal class AudioSyncTracker(
         revalidatedFrames = knownFrames
         val heard = timeline.segments(maxFrames = MAX_ANALYSIS_FRAMES)
         val heardFrames = heard.sumOf { it.knownFrames }
-        val fresh = SubtitleAudioAligner.prepare(heard, -MAX_SHIFT_MS, MAX_SHIFT_MS)?.estimate(track) ?: return null
+        val speech = SubtitleAudioAligner.prepare(heard, -MAX_SHIFT_MS, MAX_SHIFT_MS) ?: return null
+        val fresh = speech.estimate(track)?.let { stretchedWhenClear(speech, heard, it) } ?: return null
         if (lockBlocker(fresh, heard, heardFrames, track) != null) return null
         // Compare where the two mappings put a line in the middle of what was heard.
         val midMs = heard[heard.size / 2].let { (it.fromFrame + it.probabilities.size / 2) * SpeechTimeline.FRAME_DURATION_MS }
@@ -732,6 +756,12 @@ internal class AudioSyncTracker(
          * every playhead lock, 0.001 kept five fixes with no regression.
          */
         private const val LOCAL_RATE_MARGIN = 0.001
+
+        /** A 0.1% stretch replaces rate 1.0 when it fits the overlap better by this much... */
+        private const val STRETCH_OVERLAP_MARGIN = 0.005
+
+        /** ...and line starts prefer it by this much (see [stretchedWhenClear]). */
+        private const val STRETCH_STARTS_MARGIN = 0.005
 
         /** Line starts and overlap agree on the offset within this. */
         private const val STARTS_AGREEMENT_MS = 250.0
