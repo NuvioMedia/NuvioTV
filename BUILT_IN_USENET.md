@@ -158,14 +158,34 @@ and the maximum size filter and size sorting use it. The list never waits for
 the count; it is arranged again when the count comes, and without it the whole
 size is used.
 
-Searches have a 25-second timeout per request and read 200 results per
-indexer, or as many as **Maximum results** when it is higher (500); with no
-limit, up to 1000. More results than are listed are read so the filters and
-the sort choose among them. A page with fewer results than asked does not end
-a search while the indexer reports more; each page is one API hit. NZBs are
-fetched only when the existing playback or
-opt-in prefetch path needs them. Failed indexers do not cancel successful
-sources. Configuration changes invalidate the stream search session cache.
+Searches have a 25-second timeout per request. **Default fetch limit** starts
+at **200** results per query. In an indexer's **Edit** form on the TV or phone,
+**Fetch limit** can inherit that setting or select **100**, **200**, **500**,
+**1000**, or **Unlimited**. A saved global fetch value is retained;
+settings without a saved choice now use 200. The optional global **Auto** mode
+retains its previous behavior: at least 200, matching **Maximum results** when
+higher, or 1000 when the display limit is disabled.
+
+The fetch limit applies separately to each query (including episode, season,
+and fallback queries) before matching, filtering, and sorting. **Maximum
+results** is the combined display limit after those steps, still **50** by
+default. Changing it does not affect an explicit fetch limit. NZBHydra2 counts
+as one indexer: Nuvio pages through its combined results, not separately through
+each upstream indexer. Unlimited can therefore expose releases beyond Hydra's
+first 200 results for Nuvio to filter and rank.
+
+Pages request up to 100 items, respecting the indexer's smaller advertised page
+size and the remaining finite allowance. Each page is an API request to that
+endpoint; Hydra's caching determines whether it needs more upstream requests.
+A short page does not end a search while the indexer reports more. Without a
+reported total, a short page ends it. Empty or repeated pages also stop fetching,
+and a later request failure retains the results already read. Unlimited has no
+configured result cap; it can use more API requests, memory, and time, and can
+be cancelled. Changing a fetch limit also changes the season cache key.
+
+NZBs are fetched only when the existing playback or opt-in prefetch path needs
+them. Failed indexers do not cancel successful sources. Configuration changes
+invalidate the stream search session cache.
 
 ### Unplayable and available releases
 
