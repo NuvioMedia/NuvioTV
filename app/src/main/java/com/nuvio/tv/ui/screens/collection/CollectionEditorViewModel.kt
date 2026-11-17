@@ -84,7 +84,8 @@ data class CollectionEditorUiState(
     val traktPopularResults: List<TraktPublicListSearchResult> = emptyList(),
     val traktSearchError: String? = null,
     val genrePickerSourceIndex: Int? = null,
-    val showEmojiPicker: Boolean = false
+    val showEmojiPicker: Boolean = false,
+    val movingFolderKey: String? = null
 )
 
 data class AvailableCatalog(
@@ -245,24 +246,62 @@ class CollectionEditorViewModel @Inject constructor(
         }
     }
 
-    fun moveFolderUp(index: Int) {
-        if (index <= 0) return
-        _uiState.update { state ->
-            val folders = state.folders.toMutableList()
-            val item = folders.removeAt(index)
-            folders.add(index - 1, item)
-            state.copy(folders = folders)
+    private var folderMoveBaseline: List<CollectionFolder>? = null
+    private var folderDraftOrder: List<String>? = null
+
+    fun enterFolderMoveMode(folderId: String) {
+        val current = _uiState.value.folders
+        if (current.none { it.id == folderId }) return
+        folderMoveBaseline = current
+        folderDraftOrder = current.map { it.id }
+        _uiState.update { it.copy(movingFolderKey = folderId) }
+    }
+
+    fun moveFolderDuringDrag(folderId: String, direction: Int): Int? {
+        val draft = folderDraftOrder ?: return null
+        val fromIndex = draft.indexOf(folderId)
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+        folderDraftOrder = reordered
+        applyFolderDraftOrder()
+        return toIndex
+    }
+
+    fun confirmFolderMove() {
+        folderDraftOrder = null
+        folderMoveBaseline = null
+        _uiState.update { it.copy(movingFolderKey = null) }
+    }
+
+    fun cancelFolderMove() {
+        val baseline = folderMoveBaseline
+        folderDraftOrder = null
+        folderMoveBaseline = null
+        _uiState.update {
+            it.copy(
+                movingFolderKey = null,
+                folders = baseline ?: it.folders
+            )
         }
     }
 
-    fun moveFolderDown(index: Int) {
-        val folders = _uiState.value.folders
-        if (index >= folders.size - 1) return
+    private fun applyFolderDraftOrder() {
+        val draft = folderDraftOrder ?: return
         _uiState.update { state ->
-            val mutableFolders = state.folders.toMutableList()
-            val item = mutableFolders.removeAt(index)
-            mutableFolders.add(index + 1, item)
-            state.copy(folders = mutableFolders)
+            val byId = state.folders.associateBy { it.id }
+            val seen = LinkedHashSet<String>()
+            val ordered = ArrayList<CollectionFolder>(state.folders.size)
+            for (id in draft) {
+                val folder = byId[id] ?: continue
+                if (seen.add(id)) ordered.add(folder)
+            }
+            for (folder in state.folders) {
+                if (seen.add(folder.id)) ordered.add(folder)
+            }
+            state.copy(folders = ordered)
         }
     }
 

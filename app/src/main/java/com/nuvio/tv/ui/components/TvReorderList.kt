@@ -78,6 +78,7 @@ fun <T> TvReorderList(
     onCancelMove: () -> Unit,
     modifier: Modifier = Modifier,
     header: @Composable (() -> Unit)? = null,
+    footer: @Composable (() -> Unit)? = null,
     useHeaderAwareBringIntoView: Boolean = false,
     scrollToTopOnEdgeItem: Boolean = false,
     itemContent: @Composable (
@@ -732,6 +733,9 @@ fun <T> TvReorderList(
                                 placeRow(index)
                             }
                         }
+                    }
+                    if (footer != null) {
+                        footer()
                     }
                 }
             }
