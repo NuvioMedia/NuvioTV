@@ -502,6 +502,12 @@ internal class AudioSyncTracker(
         val heard = timeline.segments(maxFrames = MAX_ANALYSIS_FRAMES)
         val heardFrames = heard.sumOf { it.knownFrames }
         val speech = SubtitleAudioAligner.prepare(heard, -MAX_SHIFT_MS, MAX_SHIFT_MS) ?: return null
+        if (heardFrames >= SUPPORT_MIN_FRAMES) {
+            val support = speech.estimate(
+                track, doubleArrayOf(segment.scale), segment.shiftMs - SUPPORT_WINDOW_MS, segment.shiftMs + SUPPORT_WINDOW_MS,
+            )
+            if (support != null && support.peak < MIN_LOCK_SUPPORT) return withdrawLock(support)
+        }
         val fresh = speech.estimate(track)?.let { stretchedWhenClear(speech, heard, it) } ?: return null
         if (lockBlocker(fresh, heard, heardFrames, track) != null) return null
         // Compare where the two mappings put a line in the middle of what was heard.
@@ -514,6 +520,24 @@ internal class AudioSyncTracker(
         lastEstimate = fresh
         liveConfirmed = false
         return Outcome.Jumped(relocked, fresh)
+    }
+
+    /**
+     * The lock's own mapping barely matches speech over minutes of audio: every correct subtitle
+     * tested scores well above [MIN_LOCK_SUPPORT] there, so the lock was chance (seen on subtitles
+     * from other films). Subtitles go back to file timing and the search starts again.
+     */
+    private fun withdrawLock(support: SubtitleAudioAligner.Estimate): Outcome {
+        model = null
+        provisionalModel = null
+        provisionalBlocked = true
+        previousCandidate = null
+        pendingJump = null
+        liveConfirmed = false
+        agreeingRuns = 0
+        disagreeingRuns = 0
+        lastEstimate = support
+        return Outcome.Retracted(support)
     }
 
     /**
@@ -772,6 +796,14 @@ internal class AudioSyncTracker(
         private val REVALIDATE_FRAMES = (45 * FRAMES_PER_SECOND).toInt()
         /** A re-check must place lines this much differently to replace the lock. */
         private const val RELOCK_MIN_MS = 1_000.0
+        /**
+         * A lock whose mapping correlates below this with all heard speech is withdrawn (see
+         * [withdrawLock]). On 383 correct subtitles the lowest was 0.23 (median 0.66); the two
+         * false locks seen scored 0.10 and 0.15.
+         */
+        private const val MIN_LOCK_SUPPORT = 0.2
+        private val SUPPORT_MIN_FRAMES = (240 * FRAMES_PER_SECOND).toInt()
+        private const val SUPPORT_WINDOW_MS = 100.0
         private const val STABLE_SHIFT_TOLERANCE_MS = 250.0
         private const val JUMP_THRESHOLD_MS = 1_000.0
         private const val REFINE_RANGE_MS = 1_500.0
