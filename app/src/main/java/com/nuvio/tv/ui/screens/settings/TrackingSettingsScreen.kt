@@ -83,6 +83,7 @@ fun TrackingSettingsContent(
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
     val moreLikeThisFocusRequester = remember { FocusRequester() }
+    val ratingsFocusRequester = remember { FocusRequester() }
 
     var activeProvider by remember { mutableStateOf<TrackingProviderId?>(null) }
     var dismissOnConnected by remember { mutableStateOf<TrackingProviderId?>(null) }
@@ -92,6 +93,7 @@ fun TrackingSettingsContent(
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
+    var showRatingSourceDialog by remember { mutableStateOf(false) }
     var showAnimeIdDialog by remember { mutableStateOf(false) }
     var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
 
@@ -101,6 +103,7 @@ fun TrackingSettingsContent(
         showWatchProgressDialog ||
         showDaysCapDialog ||
         showMoreLikeThisSourceDialog ||
+        showRatingSourceDialog ||
         showAnimeIdDialog ||
         showMdbListLibraryListsDialog
 
@@ -136,6 +139,7 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
                 TrackingFocusTarget.MORE_LIKE_THIS -> moreLikeThisFocusRequester.requestFocus()
+                TrackingFocusTarget.RATINGS -> ratingsFocusRequester.requestFocus()
             }
         }
         restoreFocusTarget = null
@@ -221,6 +225,11 @@ fun TrackingSettingsContent(
         onMdbListLibraryListsClick = {
             mdbListViewModel.onLibraryListsOpened()
             showMdbListLibraryListsDialog = true
+        },
+        ratingsFocusRequester = ratingsFocusRequester,
+        onRatingsClick = {
+            restoreFocusTarget = TrackingFocusTarget.RATINGS
+            showRatingSourceDialog = true
         }
     )
 
@@ -426,6 +435,34 @@ fun TrackingSettingsContent(
         )
     }
 
+    if (showRatingSourceDialog) {
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.tracking_ratings_title),
+            subtitle = stringResource(R.string.tracking_ratings_dialog_subtitle),
+            options = listOf(
+                SettingsPickerOption<TrackingProviderId?>(
+                    null,
+                    ratingSourceLabel(null),
+                    description = stringResource(R.string.tracking_ratings_off_description)
+                )
+            ) + trackingState.availableRatingSources.map { source ->
+                SettingsPickerOption<TrackingProviderId?>(
+                    source,
+                    ratingSourceLabel(source),
+                    description = ratingSourceDescription(source)
+                )
+            },
+            selectedValue = trackingState.ratingSource,
+            onOptionSelected = { source ->
+                trackingViewModel.selectRatingSource(source)
+                showRatingSourceDialog = false
+            },
+            onDismiss = { showRatingSourceDialog = false },
+            width = 660.dp,
+            maxHeight = 420.dp
+        )
+    }
+
     if (showMdbListLibraryListsDialog) {
         MdbListLibraryListsDialog(
             state = mdbListLibraryLists,
@@ -491,7 +528,9 @@ internal fun TrackingSettingsOverview(
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
     mdbListLibraryLists: MdbListLibraryListsUiState = MdbListLibraryListsUiState(),
-    onMdbListLibraryListsClick: () -> Unit = {}
+    onMdbListLibraryListsClick: () -> Unit = {},
+    ratingsFocusRequester: FocusRequester? = null,
+    onRatingsClick: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val traktPresentation = traktConnectionPresentation(traktState)
@@ -595,6 +634,17 @@ internal fun TrackingSettingsOverview(
                                 modifier = Modifier
                                     .focusRequester(moreLikeThisFocusRequester)
                                     .testTag(TrackingSettingsTestTags.MORE_LIKE_THIS)
+                            )
+                        }
+                        if (trackingState.availableRatingSources.isNotEmpty()) {
+                            SettingsActionRow(
+                                title = stringResource(R.string.tracking_ratings_title),
+                                subtitle = stringResource(R.string.tracking_ratings_subtitle),
+                                value = ratingSourceLabel(trackingState.ratingSource),
+                                onClick = onRatingsClick,
+                                modifier = Modifier
+                                    .then(ratingsFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+                                    .testTag(TrackingSettingsTestTags.RATINGS)
                             )
                         }
                     }
@@ -780,6 +830,21 @@ private fun moreLikeThisSourceLabel(source: MoreLikeThisSourcePreference): Strin
 }
 
 @Composable
+private fun ratingSourceLabel(source: TrackingProviderId?): String = when (source) {
+    TrackingProviderId.TRAKT -> stringResource(R.string.trakt_name)
+    TrackingProviderId.SIMKL -> stringResource(R.string.simkl_name)
+    TrackingProviderId.MDBLIST -> stringResource(R.string.mdblist_name)
+    null -> stringResource(R.string.trakt_setting_off)
+}
+
+@Composable
+private fun ratingSourceDescription(source: TrackingProviderId): String? = when (source) {
+    TrackingProviderId.SIMKL -> stringResource(R.string.tracking_ratings_simkl_description)
+    TrackingProviderId.MDBLIST -> stringResource(R.string.tracking_ratings_mdblist_description)
+    TrackingProviderId.TRAKT -> null
+}
+
+@Composable
 private fun continueWatchingWindowLabel(days: Int): String {
     return if (days == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL) {
         stringResource(R.string.trakt_all_history)
@@ -803,7 +868,8 @@ private enum class TrackingFocusTarget {
     LIBRARY,
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
-    MORE_LIKE_THIS
+    MORE_LIKE_THIS,
+    RATINGS
 }
 
 internal object TrackingSettingsTestTags {
@@ -817,4 +883,5 @@ internal object TrackingSettingsTestTags {
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
     const val COMMENTS = "tracking_trakt_comments"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
+    const val RATINGS = "tracking_source_ratings"
 }
