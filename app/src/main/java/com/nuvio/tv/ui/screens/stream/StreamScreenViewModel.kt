@@ -1450,7 +1450,9 @@ class StreamScreenViewModel @Inject constructor(
                     com.nuvio.tv.core.player.StreamFallbackHandoff.put(
                         streamCacheKey, playbackProfileId, playbackUrlFor(result), session
                     )
-                    updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
+                    // Auto-play keeps its cover until the player opens: the list must not flash
+                    // while the link is saved.
+                    releaseResolveOverlay()
                     return result
                 }
                 candidate = session.next()
@@ -1496,7 +1498,7 @@ class StreamScreenViewModel @Inject constructor(
             return try {
                 val resolved = com.nuvio.tv.core.usenet.UsenetSidecar.get(context).resolve(stream, season, episode, playbackProfileId)
                 pendingUsenetPlayback.replace(requireNotNull(resolved.url))
-                updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
+                releaseResolveOverlay()
                 // The session link ends with its session: the release itself is kept for reuse.
                 getStreamForPlayback(resolved, saveLastLink = false).also { if (saveLastLink) saveUsenetLastLink(stream) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
@@ -1538,7 +1540,7 @@ class StreamScreenViewModel @Inject constructor(
 
         return when (result) {
             is DirectDebridResolveResult.Success -> {
-                releaseDebridResolveOverlay()
+                releaseResolveOverlay()
                 cancelStreamsLoad()
                 val resolved = basePlaybackInfo.copy(
                     url = result.url,
@@ -1643,7 +1645,7 @@ class StreamScreenViewModel @Inject constructor(
             return null
         }
         // A source that needs no debrid resolve does not take down what a failed one showed.
-        if (run.attempts > 0) releaseDebridResolveOverlay()
+        if (run.attempts > 0) releaseResolveOverlay()
         SourceFallbackHandoff.set(
             url = playbackUrlFor(playbackInfo),
             triedSources = SourceFallbackHandoff.TriedSources(keys = run.triedKeys, attempts = run.attempts)
@@ -1819,8 +1821,8 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
-    /** Takes down what the debrid resolve put on screen, keeping the direct auto-play cover itself. */
-    private fun releaseDebridResolveOverlay() {
+    /** Takes down what a debrid or Usenet resolve put on screen, keeping the direct auto-play cover itself. */
+    private fun releaseResolveOverlay() {
         if (!_uiState.value.isDirectAutoPlayFlow) {
             updateUiStateIfChanged {
                 it.copy(
