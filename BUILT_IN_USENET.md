@@ -127,7 +127,8 @@ two minutes and has three steps:
 2. **Port.** It measures the download speed with eight connections on the
    current port and, for a TLS provider, on 563 and 443. TLS providers are
    never moved to a plain port. Another port must be 10% faster than the current
-   one to replace it.
+   one to replace it. If ports opened different numbers of connections, the
+   tuner compares them again at the lowest successful count.
 3. **Connections.** On that port it measures 4, 8, 12, 16, 24, 32, 48, … up to
    the limit less a tenth (at least one), and stops after two steps that add
    less than 3%. It also measures the saved allowance when within the usable

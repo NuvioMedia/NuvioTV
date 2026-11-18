@@ -130,11 +130,21 @@ internal object TunePlan {
         return if (limit == null) wanted else wanted.coerceAtMost(usable(limit, tried))
     }
 
-    /** The current port unless another is clearly faster; null without a reading. */
-    fun pickPort(readings: List<TuneReading>, current: Pair<Int, Boolean>): Pair<Int, Boolean>? {
-        val best = readings.filter { it.mbps > 0 }.maxByOrNull { it.mbps } ?: return null
-        val now = readings.filter { it.port == current.first && it.tls == current.second }.maxOfOrNull { it.mbps } ?: 0.0
-        return if (now > 0 && best.mbps < now * PORT_WIN) current else best.port to best.tls
+    /** Compare working ports at the same number of signed-in connections. */
+    fun pickPort(readings: List<TuneReading>, current: Pair<Int, Boolean>,
+        remeasure: (TuneReading, Int) -> TuneReading?): Pair<Int, Boolean>? {
+        val working = readings.filter { it.mbps > 0 }
+        val count = working.minOfOrNull { it.connections } ?: return null
+        val comparable = working.mapNotNull { reading ->
+            if (reading.connections == count) reading
+            else remeasure(reading, count)?.takeIf { it.connections == count }
+        }
+        fun isCurrent(reading: TuneReading) = reading.port == current.first && reading.tls == current.second
+        val now = comparable.find(::isCurrent)
+        // Keep a working current port if its equal-count recheck failed.
+        if (now == null && working.any(::isCurrent)) return current
+        val best = comparable.maxBy { it.mbps }
+        return if (now != null && best.mbps < now.mbps * PORT_WIN) current else best.port to best.tls
     }
 
     /** True when the last two steps of a rising round each added less than [GAIN] over the best before them. */
@@ -230,8 +240,9 @@ class NntpProviderTuner internal constructor(
                 val reading = measure(TuneProgress.Phase.PORT, port, tls, portConnections)
                 if (reading == null && failure == TuneFailure.MISSING_ARTICLES) return TuneOutcome.Failed(TuneFailure.MISSING_ARTICLES)
             }
-            val (port, tls) = TunePlan.pickPort(readings, provider.port to provider.tls)
-                ?: return TuneOutcome.Failed(failure ?: TuneFailure.TOO_SLOW)
+            val (port, tls) = TunePlan.pickPort(readings, provider.port to provider.tls) { reading, count ->
+                measure(TuneProgress.Phase.PORT, reading.port, reading.tls, count)
+            } ?: return TuneOutcome.Failed(failure ?: TuneFailure.TOO_SLOW)
 
             // 3. The connection count on that port, rising until more stop helping or the limit is reached.
             val rising = mutableListOf<Double>()

@@ -63,10 +63,29 @@ class NntpProviderTunerTest {
 
     @Test fun `the current port stays unless another is clearly faster`() {
         val current = 563 to true
-        assertEquals(current, TunePlan.pickPort(listOf(reading(8, 100.0), reading(8, 108.0, port = 443)), current))
-        assertEquals(443 to true, TunePlan.pickPort(listOf(reading(8, 100.0), reading(8, 130.0, port = 443)), current))
-        assertEquals(443 to true, TunePlan.pickPort(listOf(reading(8, 130.0, port = 443)), current))
-        assertNull(TunePlan.pickPort(emptyList(), current))
+        fun pick(vararg readings: TuneReading) = TunePlan.pickPort(readings.toList(), current) { _, _ ->
+            error("Equal counts should need no recheck")
+        }
+        assertEquals(current, pick(reading(8, 100.0), reading(8, 108.0, port = 443)))
+        assertEquals(443 to true, pick(reading(8, 100.0), reading(8, 130.0, port = 443)))
+        assertEquals(443 to true, pick(reading(8, 130.0, port = 443)))
+        assertNull(pick())
+    }
+
+    @Test fun `partially opened port samples are compared at a common count`() {
+        val current = 563 to true
+        val partial = listOf(reading(3, 100.0), reading(8, 180.0, port = 443))
+        assertEquals(current, TunePlan.pickPort(partial, current) { old, count ->
+            assertEquals(443, old.port)
+            assertEquals(3, count)
+            old.copy(connections = count, mbps = 105.0)
+        })
+        assertEquals(443 to true, TunePlan.pickPort(partial, current) { old, count ->
+            old.copy(connections = count, mbps = 120.0)
+        })
+        val partialAlternate = listOf(reading(8, 100.0), reading(3, 140.0, port = 443))
+        assertEquals(current, TunePlan.pickPort(partialAlternate, current) { _, _ -> null })
+        assertEquals(current, TunePlan.pickPort(partialAlternate, current) { old, _ -> old.copy(connections = 2) })
     }
 
     @Test fun `a rising round stops after two steps without gain`() {
