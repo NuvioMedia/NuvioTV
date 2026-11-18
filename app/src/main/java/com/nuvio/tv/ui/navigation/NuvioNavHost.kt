@@ -9,6 +9,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.R
 import com.nuvio.tv.LocalRootContentInset
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import com.nuvio.tv.core.player.LocalBackgroundTrailerController
+import com.nuvio.tv.ui.components.BackgroundTrailerLayer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -82,7 +85,12 @@ fun NuvioNavHost(
         val navViewModelStoreOwner = LocalNavViewModelStoreOwner.current
             ?: checkNotNull(LocalViewModelStoreOwner.current)
         CompositionLocalProvider(LocalViewModelStoreOwner provides navViewModelStoreOwner) {
-            PlaybackNavHost(navController, startDestination, hideBuiltInHeaders, discoverIsRoot)
+            Box(modifier = Modifier.fillMaxSize()) {
+                LocalBackgroundTrailerController.current?.let { controller ->
+                    BackgroundTrailerLayer(controller = controller)
+                }
+                PlaybackNavHost(navController, startDestination, hideBuiltInHeaders, discoverIsRoot)
+            }
         }
     }
 }

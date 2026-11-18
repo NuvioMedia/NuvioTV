@@ -1182,6 +1182,8 @@
     <string name="layout_trailer_muted">Play Trailer Muted</string>
     <string name="layout_trailer_muted_sub_preview">Mute trailer audio during autoplay preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Mute trailer audio in expanded cards.</string>
+    <string name="layout_trailer_continue_in_details">Continue Trailer in Details</string>
+    <string name="layout_trailer_continue_in_details_sub">Keep the trailer playing when you open the details page.</string>
     <string name="layout_section_card_style">Poster Card</string>
     <string name="layout_section_card_style_desc">Tune card width and corner radius.</string>
     <string name="settings_card_depth_title">Card Depth Effect</string>

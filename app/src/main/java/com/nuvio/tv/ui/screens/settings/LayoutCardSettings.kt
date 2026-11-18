@@ -254,6 +254,14 @@ internal fun LayoutFocusedPosterSection(
                     onEvent(LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted(!uiState.focusedPosterBackdropTrailerMuted))
                 }
             )
+            SettingsToggleRow(
+                title = stringResource(R.string.layout_trailer_continue_in_details),
+                subtitle = stringResource(R.string.layout_trailer_continue_in_details_sub),
+                checked = uiState.focusedPosterTrailerContinueInDetails,
+                onToggle = {
+                    onEvent(LayoutSettingsEvent.SetFocusedPosterTrailerContinueInDetails(!uiState.focusedPosterTrailerContinueInDetails))
+                }
+            )
             if (isModern) {
                 ModernTrailerPlaybackTargetRow(
                     selectedTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget,

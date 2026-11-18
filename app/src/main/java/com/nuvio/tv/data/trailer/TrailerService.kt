@@ -271,14 +271,14 @@ class TrailerService(
 
             getValidCachedYoutubeSource(sourceCacheKey)?.let { cached ->
                 Log.d(TAG, "YouTube cache hit for key=${obfuscateYoutubeKey(youtubeKey.orEmpty())}")
-                return@withContext cached
+                return@withContext cached.copy(youtubeKey = youtubeKey)
             }
 
             resolveYouTubeSourceOnce(sourceCacheKey) {
                 // Re-check: another caller may have just finished this video.
                 getValidCachedYoutubeSource(sourceCacheKey)
                     ?: resolveYouTubeSource(youtubeUrl, sourceCacheKey, maxHeight, title, year)
-            }
+            }?.copy(youtubeKey = youtubeKey)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {

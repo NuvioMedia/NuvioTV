@@ -2,6 +2,7 @@ package com.nuvio.tv.core.player
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.ui.geometry.Rect
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -19,7 +20,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,9 +55,17 @@ class TrailerPlayerPool @Inject constructor(
         // rather than Media3's default (~144 MB for video + audio). Low-RAM sticks get the smallest.
         private const val LOW_RAM_TRAILER_BUFFER_MB = 48
         private const val TRAILER_BUFFER_MB = 100
+        private const val HANDOFF_TIMEOUT_MS = 5_000L
     }
 
     private var _player: ExoPlayer? = null
+    private var owner: Any? = null
+    private var loadedVideoUrl: String? = null
+    private var ownerLetterboxZoom: Float? = null
+    private var ownerBounds: Rect? = null
+    private var pendingHandoff: TrailerHandoff? = null
+    private var handoffTimeoutJob: Job? = null
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val yielded = AtomicBoolean(false)
     private val released = AtomicBoolean(false)
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -70,6 +81,9 @@ class TrailerPlayerPool @Inject constructor(
     @Volatile
     private var cachedAllow4k: Boolean = TrailerVideoPolicy.default4kTrailers(context)
 
+    @Volatile
+    private var cachedPlayInBackground: Boolean = false
+
     // Height cap currently applied to the player's track selection; reset when the player is rebuilt.
     private var appliedMaxHeight: Int? = null
 
@@ -77,7 +91,10 @@ class TrailerPlayerPool @Inject constructor(
     init {
         settingsScope.launch {
             runCatching {
-                trailerSettingsDataStore.settings.collect { cachedAllow4k = it.allow4k }
+                trailerSettingsDataStore.settings.collect {
+                    cachedAllow4k = it.allow4k
+                    cachedPlayInBackground = it.playInBackground
+                }
             }
         }
         settingsScope.launch {
@@ -127,6 +144,9 @@ class TrailerPlayerPool @Inject constructor(
      * Call this when the trailer is no longer visible (poster lost focus, screen change).
      */
     fun stop() {
+        clearHandoff()
+        owner = null
+        loadedVideoUrl = null
         _player?.let { player ->
             runCatching {
                 player.playWhenReady = false
@@ -137,6 +157,94 @@ class TrailerPlayerPool @Inject constructor(
         _isTrailerPlaying.value = false
     }
 
+    fun stopIfOwner(token: Any) {
+        if (pendingHandoff != null) return
+        if (owner === token) stop()
+    }
+
+    fun isOwnerOrFree(token: Any): Boolean = owner == null || owner === token
+
+    fun onMediaLoaded(token: Any, videoUrl: String) {
+        owner = token
+        loadedVideoUrl = videoUrl
+        ownerLetterboxZoom = null
+        ownerBounds = null
+    }
+
+    fun isLoadedBy(token: Any, videoUrl: String): Boolean = owner === token && loadedVideoUrl == videoUrl
+
+    fun onMediaCleared(token: Any) {
+        if (owner !== token) return
+        loadedVideoUrl = null
+        ownerBounds = null
+        ownerLetterboxZoom = null
+    }
+
+    fun onOwnerBounds(token: Any, bounds: Rect) {
+        if (owner === token) ownerBounds = bounds
+    }
+
+    fun onLetterboxZoomChanged(token: Any, zoom: Float) {
+        if (owner === token) ownerLetterboxZoom = zoom
+    }
+
+    fun beginHandoff(
+        itemId: String,
+        videoUrl: String,
+        audioUrl: String?,
+        youtubeKey: String?
+    ): Boolean {
+        val player = _player ?: return false
+        if (loadedVideoUrl != videoUrl) return false
+        if (!player.playWhenReady || player.playbackState == Player.STATE_ENDED || player.currentMediaItem == null) {
+            return false
+        }
+        pendingHandoff = TrailerHandoff(
+            itemId = itemId,
+            videoUrl = videoUrl,
+            audioUrl = audioUrl,
+            youtubeKey = youtubeKey,
+            playInBackground = cachedPlayInBackground,
+            letterboxZoom = ownerLetterboxZoom,
+            sourceBounds = ownerBounds
+        )
+        handoffTimeoutJob?.cancel()
+        handoffTimeoutJob = mainScope.launch {
+            delay(HANDOFF_TIMEOUT_MS)
+            if (pendingHandoff != null) stop()
+        }
+        return true
+    }
+
+    fun peekHandoff(itemId: String): TrailerHandoff? = pendingHandoff?.takeIf { it.itemId == itemId }
+
+    fun pendingHandoffFor(videoUrl: String?): TrailerHandoff? =
+        pendingHandoff?.takeIf { videoUrl != null && it.videoUrl == videoUrl && loadedVideoUrl == videoUrl }
+
+    fun claimHandoff(token: Any, videoUrl: String): TrailerHandoff? {
+        val handoff = pendingHandoffFor(videoUrl) ?: return null
+        clearHandoff()
+        owner = token
+        ownerLetterboxZoom = handoff.letterboxZoom
+        ownerBounds = null
+        return handoff
+    }
+
+    fun cancelHandoff(itemId: String) {
+        if (pendingHandoff?.itemId == itemId) stop()
+    }
+
+    fun isHandoffPending(): Boolean = pendingHandoff != null
+
+    val playInBackgroundPreference: Boolean
+        get() = cachedPlayInBackground
+
+    private fun clearHandoff() {
+        pendingHandoff = null
+        handoffTimeoutJob?.cancel()
+        handoffTimeoutJob = null
+    }
+
     /**
      * Releases codec resources so the detail-screen player can claim hardware decoders.
      * The ExoPlayer instance is released here; [reclaim] will create a fresh one.
@@ -145,6 +253,9 @@ class TrailerPlayerPool @Inject constructor(
         if (yielded.compareAndSet(false, true)) {
             Log.d(TAG, "Yielding trailer player for detail playback")
             _isTrailerPlaying.value = false
+            clearHandoff()
+            owner = null
+            loadedVideoUrl = null
             _player?.let { player ->
                 runCatching { player.stop() }
                 runCatching { player.clearMediaItems() }
@@ -248,3 +359,13 @@ class TrailerPlayerPool @Inject constructor(
         return userTargetMb.coerceAtMost(tierCapMb)
     }
 }
+
+data class TrailerHandoff(
+    val itemId: String,
+    val videoUrl: String,
+    val audioUrl: String?,
+    val youtubeKey: String?,
+    val playInBackground: Boolean,
+    val letterboxZoom: Float?,
+    val sourceBounds: Rect?
+)

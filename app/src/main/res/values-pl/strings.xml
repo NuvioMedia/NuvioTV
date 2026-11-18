@@ -491,6 +491,8 @@
     <string name="layout_trailer_muted">Odtwarzaj zwiastun bez dźwięku</string>
     <string name="layout_trailer_muted_sub_preview">Wycisz audio zwiastuna podczas podglądu auto-play.</string>
     <string name="layout_trailer_muted_sub_expanded">Wycisz audio zwiastuna w rozszerzonych kartach.</string>
+    <string name="layout_trailer_continue_in_details">Kontynuuj zwiastun w szczegółach</string>
+    <string name="layout_trailer_continue_in_details_sub">Zwiastun gra dalej po otwarciu strony szczegółów.</string>
     <string name="layout_section_sidebar">Pasek boczny i nawigacja</string>
     <string name="layout_section_sidebar_desc">Styl paska bocznego i lokalizacja sekcji Odkrywaj.</string>
     <string name="layout_section_card_depth_desc">Efekt krawędzi światła i połysku na kartach obrazów.</string>
