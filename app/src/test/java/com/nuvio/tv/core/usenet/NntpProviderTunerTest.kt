@@ -50,14 +50,15 @@ class NntpProviderTunerTest {
     }
 
     @Test fun `the allowance is lowered only to the limit and raised only for speed`() {
-        // Over the limit: down to the usable count, even when fewer were as fast.
-        assertEquals(48, TunePlan.recommend(current = 100, fastest = 16, limit = 53, tried = 54))
-        // Under the limit and fast enough: kept.
-        assertEquals(30, TunePlan.recommend(current = 30, fastest = 16, limit = 53, tried = 54))
-        // More connections were clearly faster: raised.
-        assertEquals(32, TunePlan.recommend(current = 10, fastest = 32, limit = 53, tried = 54))
-        // No refusal: no evidence of a limit, so a high allowance stays.
-        assertEquals(300, TunePlan.recommend(current = 300, fastest = 16, limit = null, tried = 200))
+        val initial = mapOf(10 to 100.0, 32 to 130.0)
+        val repeat = mapOf(10 to 101.0, 32 to 125.0)
+        assertEquals(48, TunePlan.recommend(100, 16, 53, 54, emptyMap(), emptyMap()))
+        assertEquals(30, TunePlan.recommend(30, 16, 53, 54, initial, repeat))
+        assertEquals(300, TunePlan.recommend(300, 16, null, 200, initial, repeat))
+        assertEquals(32, TunePlan.recommend(10, 32, 53, 54, initial, repeat))
+        assertEquals(10, TunePlan.recommend(10, 32, 53, 54, initial, mapOf(10 to 120.0, 32 to 125.0)))
+        assertEquals(10, TunePlan.recommend(10, 32, 53, 54, initial, emptyMap()))
+        assertEquals(10, TunePlan.recommend(10, 32, 53, 54, mapOf(32 to 130.0), repeat))
     }
 
     @Test fun `the current port stays unless another is clearly faster`() {
@@ -196,6 +197,7 @@ class NntpProviderTunerTest {
             val result = (tuner().tune(provider(server.port, connections = 6), true, 1) {} as TuneOutcome.Success).result
             assertNull(result.limit)
             assertEquals(TunePlan.PROBE_CAP, result.tried)
+            assertTrue(result.readings.any { it.port == server.port && it.connections == 6 })
             assertEquals(0, server.refused.get())
             // A faster count may raise it; it is never lowered below the current allowance.
             assertTrue(result.connections >= 6)

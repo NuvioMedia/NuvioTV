@@ -130,8 +130,10 @@ two minutes and has three steps:
    one to replace it.
 3. **Connections.** On that port it measures 4, 8, 12, 16, 24, 32, 48, … up to
    the limit less a tenth (at least one), and stops after two steps that add
-   less than 3%. The two best counts are measured again, and readings are
-   averaged.
+   less than 3%. It also measures the saved allowance when within the usable
+   range. Before raising it, the tuner repeats the saved and proposed counts
+   and requires a speed gain in both comparisons. Otherwise it repeats the
+   two best counts. Readings are averaged.
 
 The recommended allowance is the current one, lowered to the limit less a
 tenth when a limit was found and the allowance is above that, or raised when more connections measured clearly

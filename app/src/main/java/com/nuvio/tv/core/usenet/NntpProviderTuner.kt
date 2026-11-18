@@ -119,8 +119,14 @@ internal object TunePlan {
      * and without a refusal there is no evidence of a limit. It is raised when more connections
      * measured clearly faster.
      */
-    fun recommend(current: Int, fastest: Int, limit: Int?, tried: Int): Int {
-        val wanted = maxOf(current, fastest)
+    fun recommend(current: Int, fastest: Int, limit: Int?, tried: Int,
+        initial: Map<Int, Double>, repeats: Map<Int, Double>): Int {
+        fun fasterThanCurrent(speeds: Map<Int, Double>): Boolean {
+            val baseline = speeds[current] ?: return false
+            val candidate = speeds[fastest] ?: return false
+            return baseline < candidate * GOOD_ENOUGH
+        }
+        val wanted = if (fastest > current && fasterThanCurrent(initial) && fasterThanCurrent(repeats)) fastest else current
         return if (limit == null) wanted else wanted.coerceAtMost(usable(limit, tried))
     }
 
@@ -235,13 +241,23 @@ class NntpProviderTuner internal constructor(
                 if (reading == null && failure == TuneFailure.CONNECT) break
                 if (TunePlan.stopRising(rising)) break
             }
+            val current = provider.connections
+            if (current <= usable && readings.none { it.port == port && it.tls == tls && it.connections == current }) {
+                measure(TuneProgress.Phase.CONNECTIONS, port, tls, current)
+            }
             val round = readings.filter { it.port == port && it.tls == tls }
-            // The two best counts are measured again, so one lucky reading does not decide.
-            TunePlan.averages(round) { it.connections }.entries.sortedByDescending { it.value }.take(2)
-                .forEach { (count, _) -> measure(TuneProgress.Phase.CONNECTIONS, port, tls, count) }
+            val initial = TunePlan.averages(round) { it.connections }
+            val candidate = TunePlan.fastestConnections(round) ?: return TuneOutcome.Failed(TuneFailure.TOO_SLOW)
+            val countsToRepeat = if (candidate > current && current in initial) listOf(current, candidate)
+                else initial.entries.sortedByDescending { it.value }.take(2).map { it.key }
+            val repeats = mutableMapOf<Int, Double>()
+            for (count in countsToRepeat) {
+                val repeat = measure(TuneProgress.Phase.CONNECTIONS, port, tls, count)
+                if (repeat?.connections == count) repeats[count] = repeat.mbps
+            }
             val final = readings.filter { it.port == port && it.tls == tls }
             val fastest = TunePlan.fastestConnections(final) ?: return TuneOutcome.Failed(TuneFailure.TOO_SLOW)
-            val recommended = TunePlan.recommend(provider.connections, fastest, limit, tried)
+            val recommended = TunePlan.recommend(current, fastest, limit, tried, initial, repeats)
             val speed = TunePlan.averages(final) { it.connections }
             val mbps = speed[recommended] ?: speed.filterKeys { it <= recommended }.maxByOrNull { it.key }?.value ?: speed.getValue(fastest)
             return TuneOutcome.Success(TuneResult(limit, tried, port, tls, recommended, fastest, mbps, readings.toList(), downloaded.get()))
