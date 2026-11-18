@@ -1221,6 +1221,7 @@
     <string name="layout_trailer_location_sub">Choose where trailer preview plays in Modern Home.</string>
     <string name="layout_trailer_expanded_card">Expanded Card</string>
     <string name="layout_trailer_hero_media">Hero Media</string>
+    <string name="layout_trailer_hero_media_no_expand">Hero Media (No Expand)</string>
     <string name="layout_preset_compact">Compact</string>
     <string name="layout_preset_dense">Dense</string>
     <string name="layout_preset_standard">Standard</string>
