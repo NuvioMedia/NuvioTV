@@ -455,7 +455,14 @@ static int startCodeLength(const uint8_t* data, int offset, int limit) {
     return 3;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+static inline jlong packProcessResult(jint written, uint16_t rpuCalls, uint16_t rpuSuccesses) {
+    const uint64_t w = static_cast<uint32_t>(written);
+    const uint64_t c = static_cast<uint64_t>(rpuCalls) << 32;
+    const uint64_t s = static_cast<uint64_t>(rpuSuccesses) << 48;
+    return static_cast<jlong>(w | c | s);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     JNIEnv* env,
     jclass /* clazz */,
@@ -470,7 +477,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     jboolean stripDoviRpu,
     jboolean stripHdr10Plus
 ) {
-    if (sample == nullptr || outBuffer == nullptr || sampleLen <= 0) return 0;
+    if (sample == nullptr || outBuffer == nullptr || sampleLen <= 0) return 0LL;
 
     thread_local std::vector<uint8_t> sampleBuffer;
     thread_local std::vector<uint8_t> outputBuffer;
@@ -478,12 +485,14 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     sampleBuffer.resize(sampleLen);
     {
         void* samplePtr = env->GetPrimitiveArrayCritical(sample, nullptr);
-        if (samplePtr == nullptr) return 0;
+        if (samplePtr == nullptr) return 0LL;
         std::memcpy(sampleBuffer.data(), samplePtr, sampleLen);
         env->ReleasePrimitiveArrayCritical(sample, samplePtr, JNI_ABORT);
     }
 
     bool changed = false;
+    uint16_t rpuCalls = 0;
+    uint16_t rpuSuccesses = 0;
     outputBuffer.clear();
 
     if (nalFormat == 1) { // Length-Delimited
@@ -495,7 +504,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
             }
             int nalStart = pos + nalLengthFieldLength;
             if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
-                return 0; // abort processing, format malformed
+                return 0LL; // abort processing, format malformed
             }
 
             uint8_t nalHeader = sampleBuffer[nalStart];
@@ -517,6 +526,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                     if (stripDoviRpu) {
                         shouldDrop = true;
                     } else if (convertDovi) {
+                        if (rpuCalls < 0xFFFFU) ++rpuCalls;
 #if DOVI_REAL_LINKED
                         DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(sampleBuffer.data() + nalStart, nalSize);
                         if (rpu == nullptr || dovi_has_error(rpu, nullptr)) {
@@ -533,6 +543,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                                 const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
                                 if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
                                     processed = true;
+                                    if (rpuSuccesses < 0xFFFFU) ++rpuSuccesses;
                                     processedNal.resize(out_data->len);
                                     std::memcpy(processedNal.data(), out_data->data, out_data->len);
                                     if (processedNal.size() >= 2) {
@@ -628,6 +639,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                         if (stripDoviRpu) {
                             shouldDrop = true;
                         } else if (convertDovi) {
+                            if (rpuCalls < 0xFFFFU) ++rpuCalls;
 #if DOVI_REAL_LINKED
                             DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(sampleBuffer.data() + nalBegin, nalSize);
                             if (rpu == nullptr || dovi_has_error(rpu, nullptr)) {
@@ -644,6 +656,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                                     const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
                                     if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
                                         processed = true;
+                                        if (rpuSuccesses < 0xFFFFU) ++rpuSuccesses;
                                         processedNal.resize(out_data->len);
                                         std::memcpy(processedNal.data(), out_data->data, out_data->len);
                                         if (processedNal.size() >= 2) {
@@ -698,15 +711,16 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
         }
     }
 
-    if (!changed) return 0;
+    if (!changed) return packProcessResult(0, rpuCalls, rpuSuccesses);
 
     jsize maxOutLen = env->GetArrayLength(outBuffer);
     jsize outLen = static_cast<jsize>(outputBuffer.size());
     if (outLen > maxOutLen) {
-        return -outLen;
+        // Do not report counters here; the caller will grow the buffer and retry once.
+        return packProcessResult(-outLen, 0, 0);
     }
 
     env->SetByteArrayRegion(outBuffer, 0, outLen, reinterpret_cast<const jbyte*>(outputBuffer.data()));
-    return outLen;
+    return packProcessResult(outLen, rpuCalls, rpuSuccesses);
 }
 

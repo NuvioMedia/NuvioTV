@@ -138,7 +138,9 @@ object DoviBridge {
             0x7c, 0x01, 0x20, 0x40,
             0x21, 0x33, 0x55, 0x77, 0x11, 0x02, 0x06, 0x10
         )
-        val output = convertDv7RpuToDv81(payload, mode = 2)
+        val output = runCatching { nativeConvertDv7RpuToDv81(payload, 2) }
+            .onFailure { Log.w(TAG, "Self-test conversion failed: ${it.message}") }
+            .getOrNull()
         val result = if (output != null && output.isNotEmpty()) {
             SelfTestResult(
                 passed = true,
@@ -259,7 +261,7 @@ object DoviBridge {
     ): Int {
         if (!isAvailable() || sampleLen <= 0) return 0
 
-        var written = runCatching {
+        var packed = runCatching {
             nativeProcessVideoSample(
                 sample = sample,
                 sampleLen = sampleLen,
@@ -273,12 +275,13 @@ object DoviBridge {
                 stripHdr10Plus = stripHdr10Plus
             )
         }.onFailure { Log.w(TAG, "nativeProcessVideoSample failed: ${it.message}") }
-            .getOrDefault(0)
+            .getOrDefault(0L)
 
+        var written = packed.toInt()
         if (written < 0) {
             val required = -written
             rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
-            written = runCatching {
+            packed = runCatching {
                 nativeProcessVideoSample(
                     sample = sample,
                     sampleLen = sampleLen,
@@ -292,7 +295,19 @@ object DoviBridge {
                     stripHdr10Plus = stripHdr10Plus
                 )
             }.onFailure { Log.w(TAG, "nativeProcessVideoSample retry failed: ${it.message}") }
-                .getOrDefault(0)
+                .getOrDefault(0L)
+            written = packed.toInt()
+        }
+
+        if (written >= 0) {
+            val rpuCalls = (packed ushr 32) and 0xFFFFL
+            val rpuSuccesses = (packed ushr 48) and 0xFFFFL
+            if (rpuCalls > 0L) {
+                conversionCallCount.addAndGet(rpuCalls)
+            }
+            if (rpuSuccesses > 0L) {
+                conversionSuccessCount.addAndGet(rpuSuccesses)
+            }
         }
         return written
     }
@@ -345,6 +360,6 @@ object DoviBridge {
         doviProfile: Int,
         stripDoviRpu: Boolean,
         stripHdr10Plus: Boolean
-    ): Int
+    ): Long
 }
 
