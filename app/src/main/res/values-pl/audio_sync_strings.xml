@@ -18,6 +18,4 @@
     <string name="audio_sync_sampling_high_description">Najszybsza synchronizacja. Odczytuje więcej próbek przez kilka połączeń, zwykle do 150 MB na tytuł, i bardziej obciąża CPU. Niektóre serwery ograniczają liczbę połączeń.</string>
     <string name="licenses_attributions_audio_sync_title">Synchronizacja napisów z dźwiękiem</string>
     <string name="licenses_attributions_audio_sync_body">Wykrywanie mowy korzysta z wag Silero VAD v5 (MIT, Silero Team). Opcjonalne rozpoznawanie mowy korzysta z sherpa-onnx (Apache-2.0, k2-fsa) i jego angielskiego modelu Zipformer GigaSpeech (Apache-2.0). Pełne informacje licencyjne są dołączone do aplikacji w licenses/audio_sync_NOTICE.md.</string>
-    <string name="autosync_label_audio_syncing">Dopasowywanie do dźwięku</string>
-    <string name="autosync_label_audio_synced">Dopasowane do dźwięku</string>
 </resources>

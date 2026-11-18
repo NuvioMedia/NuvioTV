@@ -98,13 +98,6 @@ internal class AudioSyncFallback private constructor(
     private var appliedModel: SubtitleSyncModel? = null
     private var ticker: Job? = null
     private var takeOverJob: Job? = null
-
-    /** Shows "Audio syncing" on the subtitle until a lock marks it synced or this stops. */
-    private var syncingRun: AutoSyncSyncedSubtitle.Syncing? = null
-
-    private fun showSyncing(url: String) {
-        syncingRun = AutoSyncSyncedSubtitle.startSyncing(url, audio = true)
-    }
     private var settingsJob: Job? = null
     private var candidatesJob: Job? = null
     private var pendingStatus: AudioSyncStatus? = null
@@ -217,7 +210,6 @@ internal class AudioSyncFallback private constructor(
             return false
         }
         takeOverJob?.cancel()
-        showSyncing(url)
         if (isMpv) {
             takeOverJob = scope.launch { takeOverMpv(url) }
             return true
@@ -282,8 +274,6 @@ internal class AudioSyncFallback private constructor(
     fun stop() {
         takeOverJob?.cancel()
         takeOverJob = null
-        AutoSyncSyncedSubtitle.stopSyncing(syncingRun)
-        syncingRun = null
         candidatesJob?.cancel()
         candidatesJob = null
         ticker?.cancel()
@@ -341,24 +331,14 @@ internal class AudioSyncFallback private constructor(
                     when (status) {
                         is AudioSyncStatus.Synced, is AudioSyncStatus.Adjusted -> {
                             if (appliedModel != null && appliedModel === controller.currentModel()) {
-                                AutoSyncSyncedSubtitle.mark(current.url, audio = true)
+                                AutoSyncSyncedSubtitle.mark(current.url)
                             } else if (controller.currentModel() != null) {
                                 pendingStatus = status
                             }
                         }
-                        AudioSyncStatus.Withdrawn -> {
+                        AudioSyncStatus.Withdrawn, AudioSyncStatus.Failed -> {
                             if (controller.currentModel() == null) {
                                 AutoSyncSyncedSubtitle.clear()
-                                // The search starts again on the original timing.
-                                showSyncing(current.url)
-                            }
-                        }
-                        AudioSyncStatus.Failed -> {
-                            if (controller.currentModel() == null) {
-                                AutoSyncSyncedSubtitle.clear()
-                                // The session never started, so nothing is searching.
-                                AutoSyncSyncedSubtitle.stopSyncing(syncingRun)
-                                syncingRun = null
                             }
                         }
                         else -> Unit
@@ -465,7 +445,6 @@ internal class AudioSyncFallback private constructor(
             if (isMpv) {
                 if (!isMpvShowing(current.url)) return@launch
                 AutoSyncSyncedSubtitle.clear()
-                showSyncing(url)
                 // The previous copy is replaced as soon as the handed-over mapping is applied.
                 target.set(Target(url, cues, generation = 0L, mpvTrackId = current.mpvTrackId))
                 appliedModel = null
@@ -484,7 +463,6 @@ internal class AudioSyncFallback private constructor(
             val generation = runtime.currentSidecarGenerationFor(url)
             if (!committed || generation == null) return@launch
             AutoSyncSyncedSubtitle.clear()
-            showSyncing(url)
             target.set(Target(url, cues, generation))
             appliedModel = null
             runtime._uiState.update { it.copy(selectedAddonSubtitle = subtitle, selectedSubtitleTrackIndex = -1) }
