@@ -410,6 +410,12 @@ fun ModernHomeContent(
                         focusHolder.activeItemIndex = relocatedIndex
                         activeItemIndex.intValue = relocatedIndex
                     }
+                    // Focus restored on return can still be waiting for its card, as when playback
+                    // returns to Home before Continue Watching moves the watched card to the front.
+                    if (pendingRowFocusKey.value == rowKey && pendingRowFocusIndex.value == storedIndex) {
+                        pendingRowFocusIndex.value = relocatedIndex
+                        pendingRowFocusNonce.intValue++
+                    }
                 }
             }
         }
