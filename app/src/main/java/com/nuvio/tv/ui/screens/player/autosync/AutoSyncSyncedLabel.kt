@@ -79,9 +79,7 @@ internal object AutoSyncSyncedSubtitle {
 @Composable
 internal fun AutoSyncedChip(subtitleUrl: String, selected: Boolean) {
     val status by AutoSyncSyncedSubtitle.status.collectAsState()
-    val synced = status?.takeIf { it.url == subtitleUrl }?.state.let {
-        it == AutoSyncState.SYNCED || it == AutoSyncState.NOT_NEEDED
-    }
+    val synced = status?.takeIf { it.url == subtitleUrl }?.state == AutoSyncState.SYNCED
     if (!selected || !synced) return
 
     val contentColor = NuvioTheme.colors.OnSecondary.copy(alpha = 0.9f)
