@@ -5,13 +5,23 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** mpv lists the chapters itself; they come with the file, so once read for a stream they are kept. */
+/**
+ * mpv lists the chapters itself; they come with the file, so once read for a stream they are kept.
+ * They always feed skip intro, and reach the UI only while the chapters setting is on, the same as
+ * on ExoPlayer. Turning the setting on mid-stream reads them again on the next tick.
+ */
 internal fun PlayerRuntimeController.refreshMpvChapters(view: NuvioMpvSurfaceView) {
-    if (mpvChaptersStreamUrl == currentStreamUrl && _uiState.value.chapters.isNotEmpty()) return
+    val showChapters = _uiState.value.chaptersEnabled
+    if (mpvChaptersStreamUrl == currentStreamUrl &&
+        skipDetectionChapters.isNotEmpty() &&
+        (!showChapters || _uiState.value.chapters.isNotEmpty())
+    ) {
+        return
+    }
     val chapters = PlayerChapters.normalize(view.readChapters())
     if (chapters.isEmpty()) return
     mpvChaptersStreamUrl = currentStreamUrl
-    _uiState.update { it.copy(chapters = chapters) }
+    if (showChapters) _uiState.update { it.copy(chapters = chapters) }
     onChaptersLoaded(chapters)
 }
 

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
+import android.os.Build
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -198,7 +199,7 @@ fun CollectionManagementScreen(
                 try { targetRequester.requestFocus() } catch (_: Exception) {}
             }
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                if (uiState.collections.isNotEmpty()) {
+                if (uiState.collections.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     NuvioButton(onClick = {
                         scope.launch {
                             try {
@@ -343,6 +344,12 @@ private fun ImportContent(
     onPickFile: () -> Unit,
     onConfirmImport: () -> Unit
 ) {
+    val fileTabFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        repeat(3) { withFrameNanos { } }
+        fileTabFocusRequester.requestFocus()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -387,10 +394,15 @@ private fun ImportContent(
                             ImportMode.FILE -> stringResource(R.string.collections_mode_file)
                             ImportMode.URL -> stringResource(R.string.collections_mode_url)
                         }
+                        val tabModifier = if (mode == ImportMode.FILE) {
+                            Modifier.focusRequester(fileTabFocusRequester)
+                        } else {
+                            Modifier
+                        }
                         if (mode == importMode) {
                             Button(
                                 onClick = { onModeChange(mode) },
-                                modifier = Modifier.semantics {
+                                modifier = tabModifier.semantics {
                                     role = Role.Tab
                                     this.selected = true
                                 },
@@ -413,7 +425,7 @@ private fun ImportContent(
                         } else {
                             NuvioButton(
                                 onClick = { onModeChange(mode) },
-                                modifier = Modifier.semantics {
+                                modifier = tabModifier.semantics {
                                     role = Role.Tab
                                     this.selected = false
                                 }

@@ -2,6 +2,7 @@ package com.nuvio.tv.data.simkl
 
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import java.util.UUID
 import javax.inject.Inject
@@ -196,6 +197,27 @@ class SimklSyncRepository @Inject constructor(
                 _state.value = current.copy(snapshot = storedSnapshot)
             }
         }
+    }
+
+    internal suspend fun commitRating(media: TrackingMediaReference, rating: Int?) = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val profileId = profileManager.activeProfileId.value
+        val generation = profileGeneration
+        val ratedAt = System.currentTimeMillis().epochMsToUtcIso()
+        val committed = snapshotMutex.withLock {
+            if (!isCurrent(profileId, generation)) return@withLock true
+            val current = _state.value
+            val snapshot = current.snapshot.withRating(media, rating, ratedAt) ?: return@withLock false
+            val projection = buildProjection(snapshot)
+            val storedSnapshot = snapshot.withFreshStorageRevision()
+            storage.save(profileId, encodeSnapshot(storedSnapshot))
+            if (isCurrent(profileId, generation)) {
+                _projection.value = projection
+                _state.value = current.copy(snapshot = storedSnapshot)
+            }
+            true
+        }
+        if (!committed) refreshAsync(TrackingRefreshIntent.INVALIDATED)
     }
 
     private suspend fun loadProfile(profileId: Int) = loadMutex.withLock {

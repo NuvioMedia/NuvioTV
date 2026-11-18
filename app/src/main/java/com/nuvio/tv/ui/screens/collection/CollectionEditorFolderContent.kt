@@ -237,14 +237,14 @@ fun FolderEditorContent(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
         val catalogFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+        val sourceKeys = remember(folder.sources) { collectionSourceKeys(folder.sources) }
         var pendingFocusIndex by remember { mutableStateOf(-1) }
 
         LaunchedEffect(pendingFocusIndex, folder.sources.size) {
             if (pendingFocusIndex >= 0) {
                 val targetIndex = pendingFocusIndex.coerceAtMost(folder.sources.lastIndex)
                 if (targetIndex >= 0) {
-                    val targetSource = folder.sources[targetIndex]
-                    val targetKey = collectionSourceKey(targetSource)
+                    val targetKey = sourceKeys[targetIndex]
                     repeat(3) { androidx.compose.runtime.withFrameNanos { } }
                     try { catalogFocusRequesters[targetKey]?.requestFocus() } catch (_: Exception) {}
                 }
@@ -439,7 +439,13 @@ fun FolderEditorContent(
                         Text(stringResource(R.string.collections_editor_play_gif), style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
                         Switch(
                             checked = folder.focusGifEnabled,
-                            onCheckedChange = null
+                            onCheckedChange = null,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = NuvioTheme.colors.Secondary,
+                                checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
+                                uncheckedThumbColor = NuvioTheme.colors.TextSecondary,
+                                uncheckedTrackColor = NuvioTheme.colors.BackgroundCard
+                            )
                         )
                     }
                 }
@@ -648,7 +654,7 @@ fun FolderEditorContent(
 
             itemsIndexed(
                 items = folder.sources,
-                key = { _, source -> collectionSourceKey(source) }
+                key = { index, _ -> sourceKeys[index] }
             ) { index, source ->
                 val addonSource = source as? AddonCatalogCollectionSource
                 val tmdbSource = source as? TmdbCollectionSource
@@ -664,7 +670,7 @@ fun FolderEditorContent(
                         ?: uiState.addonCatalogInfoByKey[collectionCatalogKey(src.addonId, src.type, src.catalogId.substringBefore(","))]
                 }
                 val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
-                val sourceKey = collectionSourceKey(source)
+                val sourceKey = sourceKeys[index]
                 val removeFocusRequester = catalogFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
                 val genreLabel = addonSource?.genre ?: if (catalog?.genreRequired == true) {
                     stringResource(R.string.collections_editor_select_genre)

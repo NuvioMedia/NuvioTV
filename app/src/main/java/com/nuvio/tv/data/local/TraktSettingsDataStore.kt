@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreference
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +77,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val rememberedLibrarySourceModeKey = stringPreferencesKey("remembered_library_source_mode")
     private val moreLikeThisSourceKey = stringPreferencesKey("more_like_this_source")
     private val simklAnimeIdPreferenceKey = stringPreferencesKey("simkl_anime_id_preference")
+    private val ratingSourceKey = stringPreferencesKey("rating_source")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -258,6 +260,22 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setSimklAnimeIdPreference(preference: SimklAnimeIdPreference) {
         store().edit { prefs ->
             prefs[simklAnimeIdPreferenceKey] = preference.name
+        }
+    }
+
+    val ratingSource: StateFlow<TrackingProviderId?> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            TrackingProviderId.fromStorage(prefs[ratingSourceKey])
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    suspend fun setRatingSource(source: TrackingProviderId?) {
+        store().edit { prefs ->
+            if (source == null) {
+                prefs.remove(ratingSourceKey)
+            } else {
+                prefs[ratingSourceKey] = source.storageId
+            }
         }
     }
 }

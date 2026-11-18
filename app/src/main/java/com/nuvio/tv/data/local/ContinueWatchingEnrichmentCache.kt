@@ -185,6 +185,42 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
         }
     }
 
+    // --- Series confirmed to have no next-up episode ---
+
+    private fun noNextUpFile(): File {
+        val profileId = profileManager.activeProfileId.value
+        val dir = File(context.filesDir, "cw_enrichment")
+        dir.mkdirs()
+        return File(dir, "nonextup_${profileId}.json")
+    }
+
+    /** Next-up seed keys confirmed to have no next episode, with the time to look them up again. */
+    suspend fun getNoNextUpSeeds(): Map<String, Long> = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            try {
+                val file = noNextUpFile()
+                if (!file.exists()) return@withContext emptyMap()
+                gson.fromJson<Map<String, Long>>(
+                    file.readText(),
+                    object : TypeToken<Map<String, Long>>() {}.type
+                ) ?: emptyMap()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read no next-up cache: ${e.message}")
+                emptyMap()
+            }
+        }
+    }
+
+    suspend fun saveNoNextUpSeeds(seeds: Map<String, Long>) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            try {
+                atomicWrite(noNextUpFile(), gson.toJson(seeds))
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to write no next-up cache: ${e.message}")
+            }
+        }
+    }
+
     /**
      * Deletes all CW enrichment cache files for the active profile.
      */
@@ -193,6 +229,7 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
             try {
                 nextUpFile().delete()
                 inProgressFile().delete()
+                noNextUpFile().delete()
                 lastNextUpHash = 0
                 lastInProgressHash = 0
                 Log.d(TAG, "Cleared CW enrichment cache for profile ${profileManager.activeProfileId.value}")

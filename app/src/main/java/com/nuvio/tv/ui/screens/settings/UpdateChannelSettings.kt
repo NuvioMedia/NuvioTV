@@ -54,6 +54,17 @@ internal fun UpdateChannelSettings(
         }
     )
 
+    if (state.optimizeDuringInstallSupported) {
+        SettingsToggleRow(
+            title = stringResource(R.string.about_update_optimize_install_title),
+            subtitle = stringResource(R.string.about_update_optimize_install_subtitle),
+            checked = state.optimizeDuringInstall,
+            onToggle = {
+                viewModel.setOptimizeDuringInstall(!state.optimizeDuringInstall)
+            }
+        )
+    }
+
     if (state.autoInstallSupported) {
         SettingsToggleRow(
             title = stringResource(R.string.about_update_auto_install_title),

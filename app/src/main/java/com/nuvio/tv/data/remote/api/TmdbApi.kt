@@ -501,7 +501,8 @@ data class TmdbCountry(
 @JsonClass(generateAdapter = true)
 data class TmdbSeasonResponse(
     @Json(name = "season_number") val seasonNumber: Int? = null,
-    @Json(name = "episodes") val episodes: List<TmdbEpisode>? = null
+    @Json(name = "episodes") val episodes: List<TmdbEpisode>? = null,
+    @Json(name = "poster_path") val posterPath: String? = null
 )
 
 @JsonClass(generateAdapter = true)

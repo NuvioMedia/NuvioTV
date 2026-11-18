@@ -933,11 +933,6 @@
     <string name="library_delete_confirm">Slett</string>
     <string name="library_source_local">LOKAL</string>
     <string name="library_type_all">Alle</string>
-    <string name="library_type_items">elementer</string>
-    <string name="library_empty_local_title">Ingen %1$s ennå</string>
-    <string name="library_empty_trakt_title">Ingen %1$s i denne listen</string>
-    <string name="library_empty_local_subtitle">Start lagring av favoritter for å se dem her</string>
-    <string name="library_empty_trakt_subtitle">Bruk + i detaljer for å legge til elementer i ønskelisten eller lister</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Laster\u2026</string>

@@ -14,6 +14,7 @@ data class SubtitleItemDto(
     @Json(name = "url") val url: String? = null,
     @Json(name = "lang") val lang: String? = null,
     @Json(name = "language") val language: String? = null,
+    @Json(name = "label") val label: String? = null,
     @Json(name = "headers") val headers: Map<String, String>? = null
 )
 
