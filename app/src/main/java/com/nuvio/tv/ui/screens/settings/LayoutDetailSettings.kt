@@ -104,16 +104,6 @@ internal fun LayoutDetailPageSection(
             checked = uiState.trailerSubtitlesEnabled,
             onToggle = { onEvent(LayoutSettingsEvent.SetTrailerSubtitlesEnabled(!uiState.trailerSubtitlesEnabled)) }
         )
-        if (uiState.trailerSubtitlesEnabled) {
-            SettingsToggleRow(
-                title = stringResource(R.string.layout_trailer_subtitles_sdh),
-                subtitle = stringResource(R.string.layout_trailer_subtitles_sdh_sub),
-                checked = uiState.trailerSubtitlesSdhFilterEnabled,
-                onToggle = {
-                    onEvent(LayoutSettingsEvent.SetTrailerSubtitlesSdhFilterEnabled(!uiState.trailerSubtitlesSdhFilterEnabled))
-                }
-            )
-        }
     }
     SettingsToggleRow(
         title = stringResource(R.string.layout_trailer_button),

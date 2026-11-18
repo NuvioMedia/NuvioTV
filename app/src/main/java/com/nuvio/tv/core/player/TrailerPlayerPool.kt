@@ -82,11 +82,6 @@ class TrailerPlayerPool @Inject constructor(
     @Volatile
     private var cachedAllow4k: Boolean = TrailerVideoPolicy.default4kTrailers(context)
 
-    // Read by the text renderer on every cue, refreshed by [subtitleFor] just before
-    // playback starts, so toggling the setting takes effect on the next trailer.
-    @Volatile
-    private var sdhFilterEnabled: Boolean = false
-
     // Height cap currently applied to the player's track selection; reset when the player is rebuilt.
     private var appliedMaxHeight: Int? = null
 
@@ -115,7 +110,6 @@ class TrailerPlayerPool @Inject constructor(
      */
     suspend fun subtitleFor(streamUrl: String): TrailerSubtitleTrack? {
         val settings = trailerSettingsDataStore.settings.first()
-        sdhFilterEnabled = settings.subtitlesEnabled && settings.subtitlesSdhFilterEnabled
         if (!settings.subtitlesEnabled) return null
         val preferred = playerSettingsDataStore.playerSettings.first().subtitleStyle.preferredLanguage
         return pickTrailerSubtitle(youTubeExtractor.captionTracks(streamUrl), preferred)
@@ -257,7 +251,7 @@ class TrailerPlayerPool @Inject constructor(
             ) {
                 super.buildTextRenderers(
                     context,
-                    SdhFilteringTextOutput(CenteredTextOutput(output)) { sdhFilterEnabled },
+                    SdhFilteringTextOutput(CenteredTextOutput(output)) { cachedPlayerSettings?.subtitleStyle?.stripSdh == true },
                     outputLooper,
                     extensionRendererMode,
                     out
