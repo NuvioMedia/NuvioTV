@@ -3337,7 +3337,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Kruopšti automatinio sinchronizavimo paieška</string>
     <string name="autosync_thorough_description">Prieš sinchronizuojant toliau lyginti kitus subtitrus ir įterptus takelius, ieškant tikslesnės atitikties. Išjungus greičiau naudojama pirma gera atitiktis. Taikomos tik patikimos atitiktys.</string>
-    <string name="autosync_toast_no_fit">Nepavyko sinchronizuoti: šie subtitrai neatitinka šios vaizdo įrašo versijos.</string>
     <string name="autosync_label_synced">Sinchronizuota automatiškai</string>
     <string name="stream_resume_from_time">Tęsti nuo %1$s</string>
     <string name="stream_resume_from_percent">Tęsti nuo %1$d%%</string>

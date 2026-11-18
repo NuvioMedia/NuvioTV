@@ -3209,7 +3209,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">পুঙ্খানুপুঙ্খ অটো-সিঙ্ক সার্চ</string>
     <string name="autosync_thorough_description">সিঙ্ক করার আগে আরও নিখুঁত মিল খুঁজতে অন্যান্য সাবটাইটেল এবং এম্বেডেড ট্র্যাকগুলোর তুলনা করতে থাকে। বন্ধ থাকলে প্রথম শক্তিশালী মিলটি দ্রুত ব্যবহার করা হয়। কেবল শতভাগ নিশ্চিত মিলগুলোই প্রয়োগ করা হয়।</string>
-    <string name="autosync_toast_no_fit">সিঙ্ক ব্যর্থ হয়েছে: এই সাবটাইটেলগুলো ভিডিওর এই সংস্করণের সাথে মেলে না।</string>
     <string name="autosync_label_synced">অটো-সিঙ্ক হয়েছে</string>
     <string name="stream_resume_from_time">%1$s থেকে পুনরায় দেখুন</string>
     <string name="stream_resume_from_percent">%1$d%% থেকে পুনরায় দেখুন</string>

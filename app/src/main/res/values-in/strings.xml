@@ -3454,7 +3454,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Pencarian Sinkronisasi Otomatis Menyeluruh</string>
     <string name="autosync_thorough_description">Terus bandingkan subtitle lain dan jalur tertanam untuk kecocokan yang lebih dekat sebelum sinkronisasi. Saat nonaktif, kecocokan kuat pertama digunakan lebih cepat. Hanya kecocokan yang meyakinkan yang akan diterapkan.</string>
-    <string name="autosync_toast_no_fit">Sinkronisasi gagal: subtitle ini tidak cocok dengan versi video tersebut.</string>
     <string name="autosync_label_synced">Tersinkron otomatis</string>
     <string name="stream_resume_from_time">Lanjutkan dari %1$s</string>
     <string name="stream_resume_from_percent">Lanjutkan dari %1$d%%</string>

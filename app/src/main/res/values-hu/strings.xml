@@ -3406,7 +3406,6 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Alaposabb feliratszinkronizálás</string>
     <string name="autosync_thorough_description">A pontosabb egyezésért további feliratokat és beágyazott sávokat is összehasonlít. Kikapcsolva hamarabb alkalmazza az első megbízható egyezést. Csak biztos egyezés esetén módosítja az időzítést.</string>
-    <string name="autosync_toast_no_fit">Sikertelen szinkronizálás: ezek a feliratok nem illeszkednek a videó ezen változatához.</string>
     <string name="autosync_label_synced">Automatikusan időzítve</string>
     <string name="stream_resume_from_time">Folytatás innen: %1$s</string>
     <string name="stream_resume_from_percent">Folytatás innen: %1$d%%</string>

@@ -3497,7 +3497,6 @@
     <string name="web_subtitle_font_added">Pridané do vášho televízora</string>
     <string name="web_subtitle_font_error">Nepodarilo sa importovať toto písmo. Vyberte platný súbor .ttf alebo .otf menší ako 10 MB.</string>
     <string name="web_subtitle_font_connection_error">Chyba pripojenia</string>
-    <string name="autosync_toast_no_fit">Synchronizácia zlyhala: tieto titulky sa nezhodujú s touto verziou videa.</string>
 
     <string name="about_update_optimize_install_title">Optimalizovať aktualizácie počas inštalácie</string>
     <string name="about_update_optimize_install_subtitle">Rýchlejšie prvé spustenie po aktualizácii, ale aplikácia sa počas inštalácie na približne minútu zatvorí. Vypnite, ak chcete radšej použiť inštalačnú obrazovku systému Android</string>
