@@ -201,7 +201,8 @@ class SubtitleRepositoryImpl @Inject constructor(
                             lang = lang,
                             addonName = addon.displayName,
                             addonLogo = addon.logo,
-                            headers = dto.headers
+                            headers = dto.headers,
+                            label = dto.label?.trim()?.takeIf { it.isNotBlank() }
                         )
                     } ?: emptyList()
                     

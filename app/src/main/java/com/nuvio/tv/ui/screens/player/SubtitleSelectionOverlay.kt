@@ -2015,7 +2015,7 @@ private fun buildSubtitleOptionRailItems(
         return SubtitleOptionRailItem(
             id = optionId,
             kind = SubtitleOptionKind.ADDON,
-            title = if (subtitle.isStreamProvided) {
+            title = subtitle.label ?: if (subtitle.isStreamProvided) {
                 streamProvidedSubtitleTitle(subtitle)
             } else {
                 Subtitle.languageCodeToName(PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang))
