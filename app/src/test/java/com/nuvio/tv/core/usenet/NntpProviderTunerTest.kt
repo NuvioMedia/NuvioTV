@@ -1,0 +1,221 @@
+package com.nuvio.tv.core.usenet
+
+import java.io.ByteArrayOutputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.*
+import org.junit.Test
+
+class NntpProviderTunerTest {
+    private fun reading(connections: Int, mbps: Double, port: Int = 563, tls: Boolean = true) =
+        TuneReading(port, tls, connections, mbps)
+
+    @Test fun `usable connections leave a tenth of the limit`() {
+        assertEquals(48, TunePlan.usable(53, 54))
+        assertEquals(90, TunePlan.usable(100, 101))
+        assertEquals(1, TunePlan.usable(1, 2))
+        assertEquals(4, TunePlan.usable(5, 6))
+        assertEquals(100, TunePlan.usable(null, 100))
+    }
+
+    @Test fun `the probe goes past a low allowance but not without bound`() {
+        assertEquals(100, TunePlan.probeCap(20))
+        assertEquals(150, TunePlan.probeCap(150))
+        assertEquals(200, TunePlan.probeCap(4096))
+    }
+
+    @Test fun `the ladder ends at the usable count`() {
+        assertEquals(listOf(4, 8, 12, 16, 24, 32, 48), TunePlan.ladder(48))
+        assertEquals(listOf(4, 8, 10), TunePlan.ladder(10))
+        assertEquals(listOf(3), TunePlan.ladder(3))
+    }
+
+    @Test fun `TLS providers only try TLS ports, the current one first`() {
+        assertEquals(listOf(563 to true, 443 to true), TunePlan.ports(UsenetProvider(port = 563, tls = true)))
+        assertEquals(listOf(5563 to true, 563 to true, 443 to true), TunePlan.ports(UsenetProvider(port = 5563, tls = true)))
+        assertEquals(listOf(119 to false), TunePlan.ports(UsenetProvider(port = 119, tls = false)))
+    }
+
+    @Test fun `the fewest connections near the best speed are the fastest`() {
+        // 16 averages 202; 8 at 190 is below 95% of it, 24 at 198 is near but uses more.
+        val readings = listOf(reading(4, 100.0), reading(8, 190.0), reading(16, 200.0), reading(24, 198.0), reading(16, 204.0))
+        assertEquals(16, TunePlan.fastestConnections(readings))
+        assertEquals(8, TunePlan.fastestConnections(listOf(reading(8, 195.0), reading(16, 202.0))))
+        assertEquals(16, TunePlan.fastestConnections(listOf(reading(8, 150.0), reading(16, 200.0), reading(24, 205.0))))
+        assertNull(TunePlan.fastestConnections(emptyList()))
+    }
+
+    @Test fun `the allowance is lowered only to the limit and raised only for speed`() {
+        // Over the limit: down to the usable count, even when fewer were as fast.
+        assertEquals(48, TunePlan.recommend(current = 100, fastest = 16, limit = 53, tried = 54))
+        // Under the limit and fast enough: kept.
+        assertEquals(30, TunePlan.recommend(current = 30, fastest = 16, limit = 53, tried = 54))
+        // More connections were clearly faster: raised.
+        assertEquals(32, TunePlan.recommend(current = 10, fastest = 32, limit = 53, tried = 54))
+        // No refusal: no evidence of a limit, so a high allowance stays.
+        assertEquals(300, TunePlan.recommend(current = 300, fastest = 16, limit = null, tried = 200))
+    }
+
+    @Test fun `the current port stays unless another is clearly faster`() {
+        val current = 563 to true
+        assertEquals(current, TunePlan.pickPort(listOf(reading(8, 100.0), reading(8, 108.0, port = 443)), current))
+        assertEquals(443 to true, TunePlan.pickPort(listOf(reading(8, 100.0), reading(8, 130.0, port = 443)), current))
+        assertEquals(443 to true, TunePlan.pickPort(listOf(reading(8, 130.0, port = 443)), current))
+        assertNull(TunePlan.pickPort(emptyList(), current))
+    }
+
+    @Test fun `a rising round stops after two steps without gain`() {
+        assertFalse(TunePlan.stopRising(listOf(50.0, 100.0)))
+        assertFalse(TunePlan.stopRising(listOf(50.0, 100.0, 150.0, 151.0)))
+        assertTrue(TunePlan.stopRising(listOf(50.0, 100.0, 150.0, 151.0, 149.0)))
+        assertTrue(TunePlan.stopRising(listOf(100.0, 0.0, 0.0)))
+    }
+
+    @Test fun `message ids are read from segments`() {
+        val nzb = """<file subject="x"><segments>
+            <segment bytes="739666" number="1">abc-1@nyuu</segment>
+            <segment number="2" bytes="10"> <def@host> </segment></segments></file>"""
+        assertEquals(listOf("abc-1@nyuu", "def@host"), TunePlan.messageIds(nzb))
+    }
+
+    @Test fun `a body is read to its end without consuming the next reply`() {
+        val wire = "line one\r\n..dot stuffed\r\n.\r\n222 next\r\nx\r\n.\r\n".toByteArray()
+        val server = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
+        server.use {
+            thread(isDaemon = true) { server.accept().use { it.getOutputStream().write(wire); Thread.sleep(500) } }
+            NntpSession(Socket("127.0.0.1", server.localPort)).use { session ->
+                assertEquals(28L, session.skipBody())
+                assertEquals("222 next", session.readLine())
+                assertEquals(6L, session.skipBody())
+            }
+        }
+    }
+
+    @Test fun `an empty body ends at once`() {
+        val server = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
+        server.use {
+            thread(isDaemon = true) { server.accept().use { it.getOutputStream().write(".\r\n205 bye\r\n".toByteArray()); Thread.sleep(500) } }
+            NntpSession(Socket("127.0.0.1", server.localPort)).use { session ->
+                assertEquals(3L, session.skipBody())
+                assertEquals("205 bye", session.readLine())
+            }
+        }
+    }
+
+    /** Accepts [limit] signed-in connections at a time and serves [article] for every BODY; the rest are refused. */
+    private class FakeProvider(private val limit: Int, private val missing: Boolean = false) : AutoCloseable {
+        private val server = ServerSocket(0, 200, InetAddress.getByName("127.0.0.1"))
+        val port get() = server.localPort
+        val open = AtomicInteger()
+        val most = AtomicInteger()
+        val refused = AtomicInteger()
+        private val article = ByteArrayOutputStream().apply {
+            repeat(2000) { write("=ybody line $it with some padding to make it longer\r\n".toByteArray()) }
+            write("..starts with a dot\r\n.\r\n".toByteArray())
+        }.toByteArray()
+
+        init {
+            thread(isDaemon = true) {
+                while (!server.isClosed) {
+                    val socket = runCatching { server.accept() }.getOrNull() ?: break
+                    thread(isDaemon = true) { serve(socket) }
+                }
+            }
+        }
+
+        private fun serve(socket: Socket) = socket.use {
+            val output = socket.getOutputStream()
+            val input = socket.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+            val counted = synchronized(this) {
+                if (open.get() >= limit) false else { most.accumulateAndGet(open.incrementAndGet(), ::maxOf); true }
+            }
+            try {
+                if (!counted) {
+                    refused.incrementAndGet()
+                    output.write("502 too many connections\r\n".toByteArray()); output.flush(); return@use
+                }
+                output.write("200 welcome\r\n".toByteArray()); output.flush()
+                while (true) {
+                    val line = input.readLine() ?: break
+                    when {
+                        line.startsWith("AUTHINFO USER") -> output.write("381 more\r\n".toByteArray())
+                        line.startsWith("AUTHINFO PASS") -> output.write("281 ok\r\n".toByteArray())
+                        line.startsWith("BODY") -> if (missing) output.write("430 no such article\r\n".toByteArray())
+                            else { output.write("222 0 body\r\n".toByteArray()); output.write(article) }
+                        line == "QUIT" -> { output.write("205 bye\r\n".toByteArray()); output.flush(); break }
+                        else -> output.write("500 what\r\n".toByteArray())
+                    }
+                    output.flush()
+                }
+            } catch (_: Exception) {
+            } finally { if (counted) open.decrementAndGet() }
+        }
+
+        override fun close() = server.close()
+    }
+
+    private fun provider(port: Int, connections: Int) = UsenetProvider(name = "Test", host = "127.0.0.1", port = port,
+        tls = false, username = "user", password = "pass", connections = connections)
+
+    private fun tuner(articles: List<String> = List(100) { "a$it@test" }) =
+        NntpProviderTuner(NntpProviderTester(), { articles }, stepMs = 400, settleMs = 50, warmupMs = 100)
+
+    @Test fun `finds the limit and recommends staying under it`() = runBlocking {
+        FakeProvider(limit = 13).use { server ->
+            val phases = mutableListOf<TuneProgress.Phase>()
+            val outcome = tuner().tune(provider(server.port, connections = 40), allowPrivateNetwork = true, pipeline = 2) {
+                synchronized(phases) { phases += it.phase }
+            }
+            val result = (outcome as TuneOutcome.Success).result
+            assertEquals(13, result.limit)
+            assertEquals(14, result.tried)
+            // 13 less a tenth: 12. The allowance of 40 was over the limit, so it comes down.
+            assertEquals(12, result.connections)
+            assertEquals(server.port, result.port)
+            assertFalse(result.tls)
+            assertTrue(result.mbps > 0)
+            assertTrue(result.downloadedBytes > 0)
+            // Never more than the limit opened at once while measuring, and at most one batch refused.
+            assertTrue(server.most.get() <= 13)
+            assertTrue(server.refused.get() <= TunePlan.PROBE_BATCH)
+            assertTrue(result.readings.all { it.connections <= 12 })
+            assertEquals(listOf(TuneProgress.Phase.LIMIT, TuneProgress.Phase.PORT, TuneProgress.Phase.CONNECTIONS),
+                phases.distinct())
+        }
+    }
+
+    @Test fun `without a refusal the limit is unknown and the probe stops at its cap`() = runBlocking {
+        FakeProvider(limit = 1000).use { server ->
+            val result = (tuner().tune(provider(server.port, connections = 6), true, 1) {} as TuneOutcome.Success).result
+            assertNull(result.limit)
+            assertEquals(TunePlan.PROBE_CAP, result.tried)
+            assertEquals(0, server.refused.get())
+            // A faster count may raise it; it is never lowered below the current allowance.
+            assertTrue(result.connections >= 6)
+        }
+    }
+
+    @Test fun `missing test articles and missing test data are reported`() = runBlocking {
+        FakeProvider(limit = 20, missing = true).use { server ->
+            assertEquals(TuneOutcome.Failed(TuneFailure.MISSING_ARTICLES),
+                tuner().tune(provider(server.port, 10), true, 2) {})
+        }
+        FakeProvider(limit = 20).use { server ->
+            assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA),
+                tuner(articles = emptyList()).tune(provider(server.port, 10), true, 2) {})
+        }
+    }
+
+    @Test fun `a refused first connection is a setup failure`() = runBlocking {
+        FakeProvider(limit = 0).use { server ->
+            assertEquals(TuneOutcome.Failed(TuneFailure.CONNECT, ProviderTestResult.REFUSED),
+                tuner().tune(provider(server.port, 10), true, 2) {})
+        }
+        assertEquals(TuneOutcome.Failed(TuneFailure.CONNECT, ProviderTestResult.PRIVATE_NETWORK),
+            tuner().tune(provider(1, 10), allowPrivateNetwork = false, pipeline = 2) {})
+    }
+}

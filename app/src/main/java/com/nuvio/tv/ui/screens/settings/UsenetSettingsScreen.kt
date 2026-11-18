@@ -58,6 +58,7 @@ internal fun UsenetSettingsContent(
     val indexerStatuses by sourcesViewModel.indexerStatuses.collectAsStateWithLifecycle()
     val stats by sourcesViewModel.stats.collectAsStateWithLifecycle()
     val phoneSetup by sourcesViewModel.phoneSetup.collectAsStateWithLifecycle()
+    val providerTune by sourcesViewModel.providerTune.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     // Opens what still has to be set up; everything else starts closed.
     var expandedNames by rememberSaveable(sources.profileId, sources.loaded) {
@@ -92,6 +93,7 @@ internal fun UsenetSettingsContent(
                         update = { sourcesViewModel.update(it, sources.profileId) },
                         testIndexer = sourcesViewModel::test,
                         testProvider = sourcesViewModel::testProvider,
+                        tuneProvider = sourcesViewModel::openTune,
                         setUpFromPhone = sourcesViewModel::startPhoneSetup,
                         phoneSetupOpen = phoneSetup != null,
                         indexerStatuses = indexerStatuses,
@@ -100,6 +102,11 @@ internal fun UsenetSettingsContent(
                         onToggleSection = toggle,
                         takeEntryFocus = { startedUnloaded && playbackHasFocus })
                     if (sources.error) Text(stringResource(R.string.usenet_sources_save_error))
+                    providerTune?.let { tune ->
+                        ProviderTuneDialog(tune, sources.configuration.providers.find { it.id == tune.providerId },
+                            onStart = sourcesViewModel::startTune, onStop = sourcesViewModel::stopTune,
+                            onApply = sourcesViewModel::applyTune, onDismiss = sourcesViewModel::closeTune)
+                    }
                 }
             }
             item(key = "usenet_settings") {

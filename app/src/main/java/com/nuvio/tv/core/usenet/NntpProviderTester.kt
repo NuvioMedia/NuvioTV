@@ -1,10 +1,8 @@
 package com.nuvio.tv.core.usenet
 
 import com.nuvio.tv.R
-import java.io.BufferedReader
+import java.io.Closeable
 import java.io.IOException
-import java.io.InputStreamReader
-import java.io.OutputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -17,6 +15,100 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 
 enum class ProviderTestResult { SUCCESS, UNREACHABLE, TLS, AUTH, REFUSED, PRIVATE_NETWORK }
+
+/** [session] is open and signed in only when [result] is [ProviderTestResult.SUCCESS]. */
+internal class OpenResult(val result: ProviderTestResult, val session: NntpSession? = null)
+
+/**
+ * One NNTP connection with its own read buffer, so status lines and multi-line bodies can be read
+ * from the same stream without reading past the end of a reply (pipelined replies follow it).
+ */
+internal class NntpSession(private val socket: Socket) : Closeable {
+    private val input = socket.getInputStream()
+    private val output = socket.getOutputStream()
+    private val buffer = ByteArray(64 * 1024)
+    private var position = 0
+    private var limit = 0
+
+    var timeoutMs: Int
+        get() = socket.soTimeout
+        set(value) { socket.soTimeout = value }
+
+    fun command(line: String) {
+        output.write("$line\r\n".toByteArray(Charsets.UTF_8))
+        output.flush()
+    }
+
+    /** Several commands in one write, for pipelining. */
+    fun commands(lines: List<String>) {
+        output.write(lines.joinToString("") { "$it\r\n" }.toByteArray(Charsets.UTF_8))
+        output.flush()
+    }
+
+    private fun fill(): Boolean {
+        position = 0
+        limit = input.read(buffer)
+        if (limit <= 0) { limit = 0; return false }
+        return true
+    }
+
+    /** A status line without its CRLF; null when the connection closed. */
+    fun readLine(): String? {
+        val line = StringBuilder()
+        while (true) {
+            if (position == limit && !fill()) return null
+            while (position < limit) {
+                val byte = buffer[position++].toInt() and 0xFF
+                if (byte == '\n'.code) return line.toString().removeSuffix("\r")
+                if (line.length < MAX_LINE) line.append(byte.toChar())
+            }
+        }
+    }
+
+    /**
+     * Reads a multi-line body up to its terminating "." line, reporting the bytes as they arrive;
+     * returns its size. Only the body is consumed: a following pipelined reply stays buffered.
+     */
+    fun skipBody(onBytes: (Int) -> Unit = {}): Long {
+        // The status line ended with CRLF, so the body starts at the beginning of a line.
+        var state = AT_LINE_START
+        var total = 0L
+        while (true) {
+            if (position == limit && !fill()) throw IOException("Connection closed")
+            val start = position
+            while (position < limit) {
+                val byte = buffer[position++]
+                state = when (state) {
+                    AFTER_CR -> if (byte == LF) AT_LINE_START else if (byte == CR) AFTER_CR else IN_LINE
+                    AT_LINE_START -> if (byte == DOT) AFTER_DOT else if (byte == CR) AFTER_CR else IN_LINE
+                    AFTER_DOT -> if (byte == CR) AFTER_DOT_CR else IN_LINE
+                    AFTER_DOT_CR -> if (byte == LF) DONE else if (byte == CR) AFTER_CR else IN_LINE
+                    else -> if (byte == CR) AFTER_CR else IN_LINE
+                }
+                if (state == DONE) break
+            }
+            val read = position - start
+            total += read
+            onBytes(read)
+            if (state == DONE) return total
+        }
+    }
+
+    override fun close() { runCatching { socket.close() } }
+
+    private companion object {
+        const val MAX_LINE = 1024
+        const val CR = '\r'.code.toByte()
+        const val LF = '\n'.code.toByte()
+        const val DOT = '.'.code.toByte()
+        const val IN_LINE = 0
+        const val AFTER_CR = 1
+        const val AT_LINE_START = 2
+        const val AFTER_DOT = 3
+        const val AFTER_DOT_CR = 4
+        const val DONE = 5
+    }
+}
 
 /** [anonymous]: the provider was tested without a username or password. */
 fun ProviderTestResult.messageRes(anonymous: Boolean) = when (this) {
@@ -39,21 +131,43 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
 
     suspend fun test(provider: UsenetProvider, allowPrivateNetwork: Boolean): ProviderTestResult =
         runInterruptible(Dispatchers.IO) {
-            val addresses = try { resolve(provider.host.removeSurrounding("[", "]")) }
-                catch (_: IOException) { return@runInterruptible ProviderTestResult.UNREACHABLE }
-            // Mirror the engine's dial policy, or a test could pass where playback is refused:
-            // it skips the addresses it may not dial and tries the others.
-            val usable = addresses.filter { allowed(it, allowPrivateNetwork) }
-            if (usable.isEmpty()) return@runInterruptible ProviderTestResult.PRIVATE_NETWORK
-            val socket = connect(usable, provider.port) ?: return@runInterruptible ProviderTestResult.UNREACHABLE
-            try {
-                socket.soTimeout = TIMEOUT_MS
-                val stream = if (provider.tls) secure(socket, provider.host) else socket
-                session(stream, provider)
-            } catch (_: SSLException) { ProviderTestResult.TLS }
-            catch (_: IOException) { ProviderTestResult.UNREACHABLE }
-            finally { runCatching { socket.close() } }
+            val opened = open(provider, allowPrivateNetwork)
+            opened.session?.use { runCatching { it.command("QUIT") } }
+            opened.result
         }
+
+    /**
+     * A signed-in connection ([OpenResult.session], closed by the caller) or why there is none.
+     * Blocking; the same dial, TLS and sign-in steps as [test].
+     */
+    internal fun open(provider: UsenetProvider, allowPrivateNetwork: Boolean, addresses: List<InetAddress>? = null): OpenResult {
+        val usable = addresses ?: resolveUsable(provider, allowPrivateNetwork).let { (found, failure) ->
+            if (failure != null) return OpenResult(failure)
+            found
+        }
+        val socket = connect(usable, provider.port) ?: return OpenResult(ProviderTestResult.UNREACHABLE)
+        var keep = false
+        try {
+            socket.soTimeout = TIMEOUT_MS
+            val stream = if (provider.tls) secure(socket, provider.host) else socket
+            val session = NntpSession(stream)
+            val result = session(session, provider)
+            keep = result == ProviderTestResult.SUCCESS
+            return if (keep) OpenResult(result, session) else OpenResult(result)
+        } catch (_: SSLException) { return OpenResult(ProviderTestResult.TLS) }
+        catch (_: IOException) { return OpenResult(ProviderTestResult.UNREACHABLE) }
+        finally { if (!keep) runCatching { socket.close() } }
+    }
+
+    /** The provider's addresses this device may dial, or why there are none. */
+    internal fun resolveUsable(provider: UsenetProvider, allowPrivateNetwork: Boolean): Pair<List<InetAddress>, ProviderTestResult?> {
+        val addresses = try { resolve(provider.host.removeSurrounding("[", "]")) }
+            catch (_: IOException) { return emptyList<InetAddress>() to ProviderTestResult.UNREACHABLE }
+        // Mirror the engine's dial policy, or a test could pass where playback is refused:
+        // it skips the addresses it may not dial and tries the others.
+        val usable = addresses.filter { allowed(it, allowPrivateNetwork) }
+        return usable to if (usable.isEmpty()) ProviderTestResult.PRIVATE_NETWORK else null
+    }
 
     /**
      * Tries each address in turn within one time budget, like the engine's dialer: a host whose
@@ -75,17 +189,15 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
         return null
     }
 
-    private fun session(socket: Socket, provider: UsenetProvider): ProviderTestResult {
-        val input = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.ISO_8859_1))
-        val output = socket.getOutputStream()
-        fun code() = input.readLine()?.take(3)?.toIntOrNull() ?: throw IOException("Connection closed")
+    private fun session(session: NntpSession, provider: UsenetProvider): ProviderTestResult {
+        fun code() = session.readLine()?.take(3)?.toIntOrNull() ?: throw IOException("Connection closed")
         // 400 and 502 greetings mean the service is unavailable, often too many connections.
         if (code() !in 200..201) return ProviderTestResult.REFUSED
         if (provider.username.isNotEmpty() || provider.password.isNotEmpty()) {
-            output.command("AUTHINFO USER ${provider.username}")
+            session.command("AUTHINFO USER ${provider.username}")
             var reply = code()
             if (reply == 381) {
-                output.command("AUTHINFO PASS ${provider.password}")
+                session.command("AUTHINFO PASS ${provider.password}")
                 reply = code()
             }
             when (reply) {
@@ -95,13 +207,7 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
                 else -> return ProviderTestResult.AUTH
             }
         }
-        runCatching { output.command("QUIT") }
         return ProviderTestResult.SUCCESS
-    }
-
-    private fun OutputStream.command(line: String) {
-        write("$line\r\n".toByteArray(Charsets.UTF_8))
-        flush()
     }
 
     private fun secure(socket: Socket, host: String): Socket {
@@ -112,7 +218,7 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
         return ssl
     }
 
-    private companion object {
+    internal companion object {
         const val TIMEOUT_MS = 10_000
         const val MIN_ATTEMPT_MS = 2_000
 

@@ -56,6 +56,7 @@ internal fun UsenetSourcesCard(
     testIndexer: suspend (UsenetIndexer) -> Boolean,
     testProvider: suspend (UsenetProvider) -> ProviderTestResult?,
     initialFocusRequester: FocusRequester,
+    tuneProvider: ((UsenetProvider) -> Unit)? = null,
     indexerStatuses: Map<String, IndexerStatus> = emptyMap(),
     setUpFromPhone: (() -> Unit)? = null,
     phoneSetupOpen: Boolean = false,
@@ -286,6 +287,13 @@ internal fun UsenetSourcesCard(
                     value = priority?.let { priorityLabel(it) }, onClick = {
                         picker = if (isProvider) "providerPriority" else "indexerPriority"
                     })
+                if (providerItem != null && tuneProvider != null) {
+                    SettingsActionRow(title = stringResource(R.string.usenet_provider_tune),
+                        subtitle = stringResource(R.string.usenet_provider_tune_description), onClick = {
+                            tuneProvider(providerItem)
+                            picker = null
+                        })
+                }
                 SettingsToggleRow(title = stringResource(R.string.usenet_source_enabled), subtitle = null, checked = enabled, onToggle = {
                     if (isProvider) update(configuration.copy(providers = configuration.providers.map {
                         if (it.id == selectedId) it.copy(enabled = !it.enabled) else it
