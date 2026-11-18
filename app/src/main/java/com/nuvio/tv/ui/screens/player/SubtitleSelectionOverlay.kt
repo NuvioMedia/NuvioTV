@@ -1315,7 +1315,11 @@ private fun SubtitleOptionCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SourceChip(label = item.sourceLabel, selected = item.isSelected)
+                    SourceChip(
+                        label = item.sourceLabel,
+                        selected = item.isSelected,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     item.addonSubtitle?.let { AutoSyncedChip(it.url, item.isSelected) } // AutoSync hook
                 }
                 Text(
@@ -1368,9 +1372,9 @@ private fun CountBadge(
 }
 
 @Composable
-private fun SourceChip(label: String, selected: Boolean = false) {
+private fun SourceChip(label: String, selected: Boolean = false, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .background(
                 if (selected) {
                     NuvioTheme.colors.OnSecondary.copy(alpha = 0.14f)
@@ -1399,7 +1403,9 @@ private fun SourceChip(label: String, selected: Boolean = false) {
                 NuvioTheme.colors.OnSecondary.copy(alpha = 0.9f)
             } else {
                 Color.White.copy(alpha = 0.78f)
-            }
+            },
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }
 }

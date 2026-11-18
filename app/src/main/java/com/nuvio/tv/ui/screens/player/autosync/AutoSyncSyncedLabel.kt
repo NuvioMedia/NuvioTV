@@ -100,6 +100,8 @@ internal fun AutoSyncedChip(subtitleUrl: String, selected: Boolean) {
             text = stringResource(R.string.autosync_label_synced),
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }
