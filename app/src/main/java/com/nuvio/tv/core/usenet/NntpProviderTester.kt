@@ -140,12 +140,13 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
      * A signed-in connection ([OpenResult.session], closed by the caller) or why there is none.
      * Blocking; the same dial, TLS and sign-in steps as [test].
      */
-    internal fun open(provider: UsenetProvider, allowPrivateNetwork: Boolean, addresses: List<InetAddress>? = null): OpenResult {
+    internal fun open(provider: UsenetProvider, allowPrivateNetwork: Boolean, addresses: List<InetAddress>? = null,
+        newSocket: () -> Socket = ::Socket): OpenResult {
         val usable = addresses ?: resolveUsable(provider, allowPrivateNetwork).let { (found, failure) ->
             if (failure != null) return OpenResult(failure)
             found
         }
-        val socket = connect(usable, provider.port) ?: return OpenResult(ProviderTestResult.UNREACHABLE)
+        val socket = connect(usable, provider.port, newSocket) ?: return OpenResult(ProviderTestResult.UNREACHABLE)
         var keep = false
         try {
             socket.soTimeout = TIMEOUT_MS
@@ -173,14 +174,14 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
      * Tries each address in turn within one time budget, like the engine's dialer: a host whose
      * first address does not answer (IPv6 without a route, one server down) still connects.
      */
-    private fun connect(addresses: List<InetAddress>, port: Int): Socket? {
+    private fun connect(addresses: List<InetAddress>, port: Int, newSocket: () -> Socket): Socket? {
         val deadline = System.nanoTime() + TIMEOUT_MS * 1_000_000L
         addresses.forEachIndexed { i, address ->
             val left = ((deadline - System.nanoTime()) / 1_000_000).toInt()
             if (left <= 0) return null
             // Share what is left, so a silent address leaves time for the next ones.
             val timeout = maxOf(left / (addresses.size - i), minOf(left, MIN_ATTEMPT_MS))
-            val socket = Socket()
+            val socket = newSocket()
             try {
                 socket.connect(InetSocketAddress(address, port), timeout)
                 return socket

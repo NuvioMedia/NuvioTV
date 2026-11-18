@@ -6,7 +6,10 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -241,6 +244,32 @@ class NntpProviderTunerTest {
         FakeProvider(limit = 20).use { server ->
             assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA),
                 tuner(articles = emptyList()).tune(provider(server.port, 10), true, 2) {})
+        }
+    }
+
+    @Test fun `restarting closes sockets stalled on the previous greeting`() = runBlocking {
+        val tuner = tuner(articles = emptyList())
+        ServerSocket(0, 16, InetAddress.getByName("127.0.0.1")).use { stalled ->
+            stalled.soTimeout = 5000
+            val old = launch(Dispatchers.IO) { tuner.tune(provider(stalled.localPort, 8), true, 1) {} }
+            val sockets = mutableListOf<Socket>()
+            try {
+                withContext(Dispatchers.IO) {
+                    repeat(TunePlan.PROBE_BATCH) { sockets += stalled.accept().apply { soTimeout = 1000 } }
+                }
+                old.cancel()
+                FakeProvider(limit = 2).use { server ->
+                    val restarted = tuner.tune(provider(server.port, 2), true, 1) { progress ->
+                        if (progress.phase == TuneProgress.Phase.LIMIT && progress.connections == 0) {
+                            sockets.forEach { assertEquals(-1, it.getInputStream().read()) }
+                        }
+                    }
+                    assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA), restarted)
+                }
+            } finally {
+                old.cancel()
+                sockets.forEach { it.close() }
+            }
         }
     }
 

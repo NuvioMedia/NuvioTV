@@ -2,6 +2,7 @@ package com.nuvio.tv.core.usenet
 
 import java.io.IOException
 import java.net.InetAddress
+import java.net.Socket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.FutureTask
@@ -13,6 +14,8 @@ import javax.inject.Singleton
 import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.Buffer
@@ -174,9 +177,14 @@ class NntpProviderTuner internal constructor(
 ) {
     @Inject constructor(tester: NntpProviderTester) : this(tester, ::downloadTestArticles)
 
+    // A restart may arrive while cancellation is still releasing the previous provider slots.
+    private val runMutex = Mutex()
+
     suspend fun tune(provider: UsenetProvider, allowPrivateNetwork: Boolean, pipeline: Int,
-        onProgress: (TuneProgress) -> Unit): TuneOutcome = runInterruptible(Dispatchers.IO) {
-        Run(provider, allowPrivateNetwork, pipeline.coerceAtLeast(1), onProgress).execute()
+        onProgress: (TuneProgress) -> Unit): TuneOutcome = runMutex.withLock {
+        runInterruptible(Dispatchers.IO) {
+            Run(provider, allowPrivateNetwork, pipeline.coerceAtLeast(1), onProgress).execute()
+        }
     }
 
     private inner class Run(
@@ -283,16 +291,24 @@ class NntpProviderTuner internal constructor(
         fun openBatch(target: UsenetProvider, count: Int): List<OpenResult> {
             val results = arrayOfNulls<OpenResult>(count)
             val done = CountDownLatch(count)
+            val sockets = mutableListOf<Socket>()
+            var cancelled = false
+            fun newSocket(): Socket = synchronized(sockets) {
+                if (cancelled) throw IOException("Connection batch cancelled")
+                Socket().also(sockets::add)
+            }
             repeat(count) { i ->
                 thread(isDaemon = true, name = "usenet-tune-open") {
-                    try { results[i] = tester.open(target, allowPrivate, addresses) }
+                    try { results[i] = tester.open(target, allowPrivate, addresses, ::newSocket) }
                     catch (_: Exception) { results[i] = OpenResult(ProviderTestResult.UNREACHABLE) }
                     finally { done.countDown() }
                 }
             }
             try { done.await() } catch (e: InterruptedException) {
-                // Cancelled: close whatever the threads still open.
-                thread(isDaemon = true) { done.await(); results.forEach { it?.session?.close() } }
+                synchronized(sockets) { cancelled = true }
+                sockets.forEach { runCatching { it.close() } }
+                done.await()
+                results.forEach { it?.session?.close() }
                 throw e
             }
             return results.map { it ?: OpenResult(ProviderTestResult.UNREACHABLE) }
