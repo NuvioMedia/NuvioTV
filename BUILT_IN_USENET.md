@@ -109,6 +109,43 @@ disabled, deleted, reprioritized or reordered. Credentials are stored as AES-GCM
 ciphertext protected by Android Keystore, separately for each profile. They
 are device-local and are not included in account/profile synchronization.
 
+### Tune connections
+
+A saved provider's options include **Tune connections**. It runs only when
+started there; playback never measures anything and only uses the saved port
+and connection allowance. Nothing is saved until **Apply**. A run takes about
+two minutes and has three steps:
+
+1. **Connection limit.** It signs in eight connections at a time and keeps
+   them open until the provider refuses one, up to 100 connections (or the
+   allowance, when higher, up to 200). The connections that signed in are the
+   account's limit at that moment, so other devices using the account lower it.
+   At most one batch is refused. A refused first connection is reported like
+   **Test provider**.
+2. **Port.** It measures the download speed with eight connections on the
+   current port and, for a TLS provider, on 563 and 443. TLS providers are
+   never moved to a plain port. Another port must be 10% faster than the current
+   one to replace it.
+3. **Connections.** On that port it measures 4, 8, 12, 16, 24, 32, 48, … up to
+   the limit less a tenth (at least one), and stops after two steps that add
+   less than 3%. The two best counts are measured again, and readings are
+   averaged.
+
+The recommended allowance is the current one, lowered to the limit less a
+tenth when a limit was found and the allowance is above that, or raised when more connections measured clearly
+faster (the fewest connections within 95% of the best speed). It is not lowered
+otherwise: unused allowance costs nothing and gives seeks and slow periods
+room.
+
+The test data are the articles of a public 1 GB test NZB that SABnzbd keeps
+for speed tests, downloaded from sabnzbd.org while the limit is checked. Each
+step downloads for 8 seconds after a 1.5-second warm-up, with as many pipelined
+requests per connection as the engine uses for the chosen performance profile
+(2 for Low memory, otherwise 4). A step on a fast line ends early after 250 MB
+once 3 seconds were measured. A run downloads up to about 1 GB, which counts
+against a block account; the result shows how much. A provider that lacks the
+test articles cannot be measured, and the run says so.
+
 Searches use advertised movie/TV capabilities, preferring IMDb, then TVDB (TV
 only, looked up through TMDB) and TMDB IDs.
 Title searches are used when the indexer does not support an available ID, and
