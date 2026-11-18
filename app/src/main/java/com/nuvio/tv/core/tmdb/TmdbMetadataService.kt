@@ -625,9 +625,11 @@ class TmdbMetadataService(
                                     TMDB_API_KEY,
                                     normalizedLanguage
                                 )
-                                response.body()?.episodes.orEmpty().mapNotNull { episode ->
+                                val body = response.body()
+                                val seasonPoster = body?.posterPath?.takeIf { it.isNotBlank() }?.let { "https://image.tmdb.org/t/p/w500$it" }
+                                body?.episodes.orEmpty().mapNotNull { episode ->
                                     val episodeNumber = episode.episodeNumber ?: return@mapNotNull null
-                                    (season to episodeNumber) to episode.toEnrichment()
+                                    (season to episodeNumber) to episode.toEnrichment(seasonPoster)
                                 }.toMap()
                             } catch (e: CancellationException) {
                                 throw e
@@ -1681,7 +1683,8 @@ data class TmdbEpisodeEnrichment(
     val overview: String?,
     val thumbnail: String?,
     val airDate: String?,
-    val runtimeMinutes: Int?
+    val runtimeMinutes: Int?,
+    val seasonPoster: String? = null
 )
 
 enum class TmdbEntityKind(val routeValue: String) {
@@ -1736,7 +1739,7 @@ data class TmdbEntityRailPageResult(
     val hasMore: Boolean
 )
 
-private fun TmdbEpisode.toEnrichment(): TmdbEpisodeEnrichment {
+private fun TmdbEpisode.toEnrichment(seasonPoster: String?): TmdbEpisodeEnrichment {
     val title = name?.takeIf { it.isNotBlank() }
     val overview = overview?.takeIf { it.isNotBlank() }
     val thumbnail = stillPath?.takeIf { it.isNotBlank() }?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -1746,7 +1749,8 @@ private fun TmdbEpisode.toEnrichment(): TmdbEpisodeEnrichment {
         overview = overview,
         thumbnail = thumbnail,
         airDate = airDate,
-        runtimeMinutes = runtime
+        runtimeMinutes = runtime,
+        seasonPoster = seasonPoster
     )
 }
 

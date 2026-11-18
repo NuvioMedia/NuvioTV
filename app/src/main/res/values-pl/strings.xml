@@ -459,6 +459,8 @@
     <string name="layout_use_episode_thumbnails_cw_sub">Używaj miniatur odcinków jako domyślnego obrazu. Po wyłączeniu używa tła serii.</string>
     <string name="layout_hide_unreleased">Ukryj niewydane treści</string>
     <string name="layout_hide_unreleased_sub">Ukryj filmy i seriale, które jeszcze nie zostały wydane.</string>
+    <string name="layout_season_posters">Plakaty sezonów</string>
+    <string name="layout_season_posters_sub">Pokazuj sezony jako plakaty zamiast zakładek tekstowych, jeśli są dostępne.</string>
     <string name="layout_blur_unwatched">Rozmyj nieobejrzane odcinki</string>
     <string name="layout_blur_unwatched_sub">Rozmyj miniatury odcinków do czasu obejrzenia, aby uniknąć spoilerów.</string>
     <string name="layout_blur_cw_next_up">Rozmyj nieobejrzane w Kontynuuj oglądanie</string>
@@ -656,6 +658,8 @@
     <string name="tmdb_networks_subtitle">Sieci z logo z TMDB</string>
     <string name="tmdb_episodes_title">Odcinki</string>
     <string name="tmdb_episodes_subtitle">Tytuły, opisy, miniatury i czas trwania odcinków z TMDB</string>
+    <string name="tmdb_season_posters_title">Plakaty sezonów</string>
+    <string name="tmdb_season_posters_subtitle">Plakaty sezonów z TMDB w zakładkach sezonów na stronie szczegółów</string>
     <string name="tmdb_more_like_this_title">Podobne</string>
     <string name="tmdb_more_like_this_subtitle">Tła rekomendacji TMDB na stronie szczegółów</string>
     <string name="tmdb_collections_title">Kolekcje</string>
