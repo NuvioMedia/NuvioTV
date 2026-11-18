@@ -1,6 +1,5 @@
 package com.nuvio.tv.core.player
 
-import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import java.io.ByteArrayOutputStream
 
@@ -48,10 +47,12 @@ internal object HevcHdr10PlusStripper {
                 nalSize = (nalSize shl 8) or (sample[pos + i].toInt() and 0xFF)
             }
             val nalStart = pos + nalLengthFieldLength
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
-                // Fallback: If length field parsing fails due to missing/corrupted CSD,
-                // perform an emergency Annex-B byte scan pass over this sample frame.
-                return stripHdr10PlusAnnexB(sample, sampleLen)
+            if (nalSize <= 0 || nalSize > sampleLen - nalStart) {
+                // Malformed / not length-delimited. Never fall back to the Annex-B scanner here:
+                // a 4-byte length such as 00 00 01 xx looks like an Annex-B start code and the
+                // scanner would edit payload bytes without fixing the length prefix, and would
+                // return Annex-B bytes to a caller that expects length-delimited data.
+                return null
             }
             val nalType = (sample[nalStart].toInt() ushr 1) and 0x3F
             if (nalType == NAL_TYPE_PREFIX_SEI || nalType == NAL_TYPE_SUFFIX_SEI) {
@@ -81,50 +82,6 @@ internal object HevcHdr10PlusStripper {
                 out.write(sample, nalStart, nalSize)
             }
             pos = nalStart + nalSize
-        }
-        return if (changed) out.toByteArray() else null
-    }
-
-    /**
-     * Rewrites an Annex-B (TS/raw HEVC) sample, removing HDR10+ SEI messages.
-     * Returns the rewritten bytes, or null if nothing was stripped.
-     */
-    fun stripHdr10PlusAnnexB(sample: ByteArray, sampleLen: Int): ByteArray? {
-        val out = ByteArrayOutputStream(sampleLen)
-        var scan = 0
-        var changed = false
-        while (scan < sampleLen) {
-            val startCode = findStartCode(sample, scan, sampleLen)
-            if (startCode < 0) {
-                out.write(sample, scan, sampleLen - scan)
-                break
-            }
-            val scLen = startCodeLength(sample, startCode, sampleLen)
-            val nalBegin = startCode + scLen
-            val nextStartCode = findStartCode(sample, nalBegin + 2, sampleLen)
-            val nalEnd = if (nextStartCode < 0) sampleLen else nextStartCode
-
-            if (startCode > scan) out.write(sample, scan, startCode - scan)
-
-            if (nalBegin < nalEnd) {
-                val nalSize = nalEnd - nalBegin
-                val nalType = (sample[nalBegin].toInt() ushr 1) and 0x3F
-                if (nalType == NAL_TYPE_PREFIX_SEI || nalType == NAL_TYPE_SUFFIX_SEI) {
-                    val filtered = filterSeiNal(sample, nalBegin, nalSize)
-                    when {
-                        filtered == null -> out.write(sample, startCode, nalEnd - startCode)
-                        filtered.isNotEmpty() -> {
-                            changed = true
-                            out.write(sample, startCode, scLen)
-                            out.write(filtered)
-                        }
-                        else -> changed = true // entire NAL was HDR10+; drop it
-                    }
-                } else {
-                    out.write(sample, startCode, nalEnd - startCode)
-                }
-            }
-            scan = nalEnd
         }
         return if (changed) out.toByteArray() else null
     }
@@ -169,28 +126,31 @@ internal object HevcHdr10PlusStripper {
         var hasHdr10Plus = false
 
         while (pos < rbspEnd) {
-            // Lone 0x80 at end = RBSP stop bit; nothing more to parse
-            if (rbspEnd - pos == 1 && (rbspData[pos].toInt() and 0xFF) == 0x80) break
+            // rbsp_trailing_bits (0x80), optionally followed by zero padding; nothing more to parse
+            if (isRbspTrailing(rbspData, pos, rbspEnd)) break
 
             val msgStart = pos
 
             // Read SEI payloadType (variable-length encoding)
             var payloadType = 0
+            var typeTerminated = false
             while (pos < rbspEnd) {
                 val b = rbspData[pos++].toInt() and 0xFF
                 payloadType += b
-                if (b != 0xFF) break
+                if (b != 0xFF) { typeTerminated = true; break }
             }
 
             // Read SEI payloadSize (variable-length encoding)
             var payloadSize = 0
+            var sizeTerminated = false
             while (pos < rbspEnd) {
                 val b = rbspData[pos++].toInt() and 0xFF
                 payloadSize += b
-                if (b != 0xFF) break
+                if (b != 0xFF) { sizeTerminated = true; break }
             }
 
-            if (pos + payloadSize > rbspEnd) return null // malformed; keep original
+            if (!typeTerminated || !sizeTerminated) return null // malformed; keep original
+            if (payloadSize < 0 || payloadSize > rbspEnd - pos) return null // malformed; keep original
             val payloadStart = pos
             pos += payloadSize
             val msgEnd = pos
@@ -241,16 +201,12 @@ internal object HevcHdr10PlusStripper {
         return finalNal.toByteArray()
     }
 
-    private fun findStartCode(data: ByteArray, from: Int, limit: Int): Int {
-        var i = from
-        while (i + 2 < limit) {
-            if (data[i].toInt() == 0 && data[i + 1].toInt() == 0) {
-                if (data[i + 2].toInt() == 1) return i
-                if (i + 3 < limit && data[i + 2].toInt() == 0 && data[i + 3].toInt() == 1) return i
-            }
-            i++
+    private fun isRbspTrailing(data: ByteArray, pos: Int, end: Int): Boolean {
+        if ((data[pos].toInt() and 0xFF) != 0x80) return false
+        for (i in pos + 1 until end) {
+            if (data[i].toInt() != 0) return false
         }
-        return -1
+        return true
     }
 
     private fun matchesSignature(data: ByteArray, offset: Int, sig: ByteArray): Boolean {
@@ -261,10 +217,4 @@ internal object HevcHdr10PlusStripper {
         return true
     }
 
-    private fun startCodeLength(data: ByteArray, offset: Int, limit: Int): Int {
-        return if (offset + 3 < limit &&
-            data[offset].toInt() == 0 && data[offset + 1].toInt() == 0 &&
-            data[offset + 2].toInt() == 0 && data[offset + 3].toInt() == 1
-        ) 4 else 3
-    }
 }
