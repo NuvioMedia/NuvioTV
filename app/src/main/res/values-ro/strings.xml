@@ -821,4 +821,7 @@
     <string name="update_ignore">Ignoră</string>
       <string name="playback_player_auto">Automat (Cel mai bun pentru conținut)</string>
     <string name="playback_player_auto_desc">ExoPlayer pentru Filme și Seriale · MPV pentru Anime</string>
+    <string name="autosync_label_syncing">Se sincronizează automat</string>
+    <string name="autosync_label_audio_syncing">Se sincronizează cu audio</string>
+    <string name="autosync_label_audio_synced">Sincronizat cu audio</string>
 </resources>

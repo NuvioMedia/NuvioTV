@@ -161,6 +161,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
 
     val audioFallback = AudioSyncFallback.of(this)
     audioFallback?.arm()
+    val syncRun = AutoSyncSyncedSubtitle.startSyncing(selectedUrl, audio = false)
 
     automaticSubtitleSyncJob = scope.launch {
         launch {
@@ -324,7 +325,10 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
             }
         }
     }.also { job ->
-        job.invokeOnCompletion { selectedBodyDeferred.complete(null) }
+        job.invokeOnCompletion {
+            selectedBodyDeferred.complete(null)
+            AutoSyncSyncedSubtitle.stopSyncing(syncRun)
+        }
     }
 }
 
@@ -350,6 +354,7 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
     // Audio sync fallback: on mpv it hears the film through sampled spots only.
     val audioFallback = AudioSyncFallback.of(this)
     audioFallback?.arm()
+    val syncRun = AutoSyncSyncedSubtitle.startSyncing(selectedUrl, audio = false)
 
     automaticSubtitleSyncJob = scope.launch {
         fun streamUnchanged(): Boolean =
@@ -472,6 +477,7 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv failed", error)
         } finally {
             if (!audioTookOver && isActive) audioFallback?.disarm()
+            AutoSyncSyncedSubtitle.stopSyncing(syncRun)
         }
     }
 }
@@ -504,6 +510,7 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
     val candidatesAtStart = (_uiState.value.addonSubtitles + selectedSubtitle)
         .distinctBy { it.url }
     val candidateByUrl = candidatesAtStart.associateBy { it.url }
+    val syncRun = AutoSyncSyncedSubtitle.startSyncing(selectedUrl, audio = false)
 
     automaticSubtitleSyncJob = scope.launch {
         fun streamUnchanged(): Boolean =
@@ -626,6 +633,8 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
             throw cancel
         } catch (error: Throwable) {
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 libass failed", error)
+        } finally {
+            AutoSyncSyncedSubtitle.stopSyncing(syncRun)
         }
     }
 }
