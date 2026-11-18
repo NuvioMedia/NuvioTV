@@ -617,6 +617,15 @@ private fun ModernTrailerPlaybackTargetRow(
                 }
             )
         }
+        item(key = "trailer_target_hero_media_no_expand") {
+            SettingsChoiceChip(
+                label = stringResource(R.string.layout_trailer_hero_media_no_expand),
+                selected = selectedTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA_NO_EXPAND,
+                onClick = {
+                    onTargetSelected(FocusedPosterTrailerPlaybackTarget.HERO_MEDIA_NO_EXPAND)
+                }
+            )
+        }
     }
 }
 

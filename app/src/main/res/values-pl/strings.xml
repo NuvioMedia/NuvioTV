@@ -507,6 +507,7 @@
     <string name="layout_trailer_location_sub">Wybierz gdzie odtwarzać podgląd zwiastuna w Modern Home.</string>
     <string name="layout_trailer_expanded_card">Rozszerzona karta</string>
     <string name="layout_trailer_hero_media">Media hero</string>
+    <string name="layout_trailer_hero_media_no_expand">Media hero (bez rozszerzania)</string>
     <string name="layout_preset_compact">Kompaktowy</string>
     <string name="layout_preset_dense">Gęsty</string>
     <string name="layout_preset_standard">Standardowy</string>

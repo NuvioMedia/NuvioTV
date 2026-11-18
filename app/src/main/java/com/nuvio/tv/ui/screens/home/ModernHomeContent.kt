@@ -169,7 +169,7 @@ fun ModernHomeContent(
     val shouldActivateFocusedPosterFlow =
         effectiveExpandEnabled ||
             (effectiveAutoplayEnabled &&
-                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+                trailerPlaybackTarget != FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD)
     val presentation = modernPresentation
     val carouselRows = presentation.rows
 
@@ -860,7 +860,7 @@ fun ModernHomeContent(
                         effectiveAutoplayEnabled &&
                         !isSidebarExpanded.value &&
                         !isRapidHorizontalNav.value &&
-                        trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
+                        trailerPlaybackTarget != FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
                         !heroTrailerUrlsState.value.first.isNullOrBlank()
                 }
             }
