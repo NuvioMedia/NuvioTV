@@ -120,7 +120,9 @@ two minutes and has three steps:
    them open until the provider refuses one, up to 100 connections (or the
    allowance, when higher, up to 200). The connections that signed in are the
    account's limit at that moment, so other devices using the account lower it.
-   At most one batch is refused. A refused first connection is reported like
+   After a partial batch it tries one more sign-in with the successful sessions
+   still open. Only a repeated provider refusal confirms a limit. A transport
+   failure leaves the limit unknown. A failed first batch is reported like
    **Test provider**.
 2. **Port.** It measures the download speed with eight connections on the
    current port and, for a TLS provider, on 563 and 443. TLS providers are

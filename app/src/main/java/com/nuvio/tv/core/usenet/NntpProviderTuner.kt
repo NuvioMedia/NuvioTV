@@ -33,9 +33,9 @@ data class TuneProgress(
 }
 
 data class TuneResult(
-    /** Connections the provider accepted before it refused one; null when it accepted every one tried. */
+    /** Connections the provider accepted before it refused one; null when no refusal was confirmed. */
     val limit: Int?,
-    /** Connections tried while checking the limit. */
+    /** Confirmed simultaneous connections, including the refused slot if a limit was found. */
     val tried: Int,
     val port: Int,
     val tls: Boolean,
@@ -75,7 +75,7 @@ internal object TunePlan {
     /** At most this many connections are opened to find the limit, unless the allowance is higher. */
     const val PROBE_CAP = 100
     const val MAX_PROBE = 200
-    /** Connections opened at once while the limit is checked: at most this many refusals. */
+    /** Connections opened together before confirming a refusal with one more sign-in. */
     const val PROBE_BATCH = 8
     /** Connections used to compare ports: few enough to leave the line room, enough to fill most. */
     const val PORT_CONNECTIONS = 8
@@ -188,7 +188,7 @@ class NntpProviderTuner internal constructor(
             val held = mutableListOf<NntpSession>()
             var limit: Int? = null
             try {
-                while (held.size < cap && limit == null) {
+                while (held.size < cap) {
                     progress(TuneProgress.Phase.LIMIT, held.size, provider.port, provider.tls)
                     val batch = openBatch(provider, minOf(TunePlan.PROBE_BATCH, cap - held.size))
                     batch.mapNotNull { it.session }.let(held::addAll)
@@ -196,13 +196,20 @@ class NntpProviderTuner internal constructor(
                     if (failure != null) {
                         // The first connection failing is a setup problem, not a limit.
                         if (held.isEmpty()) return TuneOutcome.Failed(TuneFailure.CONNECT, failure)
-                        limit = held.size
+                        val retry = openBatch(provider, 1).single()
+                        if (retry.session == null) {
+                            if (retry.result == ProviderTestResult.REFUSED && batch.any { it.result == ProviderTestResult.REFUSED }) {
+                                limit = held.size
+                            }
+                            break
+                        }
+                        held += retry.session
                     }
                 }
             } finally {
                 held.forEach { session -> runCatching { session.command("QUIT") }; session.close() }
             }
-            val tried = if (limit == null) cap else limit + 1
+            val tried = if (limit == null) held.size else limit + 1
             settle()
 
             articles = try { testData.get() } catch (_: ExecutionException) { emptyList() }

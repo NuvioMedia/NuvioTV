@@ -107,7 +107,9 @@ class NntpProviderTunerTest {
     }
 
     /** Accepts [limit] signed-in connections at a time and serves [article] for every BODY; the rest are refused. */
-    private class FakeProvider(private val limit: Int, private val missing: Boolean = false) : AutoCloseable {
+    private class FakeProvider(private val limit: Int, private val missing: Boolean = false,
+        private val dropGreetings: Set<Int> = emptySet()) : AutoCloseable {
+        private val attempts = AtomicInteger()
         private val server = ServerSocket(0, 200, InetAddress.getByName("127.0.0.1"))
         val port get() = server.localPort
         val open = AtomicInteger()
@@ -128,6 +130,7 @@ class NntpProviderTunerTest {
         }
 
         private fun serve(socket: Socket) = socket.use {
+            if (attempts.incrementAndGet() in dropGreetings) return@use
             val output = socket.getOutputStream()
             val input = socket.getInputStream().bufferedReader(Charsets.ISO_8859_1)
             val counted = synchronized(this) {
@@ -179,9 +182,9 @@ class NntpProviderTunerTest {
             assertFalse(result.tls)
             assertTrue(result.mbps > 0)
             assertTrue(result.downloadedBytes > 0)
-            // Never more than the limit opened at once while measuring, and at most one batch refused.
+            // Never more than the limit opened at once while measuring, including a single confirmation after the batch refusal.
             assertTrue(server.most.get() <= 13)
-            assertTrue(server.refused.get() <= TunePlan.PROBE_BATCH)
+            assertEquals(4, server.refused.get())
             assertTrue(result.readings.all { it.connections <= 12 })
             assertEquals(listOf(TuneProgress.Phase.LIMIT, TuneProgress.Phase.PORT, TuneProgress.Phase.CONNECTIONS),
                 phases.distinct())
@@ -196,6 +199,16 @@ class NntpProviderTunerTest {
             assertEquals(0, server.refused.get())
             // A faster count may raise it; it is never lowered below the current allowance.
             assertTrue(result.connections >= 6)
+        }
+    }
+
+    @Test fun `two lost greetings leave the limit unknown and preserve the allowance`() = runBlocking {
+        FakeProvider(limit = 40, dropGreetings = setOf(8, 9)).use { server ->
+            val result = (tuner().tune(provider(server.port, 40), true, 2) {} as TuneOutcome.Success).result
+            assertNull(result.limit)
+            assertEquals(7, result.tried)
+            assertEquals(40, result.connections)
+            assertEquals(0, server.refused.get())
         }
     }
 
