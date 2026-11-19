@@ -43,7 +43,7 @@ class TrailerSettingsDataStore @Inject constructor(
                 playInBackground = prefs[playInBackgroundKey] ?: false,
                 pauseOnScroll = prefs[pauseOnScrollKey] ?: true,
                 allow4k = prefs[allow4kKey] ?: default4kTrailers,
-                subtitlesEnabled = prefs[subtitlesEnabledKey] ?: true
+                subtitlesEnabled = prefs[subtitlesEnabledKey] ?: false
             )
         }
     }
@@ -79,5 +79,5 @@ data class TrailerSettings(
     val playInBackground: Boolean = false,
     val pauseOnScroll: Boolean = true,
     val allow4k: Boolean = true,
-    val subtitlesEnabled: Boolean = true
+    val subtitlesEnabled: Boolean = false
 )
