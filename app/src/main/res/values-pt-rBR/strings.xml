@@ -1247,7 +1247,6 @@
     <string name="mdblist_rate_limited">O limite de solicitações do MDBList foi atingido. A sincronização continuará após o limite zerar.</string>
     <string name="mdblist_revoke_failed">Desconectado neste aparelho. Remova este app nas configurações da sua conta do MDBList para revogar o acesso.</string>
     <string name="mdblist_title">Avaliações do MDBList</string>
-    <string name="mdblist_subtitle">Configure avaliações externas no destaque.</string>
     <string name="mdblist_enable_title">Ativar avaliações do MDBList</string>
     <string name="mdblist_enable_subtitle">Exiba avaliações externas na tela de detalhes.</string>
     <string name="mdblist_api_key_title">Chave API</string>
@@ -1274,7 +1273,6 @@
     <string name="mdblist_show_on_hero_title">Usar avaliações no destaque</string>
     <string name="mdblist_show_on_hero_subtitle">Exiba avaliações do MDBList no carrossel de destaque (moderno e clássico/grade)</string>
     <string name="mdblist_rating_order_title">Ordem das avaliações</string>
-    <string name="mdblist_rating_order_subtitle">As 3 primeiras avaliações ativadas e disponíveis aparecem no destaque moderno. Use as setas para reordenar.</string>
     <string name="mdblist_dialog_title">Chave API MDBList</string>
     <string name="mdblist_dialog_subtitle">Insira sua chave para buscar as avaliações.</string>
     <string name="mdblist_dialog_placeholder">Digite sua chave API MDBList</string>

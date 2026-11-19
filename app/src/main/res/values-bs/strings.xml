@@ -578,7 +578,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList Ocjene</string>
-    <string name="mdblist_subtitle">Podesi vanjske ocjene prikazane u glavnoj sekciji detalja</string>
     <string name="mdblist_enable_title">Omogući MDBList Ocjene</string>
     <string name="mdblist_enable_subtitle">Dohvati ocjene od vanjskih provajdera na ekranu detalja</string>
     <string name="mdblist_api_key_title">API Key</string>

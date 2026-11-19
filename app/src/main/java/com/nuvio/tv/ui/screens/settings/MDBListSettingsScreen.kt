@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material3.Card as Material3Card
 import androidx.compose.material3.CardDefaults as Material3CardDefaults
 import androidx.compose.runtime.Composable
@@ -66,6 +68,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -537,11 +540,9 @@ private fun RatingOrderRow(
                     scale = ButtonDefaults.scale(focusedScale = 1f, pressedScale = 1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    Text(
-                        text = stringResource(
-                            if (isMoving) R.string.catalog_order_done else R.string.catalog_order_move
-                        ),
-                        style = MaterialTheme.typography.labelLarge
+                    Icon(
+                        imageVector = Icons.Default.Reorder,
+                        contentDescription = stringResource(R.string.cd_reorder)
                     )
                 }
             }

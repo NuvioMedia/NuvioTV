@@ -1330,7 +1330,7 @@
     <string name="mdblist_show_on_hero_title">Use Ratings on Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Show MDBList ratings on hero carousel (modern and classic/grid)</string>
     <string name="mdblist_rating_order_title">Rating Order</string>
-    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Select Move to reorder.</string>
+    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use the reorder button to change their order.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
@@ -1844,8 +1844,6 @@
     <string name="catalog_order_disabled_on_home">Disabled on Home</string>
     <string name="catalog_order_enable">Enable</string>
     <string name="catalog_order_disable">Disable</string>
-    <string name="catalog_order_move">Move</string>
-    <string name="catalog_order_done">Done</string>
     <string name="catalog_order_pinned">Pinned</string>
     <string name="catalog_order_pinned_to_top">Pinned to top</string>
     <string name="catalog_order_pin_to_move_toast">Remove pin to top from collection to move</string>
@@ -2641,6 +2639,7 @@
     <string name="cd_loading_logo">Loading logo</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
+    <string name="cd_reorder">Reorder</string>
     <string name="cd_edit">Edit</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_qr_code">QR Code</string>

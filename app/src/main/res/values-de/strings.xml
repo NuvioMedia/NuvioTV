@@ -836,7 +836,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList-Bewertungen</string>
-    <string name="mdblist_subtitle">Externe Bewertungen konfigurieren, die im Detailbereich angezeigt werden</string>
     <string name="mdblist_enable_title">MDBList-Bewertungen aktivieren</string>
     <string name="mdblist_enable_subtitle">Bewertungen von externen Anbietern im Metadaten-Detailbildschirm abrufen</string>
     <string name="mdblist_api_key_title">API-Schlüssel</string>

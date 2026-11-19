@@ -1115,7 +1115,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">تقييمات MDBList</string>
-    <string name="mdblist_subtitle">ضبط التقييمات الخارجية المعروضة في القسم المميز بصفحة التفاصيل.</string>
     <string name="mdblist_enable_title">تفعيل تقييمات MDBList</string>
     <string name="mdblist_enable_subtitle">جلب التقييمات من مصادر خارجية في شاشة تفاصيل البيانات الوصفية.</string>
     <string name="mdblist_api_key_title">مفتاح API</string>
@@ -3167,7 +3166,6 @@
     <string name="mdblist_show_on_hero_title">استخدام التقييمات في القسم المميز</string>
     <string name="mdblist_show_on_hero_subtitle">إظهار تقييمات MDBList في القسم المميز (النمط الحديث والكلاسيكي أو الشبكي)</string>
     <string name="mdblist_rating_order_title">ترتيب التقييمات</string>
-    <string name="mdblist_rating_order_subtitle">تُعرض أول 3 تقييمات مفعّلة ومتاحة في القسم المميز الحديث. استخدم الأسهم لإعادة الترتيب.</string>
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="official_server_action">استخدام الخادم الرسمي</string>
     <string name="official_server_description">سيتم تسجيل خروجك من الخادم المخصص وسيُعاد تشغيل التطبيق بالخدمة الرسمية.</string>

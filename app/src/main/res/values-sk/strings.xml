@@ -848,7 +848,6 @@
     
     
     <string name="mdblist_title">MDBList hodnotenia</string>
-    <string name="mdblist_subtitle">Nastavenie externých hodnotení zobrazených v detaile</string>
     <string name="mdblist_enable_title">Povoliť MDBList hodnotenia</string>
     <string name="mdblist_enable_subtitle">Získať hodnotenia z externých poskytovateľov v detaile metadát</string>
     <string name="mdblist_api_key_title">API kľúč</string>
@@ -3293,7 +3292,6 @@
     <string name="mdblist_show_on_hero_title">Použiť hodnotenia v hlavnom sekčnom paneli</string>
     <string name="mdblist_show_on_hero_subtitle">Zobrazovať hodnotenia MDBList v hlavnom karuseli (moderné aj klasické/mriežka)</string>
     <string name="mdblist_rating_order_title">Poradie hodnotení</string>
-    <string name="mdblist_rating_order_subtitle">Prvé 3 povolené a dostupné hodnotenia sa zobrazia v modernom hlavnom paneli. Zmeňte poradie pomocou šípok.</string>
     <string name="mdblist_library_lists">Zoznamy v knižnici</string>
     <string name="mdblist_library_lists_description">Vyberte, ktoré zoznamy MDBList sa zobrazia v Knižnici a v Správe zoznamov. Zoznam sledovaných sa zobrazuje vždy.</string>
     <string name="mdblist_library_lists_empty">Vo vašom účte MDBList sa zatiaľ nenašli žiadne zoznamy. Synchronizujte pre ich načítanie.</string>

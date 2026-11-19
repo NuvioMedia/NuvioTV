@@ -1283,7 +1283,7 @@
     <string name="mdblist_show_on_hero_title">Hero Alanında Puanları Göster</string>
     <string name="mdblist_show_on_hero_subtitle">Hero karuselinde MDBList puanlarını göster (modern ve klasik/ızgara)</string>
     <string name="mdblist_rating_order_title">Puan Sıralaması</string>
-    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için Taşı\'yı seçin.</string>
+    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için yeniden sırala düğmesini kullanın.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
@@ -1783,8 +1783,6 @@
     <string name="catalog_order_disabled_on_home">Ana Sayfada Devre Dışı</string>
     <string name="catalog_order_enable">Etkinleştir</string>
     <string name="catalog_order_disable">Devre Dışı</string>
-    <string name="catalog_order_move">Taşı</string>
-    <string name="catalog_order_done">Tamam</string>
     <string name="catalog_order_pinned">Sabitlendi</string>
     <string name="catalog_order_pinned_to_top">Üste sabitlendi</string>
     <string name="catalog_order_pin_to_move_toast">Taşımak için koleksiyondaki üste sabitlemeyi kaldır</string>
@@ -2828,6 +2826,7 @@
     <string name="cd_loading_logo">Logo yükleniyor</string>
     <string name="cd_move_up">Yukarı taşı</string>
     <string name="cd_move_down">Aşağı taşı</string>
+    <string name="cd_reorder">Yeniden sırala</string>
     <string name="cd_edit">Düzenle</string>
     <string name="cd_delete">Sil</string>
     <string name="cd_qr_code">QR kod</string>

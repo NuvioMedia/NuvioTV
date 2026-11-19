@@ -1303,7 +1303,6 @@
     <string name="mdblist_rate_limited">O limite de pedidos do MDBList foi atingido. A sincronização será retomada após a reposição do limite.</string>
     <string name="mdblist_revoke_failed">Desligado neste dispositivo. Remove esta aplicação nas definições da tua conta MDBList para revogar o acesso.</string>
     <string name="mdblist_title">Classificações MDBList</string>
-    <string name="mdblist_subtitle">Configura as classificações externas mostradas no destaque dos detalhes</string>
     <string name="mdblist_enable_title">Ativar classificações MDBList</string>
     <string name="mdblist_enable_subtitle">Obter classificações de fornecedores externos no ecrã de detalhes de metadados</string>
     <string name="mdblist_api_key_title">Chave da API</string>
@@ -1330,7 +1329,6 @@
     <string name="mdblist_show_on_hero_title">Usar classificações no destaque</string>
     <string name="mdblist_show_on_hero_subtitle">Mostrar classificações MDBList no carrossel de destaque (moderno e clássico/grelha)</string>
     <string name="mdblist_rating_order_title">Ordem das classificações</string>
-    <string name="mdblist_rating_order_subtitle">As primeiras 3 classificações ativadas e disponíveis são mostradas no destaque moderno. Usa as setas para reordenar.</string>
     <string name="mdblist_dialog_title">Chave da API MDBList</string>
     <string name="mdblist_dialog_subtitle">Introduz a tua chave da API para obter classificações externas</string>
     <string name="mdblist_dialog_placeholder">Introduzir chave da API MDBList</string>

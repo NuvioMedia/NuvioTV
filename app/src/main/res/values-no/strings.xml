@@ -505,7 +505,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList-vurderinger</string>
-    <string name="mdblist_subtitle">Konfigurer eksterne vurderinger vist i helt-delen av detaljer</string>
     <string name="mdblist_enable_title">Aktiver MDBList-vurderinger</string>
     <string name="mdblist_enable_subtitle">Hent vurderinger fra eksterne leverandører i detaljedskjermen for metadata</string>
     <string name="mdblist_api_key_title">API-nøkkel</string>

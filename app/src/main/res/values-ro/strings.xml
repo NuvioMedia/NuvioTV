@@ -355,7 +355,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Evaluări MDBList</string>
-    <string name="mdblist_subtitle">Configurează ratingurile externe afișate în pagina de detaliu</string>
     <string name="mdblist_enable_title">Activează ratingurile MDBList</string>
     <string name="mdblist_enable_subtitle">Obține ratinguri de la furnizori externi în ecranul de detalii ale metadatelor</string>
     <string name="mdblist_api_key_title">Cheie API</string>

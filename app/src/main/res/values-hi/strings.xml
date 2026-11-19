@@ -458,7 +458,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList रेटिंग्स</string>
-    <string name="mdblist_subtitle">डिटेल हीरो में दिखाई जाने वाली बाहरी रेटिंग्स कॉन्फ़िगर करें</string>
     <string name="mdblist_enable_title">MDBList रेटिंग्स सक्षम करें</string>
     <string name="mdblist_enable_subtitle">मेटाडेटा डिटेल स्क्रीन में बाहरी प्रोवाइडर से रेटिंग प्राप्त करें</string>
     <string name="mdblist_api_key_title">API Key</string>

@@ -943,7 +943,6 @@
 
 
     <string name="mdblist_title">Hodnocení MDBList</string>
-    <string name="mdblist_subtitle">Konfigurovat externí hodnocení zobrazená v hrdinovi podrobností</string>
     <string name="mdblist_enable_title">Povolit hodnocení MDBList</string>
     <string name="mdblist_enable_subtitle">Získávat hodnocení od externích poskytovatelů na obrazovce podrobností metadat</string>
     <string name="mdblist_api_key_title">API klíč</string>

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -891,10 +892,9 @@ fun FolderEditorContent(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                     ) {
-                        Text(
-                            text = stringResource(
-                                if (isMoving) R.string.catalog_order_done else R.string.catalog_order_move,
-                            ),
+                        Icon(
+                            imageVector = Icons.Default.Reorder,
+                            contentDescription = stringResource(R.string.cd_reorder)
                         )
                     }
                     Button(

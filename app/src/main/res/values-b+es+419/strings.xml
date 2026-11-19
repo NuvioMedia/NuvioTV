@@ -1251,7 +1251,6 @@
     <string name="mdblist_rate_limited">Se alcanzó el límite de solicitudes de MDBList. La sincronización se reanudará cuando se restablezca el límite.</string>
     <string name="mdblist_revoke_failed">Se desconectó en este dispositivo. Elimina esta app desde la configuración de tu cuenta de MDBList para revocar su acceso.</string>
     <string name="mdblist_title">Calificaciones de MDBList</string>
-    <string name="mdblist_subtitle">Configurar calificaciones externas mostradas en la sección destacada</string>
     <string name="mdblist_enable_title">Habilitar Calificaciones de MDBList</string>
     <string name="mdblist_enable_subtitle">Obtener calificaciones de proveedores externos en la pantalla de detalles</string>
     <string name="mdblist_api_key_title">Clave de API</string>
@@ -1278,7 +1277,6 @@
     <string name="mdblist_show_on_hero_title">Usar calificaciones en el hero</string>
     <string name="mdblist_show_on_hero_subtitle">Mostrar las calificaciones de MDBList en el carrusel del hero (moderno y clásico/cuadrícula)</string>
     <string name="mdblist_rating_order_title">Orden de calificaciones</string>
-    <string name="mdblist_rating_order_subtitle">Las primeras 3 calificaciones habilitadas y disponibles se muestran en el hero moderno. Usa las flechas para cambiar el orden.</string>
     <string name="mdblist_dialog_title">Clave API de MDBList</string>
     <string name="mdblist_dialog_subtitle">Ingresa tu clave API para obtener calificaciones externas</string>
     <string name="mdblist_dialog_placeholder">Ingresa la clave API de MDBList</string>

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -631,7 +632,7 @@ private fun FolderListItem(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 Button(
                     onClick = if (isMoving) onConfirmMove else onStartMove,
                     enabled = isMoving || (canMove && actionsEnabled),
@@ -652,21 +653,49 @@ private fun FolderListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
-                    Text(
-                        text = stringResource(
-                            if (isMoving) R.string.catalog_order_done else R.string.catalog_order_move,
-                        ),
+                    Icon(
+                        imageVector = Icons.Default.Reorder,
+                        contentDescription = stringResource(R.string.cd_reorder)
                     )
                 }
-                NuvioButton(
+                Button(
                     onClick = onEdit,
                     enabled = actionsEnabled && !isMoving,
-                    modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier
+                    modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier,
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Primary
+                    ),
+                    border = ButtonDefaults.border(
+                        focusedBorder = Border(
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                        )
+                    ),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
-                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit), tint = NuvioTheme.colors.TextSecondary)
+                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                 }
-                NuvioButton(onClick = onDelete, enabled = actionsEnabled && !isMoving) {
-                    Icon(Icons.Default.Delete, stringResource(R.string.cd_delete), tint = NuvioTheme.colors.TextSecondary)
+                Button(
+                    onClick = onDelete,
+                    enabled = actionsEnabled && !isMoving,
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Error
+                    ),
+                    border = ButtonDefaults.border(
+                        focusedBorder = Border(
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                        )
+                    ),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                ) {
+                    Icon(Icons.Default.Delete, stringResource(R.string.cd_delete))
                 }
             }
         }

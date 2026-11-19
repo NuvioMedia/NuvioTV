@@ -449,7 +449,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList įvertinimai</string>
-    <string name="mdblist_subtitle">Konfigūruoti išorinius įvertinimus, rodomus pagrindinėje informacijos dalyje</string>
     <string name="mdblist_enable_title">Įjungti MDBList įvertinimus</string>
     <string name="mdblist_enable_subtitle">Gauti įvertinimus iš išorinių teikėjų išsamios informacijos ekrane</string>
     <string name="mdblist_api_key_title">API raktas</string>
@@ -1797,7 +1796,6 @@
     <string name="mdblist_show_on_hero_title">Rodyti įvertinimus pagrindinėje skiltyje</string>
     <string name="mdblist_show_on_hero_subtitle">Rodyti MDBList įvertinimus pagrindinėje karuselėje (modernioje ir klasikinėje / tinklelio)</string>
     <string name="mdblist_rating_order_title">Įvertinimų tvarka</string>
-    <string name="mdblist_rating_order_subtitle">Modernioje pagrindinėje skiltyje rodomi pirmi 3 įjungti ir prieinami įvertinimai. Tvarką keiskite rodyklėmis.</string>
     <string name="mdblist_library_lists">Bibliotekos sąrašai</string>
     <string name="mdblist_library_lists_description">Pasirinkite, kurie MDBList sąrašai rodomi bibliotekoje ir sąrašų tvarkymo lange. Žiūrėtinų sąrašas rodomas visada.</string>
     <string name="mdblist_library_lists_empty">Jūsų MDBList paskyroje sąrašų dar nerasta. Sinchronizuokite, kad juos įkeltumėte.</string>

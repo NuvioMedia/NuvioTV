@@ -18,8 +18,10 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -119,8 +121,7 @@ class MDBListSettingsReorderFocusTest {
             }
         }
 
-        val moveLabel = context.getString(R.string.catalog_order_move)
-        val doneLabel = context.getString(R.string.catalog_order_done)
+        val moveLabel = context.getString(R.string.cd_reorder)
 
         // Focus IMDb toggle independently (focus ring wraps only the toggle)
         val imdbToggle = composeRule.onNodeWithContentDescription("IMDb")
@@ -129,7 +130,7 @@ class MDBListSettingsReorderFocusTest {
         imdbToggle.assertIsFocused()
 
         // Focus first Move button (IMDb) and press DirectionCenter
-        val firstMoveButton = composeRule.onAllNodesWithText(moveLabel).onFirst()
+        val firstMoveButton = composeRule.onAllNodesWithContentDescription(moveLabel).onFirst()
         firstMoveButton.performSemanticsAction(SemanticsActions.RequestFocus)
         composeRule.waitForIdle()
         firstMoveButton.assertIsFocused()
@@ -138,21 +139,20 @@ class MDBListSettingsReorderFocusTest {
         firstMoveButton.performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.waitForIdle()
 
-        // Focus must remain on Done button and NOT jump to Integrations rail
+        // Focus must remain on the moving row's action button and NOT jump to Integrations rail
         assertFalse("Focus should never jump to Integrations rail on Move click", railStoleFocus)
         composeRule.onNodeWithText("Integrations").assertIsNotFocused()
-        val doneButton = composeRule.onNodeWithText(doneLabel)
-        doneButton.assertIsDisplayed()
-        doneButton.assertIsFocused()
+        val movingButton = composeRule.onNode(isFocused())
+        movingButton.assertIsDisplayed()
 
         // Move IMDb down one slot and confirm
-        doneButton.performKeyInput { pressKey(Key.DirectionDown) }
+        movingButton.performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.waitForIdle()
         assertEquals(listOf("trakt", "imdb", "tmdb"), uiState.ratingOrder)
-        doneButton.assertIsFocused()
+        composeRule.onNode(isFocused()).assertIsFocused()
         assertFalse("Focus should not jump to rail while moving", railStoleFocus)
 
-        doneButton.performKeyInput { pressKey(Key.DirectionCenter) }
+        composeRule.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.waitForIdle()
         assertEquals(null, uiState.movingRatingKey)
         assertEquals(listOf("trakt", "imdb", "tmdb"), uiState.ratingOrder)

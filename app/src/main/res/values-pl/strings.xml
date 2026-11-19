@@ -569,7 +569,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Oceny MDBList</string>
-    <string name="mdblist_subtitle">Konfiguruj zewnętrzne oceny widoczne w szczegółach</string>
     <string name="mdblist_enable_title">Włącz oceny MDBList</string>
     <string name="mdblist_enable_subtitle">Pobieraj oceny od zewnętrznych dostawców na ekranie szczegółów</string>
     <string name="mdblist_api_key_title">Klucz API</string>
@@ -596,7 +595,6 @@
     <string name="mdblist_show_on_hero_title">Oceny na stronie głównej</string>
     <string name="mdblist_show_on_hero_subtitle">Pokaż oceny MDBList na karuzeli głównej (modern i classic/grid)</string>
     <string name="mdblist_rating_order_title">Kolejność ocen</string>
-    <string name="mdblist_rating_order_subtitle">Pierwsze 3 włączone i dostępne oceny są widoczne na modern hero. Użyj strzałek, aby zmienić kolejność.</string>
     <string name="mdblist_ratings_credentials_subtitle">Użyj konta MDBList połączonego w Śledzeniu lub wprowadź oddzielny klucz API dla ocen.</string>
     <string name="mdblist_ratings_connected_account">Używa połączonego konta</string>
     <string name="mdblist_ratings_key_override_subtitle">Klucz API zastępuje połączone konto dla ocen. Wyczyść go, aby ponownie użyć połączonego konta.</string>

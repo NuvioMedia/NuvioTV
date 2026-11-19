@@ -1229,7 +1229,6 @@
 
 
     <string name="mdblist_title">MDBList-beoordelingen</string>
-    <string name="mdblist_subtitle">Configureer externe beoordelingen in de detail-hero</string>
     <string name="mdblist_enable_title">MDBList-beoordelingen inschakelen</string>
     <string name="mdblist_enable_subtitle">Haal beoordelingen op van externe providers in het detailscherm</string>
     <string name="mdblist_api_key_title">API-sleutel</string>
@@ -1256,7 +1255,6 @@
     <string name="mdblist_show_on_hero_title">Beoordelingen in hero gebruiken</string>
     <string name="mdblist_show_on_hero_subtitle">Toon MDBList-beoordelingen in de hero-carrousel (modern en klassiek/raster)</string>
     <string name="mdblist_rating_order_title">Volgorde van beoordelingen</string>
-    <string name="mdblist_rating_order_subtitle">De eerste 3 ingeschakelde en beschikbare beoordelingen worden in de moderne hero getoond. Gebruik de pijlen om de volgorde te wijzigen.</string>
     <string name="mdblist_dialog_title">MDBList API-sleutel</string>
     <string name="mdblist_dialog_subtitle">Voer je API-sleutel in om externe beoordelingen op te halen</string>
     <string name="mdblist_dialog_placeholder">Voer MDBList API-sleutel in</string>

@@ -842,7 +842,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Rating MDBList</string>
-    <string name="mdblist_subtitle">Konfigurasikan rating eksternal yang ditampilkan di hero detail</string>
     <string name="mdblist_enable_title">Aktifkan Rating MDBList</string>
     <string name="mdblist_enable_subtitle">Ambil rating dari penyedia eksternal di layar detail metadata</string>
     <string name="mdblist_api_key_title">Kunci API</string>
@@ -2895,7 +2894,6 @@
     <string name="mdblist_show_on_hero_title">Gunakan Rating di Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Tampilkan rating MDBList pada karusel hero (modern dan klasik/grid)</string>
     <string name="mdblist_rating_order_title">Urutan Rating</string>
-    <string name="mdblist_rating_order_subtitle">3 rating pertama yang aktif dan tersedia ditampilkan pada hero modern. Gunakan panah untuk mengubah urutan.</string>
     <string name="mdblist_library_lists">Daftar pustaka</string>
     <string name="mdblist_library_lists_description">Pilih daftar MDBList mana yang muncul di Pustaka dan di Kelola Daftar. Daftar Tontonan selalu ditampilkan.</string>
     <string name="mdblist_library_lists_empty">Belum ada daftar yang ditemukan di akun MDBList Anda. Sinkronkan untuk memuatnya.</string>

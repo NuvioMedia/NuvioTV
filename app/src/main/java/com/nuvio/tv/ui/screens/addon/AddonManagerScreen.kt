@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Reorder
@@ -1742,10 +1743,9 @@ private fun AddonCardContent(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                         ) {
-                            Text(
-                                text = stringResource(
-                                    if (isMoving) R.string.catalog_order_done else R.string.catalog_order_move,
-                                ),
+                            Icon(
+                                imageVector = Icons.Default.Reorder,
+                                contentDescription = stringResource(R.string.cd_reorder)
                             )
                         }
                     }
@@ -1772,7 +1772,10 @@ private fun AddonCardContent(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                     ) {
-                        Text(text = stringResource(R.string.addon_remove))
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.cd_delete)
+                        )
                     }
                 }
             }
