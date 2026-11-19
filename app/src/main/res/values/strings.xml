@@ -1165,7 +1165,7 @@
     <string name="layout_trailer_4k">4K Trailers</string>
     <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
     <string name="layout_trailer_subtitles">Trailer Subtitles</string>
-    <string name="layout_trailer_subtitles_sub">Show YouTube captions on trailers everywhere they play, including the home screen, in your preferred subtitle language when the trailer has one. Follows the Strip SDH subtitles setting.</string>
+    <string name="layout_trailer_subtitles_sub">Show YouTube captions on trailers in your preferred subtitle language, when available.</string>
     <string name="layout_detail_group_episodes">Episodes</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>

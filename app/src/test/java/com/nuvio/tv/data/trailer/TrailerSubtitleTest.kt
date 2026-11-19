@@ -11,21 +11,27 @@ class TrailerSubtitleTest {
     @Test
     fun `preferred language wins and author captions beat auto-generated`() {
         val author = track("en-US")
-        val picked = pickTrailerSubtitle(listOf(track("fr"), track("en", auto = true), author), "en")
+        val picked = pickTrailerSubtitle(listOf(track("fr"), track("en", auto = true), author), "en", null)
         assertEquals(author, picked)
     }
 
     @Test
-    fun `single other language is used as a fallback`() {
+    fun `secondary language is used when the preferred one is missing`() {
         val auto = track("fr", auto = true)
         val author = track("fr-CA")
-        assertEquals(author, pickTrailerSubtitle(listOf(auto, author), "en"))
+        assertEquals(author, pickTrailerSubtitle(listOf(track("de"), auto, author), "pl", "fr"))
     }
 
     @Test
-    fun `several other languages or no tracks pick nothing`() {
-        assertNull(pickTrailerSubtitle(listOf(track("fr"), track("de")), "en"))
-        assertNull(pickTrailerSubtitle(emptyList(), "en"))
+    fun `other languages are never picked`() {
+        assertNull(pickTrailerSubtitle(listOf(track("en")), "pl", null))
+        assertNull(pickTrailerSubtitle(listOf(track("fr"), track("de")), "en", null))
+        assertNull(pickTrailerSubtitle(emptyList(), "en", "fr"))
+    }
+
+    @Test
+    fun `none as preferred language picks nothing`() {
+        assertNull(pickTrailerSubtitle(listOf(track("en")), "none", "en"))
     }
 
     @Test

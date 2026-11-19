@@ -128,8 +128,12 @@ class TrailerPlayerPool @Inject constructor(
     suspend fun subtitleFor(streamUrl: String): TrailerSubtitleTrack? {
         val settings = trailerSettingsDataStore.settings.first()
         if (!settings.subtitlesEnabled) return null
-        val preferred = playerSettingsDataStore.playerSettings.first().subtitleStyle.preferredLanguage
-        return pickTrailerSubtitle(youTubeExtractor.captionTracks(streamUrl), preferred)
+        val style = playerSettingsDataStore.playerSettings.first().subtitleStyle
+        return pickTrailerSubtitle(
+            youTubeExtractor.captionTracks(streamUrl),
+            style.preferredLanguage,
+            style.secondaryPreferredLanguage
+        )
     }
 
     /**
