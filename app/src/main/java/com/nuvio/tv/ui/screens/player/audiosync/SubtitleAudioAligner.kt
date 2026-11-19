@@ -35,6 +35,9 @@ internal object SubtitleAudioAligner {
     /** Peaks this close to either end of the searched shift range are flagged as unreliable. */
     const val EDGE_MARGIN_MS = 1_500.0
 
+    /** Searches over at most this many lags (about ±4 s) skip the FFTs; see [accumulateIntervalTerms]. */
+    private const val INTERVAL_MAX_LAGS = 256
+
     /** Keeps a mistaken ~0.1% ratio from winning on noise over the plain 1.0 hypothesis. */
     private const val SCALE_PREFERENCE_MARGIN = 0.01
 
@@ -127,6 +130,27 @@ internal object SubtitleAudioAligner {
             if (n == 0) continue
             // g covers frames [fromFrame - maxLag, fromFrame + n - minLag).
             val gLength = n + lagCount - 1
+            if (lagCount <= INTERVAL_MAX_LAGS) {
+                // Few lags: running sums of the audio side replace the transforms (see accumulateIntervalTerms).
+                val centered = DoubleArray(n + 1)
+                val mask = DoubleArray(n + 1)
+                var known = 0
+                for (i in 0 until n) {
+                    val p = segment.probabilities[i]
+                    var c = 0.0
+                    if (!p.isNaN()) {
+                        c = p - mean
+                        energy += c * c
+                        speechSeconds += p * frameMs / 1_000.0
+                        known++
+                    }
+                    centered[i + 1] = centered[i] + c
+                    mask[i + 1] = mask[i] + if (p.isNaN()) 0.0 else 1.0
+                }
+                if (known == 0) continue
+                parts += Part(null, centered, mask, n, segment.fromFrame, gLength, fullyKnown = known == n)
+                continue
+            }
             // Lags k < lagCount only read g[i + k] with i < n, so i + k < gLength: no wrap-around.
             val size = Fft.sizeFor(gLength)
             // Audio side, packed as (centered + i * mask), shared by every scale and subtitle.
@@ -152,9 +176,12 @@ internal object SubtitleAudioAligner {
         return PreparedSpeech(parts, count, sqrt(energy), speechSeconds, minLag, maxLag, detectorBiasMs)
     }
 
-    /** One transformed stretch of speech. */
+    /**
+     * One stretch of speech: transformed, or with no [fft] (a narrow search), [audioRe] and
+     * [audioIm] are running sums of the centered values and of the known-frame mask instead.
+     */
     internal class Part(
-        val fft: Fft,
+        val fft: Fft?,
         val audioRe: DoubleArray,
         val audioIm: DoubleArray,
         val n: Int,
@@ -263,6 +290,10 @@ internal object SubtitleAudioAligner {
             for (part in parts) {
                 val reusable = renderBuffers(part.gLength, scales.size)
                 val g = scales.mapIndexed { j, scale -> track.renderInto(reusable[j], part.fromFrame - maxLag, scale) }
+                if (part.fft == null) {
+                    for (j in scales.indices) accumulateIntervalTerms(part, g[j], lagCount, c1[j], cm[j], cm2[j])
+                    continue
+                }
                 val buffers = scratch(part.fft.size)
                 if (part.fullyKnown) {
                     for (first in scales.indices step 2) {
@@ -307,7 +338,7 @@ internal object SubtitleAudioAligner {
         cm2: DoubleArray,
         scratch: Scratch,
     ) {
-        val fft = part.fft
+        val fft = part.fft!!
         val size = fft.size
         val audioRe = part.audioRe
         val audioIm = part.audioIm
@@ -372,7 +403,7 @@ internal object SubtitleAudioAligner {
         c1B: DoubleArray?,
         scratch: Scratch,
     ) {
-        val fft = part.fft
+        val fft = part.fft!!
         val size = fft.size
         val audioRe = part.audioRe
         val audioIm = part.audioIm
@@ -427,6 +458,34 @@ internal object SubtitleAudioAligner {
         for (k in 0 until lagCount) {
             cm[k] += prefix[k + n] - prefix[k]
             cm2[k] += prefixSquares[k + n] - prefixSquares[k]
+        }
+    }
+
+    /**
+     * The same terms as [accumulateTerms] for a stretch prepared without transforms. The rendered
+     * subtitle is constant over runs of frames, so each run adds its value times a difference of
+     * running sums per lag: work grows with runs times lags rather than with the stretch's length.
+     */
+    private fun accumulateIntervalTerms(part: Part, g: DoubleArray, lagCount: Int, c1: DoubleArray, cm: DoubleArray, cm2: DoubleArray) {
+        val centered = part.audioRe
+        val mask = part.audioIm
+        val n = part.n
+        var from = 0
+        while (from < g.size) {
+            val value = g[from]
+            var to = from + 1
+            while (to < g.size && g[to] == value) to++
+            // Audio frames i with i + k in [from, to), clipped to [0, n).
+            if (value != 0.0) for (k in maxOf(0, from - n + 1)..minOf(lagCount - 1, to - 1)) {
+                val lo = maxOf(from - k, 0)
+                val hi = minOf(to - k, n)
+                if (hi <= lo) continue
+                val known = mask[hi] - mask[lo]
+                c1[k] += value * (centered[hi] - centered[lo])
+                cm[k] += value * known
+                cm2[k] += value * value * known
+            }
+            from = to
         }
     }
 

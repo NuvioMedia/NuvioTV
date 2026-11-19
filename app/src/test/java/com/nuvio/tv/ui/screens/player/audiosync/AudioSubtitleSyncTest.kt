@@ -105,6 +105,33 @@ class AudioSubtitleSyncTest {
     }
 
     @Test
+    fun narrowSearchScoresMatchTheTransformedSearch() {
+        val cues = syntheticCues(Random(41), durationMs = 10 * 60_000L)
+        val timeline = speechFor(cues, SubtitleSyncSegment(0L, 25.0 / 24.0, 3_210.0), Random(42))
+        val range = timeline.knownRange()!!
+        val probabilities = timeline.snapshot(range.first, range.last + 1)
+        // Unknown audio inside the stretch, as from a dropped decoder buffer.
+        for (i in 4_000 until 4_300) probabilities[i] = Float.NaN
+        val segments = listOf(
+            SpeechSegment(range.first, probabilities.copyOfRange(0, 9_000)),
+            SpeechSegment(range.first + 11_000, probabilities.copyOfRange(11_000, probabilities.size)),
+        )
+        val track = SubtitleSpeechTrack.fromCues(cues)
+        val wide = assertNotNull(SubtitleAudioAligner.prepare(segments, -60_000.0, 60_000.0))
+        for (centre in listOf(3_210.0, 2_000.0, -700.0)) {
+            for (scale in SubtitleAudioAligner.CANDIDATE_SCALES) {
+                val narrow = assertNotNull(SubtitleAudioAligner.prepare(segments, centre - 1_500.0, centre + 1_500.0))
+                val direct = assertNotNull(narrow.estimate(track, doubleArrayOf(scale)))
+                val transformed = assertNotNull(wide.estimate(track, doubleArrayOf(scale), centre - 1_500.0, centre + 1_500.0))
+                assertEquals(transformed.shiftMs, direct.shiftMs, 1e-6)
+                assertEquals(transformed.peak, direct.peak, 1e-9)
+                assertEquals(transformed.prominence, direct.prominence, 1e-9)
+                assertEquals(transformed.atSearchEdge, direct.atSearchEdge)
+            }
+        }
+    }
+
+    @Test
     fun alignerDetectsFrameRateMismatch() {
         val cues = syntheticCues(Random(3), durationMs = 12 * 60_000L)
         val truth = SubtitleSyncSegment(0L, 25.0 / 23.976, -1_200.0)
