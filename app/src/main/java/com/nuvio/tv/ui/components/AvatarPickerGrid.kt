@@ -258,7 +258,7 @@ private fun CategoryTab(
             .focusRequester(focusRequester)
             .focusProperties {
                 if (downFocusRequester != null) down = downFocusRequester
-                if (leftFocusRequester != null) left = leftFocusRequester
+                if (leftFocusRequester != null) start = leftFocusRequester
             }
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
@@ -331,7 +331,7 @@ private fun AvatarGridItem(
             .then(if (entryFocusRequester != null) Modifier.focusRequester(entryFocusRequester) else Modifier)
             .focusProperties {
                 if (upFocusRequester != null) up = upFocusRequester
-                if (leftFocusRequester != null) left = leftFocusRequester
+                if (leftFocusRequester != null) start = leftFocusRequester
             }
             .onFocusChanged {
                 isFocused = it.isFocused
