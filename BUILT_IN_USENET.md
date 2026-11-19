@@ -147,7 +147,12 @@ for speed tests, downloaded from sabnzbd.org while the limit is checked. Each
 step downloads for 8 seconds after a 1.5-second warm-up, with as many pipelined
 requests per connection as the engine uses for the chosen performance profile
 (2 for Low memory, otherwise 4). A step on a fast line ends early after 250 MB
-once 3 seconds were measured. A run downloads up to about 1 GB, which counts
+once 3 seconds were measured. At the end of a step each connection sends QUIT
+and reads the replies still due before it closes, for up to twice the time
+they should take at the measured speed (3 to 15 seconds; 3 after **Stop**).
+Some servers keep counting a connection closed in the middle of a reply for
+minutes, so the next step or a rerun would be refused. The 2.5-second pause
+between steps runs during that wait. A run downloads up to about 1 GB, which counts
 against a block account; the result shows how much. A provider that lacks the
 test articles cannot be measured, and the run says so.
 
