@@ -191,22 +191,18 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
     }
 
     private fun session(session: NntpSession, provider: UsenetProvider): ProviderTestResult {
-        fun code() = session.readLine()?.take(3)?.toIntOrNull() ?: throw IOException("Connection closed")
+        fun reply() = session.readLine()?.takeIf { it.take(3).toIntOrNull() != null } ?: throw IOException("Connection closed")
+        fun code(line: String) = line.take(3).toInt()
         // 400 and 502 greetings mean the service is unavailable, often too many connections.
-        if (code() !in 200..201) return ProviderTestResult.REFUSED
+        if (code(reply()) !in 200..201) return ProviderTestResult.REFUSED
         if (provider.username.isNotEmpty() || provider.password.isNotEmpty()) {
             session.command("AUTHINFO USER ${provider.username}")
-            var reply = code()
-            if (reply == 381) {
+            var line = reply()
+            if (code(line) == 381) {
                 session.command("AUTHINFO PASS ${provider.password}")
-                reply = code()
+                line = reply()
             }
-            when (reply) {
-                281 -> Unit
-                // Some providers report too many connections (or a spent block) as 502.
-                502 -> return ProviderTestResult.REFUSED
-                else -> return ProviderTestResult.AUTH
-            }
+            if (code(line) != 281) return if (refusesSignIn(line)) ProviderTestResult.REFUSED else ProviderTestResult.AUTH
         }
         return ProviderTestResult.SUCCESS
     }
@@ -222,6 +218,21 @@ class NntpProviderTester internal constructor(private val resolve: (String) -> A
     internal companion object {
         const val TIMEOUT_MS = 10_000
         const val MIN_ATTEMPT_MS = 2_000
+        /** Sign-in replies that report the account's connection ceiling, whatever their status code. */
+        private val LIMIT_PHRASES = listOf("too many connections", "maximum connections", "max connections",
+            "connection limit", "connections limit")
+
+        /**
+         * True when a failed sign-in reply means the account is out of connections rather than the
+         * credentials being wrong, read the way the engine reads it: some providers answer with 481 or
+         * 482 and such a message, others with 400 or 502 (which also cover a spent block). Only matched
+         * here: the reply text is never shown, as it could echo credentials.
+         */
+        fun refusesSignIn(line: String): Boolean {
+            val text = line.lowercase()
+            if (LIMIT_PHRASES.any { text.contains(it) }) return true
+            return line.take(3).toIntOrNull().let { it == 400 || it == 502 }
+        }
 
         fun allowed(address: InetAddress, allowPrivate: Boolean): Boolean {
             if (address.isAnyLocalAddress || address.isMulticastAddress || address.isLinkLocalAddress) return false
