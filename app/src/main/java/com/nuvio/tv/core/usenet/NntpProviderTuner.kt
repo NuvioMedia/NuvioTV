@@ -30,12 +30,9 @@ data class TuneProgress(
     val connections: Int,
     val port: Int,
     val tls: Boolean,
-    val readings: List<TuneReading>,
-    /** While [Phase.WAITING]: how long until the next attempt. */
-    val waitMs: Long = 0
+    val readings: List<TuneReading>
 ) {
-    /** [WAITING]: the provider refused connections; the run waits for it to free them and tries again. */
-    enum class Phase { LIMIT, PORT, CONNECTIONS, WAITING }
+    enum class Phase { LIMIT, PORT, CONNECTIONS }
 }
 
 data class TuneResult(
@@ -62,24 +59,12 @@ enum class TuneFailure {
     /** The provider does not have the test articles. */
     MISSING_ARTICLES,
     /** Too little arrived to measure a speed. */
-    TOO_SLOW,
-    /**
-     * The provider kept refusing connections after the run had signed in: it still counts closed
-     * ones as open. Some providers free them only after minutes.
-     */
-    BUSY
+    TOO_SLOW
 }
 
 sealed interface TuneOutcome {
     data class Success(val result: TuneResult) : TuneOutcome
-    data class Failed(
-        val reason: TuneFailure,
-        val connect: ProviderTestResult? = null,
-        /** The limit found before the failure; null when the limit check did not confirm one. */
-        val limit: Int? = null,
-        /** The usable share of [limit] when the current allowance is above it; that much can still be saved. */
-        val allowance: Int? = null
-    ) : TuneOutcome
+    data class Failed(val reason: TuneFailure, val connect: ProviderTestResult? = null) : TuneOutcome
 }
 
 /**
@@ -172,17 +157,6 @@ internal object TunePlan {
         return noGain(speeds.lastIndex) && noGain(speeds.lastIndex - 1)
     }
 
-    /** Waits a batch may spend on refused connections, and on a refused first batch. */
-    const val BUSY_TRIES = 3
-    const val FIRST_BATCH_TRIES = 2
-
-    /**
-     * How long to wait before trying a refused batch again: [base], then twice as long each time,
-     * within the run's waiting time [left]. 0 when the batch is not tried again.
-     */
-    fun busyWait(attempt: Int, tries: Int, base: Long, left: Long): Long =
-        if (attempt >= tries) 0 else minOf(base shl attempt, left).coerceAtLeast(0)
-
     /** Message ids of an NZB's segments, in order. */
     fun messageIds(nzb: String): List<String> =
         Regex("<segment\\b[^>]*>\\s*<?([^<>\\s]+?)>?\\s*</segment>").findAll(nzb).map { it.groupValues[1] }.toList()
@@ -199,9 +173,7 @@ class NntpProviderTuner internal constructor(
     private val testArticles: () -> List<String>,
     private val stepMs: Long = STEP_MS,
     private val settleMs: Long = SETTLE_MS,
-    private val warmupMs: Long = WARMUP_MS,
-    private val busyWaitMs: Long = BUSY_WAIT_MS,
-    private val busyBudgetMs: Long = BUSY_BUDGET_MS
+    private val warmupMs: Long = WARMUP_MS
 ) {
     @Inject constructor(tester: NntpProviderTester) : this(tester, ::downloadTestArticles)
 
@@ -226,18 +198,6 @@ class NntpProviderTuner internal constructor(
         lateinit var addresses: List<InetAddress>
         lateinit var articles: List<String>
         val next = AtomicInteger()
-        /** Connections the provider accepted before it refused one, once the limit check confirmed it. */
-        var limit: Int? = null
-        var tried = 0
-        /** Time left for waiting on refused connections, shared by the whole run. */
-        var busyLeftMs = busyBudgetMs
-
-        /** A failure that still carries the limit found, so an allowance above it can be lowered. */
-        fun failed(reason: TuneFailure, connect: ProviderTestResult? = null): TuneOutcome.Failed {
-            val found = limit ?: return TuneOutcome.Failed(reason, connect)
-            val usable = TunePlan.usable(found, tried)
-            return TuneOutcome.Failed(reason, connect, found, usable.takeIf { provider.connections > it })
-        }
 
         fun execute(): TuneOutcome {
             val (usableAddresses, unusable) = tester.resolveUsable(provider, allowPrivate)
@@ -250,24 +210,16 @@ class NntpProviderTuner internal constructor(
             // 1. The limit: sign in batch after batch, holding every connection, until one is refused.
             val cap = TunePlan.probeCap(provider.connections)
             val held = mutableListOf<NntpSession>()
+            var limit: Int? = null
             try {
-                var firstWaits = 0
                 while (held.size < cap) {
                     progress(TuneProgress.Phase.LIMIT, held.size, provider.port, provider.tls)
                     val batch = openBatch(provider, minOf(TunePlan.PROBE_BATCH, cap - held.size))
                     batch.mapNotNull { it.session }.let(held::addAll)
                     val failure = batch.firstOrNull { it.session == null }?.result
                     if (failure != null) {
-                        if (held.isEmpty()) {
-                            // Refused outright: the slots of a run or stream that just ended may not be free yet.
-                            val wait = if (batch.all { it.result == ProviderTestResult.REFUSED })
-                                TunePlan.busyWait(firstWaits++, TunePlan.FIRST_BATCH_TRIES, busyWaitMs, busyLeftMs) else 0
-                            if (wait > 0) { waitForSlots(wait, provider.port, provider.tls, 0); continue }
-                            // The first connection failing is a setup problem, not a limit.
-                            return TuneOutcome.Failed(TuneFailure.CONNECT, failure)
-                        }
-                        // Confirmed after a pause, so a slot the provider frees late does not pass for the limit.
-                        settle()
+                        // The first connection failing is a setup problem, not a limit.
+                        if (held.isEmpty()) return TuneOutcome.Failed(TuneFailure.CONNECT, failure)
                         val retry = openBatch(provider, 1).single()
                         if (retry.session == null) {
                             if (retry.result == ProviderTestResult.REFUSED && batch.any { it.result == ProviderTestResult.REFUSED }) {
@@ -279,41 +231,33 @@ class NntpProviderTuner internal constructor(
                     }
                 }
             } finally {
-                held.forEach(::quit)
+                held.forEach { session -> runCatching { session.command("QUIT") }; session.close() }
             }
-            tried = limit?.let { it + 1 } ?: held.size
+            val tried = if (limit == null) held.size else limit + 1
             settle()
 
             articles = try { testData.get() } catch (_: ExecutionException) { emptyList() }
-            if (articles.size < MIN_ARTICLES) return failed(TuneFailure.TEST_DATA)
+            if (articles.size < MIN_ARTICLES) return TuneOutcome.Failed(TuneFailure.TEST_DATA)
             next.set((articles.indices).random())
             val usable = TunePlan.usable(limit, tried)
 
             // 2. The port, at a few connections.
             val ports = TunePlan.ports(provider)
             val portConnections = minOf(TunePlan.PORT_CONNECTIONS, usable)
-            val portFailures = mutableListOf<Pair<TuneFailure, ProviderTestResult?>>()
             for ((port, tls) in ports) {
-                if (measure(TuneProgress.Phase.PORT, port, tls, portConnections) != null) continue
-                val reason = failure ?: TuneFailure.TOO_SLOW
-                if (reason == TuneFailure.MISSING_ARTICLES) return failed(reason)
-                portFailures += reason to connectFailure
+                val reading = measure(TuneProgress.Phase.PORT, port, tls, portConnections)
+                if (reading == null && failure == TuneFailure.MISSING_ARTICLES) return TuneOutcome.Failed(TuneFailure.MISSING_ARTICLES)
             }
             val (port, tls) = TunePlan.pickPort(readings, provider.port to provider.tls) { reading, count ->
                 measure(TuneProgress.Phase.PORT, reading.port, reading.tls, count)
-            } ?: run {
-                // A provider still refusing explains more than a port that does not answer; otherwise the current port's reason.
-                val (reason, connect) = portFailures.firstOrNull { it.first == TuneFailure.BUSY }
-                    ?: portFailures.firstOrNull() ?: (TuneFailure.TOO_SLOW to null)
-                return failed(reason, connect)
-            }
+            } ?: return TuneOutcome.Failed(failure ?: TuneFailure.TOO_SLOW)
 
             // 3. The connection count on that port, rising until more stop helping or the limit is reached.
             val rising = mutableListOf<Double>()
             for (count in TunePlan.ladder(usable)) {
                 val reading = measure(TuneProgress.Phase.CONNECTIONS, port, tls, count)
                 rising += reading?.mbps ?: 0.0
-                if (reading == null && (failure == TuneFailure.CONNECT || failure == TuneFailure.BUSY)) break
+                if (reading == null && failure == TuneFailure.CONNECT) break
                 if (TunePlan.stopRising(rising)) break
             }
             val current = provider.connections
@@ -322,7 +266,7 @@ class NntpProviderTuner internal constructor(
             }
             val round = readings.filter { it.port == port && it.tls == tls }
             val initial = TunePlan.averages(round) { it.connections }
-            val candidate = TunePlan.fastestConnections(round) ?: return failed(TuneFailure.TOO_SLOW)
+            val candidate = TunePlan.fastestConnections(round) ?: return TuneOutcome.Failed(TuneFailure.TOO_SLOW)
             val countsToRepeat = if (candidate > current && current in initial) listOf(current, candidate)
                 else initial.entries.sortedByDescending { it.value }.take(2).map { it.key }
             val repeats = mutableMapOf<Int, Double>()
@@ -331,7 +275,7 @@ class NntpProviderTuner internal constructor(
                 if (repeat?.connections == count) repeats[count] = repeat.mbps
             }
             val final = readings.filter { it.port == port && it.tls == tls }
-            val fastest = TunePlan.fastestConnections(final) ?: return failed(TuneFailure.TOO_SLOW)
+            val fastest = TunePlan.fastestConnections(final) ?: return TuneOutcome.Failed(TuneFailure.TOO_SLOW)
             val recommended = TunePlan.recommend(current, fastest, limit, tried, initial, repeats)
             val speed = TunePlan.averages(final) { it.connections }
             val mbps = speed[recommended] ?: speed.filterKeys { it <= recommended }.maxByOrNull { it.key }?.value ?: speed.getValue(fastest)
@@ -339,51 +283,9 @@ class NntpProviderTuner internal constructor(
         }
 
         var failure: TuneFailure? = null
-        /** Why the last [measure] signed in no connection, when it failed with [TuneFailure.CONNECT] or [TuneFailure.BUSY]. */
-        var connectFailure: ProviderTestResult? = null
 
         fun progress(phase: TuneProgress.Phase, connections: Int, port: Int, tls: Boolean) =
             onProgress(TuneProgress(phase, connections, port, tls, readings.toList()))
-
-        /** Signs out before closing: an idle session, so the provider can free its slot at once. */
-        fun quit(session: NntpSession) {
-            runCatching { session.command("QUIT") }
-            session.close()
-        }
-
-        fun waitForSlots(waitMs: Long, port: Int, tls: Boolean, connections: Int) {
-            onProgress(TuneProgress(TuneProgress.Phase.WAITING, connections, port, tls, readings.toList(), waitMs))
-            Thread.sleep(waitMs)
-            busyLeftMs -= waitMs
-        }
-
-        /**
-         * Opens [count] connections. Some providers free the slots of closed connections only after a
-         * while and refuse new ones meanwhile, so a refused batch is signed out and tried again after a
-         * wait, within the run's waiting time; then whatever signed in is used. Empty, with [failure]
-         * and [connectFailure], when nothing signed in.
-         */
-        fun openWhenFree(phase: TuneProgress.Phase, target: UsenetProvider, count: Int): List<NntpSession> {
-            var attempt = 0
-            while (true) {
-                val opened = openBatch(target, count)
-                val sessions = opened.mapNotNull { it.session }
-                val refused = opened.mapNotNull { result -> result.result.takeIf { result.session == null } }
-                // The limit check signed in with these credentials, so a refused sign-in now is the provider out of slots too.
-                val busy = refused.any { it == ProviderTestResult.REFUSED || it == ProviderTestResult.AUTH }
-                val wait = if (busy) TunePlan.busyWait(attempt++, TunePlan.BUSY_TRIES, busyWaitMs, busyLeftMs) else 0
-                if (wait <= 0) {
-                    if (sessions.isEmpty()) {
-                        failure = if (busy) TuneFailure.BUSY else TuneFailure.CONNECT
-                        connectFailure = refused.firstOrNull()
-                    }
-                    return sessions
-                }
-                sessions.forEach(::quit)
-                waitForSlots(wait, target.port, target.tls, count)
-                progress(phase, count, target.port, target.tls)
-            }
-        }
 
         /** Opens [count] connections at once; each result keeps its session when it signed in. */
         fun openBatch(target: UsenetProvider, count: Int): List<OpenResult> {
@@ -418,10 +320,12 @@ class NntpProviderTuner internal constructor(
          */
         fun measure(phase: TuneProgress.Phase, port: Int, tls: Boolean, connections: Int): TuneReading? {
             failure = null
-            connectFailure = null
             progress(phase, connections, port, tls)
-            val sessions = openWhenFree(phase, provider.copy(port = port, tls = tls), connections)
+            val target = provider.copy(port = port, tls = tls)
+            val opened = openBatch(target, connections)
+            val sessions = opened.mapNotNull { it.session }
             if (sessions.isEmpty()) {
+                failure = TuneFailure.CONNECT
                 settle()
                 return null
             }
@@ -496,10 +400,6 @@ class NntpProviderTuner internal constructor(
         const val MAX_STEP_BYTES = 250L * 1024 * 1024
         const val READ_TIMEOUT_MS = 15_000
         const val MIN_ARTICLES = 50
-        /** First wait for refused connections; each further one is twice as long. */
-        const val BUSY_WAIT_MS = 5_000L
-        /** At most this long is spent waiting for refused connections in one run. */
-        const val BUSY_BUDGET_MS = 60_000L
         /** Missing articles are judged once this many replies arrived. */
         const val MISSING_SAMPLE = 10
 

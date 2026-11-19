@@ -216,22 +216,13 @@ class UsenetSourcesViewModel @Inject constructor(
         tune.value = null
     }
 
-    /**
-     * Saves the measured port and connection allowance to the provider, or, after a run that found
-     * the limit but measured nothing, only the allowance under that limit.
-     */
+    /** Saves the measured port and connection allowance to the provider. */
     fun applyTune() {
         val ui = tune.value ?: return
-        val outcome = ui.outcome ?: return
+        val result = (ui.outcome as? TuneOutcome.Success)?.result ?: return
         val current = state.value
         save(current.configuration.copy(providers = current.configuration.providers.map {
-            if (it.id != ui.providerId) it
-            else when (outcome) {
-                is TuneOutcome.Success -> outcome.result.let { result ->
-                    it.copy(port = result.port, tls = result.tls, connections = result.connections)
-                }
-                is TuneOutcome.Failed -> lowered(outcome, it)?.let { allowance -> it.copy(connections = allowance) } ?: it
-            }
+            if (it.id == ui.providerId) it.copy(port = result.port, tls = result.tls, connections = result.connections) else it
         }), current.profileId)
         closeTune()
     }

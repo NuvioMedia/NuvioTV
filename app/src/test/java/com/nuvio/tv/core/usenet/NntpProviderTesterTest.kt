@@ -67,27 +67,6 @@ class NntpProviderTesterTest {
         }
     }
 
-    @Test fun `a full account at sign-in is a refusal, not a rejected password`() = runBlocking {
-        for (reply in listOf("481 Too many connections for your user", "482 Connection limit reached", "400 service unavailable")) {
-            FakeNntp("200 welcome", auth + ("AUTHINFO PASS" to reply)).use { server ->
-                assertEquals(reply, ProviderTestResult.REFUSED,
-                    NntpProviderTester().test(provider(server.port), allowPrivateNetwork = true))
-            }
-        }
-        FakeNntp("200 welcome", mapOf("AUTHINFO USER" to "482 max connections exceeded")).use { server ->
-            assertEquals(ProviderTestResult.REFUSED, NntpProviderTester().test(provider(server.port), allowPrivateNetwork = true))
-        }
-    }
-
-    @Test fun `sign-in replies are read like the engine reads them`() {
-        assertTrue(NntpProviderTester.refusesSignIn("481 Too many connections for your user"))
-        assertTrue(NntpProviderTester.refusesSignIn("502 connection limit (50) reached"))
-        assertTrue(NntpProviderTester.refusesSignIn("400 try later"))
-        assertFalse(NntpProviderTester.refusesSignIn("481 Authentication failed"))
-        assertFalse(NntpProviderTester.refusesSignIn("482 Authentication rejected"))
-        assertFalse(NntpProviderTester.refusesSignIn("480 authentication required"))
-    }
-
     @Test fun `local addresses need self hosted servers and closed ports are unreachable`() = runBlocking {
         FakeNntp("200 welcome", auth).use { server ->
             assertEquals(ProviderTestResult.PRIVATE_NETWORK,

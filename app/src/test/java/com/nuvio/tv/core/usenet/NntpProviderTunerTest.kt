@@ -91,14 +91,6 @@ class NntpProviderTunerTest {
         assertEquals(current, TunePlan.pickPort(partialAlternate, current) { old, _ -> old.copy(connections = 2) })
     }
 
-    @Test fun `refused batches wait longer each time within the run's waiting time`() {
-        assertEquals(5_000L, TunePlan.busyWait(0, 3, 5_000, 60_000))
-        assertEquals(20_000L, TunePlan.busyWait(2, 3, 5_000, 60_000))
-        assertEquals(0L, TunePlan.busyWait(3, 3, 5_000, 60_000))
-        assertEquals(7_000L, TunePlan.busyWait(1, 3, 5_000, 7_000))
-        assertEquals(0L, TunePlan.busyWait(0, 3, 5_000, 0))
-    }
-
     @Test fun `a rising round stops after two steps without gain`() {
         assertFalse(TunePlan.stopRising(listOf(50.0, 100.0)))
         assertFalse(TunePlan.stopRising(listOf(50.0, 100.0, 150.0, 151.0)))
@@ -137,14 +129,9 @@ class NntpProviderTunerTest {
         }
     }
 
-    /**
-     * Accepts [limit] signed-in connections at a time and serves [article] for every BODY; the rest are
-     * refused. A closed connection keeps its slot for [releaseMs], like providers that free slots late.
-     * [refusal] is the sign-in reply of a full account; null refuses it at the greeting instead.
-     */
+    /** Accepts [limit] signed-in connections at a time and serves [article] for every BODY; the rest are refused. */
     private class FakeProvider(private val limit: Int, private val missing: Boolean = false,
-        private val dropGreetings: Set<Int> = emptySet(), private val releaseMs: Long = 0,
-        private val refusal: String? = null) : AutoCloseable {
+        private val dropGreetings: Set<Int> = emptySet()) : AutoCloseable {
         private val attempts = AtomicInteger()
         private val server = ServerSocket(0, 200, InetAddress.getByName("127.0.0.1"))
         val port get() = server.localPort
@@ -173,7 +160,7 @@ class NntpProviderTunerTest {
                 if (open.get() >= limit) false else { most.accumulateAndGet(open.incrementAndGet(), ::maxOf); true }
             }
             try {
-                if (!counted && refusal == null) {
+                if (!counted) {
                     refused.incrementAndGet()
                     output.write("502 too many connections\r\n".toByteArray()); output.flush(); return@use
                 }
@@ -182,10 +169,6 @@ class NntpProviderTunerTest {
                     val line = input.readLine() ?: break
                     when {
                         line.startsWith("AUTHINFO USER") -> output.write("381 more\r\n".toByteArray())
-                        line.startsWith("AUTHINFO PASS") && !counted -> {
-                            refused.incrementAndGet()
-                            output.write("$refusal\r\n".toByteArray()); output.flush(); return@use
-                        }
                         line.startsWith("AUTHINFO PASS") -> output.write("281 ok\r\n".toByteArray())
                         line.startsWith("BODY") -> if (missing) output.write("430 no such article\r\n".toByteArray())
                             else { output.write("222 0 body\r\n".toByteArray()); output.write(article) }
@@ -195,23 +178,7 @@ class NntpProviderTunerTest {
                     output.flush()
                 }
             } catch (_: Exception) {
-            } finally {
-                if (counted) {
-                    if (releaseMs > 0) thread(isDaemon = true) { Thread.sleep(releaseMs); open.decrementAndGet() }
-                    else open.decrementAndGet()
-                }
-            }
-        }
-
-        /** Signs in [count] connections and closes them, so their slots stay taken for [releaseMs]. */
-        fun occupy(count: Int) = repeat(count) {
-            Socket("127.0.0.1", port).use { socket ->
-                val input = socket.getInputStream().bufferedReader()
-                val output = socket.getOutputStream()
-                input.readLine()
-                output.write("AUTHINFO USER user\r\n".toByteArray()); output.flush(); input.readLine()
-                output.write("AUTHINFO PASS pass\r\n".toByteArray()); output.flush(); input.readLine()
-            }
+            } finally { if (counted) open.decrementAndGet() }
         }
 
         override fun close() = server.close()
@@ -220,9 +187,8 @@ class NntpProviderTunerTest {
     private fun provider(port: Int, connections: Int) = UsenetProvider(name = "Test", host = "127.0.0.1", port = port,
         tls = false, username = "user", password = "pass", connections = connections)
 
-    private fun tuner(articles: List<String> = List(100) { "a$it@test" }, busyWaitMs: Long = 50, busyBudgetMs: Long = 1_000) =
-        NntpProviderTuner(NntpProviderTester(), { articles }, stepMs = 400, settleMs = 50, warmupMs = 100,
-            busyWaitMs = busyWaitMs, busyBudgetMs = busyBudgetMs)
+    private fun tuner(articles: List<String> = List(100) { "a$it@test" }) =
+        NntpProviderTuner(NntpProviderTester(), { articles }, stepMs = 400, settleMs = 50, warmupMs = 100)
 
     @Test fun `finds the limit and recommends staying under it`() = runBlocking {
         FakeProvider(limit = 13).use { server ->
@@ -270,57 +236,14 @@ class NntpProviderTunerTest {
         }
     }
 
-    @Test fun `missing test articles and missing test data are reported with the limit found`() = runBlocking {
+    @Test fun `missing test articles and missing test data are reported`() = runBlocking {
         FakeProvider(limit = 20, missing = true).use { server ->
-            assertEquals(TuneOutcome.Failed(TuneFailure.MISSING_ARTICLES, limit = 20),
+            assertEquals(TuneOutcome.Failed(TuneFailure.MISSING_ARTICLES),
                 tuner().tune(provider(server.port, 10), true, 2) {})
         }
         FakeProvider(limit = 20).use { server ->
-            // An allowance above the limit can still be lowered to its usable share, 18.
-            assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA, limit = 20, allowance = 18),
-                tuner(articles = emptyList()).tune(provider(server.port, 40), true, 2) {})
-        }
-    }
-
-    @Test fun `slots freed late are waited for instead of failing the run`() = runBlocking {
-        FakeProvider(limit = 13, releaseMs = 300).use { server ->
-            val phases = mutableListOf<TuneProgress.Phase>()
-            val outcome = tuner(busyWaitMs = 100, busyBudgetMs = 20_000).tune(provider(server.port, 40), true, 2) {
-                synchronized(phases) { phases += it.phase }
-            }
-            val result = (outcome as TuneOutcome.Success).result
-            assertEquals(13, result.limit)
-            assertEquals(12, result.connections)
-            assertTrue(TuneProgress.Phase.WAITING in phases)
-            // After waiting, the full count signed in rather than only what the provider had free.
-            assertTrue(result.readings.any { it.connections == 12 })
-        }
-    }
-
-    @Test fun `a provider that keeps refusing ends busy and keeps the limit it found`() = runBlocking {
-        FakeProvider(limit = 13, releaseMs = 60_000).use { server ->
-            assertEquals(TuneOutcome.Failed(TuneFailure.BUSY, ProviderTestResult.REFUSED, limit = 13, allowance = 12),
-                tuner(busyBudgetMs = 300).tune(provider(server.port, 40), true, 2) {})
-        }
-    }
-
-    @Test fun `a full account refused at sign-in is a limit, not a rejected password`() = runBlocking {
-        FakeProvider(limit = 13, refusal = "481 Too many connections for your user").use { server ->
-            val result = (tuner().tune(provider(server.port, 40), true, 2) {} as TuneOutcome.Success).result
-            assertEquals(13, result.limit)
-            assertEquals(12, result.connections)
-        }
-    }
-
-    @Test fun `a refused first batch is tried again once the slots of a previous run are free`() = runBlocking {
-        FakeProvider(limit = 4, releaseMs = 250).use { server ->
-            server.occupy(4)
-            val phases = mutableListOf<TuneProgress.Phase>()
-            val outcome = tuner(busyWaitMs = 200, busyBudgetMs = 20_000).tune(provider(server.port, 4), true, 2) {
-                synchronized(phases) { phases += it.phase }
-            }
-            assertEquals(4, (outcome as TuneOutcome.Success).result.limit)
-            assertEquals(TuneProgress.Phase.WAITING, phases.first { it != TuneProgress.Phase.LIMIT })
+            assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA),
+                tuner(articles = emptyList()).tune(provider(server.port, 10), true, 2) {})
         }
     }
 
@@ -341,7 +264,7 @@ class NntpProviderTunerTest {
                             sockets.forEach { assertEquals(-1, it.getInputStream().read()) }
                         }
                     }
-                    assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA, limit = 2, allowance = 1), restarted)
+                    assertEquals(TuneOutcome.Failed(TuneFailure.TEST_DATA), restarted)
                 }
             } finally {
                 old.cancel()
