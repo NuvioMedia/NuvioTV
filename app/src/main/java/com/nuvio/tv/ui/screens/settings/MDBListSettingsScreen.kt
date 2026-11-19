@@ -253,7 +253,14 @@ internal fun MDBListSettingsBody(
                         onConfirmMove = onItemConfirmMove
                     )
                 }
-                SettingsVerticalScrollIndicators(state = mdbScrollState)
+                val movingIndex = uiState.movingRatingKey?.let { movingKey ->
+                    ratingItems.indexOfFirst { it.provider == movingKey }
+                } ?: -1
+                SettingsVerticalScrollIndicators(
+                    state = mdbScrollState,
+                    suppressBackward = movingIndex == 0,
+                    suppressForward = movingIndex >= 0 && movingIndex == ratingItems.lastIndex
+                )
             }
         }
     }
