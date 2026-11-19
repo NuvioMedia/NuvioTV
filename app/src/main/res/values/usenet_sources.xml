@@ -97,7 +97,7 @@
     <string name="usenet_provider_tune_over_limit">The current allowance of %1$d is above the limit: playback would get refused connections and stall while the engine retries them.</string>
     <string name="usenet_provider_tune_fastest">%1$d connections already reach %2$s Mbps.</string>
     <string name="usenet_provider_tune_recommended">Recommended: port %1$d with a connection allowance of %2$d (now port %3$d with %4$d). It stays under the limit and is otherwise not lowered.</string>
-    <string name="usenet_provider_tune_unchanged">The current port and connection allowance are already the best choice.</string>
+    <string name="usenet_provider_tune_unchanged">Nothing to apply: the current port and connection allowance are already the best choice.</string>
     <string name="usenet_provider_tune_data">Test data downloaded: %1$s</string>
     <string name="usenet_provider_tune_test_data">Could not download the test data. Check the internet connection and try again.</string>
     <string name="usenet_provider_tune_missing">This provider does not have the test articles, so its speed could not be measured.</string>
