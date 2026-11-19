@@ -1119,7 +1119,7 @@
     <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ tập phim trong Tiếp tục xem</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ tập phim làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
     <string name="layout_season_posters">Poster từng mùa</string>
-    <string name="layout_season_posters_sub"><string name="layout_season_posters_sub">Hiển thị poster riêng cho từng mùa khi có sẵn thay vì thẻ văn bản.</string>
+    <string name="layout_season_posters_sub">Hiển thị poster riêng cho từng mùa khi có sẵn thay vì thẻ văn bản.</string>
     <string name="layout_blur_unwatched">Làm mờ tập phim chưa xem.</string>
     <string name="layout_blur_unwatched_sub">Làm mờ ảnh thu nhỏ các tập phim chưa xem để tránh tiết lộ nội dung.</string>
     <string name="layout_episode_options_overlay">Lớp phủ tùy chọn tập phim</string>
