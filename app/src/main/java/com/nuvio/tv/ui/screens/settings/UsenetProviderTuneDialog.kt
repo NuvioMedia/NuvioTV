@@ -37,7 +37,11 @@ internal fun ProviderTuneDialog(state: ProviderTuneUi, provider: UsenetProvider?
     onApply: () -> Unit, onDismiss: () -> Unit) {
     val outcome = state.outcome
     val notStarted = !state.running && !state.stopped && outcome == null
-    val canApply = outcome is TuneOutcome.Success && provider != null && changes(outcome, provider)
+    val canApply = provider != null && when (outcome) {
+        is TuneOutcome.Success -> changes(outcome, provider)
+        is TuneOutcome.Failed -> lowered(outcome, provider) != null
+        null -> false
+    }
     // The buttons change with the phase; the new main button takes the focus, or the remote has none.
     val main = remember { FocusRequester() }
     LaunchedEffect(state.running, state.stopped, outcome, canApply) {
@@ -51,7 +55,7 @@ internal fun ProviderTuneDialog(state: ProviderTuneUi, provider: UsenetProvider?
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (state.running) Text(progressText(state.progress), color = NuvioTheme.colors.TextPrimary)
             if (outcome is TuneOutcome.Success && provider != null) TuneSummary(outcome, provider)
-            if (outcome is TuneOutcome.Failed) Text(stringResource(failureRes(outcome)), color = NuvioTheme.colors.TextPrimary)
+            if (outcome is TuneOutcome.Failed) FailedSummary(outcome, provider)
             if (state.stopped && !state.running && outcome == null) {
                 Text(stringResource(R.string.usenet_provider_tune_stopped), color = NuvioTheme.colors.TextSecondary)
             }
@@ -84,6 +88,25 @@ private fun changes(outcome: TuneOutcome.Success, provider: UsenetProvider) = ou
     it.port != provider.port || it.tls != provider.tls || it.connections != provider.connections
 }
 
+/** The allowance a failed run still recommends: under the limit it found, when the saved one is above. */
+internal fun lowered(outcome: TuneOutcome.Failed, provider: UsenetProvider) =
+    outcome.allowance?.takeIf { it < provider.connections }
+
+/** Why nothing was measured, and what the limit check found before that. */
+@Composable
+private fun FailedSummary(outcome: TuneOutcome.Failed, provider: UsenetProvider?) {
+    Text(stringResource(failureRes(outcome)), color = NuvioTheme.colors.TextPrimary)
+    val limit = outcome.limit ?: return
+    Text(stringResource(R.string.usenet_provider_tune_limit, limit), color = NuvioTheme.colors.TextPrimary)
+    if (provider == null) return
+    if (provider.connections > limit) {
+        Text(stringResource(R.string.usenet_provider_tune_over_limit, provider.connections), color = NuvioTheme.colors.TextPrimary)
+    }
+    lowered(outcome, provider)?.let { allowance ->
+        Text(stringResource(R.string.usenet_provider_tune_lower, allowance, provider.connections), color = NuvioTheme.colors.TextPrimary)
+    }
+}
+
 @Composable
 private fun TuneSummary(outcome: TuneOutcome.Success, provider: UsenetProvider) {
     val result = outcome.result
@@ -109,6 +132,7 @@ private fun progressText(progress: TuneProgress?): String = when (progress?.phas
     TuneProgress.Phase.LIMIT -> stringResource(R.string.usenet_provider_tune_limit_running, progress.connections)
     TuneProgress.Phase.PORT -> stringResource(R.string.usenet_provider_tune_port_running, progress.port, progress.connections)
     TuneProgress.Phase.CONNECTIONS -> stringResource(R.string.usenet_provider_tune_connections_running, progress.connections)
+    TuneProgress.Phase.WAITING -> stringResource(R.string.usenet_provider_tune_waiting, ((progress.waitMs + 999) / 1000).toInt())
 }
 
 @Composable
@@ -122,4 +146,5 @@ private fun failureRes(failure: TuneOutcome.Failed) = when (failure.reason) {
     TuneFailure.TEST_DATA -> R.string.usenet_provider_tune_test_data
     TuneFailure.MISSING_ARTICLES -> R.string.usenet_provider_tune_missing
     TuneFailure.TOO_SLOW -> R.string.usenet_provider_tune_too_slow
+    TuneFailure.BUSY -> R.string.usenet_provider_tune_busy
 }

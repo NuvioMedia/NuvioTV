@@ -120,10 +120,15 @@ two minutes and has three steps:
    them open until the provider refuses one, up to 100 connections (or the
    allowance, when higher, up to 200). The connections that signed in are the
    account's limit at that moment, so other devices using the account lower it.
-   After a partial batch it tries one more sign-in with the successful sessions
-   still open. Only a repeated provider refusal confirms a limit. A transport
-   failure leaves the limit unknown. A failed first batch is reported like
-   **Test provider**.
+   After a partial batch it waits a moment and tries one more sign-in with the
+   successful sessions still open, so a slot freed late does not pass for the
+   limit. Only a repeated provider refusal confirms a limit. A transport failure
+   leaves the limit unknown. A sign-in refused with a connection-limit reply
+   (400 or 502, or 481/482 saying so) counts as a refusal, not as wrong
+   credentials, the way the engine reads it; **Test provider** reads it the same
+   way. A first batch refused outright is tried again after 5 and 10 seconds,
+   since the slots of a run or stream that just ended may not be free yet; if it
+   still fails, it is reported like **Test provider**.
 2. **Port.** It measures the download speed with eight connections on the
    current port and, for a TLS provider, on 563 and 443. TLS providers are
    never moved to a plain port. Another port must be 10% faster than the current
@@ -141,6 +146,16 @@ tenth when a limit was found and the allowance is above that, or raised when mor
 faster (the fewest connections within 95% of the best speed). It is not lowered
 otherwise: unused allowance costs nothing and gives seeks and slow periods
 room.
+
+Some providers free the slot of a closed connection only after a while (some
+document stuck connections being reset every 30 minutes) and refuse new ones
+meanwhile. When a measurement's sign-ins are refused, the tuner signs out the
+ones that got in, waits 5, 10 and 20 seconds between attempts (at most a minute
+per run) and then measures with whatever signed in. If the provider still
+refuses everything, the run ends saying so, with advice to wait before playing
+or running it again. A run that found the limit but measured nothing still
+shows it, and **Apply** then lowers an allowance above the limit to its usable
+share without changing the port.
 
 The test data are the articles of a public 1 GB test NZB that SABnzbd keeps
 for speed tests, downloaded from sabnzbd.org while the limit is checked. Each
