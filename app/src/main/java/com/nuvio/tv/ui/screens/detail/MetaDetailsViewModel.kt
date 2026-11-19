@@ -130,11 +130,13 @@ class MetaDetailsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MetaDetailsUiState())
     private val shuffleVisit = System.nanoTime()
-    val uiState: StateFlow<MetaDetailsUiState> = combine(
-        _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
-    ) { state, profile, progress ->
-        applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, MetaDetailsUiState())
+    val uiState: StateFlow<MetaDetailsUiState> by lazy {
+        combine(
+            _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
+        ) { state, profile, progress ->
+            applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, _uiState.value)
+    }
 
     private val _posterCardCornerRadiusDp = MutableStateFlow(12)
     val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
