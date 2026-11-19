@@ -24,10 +24,13 @@ internal object SubtitleAudioAligner {
     )
 
     /**
-     * Silero reacts ~45 ms after speech starts and subtitles usually lead speech slightly, so the raw
-     * correlation peak sits this much after the subtitle author's intended timing.
+     * Silero reacts ~45 ms after speech starts and trails off after it ends, and subtitles usually
+     * lead speech slightly, so the raw correlation peak sits this much after the subtitle author's
+     * intended timing. Swept on 10 offline corpora (about 590 subtitles): at 100 ms, 27 synced files
+     * showed lines over 250 ms after the release's own subtitle against 6 early; at 200 ms, 10 late
+     * against 8 early, 15 more within 250 ms, and no more locks on other films' subtitles.
      */
-    const val DETECTOR_BIAS_MS = 100.0
+    const val DETECTOR_BIAS_MS = 200.0
 
     /** Excluded neighbourhood around the peak when measuring how much it stands out. */
     private const val PROMINENCE_EXCLUSION_MS = 2_500.0
