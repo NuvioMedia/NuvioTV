@@ -547,21 +547,13 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setHomeCatalogOrderKeys(keys: List<String>) {
         val normalizedKeys = normalizeCatalogOrderKeys(keys)
-        val started = android.os.SystemClock.elapsedRealtime()
-        Log.d(
-            TAG,
-            "setHomeCatalogOrderKeys in=${keys.size} normalized=${normalizedKeys.size} " +
-                "same=${keys == normalizedKeys} sample=${normalizedKeys.take(8)}",
-        )
         store().edit { prefs ->
             if (normalizedKeys.isEmpty()) {
-                Log.w(TAG, "setHomeCatalogOrderKeys removing key because normalized empty")
                 prefs.remove(homeCatalogOrderKeysKey)
             } else {
                 prefs[homeCatalogOrderKeysKey] = gson.toJson(normalizedKeys)
             }
         }
-        Log.d(TAG, "setHomeCatalogOrderKeys wrote in ${android.os.SystemClock.elapsedRealtime() - started}ms")
     }
 
     suspend fun setDisabledHomeCatalogKeys(keys: List<String>) {

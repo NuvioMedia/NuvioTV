@@ -5,7 +5,6 @@ package com.nuvio.tv.ui.screens.addon
 import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -64,7 +63,6 @@ fun CatalogOrderScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     BackHandler(enabled = uiState.movingKey == null) {
-        Log.d("CatalogOrder", "screen BACK leave")
         onBackPress()
     }
 
@@ -116,14 +114,8 @@ fun CatalogOrderScreen(
                     movingKey = uiState.movingKey,
                     onStartMove = viewModel::enterMoveMode,
                     onMoveBy = viewModel::moveDuringDrag,
-                    onConfirmMove = {
-                        Log.d("CatalogOrder", "screen Done/confirm requested")
-                        viewModel.confirmMove()
-                    },
-                    onCancelMove = {
-                        Log.d("CatalogOrder", "screen cancel requested")
-                        viewModel.cancelMove()
-                    },
+                    onConfirmMove = { viewModel.confirmMove() },
+                    onCancelMove = { viewModel.cancelMove() },
                     modifier = Modifier.fillMaxSize(),
                     header = {
                         CatalogOrderHeader(

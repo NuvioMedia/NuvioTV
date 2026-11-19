@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -33,24 +32,6 @@ import javax.inject.Inject
 
 private const val TAG = "CatalogOrder"
 private const val PENDING_SAVED_ORDER_TIMEOUT_MS = 2000L
-
-internal fun catalogOrderKeySample(keys: List<String>, limit: Int = 8): String {
-    if (keys.isEmpty()) return "[] n=0"
-    val shown = keys.take(limit).joinToString(",")
-    val more = if (keys.size > limit) " …+${keys.size - limit}" else ""
-    return "[$shown$more] n=${keys.size}"
-}
-
-internal fun catalogOrderKeysDiff(pending: List<String>?, disk: List<String>): String {
-    if (pending == null) return "pending=null disk=${catalogOrderKeySample(disk)}"
-    if (pending == disk) return "equal n=${pending.size}"
-    if (pending.size != disk.size) {
-        return "size pending=${pending.size} disk=${disk.size} " +
-            "pending=${catalogOrderKeySample(pending)} disk=${catalogOrderKeySample(disk)}"
-    }
-    val index = pending.indices.first { pending[it] != disk[it] }
-    return "mismatch@$index pending=${pending[index]} disk=${disk[index]}"
-}
 
 @HiltViewModel
 class CatalogOrderViewModel @Inject constructor(
@@ -74,48 +55,28 @@ class CatalogOrderViewModel @Inject constructor(
     private val persistMutex = Mutex()
 
     init {
-        Log.d(TAG, "ViewModel init")
         observeCatalogs()
     }
 
     fun enterMoveMode(key: String) {
         val items = _uiState.value.items
         val item = items.firstOrNull { it.key == key } ?: return
-        if (!item.canMove) {
-            Log.w(TAG, "enterMoveMode ignored key=$key canMove=false")
-            return
-        }
+        if (!item.canMove) return
         moveBaselineItems = items
         draftOrderKeys = items.map { it.key }
-        Log.d(
-            TAG,
-            "enterMoveMode key=$key index=${items.indexOf(item)} " +
-                "baseline=${catalogOrderKeySample(draftOrderKeys.orEmpty())} follow=${_uiState.value.followAddonsOrder}",
-        )
         _uiState.update { it.copy(movingKey = key) }
     }
 
     fun moveDuringDrag(key: String, direction: Int): Int? {
-        val draft = draftOrderKeys ?: run {
-            Log.w(TAG, "moveDuringDrag no draft key=$key dir=$direction")
-            return null
-        }
-        val fromIndex = draft.indexOf(key)
+        val draft = draftOrderKeys ?: return null
         val reordered = if (_uiState.value.followAddonsOrder) {
-            reorderCollectionInDraft(draft, key, direction) ?: run {
-                Log.d(TAG, "moveDuringDrag blocked followAddons key=$key dir=$direction from=$fromIndex")
-                return null
-            }
+            reorderCollectionInDraft(draft, key, direction) ?: return null
         } else {
-            reorderInDraft(draft, key, direction) ?: run {
-                Log.d(TAG, "moveDuringDrag blocked edge key=$key dir=$direction from=$fromIndex")
-                return null
-            }
+            reorderInDraft(draft, key, direction) ?: return null
         }
         val toIndex = reordered.indexOf(key)
         draftOrderKeys = reordered
         applyDraftOrder(reordered)
-        Log.d(TAG, "moveDuringDrag key=$key dir=$direction $fromIndex->$toIndex")
         return toIndex.takeIf { it >= 0 }
     }
 
@@ -123,11 +84,6 @@ class CatalogOrderViewModel @Inject constructor(
         val draft = draftOrderKeys
         val baselineKeys = moveBaselineItems?.map { it.key }
         if (draft == null || draft == baselineKeys) {
-            Log.d(
-                TAG,
-                "confirmMove skip unchanged draftNull=${draft == null} " +
-                    "baseline=${catalogOrderKeySample(baselineKeys.orEmpty())}",
-            )
             exitMoveMode()
             return
         }
@@ -142,31 +98,20 @@ class CatalogOrderViewModel @Inject constructor(
         val sessionBaseline = moveBaselineItems
         draftOrderKeys = null
         moveBaselineItems = null
-        Log.d(
-            TAG,
-            "confirmMove start gen=$generation draft=${catalogOrderKeySample(draft)} " +
-                "uiItems=${confirmedItems.size} names=${confirmedItems.take(6).joinToString { it.catalogName }}",
-        )
         _uiState.update { it.copy(movingKey = null, items = confirmedItems) }
 
         viewModelScope.launch {
             var wrote = false
-            val writeStarted = SystemClock.elapsedRealtime()
             try {
                 withContext(NonCancellable) {
                     persistMutex.withLock {
                         if (generation != persistGeneration) {
-                            Log.w(
-                                TAG,
-                                "confirmMove skip stale write gen=$generation current=$persistGeneration",
-                            )
                             return@withLock
                         }
                         layoutPreferenceDataStore.setHomeCatalogOrderKeys(draft)
                         wrote = true
                     }
                     if (wrote && generation == persistGeneration) {
-                        Log.d(TAG, "confirmMove triggerPush gen=$generation")
                         homeCatalogSettingsSyncService.triggerPush()
                     }
                 }
@@ -175,12 +120,6 @@ class CatalogOrderViewModel @Inject constructor(
             } catch (t: Throwable) {
                 Log.e(TAG, "confirmMove write failed gen=$generation", t)
             }
-            val writeMs = SystemClock.elapsedRealtime() - writeStarted
-            Log.d(
-                TAG,
-                "confirmMove writeDone gen=$generation wrote=$wrote writeMs=$writeMs " +
-                    "stillCurrent=${generation == persistGeneration} pending=${pendingSavedOrderKeys != null}",
-            )
             if (!wrote && generation == persistGeneration) {
                 pendingSavedOrderKeys = null
                 val current = _uiState.value
@@ -203,11 +142,6 @@ class CatalogOrderViewModel @Inject constructor(
 
     fun cancelMove() {
         val baseline = moveBaselineItems
-        Log.d(
-            TAG,
-            "cancelMove restoring=${baseline?.size ?: 0} " +
-                "keys=${catalogOrderKeySample(baseline?.map { it.key }.orEmpty())}",
-        )
         exitMoveMode()
         if (baseline != null) {
             _uiState.update { it.copy(items = baseline) }
@@ -341,7 +275,6 @@ class CatalogOrderViewModel @Inject constructor(
     }
 
     fun toggleFollowAddonsOrder(enabled: Boolean) {
-        Log.d(TAG, "toggleFollowAddonsOrder enabled=$enabled")
         pendingSavedOrderKeys = null
         val current = _uiState.value.items
         val reordered = if (enabled) {
@@ -352,11 +285,6 @@ class CatalogOrderViewModel @Inject constructor(
         val flagged = reordered.mapIndexed { index, item ->
             item.withMoveFlags(index, reordered.size, enabled)
         }
-        Log.d(
-            TAG,
-            "toggleFollowAddonsOrder apply n=${flagged.size} " +
-                "names=${flagged.take(6).joinToString { it.catalogName }}",
-        )
         _uiState.update {
             it.copy(followAddonsOrder = enabled, items = flagged)
         }
@@ -406,52 +334,18 @@ class CatalogOrderViewModel @Inject constructor(
 
     private fun observeCatalogs() {
         viewModelScope.launch {
-            val openedAt = SystemClock.elapsedRealtime()
-            Log.d(TAG, "observeCatalogs subscribe waiting for 6 sources")
             combine(
                 combine(
-                    addonRepository.getInstalledAddons().onEach { addons ->
-                        Log.d(
-                            TAG,
-                            "source[addons] +${SystemClock.elapsedRealtime() - openedAt}ms " +
-                                "n=${addons.size} enabled=${addons.count { it.enabled }}",
-                        )
-                    },
+                    addonRepository.getInstalledAddons(),
                     serverCatalog.addons,
                 ) { installed, servers ->
                     installed.enabledAddons() + servers
                 },
-                collectionsDataStore.collections.onEach { collections ->
-                    Log.d(
-                        TAG,
-                        "source[collections] +${SystemClock.elapsedRealtime() - openedAt}ms n=${collections.size}",
-                    )
-                },
-                layoutPreferenceDataStore.homeCatalogOrderKeys.onEach { keys ->
-                    Log.d(
-                        TAG,
-                        "source[diskOrder] +${SystemClock.elapsedRealtime() - openedAt}ms " +
-                            catalogOrderKeySample(keys),
-                    )
-                },
-                layoutPreferenceDataStore.disabledHomeCatalogKeys.onEach { keys ->
-                    Log.d(
-                        TAG,
-                        "source[disabled] +${SystemClock.elapsedRealtime() - openedAt}ms n=${keys.size}",
-                    )
-                },
-                layoutPreferenceDataStore.customCatalogTitles.onEach { titles ->
-                    Log.d(
-                        TAG,
-                        "source[titles] +${SystemClock.elapsedRealtime() - openedAt}ms n=${titles.size}",
-                    )
-                },
-                layoutPreferenceDataStore.followAddonsOrder.onEach { follow ->
-                    Log.d(
-                        TAG,
-                        "source[followAddons] +${SystemClock.elapsedRealtime() - openedAt}ms follow=$follow",
-                    )
-                },
+                collectionsDataStore.collections,
+                layoutPreferenceDataStore.homeCatalogOrderKeys,
+                layoutPreferenceDataStore.disabledHomeCatalogKeys,
+                layoutPreferenceDataStore.customCatalogTitles,
+                layoutPreferenceDataStore.followAddonsOrder,
             ) { values ->
                 @Suppress("UNCHECKED_CAST")
                 val addons = values[0] as List<Addon>
@@ -466,7 +360,6 @@ class CatalogOrderViewModel @Inject constructor(
                 val followAddons = values[5] as Boolean
                 persistedDisabledKeys = disabledKeys
 
-                val buildStarted = SystemClock.elapsedRealtime()
                 val items = buildOrderedCatalogItems(
                     addons = addons,
                     collections = collections,
@@ -475,14 +368,6 @@ class CatalogOrderViewModel @Inject constructor(
                     customTitles = customTitles,
                     followAddonsOrder = followAddons
                 )
-                Log.d(
-                    TAG,
-                    "combine buildMs=${SystemClock.elapsedRealtime() - buildStarted} " +
-                        "openMs=${SystemClock.elapsedRealtime() - openedAt} " +
-                        "items=${items.size} addons=${addons.size} cols=${collections.size} " +
-                        "disk=${catalogOrderKeySample(savedOrderKeys)} follow=$followAddons " +
-                        "disabled=${disabledKeys.size} titles=${customTitles.size}",
-                )
                 Triple(items, followAddons, savedOrderKeys)
             }.collectLatest { (orderedItems, followAddons, diskOrderKeys) ->
                 var pendingKeys = pendingSavedOrderKeys
@@ -490,23 +375,14 @@ class CatalogOrderViewModel @Inject constructor(
                     SystemClock.elapsedRealtime() - pendingSavedOrderKeysAt >
                     PENDING_SAVED_ORDER_TIMEOUT_MS
                 ) {
-                    Log.w(TAG, "pending order timed out, falling back to disk order")
                     pendingSavedOrderKeys = null
                     pendingKeys = null
                 }
                 val diskMatchesPending = pendingKeys != null && diskOrderKeys == pendingKeys
-                Log.d(
-                    TAG,
-                    "collect movingKey=${_uiState.value.movingKey} isLoading=${_uiState.value.isLoading} " +
-                        "disk=${catalogOrderKeySample(diskOrderKeys)} ${catalogOrderKeysDiff(pendingKeys, diskOrderKeys)} " +
-                        "built=${orderedItems.size} names=${orderedItems.take(6).joinToString { it.catalogName }}",
-                )
                 if (diskMatchesPending) {
                     pendingSavedOrderKeys = null
-                    Log.d(TAG, "pending cleared disk caught up")
                 }
                 val itemsToApply = if (pendingKeys != null && !diskMatchesPending) {
-                    Log.w(TAG, "keeping pending UI order until disk matches")
                     itemsInOrder(pendingKeys, orderedItems, followAddons)
                 } else {
                     orderedItems
@@ -516,9 +392,7 @@ class CatalogOrderViewModel @Inject constructor(
                 if (current.movingKey == null) {
                     val itemsUnchanged = current.items == itemsToApply
                     val followUnchanged = current.followAddonsOrder == followAddons
-                    if (itemsUnchanged && followUnchanged && !current.isLoading) {
-                        Log.d(TAG, "ui skip identical items follow=$followAddons")
-                    } else {
+                    if (!itemsUnchanged || !followUnchanged || current.isLoading) {
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -526,15 +400,8 @@ class CatalogOrderViewModel @Inject constructor(
                                 followAddonsOrder = followAddons
                             )
                         }
-                        Log.d(
-                            TAG,
-                            "ui applied items=${itemsToApply.size} follow=$followAddons " +
-                                "openMs=${SystemClock.elapsedRealtime() - openedAt} " +
-                                "itemsUnchanged=$itemsUnchanged",
-                        )
                     }
                 } else {
-                    Log.d(TAG, "ui skip item replace while moving, follow=$followAddons")
                     _uiState.update {
                         it.copy(
                             isLoading = false,

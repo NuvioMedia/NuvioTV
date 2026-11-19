@@ -62,18 +62,8 @@ internal fun HomeViewModel.observeCollectionsPipeline() {
 internal fun HomeViewModel.loadHomeCatalogOrderPreferencePipeline() {
     viewModelScope.launch {
         layoutPreferenceDataStore.homeCatalogOrderKeys.collectLatest { keys ->
-            Log.d(
-                HomeViewModel.TAG,
-                "homeCatalogOrderKeys emit n=${keys.size} addonsCache=${addonsCache.size} " +
-                    "sample=${keys.take(8)}",
-            )
             homeCatalogOrderKeys = keys
             rebuildCatalogOrder(addonsCache)
-            Log.d(
-                HomeViewModel.TAG,
-                "homeCatalogOrderKeys rebuilt catalogOrder n=${synchronized(catalogStateLock) { catalogOrder.size }} " +
-                    "sample=${synchronized(catalogStateLock) { catalogOrder.take(8) }}",
-            )
             scheduleUpdateCatalogRows()
         }
     }

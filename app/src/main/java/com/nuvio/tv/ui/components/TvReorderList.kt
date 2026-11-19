@@ -3,8 +3,6 @@
 package com.nuvio.tv.ui.components
 
 import android.os.Looper
-import android.os.SystemClock
-import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animate
@@ -58,7 +56,6 @@ import kotlin.math.roundToInt
 
 private const val MOVE_REPEAT_INITIAL_DELAY_MS = 280L
 private const val MOVE_REPEAT_INTERVAL_MS = 140L
-private const val LIST_TAG = "CatalogOrder"
 
 private const val RETAINED_ROW_SLOTS = 24
 
@@ -102,11 +99,6 @@ fun <T> TvReorderList(
     val measuredRowHeights = remember { mutableMapOf<String, Float>() }
 
     fun listOriginPx(): Float = contentTopPaddingPx + headerHeightPx[0]
-
-    fun slotStridePx(): Float {
-        val height = rowHeightPx[0]
-        return if (height > 0f) height + rowSpacingPx else 0f
-    }
 
     fun defaultRowHeightPx(): Float {
         if (measuredRowHeights.isNotEmpty()) {
@@ -193,48 +185,22 @@ fun <T> TvReorderList(
         inheritedBringIntoViewSpec
     }
 
-    fun pinScroll(reason: String) {
+    fun pinScroll() {
         val movingIndex = movingKey?.let { animatedIndices[it] }
         pinnedScrollPx = if (scrollToTopOnEdgeItem && movingIndex == 0) {
             0
         } else {
             scrollState.value
         }
-        Log.d(LIST_TAG, "list pinScroll reason=$reason value=$pinnedScrollPx")
     }
 
-    suspend fun restorePinnedScroll(reason: String) {
+    suspend fun restorePinnedScroll() {
         val pin = pinnedScrollPx
         if (pin < 0 || scrollState.value == pin) return
-        Log.d(LIST_TAG, "list JUMP? restoreScroll $reason ${scrollState.value}→$pin")
         scrollState.scrollTo(pin)
     }
 
-    fun slotOrderSample(): String {
-        return animatedIndices.entries
-            .sortedBy { it.value }
-            .take(8)
-            .joinToString { "${it.value}:${it.key}" }
-    }
-
-    fun visualSnapshot(reason: String): String {
-        val itemKeys = items.map(key)
-        val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
-        val offsetSample = dragOffsets.entries
-            .filter { kotlin.math.abs(it.value) > 0.5f }
-            .take(6)
-            .joinToString { "${it.key}=${it.value.toInt()}" }
-        return "reason=$reason t=${SystemClock.elapsedRealtime()} movingKey=$movingKey " +
-            "scroll=${scrollState.value}/${scrollState.maxValue} rowH=${rowHeightPx[0]} stride=${slotStridePx()} " +
-            "viewport=${viewportHeightPx[0]} items=${itemKeys.take(6)} slots=${slotOrderSample()} " +
-            "indicesMatchItems=${itemKeys == animatedOrder} liveOffsets=[$offsetSample]"
-    }
-
     fun clearOffsets() {
-        val hadOffsets = dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }
-        if (hadOffsets) {
-            Log.d(LIST_TAG, "list JUMP? snapOffsets ${visualSnapshot("clearOffsets")}")
-        }
         offsetJobs.values.forEach { it.cancel() }
         offsetJobs.clear()
         dragOffsets.clear()
@@ -252,7 +218,6 @@ fun <T> TvReorderList(
             clearOffsets()
             val nextIndices = indicesFrom(items)
             if (nextIndices != animatedIndices) {
-                Log.d(LIST_TAG, "list syncSlots ${visualSnapshot("itemsReorder")}")
                 animatedIndices.clear()
                 animatedIndices.putAll(nextIndices)
             }
@@ -274,12 +239,6 @@ fun <T> TvReorderList(
             rowContentCache.retainKeys(validKeys)
         }
         if (movingChanged || itemsChanged) {
-            Log.d(
-                LIST_TAG,
-                "list JUMP? composition ${visualSnapshot(
-                    "moving ${runtime.previousMovingKey}→$movingKey itemsChanged=$itemsChanged",
-                )}",
-            )
             runtime.previousMovingKey = movingKey
             runtime.previousItemKeys = itemKeys
         }
@@ -334,11 +293,6 @@ fun <T> TvReorderList(
         val oldTops = slotTopsFor(oldOrderKeys)
         val newTops = slotTopsFor(newOrderKeys)
         val newSlotByKey = newOrderKeys.mapIndexed { index, itemKey -> itemKey to index }.toMap()
-        val movedDeltaSlots = clampedNew - clampedOld
-        Log.d(
-            LIST_TAG,
-            "list animateMove key=$movedKey $oldIndex->$newIndex delta=$movedDeltaSlots",
-        )
 
         val entries = animatedIndices.entries.toList()
         val changedKeys = ArrayList<String>(entries.size)
@@ -357,7 +311,6 @@ fun <T> TvReorderList(
         for (itemKey in changedKeys) {
             animateOffsetToZero(itemKey)
         }
-        Log.d(LIST_TAG, "list animateMove applied changed=${changedKeys.size}")
     }
 
     fun keepNeighborVisible(newIndex: Int, direction: Int) {
@@ -377,11 +330,6 @@ fun <T> TvReorderList(
                 listOrigin + movingHeight * 2f <= viewport)
         ) {
             runtime.neighborScrollJob?.cancel()
-            Log.d(
-                LIST_TAG,
-                "list scrollTo keepNeighbor header dir=$direction newIndex=$newIndex " +
-                    "from=${scrollState.value} to=0 ${visualSnapshot("keepNeighbor")}",
-            )
             runtime.neighborScrollJob = scope.launch {
                 scrollState.animateScrollTo(0, ReorderTravelSpec)
             }
@@ -397,11 +345,6 @@ fun <T> TvReorderList(
             else -> return
         }.coerceIn(0f, scrollState.maxValue.toFloat())
         runtime.neighborScrollJob?.cancel()
-        Log.d(
-            LIST_TAG,
-            "list scrollTo keepNeighbor dir=$direction newIndex=$newIndex " +
-                "from=${current.toInt()} to=${target.toInt()} ${visualSnapshot("keepNeighbor")}",
-        )
         runtime.neighborScrollJob = scope.launch {
             scrollState.animateScrollTo(
                 value = target.roundToInt(),
@@ -416,23 +359,17 @@ fun <T> TvReorderList(
             ?: items.indexOfFirst { key(it) == activeKey }.takeIf { it >= 0 }
             ?: return false
         val newIndex = onMoveBy(activeKey, direction)
-        Log.d(
-            LIST_TAG,
-            "list performMove key=$activeKey dir=$direction oldIndex=$oldIndex " +
-                "newIndex=$newIndex ${visualSnapshot("performMove")}",
-        )
         if (newIndex == null || newIndex == oldIndex) return false
         animateMove(activeKey, oldIndex, newIndex)
         keepNeighborVisible(newIndex, direction)
         return true
     }
 
-    fun confirmFromUi(source: String) {
+    fun confirmFromUi(fromOkKey: Boolean) {
         val activeKey = movingKey ?: return
         stopRepeat()
-        pinScroll(source)
-        suppressStartMove = source == "ok-confirm"
-        Log.d(LIST_TAG, "list confirm source=$source suppressStartMove ${visualSnapshot(source)}")
+        pinScroll()
+        suppressStartMove = fromOkKey
         onConfirmMove(activeKey)
     }
 
@@ -472,7 +409,6 @@ fun <T> TvReorderList(
         if (!suppressStartMove) return@LaunchedEffect
         delay(400)
         if (suppressStartMove) {
-            Log.d(LIST_TAG, "list clear stale suppressStartMove")
             suppressStartMove = false
         }
     }
@@ -501,31 +437,24 @@ fun <T> TvReorderList(
         }
         delay(1)
         if (runtime.latestMovingKey != null) {
-            Log.d(
-                LIST_TAG,
-                "list skip stale exitMove latest=${runtime.latestMovingKey} ${visualSnapshot("stale-exit")}",
-            )
             return@LaunchedEffect
         }
         runtime.neighborScrollJob?.cancel()
         stopRepeat()
-        restorePinnedScroll("exitMove")
+        restorePinnedScroll()
         val exitItemKeys = latestItems.map(key)
         val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
         if (exitItemKeys != animatedOrder) {
-            Log.d(LIST_TAG, "list JUMP? exitMove beforeReset ${visualSnapshot("exitMove-before")}")
             clearOffsets()
             animatedIndices.clear()
             animatedIndices.putAll(latestItems.mapIndexed { index, item -> key(item) to index }.toMap())
             slotOrderKeys = exitItemKeys
-            Log.d(LIST_TAG, "list JUMP? exitMove afterReset ${visualSnapshot("exitMove-after")}")
         } else {
             slotOrderKeys = exitItemKeys
-            Log.d(LIST_TAG, "list exitMove keepSlots ${visualSnapshot("exitMove-keep")}")
         }
-        restorePinnedScroll("exitMove-afterLayout")
+        restorePinnedScroll()
         delay(32)
-        restorePinnedScroll("exitMove-late")
+        restorePinnedScroll()
         if (runtime.latestMovingKey == null) {
             pinnedScrollPx = -1
         }
@@ -577,7 +506,6 @@ fun <T> TvReorderList(
                                 when {
                                     isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
                                         if (suppressStartMove) {
-                                            Log.d(LIST_TAG, "list swallow OK up after confirm")
                                             suppressStartMove = false
                                             true
                                         } else {
@@ -588,7 +516,7 @@ fun <T> TvReorderList(
                                     movingKey != null && isConfirmKey &&
                                         native.action == KeyEvent.ACTION_DOWN -> {
                                         if (native.repeatCount == 0) {
-                                            confirmFromUi("ok-confirm")
+                                            confirmFromUi(fromOkKey = true)
                                         }
                                         true
                                     }
@@ -671,13 +599,11 @@ fun <T> TvReorderList(
                                             item,
                                             isMoving,
                                             {
-                                                if (suppressStartMove) {
-                                                    Log.d(LIST_TAG, "list ignore startMove suppressed key=$itemKey")
-                                                } else if (canMove(item)) {
+                                                if (!suppressStartMove && canMove(item)) {
                                                     onStartMove(itemKey)
                                                 }
                                             },
-                                            { confirmFromUi("done-button") },
+                                            { confirmFromUi(fromOkKey = false) },
                                         )
                                     }
                                 }
