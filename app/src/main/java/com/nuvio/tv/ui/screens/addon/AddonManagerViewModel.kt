@@ -51,7 +51,9 @@ import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,6 +110,8 @@ class AddonManagerViewModel @Inject constructor(
     private var currentCollections: List<Collection> = emptyList()
     private var addonDraftOrder: List<String>? = null
     private var addonMoveBaseline: List<Addon>? = null
+    private var pendingAddonOrder: List<String>? = null
+    private var addonPersistGeneration: Int = 0
 
     init {
         observeInstalledAddons()
@@ -219,6 +223,7 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     fun removeAddon(baseUrl: String) {
+        pendingAddonOrder = null
         viewModelScope.launch {
             addonRepository.removeAddon(baseUrl)
         }
@@ -232,7 +237,8 @@ class AddonManagerViewModel @Inject constructor(
 
     fun enterAddonMoveMode(baseUrl: String) {
         val current = _uiState.value.installedAddons
-        if (current.none { it.baseUrl == baseUrl }) return
+        if (current.size <= 1 || current.none { it.baseUrl == baseUrl }) return
+        pendingAddonOrder = null
         addonMoveBaseline = current
         addonDraftOrder = current.map { it.baseUrl }
         _uiState.update { it.copy(movingAddonKey = baseUrl) }
@@ -253,12 +259,40 @@ class AddonManagerViewModel @Inject constructor(
 
     fun confirmAddonMove() {
         val draft = addonDraftOrder
+        val baseline = addonMoveBaseline
+        val baselineKeys = baseline?.map { it.baseUrl }
         addonDraftOrder = null
         addonMoveBaseline = null
         _uiState.update { it.copy(movingAddonKey = null) }
-        if (draft != null) {
-            viewModelScope.launch {
-                addonRepository.setAddonOrder(draft)
+        if (draft == null || draft == baselineKeys) return
+
+        val generation = ++addonPersistGeneration
+        pendingAddonOrder = draft
+        viewModelScope.launch {
+            var wrote = false
+            try {
+                withContext(NonCancellable) {
+                    addonRepository.setAddonOrder(draft)
+                    wrote = true
+                }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                wrote = false
+            }
+            if (!wrote && generation == addonPersistGeneration) {
+                if (pendingAddonOrder == draft) {
+                    pendingAddonOrder = null
+                }
+                if (baseline != null && _uiState.value.movingAddonKey == null) {
+                    _uiState.update { it.copy(installedAddons = baseline) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            delay(2_500L)
+            if (generation == addonPersistGeneration && pendingAddonOrder == draft) {
+                pendingAddonOrder = null
             }
         }
     }
@@ -267,6 +301,7 @@ class AddonManagerViewModel @Inject constructor(
         val baseline = addonMoveBaseline
         addonDraftOrder = null
         addonMoveBaseline = null
+        pendingAddonOrder = null
         _uiState.update {
             it.copy(
                 movingAddonKey = null,
@@ -895,9 +930,21 @@ class AddonManagerViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, error = error.message) }
                 }
                 .collect { addons ->
-                    val ordered = addonDraftOrder
-                        ?.let { orderAddonsByKeys(addons, it) }
-                        ?: addons
+                    val draft = addonDraftOrder
+                    val pending = pendingAddonOrder
+                    val ordered = when {
+                        draft != null -> orderAddonsByKeys(addons, draft)
+                        pending != null -> {
+                            val emittedKeys = addons.map { it.baseUrl }
+                            if (emittedKeys == pending || emittedKeys.toSet() != pending.toSet()) {
+                                pendingAddonOrder = null
+                                addons
+                            } else {
+                                orderAddonsByKeys(addons, pending)
+                            }
+                        }
+                        else -> addons
+                    }
                     _uiState.update { state ->
                         state.copy(
                             installedAddons = ordered,

@@ -10,7 +10,10 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,18 +53,22 @@ class CollectionManagementViewModel @Inject constructor(
 
     private var collectionMoveBaseline: List<Collection>? = null
     private var collectionDraftOrder: List<String>? = null
+    private var pendingCollectionOrder: List<String>? = null
+    private var collectionPersistGeneration: Int = 0
 
     init {
         viewModelScope.launch {
             collectionsDataStore.collections.collectLatest { collections ->
+                val resolved = resolveObservedCollections(collections)
                 _uiState.update {
-                    it.copy(collections = applyCollectionDraftOrder(collections), isLoading = false)
+                    it.copy(collections = resolved, isLoading = false)
                 }
             }
         }
     }
 
     fun deleteCollection(collectionId: String) {
+        pendingCollectionOrder = null
         viewModelScope.launch {
             collectionsDataStore.removeCollection(collectionId)
             collectionSyncService.triggerPush()
@@ -70,7 +77,8 @@ class CollectionManagementViewModel @Inject constructor(
 
     fun enterCollectionMoveMode(collectionId: String) {
         val current = _uiState.value.collections
-        if (current.none { it.id == collectionId }) return
+        if (current.size <= 1 || current.none { it.id == collectionId }) return
+        pendingCollectionOrder = null
         collectionMoveBaseline = current
         collectionDraftOrder = current.map { it.id }
         _uiState.update { it.copy(movingCollectionKey = collectionId) }
@@ -91,17 +99,43 @@ class CollectionManagementViewModel @Inject constructor(
 
     fun confirmCollectionMove() {
         val draft = collectionDraftOrder
+        val baseline = collectionMoveBaseline
+        val baselineIds = baseline?.map { it.id }
         collectionDraftOrder = null
         collectionMoveBaseline = null
         _uiState.update { it.copy(movingCollectionKey = null) }
-        if (draft != null) {
-            viewModelScope.launch {
-                val current = _uiState.value.collections
-                val byId = current.associateBy { it.id }
-                val ordered = draft.mapNotNull { byId[it] } +
-                    current.filter { it.id !in draft.toSet() }
-                collectionsDataStore.setCollections(ordered)
-                collectionSyncService.triggerPush()
+        if (draft == null || draft == baselineIds) return
+
+        val ordered = orderCollectionsByIds(_uiState.value.collections, draft)
+        val orderedIds = ordered.map { it.id }
+        val generation = ++collectionPersistGeneration
+        pendingCollectionOrder = orderedIds
+        viewModelScope.launch {
+            var wrote = false
+            try {
+                withContext(NonCancellable) {
+                    collectionsDataStore.setCollections(ordered)
+                    wrote = true
+                    collectionSyncService.triggerPush()
+                }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                wrote = false
+            }
+            if (!wrote && generation == collectionPersistGeneration) {
+                if (pendingCollectionOrder == orderedIds) {
+                    pendingCollectionOrder = null
+                }
+                if (baseline != null && _uiState.value.movingCollectionKey == null) {
+                    _uiState.update { it.copy(collections = baseline) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            delay(2_500L)
+            if (generation == collectionPersistGeneration && pendingCollectionOrder == orderedIds) {
+                pendingCollectionOrder = null
             }
         }
     }
@@ -110,6 +144,7 @@ class CollectionManagementViewModel @Inject constructor(
         val baseline = collectionMoveBaseline
         collectionDraftOrder = null
         collectionMoveBaseline = null
+        pendingCollectionOrder = null
         _uiState.update {
             it.copy(
                 movingCollectionKey = null,
@@ -125,9 +160,19 @@ class CollectionManagementViewModel @Inject constructor(
         }
     }
 
-    private fun applyCollectionDraftOrder(collections: List<Collection>): List<Collection> {
-        val draft = collectionDraftOrder ?: return collections
-        return orderCollectionsByIds(collections, draft)
+    private fun resolveObservedCollections(collections: List<Collection>): List<Collection> {
+        val draft = collectionDraftOrder
+        if (draft != null) return orderCollectionsByIds(collections, draft)
+        val pending = pendingCollectionOrder
+        if (pending != null) {
+            val emittedIds = collections.map { it.id }
+            if (emittedIds == pending || emittedIds.toSet() != pending.toSet()) {
+                pendingCollectionOrder = null
+                return collections
+            }
+            return orderCollectionsByIds(collections, pending)
+        }
+        return collections
     }
 
     private fun orderCollectionsByIds(
