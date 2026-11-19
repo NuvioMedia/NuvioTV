@@ -30,8 +30,23 @@ class TrailerSubtitleTest {
     }
 
     @Test
-    fun `none as preferred language picks nothing`() {
-        assertNull(pickTrailerSubtitle(listOf(track("en")), "none", "en"))
+    fun `none as preferred language picks the spoken language first`() {
+        val author = track("en-US")
+        assertEquals(author, pickTrailerSubtitle(listOf(track("de"), track("en", auto = true), author), "none", null))
+    }
+
+    @Test
+    fun `none as preferred language still honours the secondary language`() {
+        val french = track("fr")
+        assertEquals(french, pickTrailerSubtitle(listOf(track("en", auto = true), french), "none", "fr"))
+    }
+
+    @Test
+    fun `none as preferred language falls back to the first listed track`() {
+        val german = track("de")
+        assertEquals(german, pickTrailerSubtitle(listOf(german, track("fr")), "none", null))
+        assertEquals(german, pickTrailerSubtitle(listOf(german, track("fr")), "none", "pl"))
+        assertNull(pickTrailerSubtitle(emptyList(), "none", null))
     }
 
     @Test
