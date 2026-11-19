@@ -133,7 +133,7 @@ fun <T> TvReorderList(
     val dragOffsets = remember { mutableStateMapOf<String, Float>() }
     val offsetJobs = remember { mutableMapOf<String, Job>() }
     val rowContentCache = remember(movingKey) {
-        mutableMapOf<String, CachedRowContent<T>>()
+        TvReorderRowCache<T, @Composable () -> Unit>()
     }
     val subcomposeLayoutState = remember {
         SubcomposeLayoutState(SubcomposeSlotReusePolicy(RETAINED_ROW_SLOTS))
@@ -251,7 +251,9 @@ fun <T> TvReorderList(
                 animatedIndices.putAll(nextIndices)
             }
             slotOrderKeys = itemKeys
-            measuredRowHeights.keys.retainAll(itemKeys.toSet())
+            val validKeys = itemKeys.toSet()
+            measuredRowHeights.keys.retainAll(validKeys)
+            rowContentCache.retainKeys(validKeys)
         } else if (itemsChanged) {
             val validKeys = itemKeys.toSet()
             val kept = slotOrderKeys.filter { it in validKeys }
@@ -263,6 +265,7 @@ fun <T> TvReorderList(
             }
             dragOffsets.keys.retainAll(validKeys)
             measuredRowHeights.keys.retainAll(validKeys)
+            rowContentCache.retainKeys(validKeys)
         }
         if (movingChanged || itemsChanged) {
             Log.d(
@@ -630,12 +633,16 @@ fun <T> TvReorderList(
                             val item = items[index]
                             val itemKey = key(item)
                             val isMoving = movingKey == itemKey
-                            val cached = rowContentCache[itemKey]
-                            val content: @Composable () -> Unit
-                            if (cached != null && cached.item == item && cached.isMoving == isMoving) {
-                                content = cached.content
-                            } else {
-                                content = {
+                            val content = rowContentCache.getOrPut(
+                                key = itemKey,
+                                item = item,
+                                isMoving = isMoving,
+                                itemContent = itemContent,
+                                canMove = canMove,
+                                onStartMove = onStartMove,
+                                onConfirmMove = onConfirmMove,
+                            ) {
+                                {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -659,7 +666,6 @@ fun <T> TvReorderList(
                                         )
                                     }
                                 }
-                                rowContentCache[itemKey] = CachedRowContent(item, isMoving, content)
                             }
                             val placeable = subcompose(itemKey, content).first().measure(itemConstraints)
                             placeables[index] = placeable
@@ -758,11 +764,57 @@ private class TvReorderListRuntime(
     var cancelScrollJob: Job? = null
 }
 
-private class CachedRowContent<T>(
-    val item: T,
-    val isMoving: Boolean,
-    val content: @Composable () -> Unit,
-)
+internal class TvReorderRowCache<T, C> {
+    private class Entry<T, C>(
+        val item: T,
+        val isMoving: Boolean,
+        val itemContent: Any,
+        val canMove: Any,
+        val onStartMove: Any,
+        val onConfirmMove: Any,
+        val content: C,
+    )
+
+    private val entries = mutableMapOf<String, Entry<T, C>>()
+
+    fun getOrPut(
+        key: String,
+        item: T,
+        isMoving: Boolean,
+        itemContent: Any,
+        canMove: Any,
+        onStartMove: Any,
+        onConfirmMove: Any,
+        factory: () -> C,
+    ): C {
+        val cached = entries[key]
+        if (cached != null &&
+            cached.item == item &&
+            cached.isMoving == isMoving &&
+            cached.itemContent == itemContent &&
+            cached.canMove == canMove &&
+            cached.onStartMove == onStartMove &&
+            cached.onConfirmMove == onConfirmMove
+        ) {
+            return cached.content
+        }
+        val created = factory()
+        entries[key] = Entry(
+            item = item,
+            isMoving = isMoving,
+            itemContent = itemContent,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+            content = created,
+        )
+        return created
+    }
+
+    fun retainKeys(validKeys: Set<String>) {
+        entries.keys.retainAll(validKeys)
+    }
+}
 
 internal fun computeSlotTops(
     slotCount: Int,

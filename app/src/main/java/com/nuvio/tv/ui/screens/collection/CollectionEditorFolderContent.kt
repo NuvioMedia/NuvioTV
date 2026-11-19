@@ -234,7 +234,9 @@ fun FolderEditorContent(
         val catalogFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
         val sourceKeys = remember(folder.sources) { collectionSourceKeys(folder.sources) }
         val sourceItems = remember(sourceKeys, folder.sources) {
-            sourceKeys.zip(folder.sources).map { (key, source) -> FolderSourceItem(key, source) }
+            sourceKeys.zip(folder.sources).mapIndexed { index, (key, source) ->
+                FolderSourceItem(key = key, index = index, source = source)
+            }
         }
         var pendingFocusIndex by remember { mutableStateOf(-1) }
 
@@ -669,7 +671,7 @@ fun FolderEditorContent(
             },
         ) { item, isMoving, onStartMove, onConfirmMove ->
         val source = item.source
-        val index = sourceKeys.indexOf(item.key)
+        val index = item.index
         val reorderActive = uiState.movingSourceKey != null
         val addonSource = source as? AddonCatalogCollectionSource
         val tmdbSource = source as? TmdbCollectionSource
@@ -896,5 +898,6 @@ fun FolderEditorContent(
 
 private data class FolderSourceItem(
     val key: String,
+    val index: Int,
     val source: CollectionSource
 )

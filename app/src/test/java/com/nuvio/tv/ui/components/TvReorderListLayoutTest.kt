@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.components
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -89,5 +91,138 @@ class TvReorderListLayoutTest {
         val range = visibleSlotRangeFromTops(tops, topEdgePx = 5000f, bottomEdgePx = 100000f)
         assertEquals(19, range.last)
         assertTrue(range.first <= range.last)
+    }
+
+    @Test
+    fun `row cache reuses content when item moving state and callbacks are unchanged`() {
+        val cache = TvReorderRowCache<String, Any>()
+        val itemContent = Any()
+        val canMove = Any()
+        val onStartMove = Any()
+        val onConfirmMove = Any()
+        var factoryCalls = 0
+
+        val first = cache.getOrPut(
+            key = "row-a",
+            item = "A",
+            isMoving = false,
+            itemContent = itemContent,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) {
+            factoryCalls++
+            Any()
+        }
+        val second = cache.getOrPut(
+            key = "row-a",
+            item = "A",
+            isMoving = false,
+            itemContent = itemContent,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) {
+            factoryCalls++
+            Any()
+        }
+
+        assertEquals(1, factoryCalls)
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `row cache invalidates when itemContent callback changes even if item and moving flag match`() {
+        val cache = TvReorderRowCache<String, Any>()
+        val canMove = Any()
+        val onStartMove = Any()
+        val onConfirmMove = Any()
+        val initialRenderer = Any()
+        val updatedRenderer = Any()
+
+        val first = cache.getOrPut(
+            key = "row-b",
+            item = "B",
+            isMoving = false,
+            itemContent = initialRenderer,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) { Any() }
+
+        val second = cache.getOrPut(
+            key = "row-b",
+            item = "B",
+            isMoving = false,
+            itemContent = updatedRenderer,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) { Any() }
+
+        assertNotSame(first, second)
+    }
+
+    @Test
+    fun `row cache invalidates when canMove or action callbacks change`() {
+        val cache = TvReorderRowCache<String, Any>()
+        val itemContent = Any()
+        val onStartMove = Any()
+        val onConfirmMove = Any()
+
+        val first = cache.getOrPut(
+            key = "row-a",
+            item = "A",
+            isMoving = false,
+            itemContent = itemContent,
+            canMove = Any(),
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) { Any() }
+
+        val second = cache.getOrPut(
+            key = "row-a",
+            item = "A",
+            isMoving = false,
+            itemContent = itemContent,
+            canMove = Any(),
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) { Any() }
+
+        assertNotSame(first, second)
+    }
+
+    @Test
+    fun `row cache retainKeys evicts removed rows`() {
+        val cache = TvReorderRowCache<String, Any>()
+        val itemContent = Any()
+        val canMove = Any()
+        val onStartMove = Any()
+        val onConfirmMove = Any()
+
+        val first = cache.getOrPut(
+            key = "row-a",
+            item = "A",
+            isMoving = false,
+            itemContent = itemContent,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) { Any() }
+
+        cache.retainKeys(setOf("row-b"))
+
+        val recreated = cache.getOrPut(
+            key = "row-a",
+            item = "A",
+            isMoving = false,
+            itemContent = itemContent,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+        ) { Any() }
+
+        assertNotSame(first, recreated)
     }
 }
