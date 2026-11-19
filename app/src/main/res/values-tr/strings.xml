@@ -1785,6 +1785,9 @@
     <string name="catalog_order_disable">Devre Dışı</string>
     <string name="catalog_order_move">Taşı</string>
     <string name="catalog_order_done">Tamam</string>
+    <string name="catalog_order_pinned">Sabitlendi</string>
+    <string name="catalog_order_pinned_to_top">Üste sabitlendi</string>
+    <string name="catalog_order_pin_to_move_toast">Taşımak için koleksiyondaki üste sabitlemeyi kaldır</string>
 
 
     <!-- StreamScreen -->
@@ -2896,6 +2899,7 @@
     <string name="collections_valid_summary">%1$d koleksiyon, %2$d klasör</string>
     <string name="collections_confirm_import">İçe Aktarmayı Onayla</string>
     <string name="collections_folder_count">%1$d klasör</string>
+    <string name="collections_pinned">Sabitlendi</string>
 
     <!-- Collection Editor -->
     <string name="collections_delete_confirm_title">Koleksiyon silinsin mi?</string>

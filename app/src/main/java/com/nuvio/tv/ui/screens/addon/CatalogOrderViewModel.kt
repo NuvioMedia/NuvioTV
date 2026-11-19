@@ -172,6 +172,12 @@ class CatalogOrderViewModel @Inject constructor(
         val map = source.associateBy { it.key }
         val seen = LinkedHashSet<String>()
         val ordered = ArrayList<CatalogOrderItem>(source.size)
+        for (item in source) {
+            if (item.isPinnedToTop && seen.add(item.key)) {
+                ordered.add(item)
+            }
+        }
+        val firstUnpinnedIndex = ordered.size
         for (key in orderKeys) {
             val item = map[key] ?: continue
             if (seen.add(key)) ordered.add(item)
@@ -180,28 +186,32 @@ class CatalogOrderViewModel @Inject constructor(
             if (seen.add(item.key)) ordered.add(item)
         }
         return ordered.mapIndexed { index, item ->
-            item.withMoveFlags(index, ordered.size, followAddonsOrder)
+            item.withMoveFlags(index, ordered.size, firstUnpinnedIndex, followAddonsOrder)
         }
     }
 
     private fun CatalogOrderItem.withMoveFlags(
         index: Int,
         size: Int,
+        firstUnpinnedIndex: Int,
         followAddonsOrder: Boolean,
     ): CatalogOrderItem {
         val isCollection = key.startsWith("collection_")
         val canMoveUp: Boolean
         val canMoveDown: Boolean
-        if (followAddonsOrder) {
+        if (isPinnedToTop) {
+            canMoveUp = false
+            canMoveDown = false
+        } else if (followAddonsOrder) {
             if (isCollection) {
-                canMoveUp = index > 0
+                canMoveUp = index > firstUnpinnedIndex
                 canMoveDown = index < size - 1
             } else {
                 canMoveUp = false
                 canMoveDown = false
             }
         } else {
-            canMoveUp = index > 0
+            canMoveUp = index > firstUnpinnedIndex
             canMoveDown = index < size - 1
         }
         return copy(
@@ -211,15 +221,24 @@ class CatalogOrderViewModel @Inject constructor(
         )
     }
 
+    private fun pinnedItemKeys(): Set<String> =
+        _uiState.value.items.asSequence()
+            .filter { it.isPinnedToTop }
+            .map { it.key }
+            .toSet()
+
     private fun reorderInDraft(
         draft: List<String>,
         key: String,
         direction: Int,
     ): List<String>? {
+        val pinnedKeys = pinnedItemKeys()
+        if (key in pinnedKeys) return null
         val currentIndex = draft.indexOf(key)
         if (currentIndex == -1) return null
         val newIndex = currentIndex + direction
         if (newIndex !in draft.indices) return null
+        if (draft[newIndex] in pinnedKeys) return null
         return draft.toMutableList().apply {
             val item = removeAt(currentIndex)
             add(newIndex, item)
@@ -232,6 +251,8 @@ class CatalogOrderViewModel @Inject constructor(
         direction: Int,
     ): List<String>? {
         if (!key.startsWith("collection_")) return null
+        val pinnedKeys = pinnedItemKeys()
+        if (key in pinnedKeys) return null
         val items = _uiState.value.items
         val currentIndex = draft.indexOf(key)
         if (currentIndex == -1) return null
@@ -267,7 +288,7 @@ class CatalogOrderViewModel @Inject constructor(
             newIndex = scanIdx
         }
 
-        if (newIndex == currentIndex) return null
+        if (newIndex == currentIndex || draft[newIndex] in pinnedKeys) return null
         return draft.toMutableList().apply {
             removeAt(currentIndex)
             add(newIndex, key)
@@ -282,8 +303,9 @@ class CatalogOrderViewModel @Inject constructor(
         } else {
             current
         }
+        val firstUnpinnedIndex = reordered.count { it.isPinnedToTop }
         val flagged = reordered.mapIndexed { index, item ->
-            item.withMoveFlags(index, reordered.size, enabled)
+            item.withMoveFlags(index, reordered.size, firstUnpinnedIndex, enabled)
         }
         _uiState.update {
             it.copy(followAddonsOrder = enabled, items = flagged)
@@ -301,20 +323,22 @@ class CatalogOrderViewModel @Inject constructor(
         manifestKeys: List<String>,
     ): List<CatalogOrderItem> {
         if (current.isEmpty() || manifestKeys.isEmpty()) return current
-        val byKey = current.associateBy { it.key }
+        val pinnedItems = current.filter { it.isPinnedToTop }
+        val unpinnedItems = current.filterNot { it.isPinnedToTop }
+        val byKey = unpinnedItems.associateBy { it.key }
         val addonKeys = manifestKeys.filter { it in byKey }
-        if (addonKeys.isEmpty()) return current
-        val collectionKeys = current.asSequence()
+        if (addonKeys.isEmpty()) return pinnedItems + unpinnedItems
+        val collectionKeys = unpinnedItems.asSequence()
             .map { it.key }
             .filter { it.startsWith("collection_") }
             .toSet()
         val orderedKeys = computeFollowAddonsOrderKeys(
             addonKeys = addonKeys,
             collectionKeys = collectionKeys,
-            referenceOrderKeys = current.map { it.key },
+            referenceOrderKeys = unpinnedItems.map { it.key },
             addonIdForKey = { key -> byKey[key]?.addonId },
         )
-        return orderedKeys.mapNotNull { byKey[it] }
+        return pinnedItems + orderedKeys.mapNotNull { byKey[it] }
     }
 
     fun toggleCatalogEnabled(disableKey: String) {
@@ -428,36 +452,48 @@ class CatalogOrderViewModel @Inject constructor(
                 disableKey = "collection_${collection.id}",
                 catalogName = collection.title,
                 addonName = "${collection.folders.size} folder${if (collection.folders.size != 1) "s" else ""}",
-                typeLabel = "collection"
+                typeLabel = "collection",
+                isPinnedToTop = collection.pinToTop
             )
         }
-        val allEntries = defaultEntries + collectionEntries
+        val pinnedEntries = collectionEntries.filter { it.isPinnedToTop }
+        val unpinnedCollectionEntries = collectionEntries.filterNot { it.isPinnedToTop }
+        val pinnedKeys = pinnedEntries.map { it.key }
+        val pinnedKeySet = pinnedKeys.toSet()
+        val allEntries = pinnedEntries + defaultEntries + unpinnedCollectionEntries
         val availableMap = allEntries.associateBy { it.key }
-        val defaultOrderKeys = allEntries.map { it.key }
+        val unpinnedDefaultOrderKeys = (defaultEntries + unpinnedCollectionEntries).map { it.key }
+        val unpinnedKeySet = unpinnedDefaultOrderKeys.toSet()
         lastManifestAddonKeys = defaultEntries.map { it.key }
 
-        val effectiveOrder: List<String>
+        val unpinnedEffectiveOrder: List<String>
         if (followAddonsOrder) {
             val addonKeys = defaultEntries.map { it.key }
-            val collectionKeys = collectionEntries.map { it.key }.toSet()
-            val savedValid = savedOrderKeys.filter { it in availableMap }.distinct()
-            effectiveOrder = computeFollowAddonsOrderKeys(
+            val unpinnedCollectionKeys = unpinnedCollectionEntries.map { it.key }.toSet()
+            val savedValidUnpinned = savedOrderKeys
+                .asSequence()
+                .filter { it in unpinnedKeySet }
+                .distinct()
+                .toList()
+            unpinnedEffectiveOrder = computeFollowAddonsOrderKeys(
                 addonKeys = addonKeys,
-                collectionKeys = collectionKeys,
-                referenceOrderKeys = savedValid,
+                collectionKeys = unpinnedCollectionKeys,
+                referenceOrderKeys = savedValidUnpinned,
                 addonIdForKey = { key -> availableMap[key]?.addonId },
             )
         } else {
-            val savedValid = savedOrderKeys
+            val savedValidUnpinned = savedOrderKeys
                 .asSequence()
-                .filter { it in availableMap }
+                .filter { it in unpinnedKeySet }
                 .distinct()
                 .toList()
 
-            val savedKeySet = savedValid.toSet()
-            val missing = defaultOrderKeys.filterNot { it in savedKeySet }
-            effectiveOrder = savedValid + missing
+            val savedKeySet = savedValidUnpinned.toSet()
+            val missing = unpinnedDefaultOrderKeys.filterNot { it in savedKeySet }
+            unpinnedEffectiveOrder = savedValidUnpinned + missing
         }
+        val effectiveOrder = pinnedKeys + unpinnedEffectiveOrder
+        val firstUnpinnedIndex = pinnedKeySet.size
 
         return effectiveOrder.mapIndexedNotNull { index, key ->
             val entry = availableMap[key] ?: return@mapIndexedNotNull null
@@ -466,16 +502,19 @@ class CatalogOrderViewModel @Inject constructor(
 
             val canMoveUp: Boolean
             val canMoveDown: Boolean
-            if (followAddonsOrder) {
+            if (entry.isPinnedToTop) {
+                canMoveUp = false
+                canMoveDown = false
+            } else if (followAddonsOrder) {
                 if (isCollection) {
-                    canMoveUp = index > 0
+                    canMoveUp = index > firstUnpinnedIndex
                     canMoveDown = index < effectiveOrder.lastIndex
                 } else {
                     canMoveUp = false
                     canMoveDown = false
                 }
             } else {
-                canMoveUp = index > 0
+                canMoveUp = index > firstUnpinnedIndex
                 canMoveDown = index < effectiveOrder.lastIndex
             }
 
@@ -488,6 +527,7 @@ class CatalogOrderViewModel @Inject constructor(
                 typeLabel = entry.typeLabel,
                 isDisabled = entry.disableKey in disabledKeys ||
                     (entry.legacyDisableKey != null && entry.legacyDisableKey in disabledKeys),
+                isPinnedToTop = entry.isPinnedToTop,
                 canMoveUp = canMoveUp,
                 canMoveDown = canMoveDown,
                 canMove = canMoveUp || canMoveDown
@@ -667,6 +707,7 @@ data class CatalogOrderItem(
     val addonId: String = "",
     val typeLabel: String,
     val isDisabled: Boolean,
+    val isPinnedToTop: Boolean = false,
     val canMoveUp: Boolean,
     val canMoveDown: Boolean,
     val canMove: Boolean,
@@ -679,5 +720,6 @@ private data class CatalogOrderEntry(
     val catalogName: String,
     val addonName: String,
     val addonId: String = "",
-    val typeLabel: String
+    val typeLabel: String,
+    val isPinnedToTop: Boolean = false
 )

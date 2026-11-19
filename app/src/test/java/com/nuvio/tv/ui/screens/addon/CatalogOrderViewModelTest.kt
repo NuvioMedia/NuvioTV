@@ -22,7 +22,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -56,9 +58,10 @@ class CatalogOrderViewModelTest {
         resources = emptyList()
     )
 
-    private fun testCollection(id: String): Collection = Collection(
+    private fun testCollection(id: String, pinToTop: Boolean = false): Collection = Collection(
         id = id,
         title = "Collection $id",
+        pinToTop = pinToTop,
         folders = emptyList()
     )
 
@@ -245,5 +248,174 @@ class CatalogOrderViewModelTest {
 
         assertEquals(0, h.vm.moveDuringDrag(keyCol1, -1))
         assertEquals(listOf(keyCol1, keyA1, keyA2, keyB1), h.vm.uiState.value.items.map { it.key })
+    }
+
+    @Test
+    fun `pinned collections stay at top of list ahead of catalogs and are non-movable`() = runTest {
+        val addonA = testAddon("addonA", catalogIds = listOf("a1", "a2"))
+        val pinned = testCollection("p1", pinToTop = true)
+        val unpinned = testCollection("u1", pinToTop = false)
+
+        val keyA1 = homeCatalogKey("addonA", "movie", "a1")
+        val keyA2 = homeCatalogKey("addonA", "movie", "a2")
+        val keyPinned = "collection_p1"
+        val keyUnpinned = "collection_u1"
+
+        val h = createHarness(
+            addons = listOf(addonA),
+            collections = listOf(unpinned, pinned),
+            initialOrderKeys = listOf(keyA1, keyA2, keyUnpinned, keyPinned),
+            initialFollowAddons = false
+        )
+        runCurrent()
+
+        val items = h.vm.uiState.value.items
+        assertEquals(listOf(keyPinned, keyA1, keyA2, keyUnpinned), items.map { it.key })
+
+        assertTrue(items[0].isPinnedToTop)
+        assertFalse(items[0].canMove)
+        assertFalse(items[0].canMoveUp)
+        assertFalse(items[0].canMoveDown)
+
+        // First unpinned item right below pinned collection cannot move up into pinned slot
+        assertFalse(items[1].isPinnedToTop)
+        assertFalse(items[1].canMoveUp)
+        assertTrue(items[1].canMoveDown)
+        assertTrue(items[1].canMove)
+
+        h.vm.enterMoveMode(keyPinned)
+        assertNull(h.vm.uiState.value.movingKey)
+    }
+
+    @Test
+    fun `unpinned catalog cannot drag above pinned collection`() = runTest {
+        val addonA = testAddon("addonA", catalogIds = listOf("a1", "a2"))
+        val pinned = testCollection("p1", pinToTop = true)
+
+        val keyA1 = homeCatalogKey("addonA", "movie", "a1")
+        val keyA2 = homeCatalogKey("addonA", "movie", "a2")
+        val keyPinned = "collection_p1"
+
+        val h = createHarness(
+            addons = listOf(addonA),
+            collections = listOf(pinned),
+            initialOrderKeys = listOf(keyA1, keyA2, keyPinned),
+            initialFollowAddons = false
+        )
+        runCurrent()
+
+        h.vm.enterMoveMode(keyA2)
+        assertEquals(1, h.vm.moveDuringDrag(keyA2, -1))
+        assertEquals(listOf(keyPinned, keyA2, keyA1), h.vm.uiState.value.items.map { it.key })
+
+        assertNull(h.vm.moveDuringDrag(keyA2, -1))
+        assertEquals(listOf(keyPinned, keyA2, keyA1), h.vm.uiState.value.items.map { it.key })
+    }
+
+    @Test
+    fun `single unpinned item below pinned collection cannot enter move mode`() = runTest {
+        val addonA = testAddon("addonA", catalogIds = listOf("a1"))
+        val pinned = testCollection("p1", pinToTop = true)
+
+        val keyA1 = homeCatalogKey("addonA", "movie", "a1")
+
+        val h = createHarness(
+            addons = listOf(addonA),
+            collections = listOf(pinned),
+            initialFollowAddons = false
+        )
+        runCurrent()
+
+        val items = h.vm.uiState.value.items
+        assertFalse(items[1].canMove)
+        h.vm.enterMoveMode(keyA1)
+        assertNull(h.vm.uiState.value.movingKey)
+    }
+
+    @Test
+    fun `follow addons mode keeps pinned collections at top and blocks crossing above them`() = runTest {
+        val addonA = testAddon("addonA", catalogIds = listOf("a1", "a2"))
+        val pinned = testCollection("p1", pinToTop = true)
+        val unpinned = testCollection("u1", pinToTop = false)
+
+        val keyA1 = homeCatalogKey("addonA", "movie", "a1")
+        val keyA2 = homeCatalogKey("addonA", "movie", "a2")
+        val keyPinned = "collection_p1"
+        val keyUnpinned = "collection_u1"
+
+        val h = createHarness(
+            addons = listOf(addonA),
+            collections = listOf(pinned, unpinned),
+            initialOrderKeys = listOf(keyA1, keyA2, keyUnpinned, keyPinned),
+            initialFollowAddons = true
+        )
+        runCurrent()
+
+        assertEquals(listOf(keyPinned, keyA1, keyA2, keyUnpinned), h.vm.uiState.value.items.map { it.key })
+
+        h.vm.enterMoveMode(keyUnpinned)
+        assertEquals(1, h.vm.moveDuringDrag(keyUnpinned, -1))
+        assertEquals(listOf(keyPinned, keyUnpinned, keyA1, keyA2), h.vm.uiState.value.items.map { it.key })
+
+        assertNull(h.vm.moveDuringDrag(keyUnpinned, -1))
+        assertEquals(listOf(keyPinned, keyUnpinned, keyA1, keyA2), h.vm.uiState.value.items.map { it.key })
+    }
+
+    @Test
+    fun `toggleFollowAddonsOrder true keeps pinned collections at top optimistically`() = runTest {
+        val addonA = testAddon("addonA", catalogIds = listOf("a1", "a2"))
+        val pinned = testCollection("p1", pinToTop = true)
+        val unpinned = testCollection("u1", pinToTop = false)
+
+        val keyA1 = homeCatalogKey("addonA", "movie", "a1")
+        val keyA2 = homeCatalogKey("addonA", "movie", "a2")
+        val keyPinned = "collection_p1"
+        val keyUnpinned = "collection_u1"
+
+        val writeGate = CompletableDeferred<Unit>()
+        val layoutPrefs = mockk<LayoutPreferenceDataStore>(relaxed = true)
+        coEvery { layoutPrefs.setFollowAddonsOrder(true) } coAnswers { writeGate.await() }
+
+        val h = createHarness(
+            addons = listOf(addonA),
+            collections = listOf(pinned, unpinned),
+            initialOrderKeys = listOf(keyPinned, keyA2, keyUnpinned, keyA1),
+            initialFollowAddons = false,
+            layoutPrefs = layoutPrefs
+        )
+        runCurrent()
+
+        h.vm.toggleFollowAddonsOrder(true)
+        runCurrent()
+
+        val items = h.vm.uiState.value.items
+        assertEquals(listOf(keyPinned, keyA1, keyA2, keyUnpinned), items.map { it.key })
+        assertTrue(items[0].isPinnedToTop)
+        assertFalse(items[0].canMove)
+
+        writeGate.complete(Unit)
+    }
+
+    @Test
+    fun `multiple pinned collections preserve collections list order at the top`() = runTest {
+        val addonA = testAddon("addonA", catalogIds = listOf("a1"))
+        val p1 = testCollection("p1", pinToTop = true)
+        val p2 = testCollection("p2", pinToTop = true)
+        val u1 = testCollection("u1", pinToTop = false)
+
+        val keyA1 = homeCatalogKey("addonA", "movie", "a1")
+
+        val h = createHarness(
+            addons = listOf(addonA),
+            collections = listOf(p1, u1, p2),
+            initialOrderKeys = listOf(keyA1, "collection_p2", "collection_p1", "collection_u1"),
+            initialFollowAddons = false
+        )
+        runCurrent()
+
+        assertEquals(
+            listOf("collection_p1", "collection_p2", keyA1, "collection_u1"),
+            h.vm.uiState.value.items.map { it.key }
+        )
     }
 }

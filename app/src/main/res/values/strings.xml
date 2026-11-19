@@ -1846,6 +1846,9 @@
     <string name="catalog_order_disable">Disable</string>
     <string name="catalog_order_move">Move</string>
     <string name="catalog_order_done">Done</string>
+    <string name="catalog_order_pinned">Pinned</string>
+    <string name="catalog_order_pinned_to_top">Pinned to top</string>
+    <string name="catalog_order_pin_to_move_toast">Remove pin to top from collection to move</string>
 
 
     <string name="stream_retry">Retry</string>
@@ -2709,6 +2712,7 @@
     <string name="collections_valid_summary">%1$d collection(s), %2$d folder(s)</string>
     <string name="collections_confirm_import">Confirm Import</string>
     <string name="collections_folder_count">%1$d folder(s)</string>
+    <string name="collections_pinned">Pinned</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Row Title</string>

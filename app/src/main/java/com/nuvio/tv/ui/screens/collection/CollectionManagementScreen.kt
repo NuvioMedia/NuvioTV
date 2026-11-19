@@ -644,8 +644,15 @@ private fun CollectionListItem(
                     ),
                     color = NuvioTheme.colors.TextPrimary,
                 )
+                val summary = buildString {
+                    append(stringResource(R.string.collections_folder_count, collection.folders.size))
+                    if (collection.pinToTop) {
+                        append(" · ")
+                        append(stringResource(R.string.collections_pinned))
+                    }
+                }
                 Text(
-                    text = stringResource(R.string.collections_folder_count, collection.folders.size),
+                    text = summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextTertiary
                 )
