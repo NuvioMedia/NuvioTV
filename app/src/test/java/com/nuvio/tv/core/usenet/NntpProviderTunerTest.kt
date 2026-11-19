@@ -6,10 +6,14 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -138,6 +142,9 @@ class NntpProviderTunerTest {
         val open = AtomicInteger()
         val most = AtomicInteger()
         val refused = AtomicInteger()
+        /** Signed-in connections that ended without QUIT: some providers keep counting those for minutes. */
+        val abandoned = AtomicInteger()
+        val bodies = AtomicInteger()
         private val article = ByteArrayOutputStream().apply {
             repeat(2000) { write("=ybody line $it with some padding to make it longer\r\n".toByteArray()) }
             write("..starts with a dot\r\n.\r\n".toByteArray())
@@ -159,6 +166,8 @@ class NntpProviderTunerTest {
             val counted = synchronized(this) {
                 if (open.get() >= limit) false else { most.accumulateAndGet(open.incrementAndGet(), ::maxOf); true }
             }
+            var quit = false
+            var signedIn = false
             try {
                 if (!counted) {
                     refused.incrementAndGet()
@@ -169,16 +178,19 @@ class NntpProviderTunerTest {
                     val line = input.readLine() ?: break
                     when {
                         line.startsWith("AUTHINFO USER") -> output.write("381 more\r\n".toByteArray())
-                        line.startsWith("AUTHINFO PASS") -> output.write("281 ok\r\n".toByteArray())
+                        line.startsWith("AUTHINFO PASS") -> { signedIn = true; output.write("281 ok\r\n".toByteArray()) }
                         line.startsWith("BODY") -> if (missing) output.write("430 no such article\r\n".toByteArray())
-                            else { output.write("222 0 body\r\n".toByteArray()); output.write(article) }
-                        line == "QUIT" -> { output.write("205 bye\r\n".toByteArray()); output.flush(); break }
+                            else { output.write("222 0 body\r\n".toByteArray()); output.write(article); bodies.incrementAndGet() }
+                        line == "QUIT" -> { quit = true; output.write("205 bye\r\n".toByteArray()); output.flush(); break }
                         else -> output.write("500 what\r\n".toByteArray())
                     }
                     output.flush()
                 }
             } catch (_: Exception) {
-            } finally { if (counted) open.decrementAndGet() }
+            } finally {
+                if (counted) open.decrementAndGet()
+                if (signedIn && !quit) abandoned.incrementAndGet()
+            }
         }
 
         override fun close() = server.close()
@@ -211,6 +223,38 @@ class NntpProviderTunerTest {
             assertTrue(result.readings.all { it.connections <= 12 })
             assertEquals(listOf(TuneProgress.Phase.LIMIT, TuneProgress.Phase.PORT, TuneProgress.Phase.CONNECTIONS),
                 phases.distinct())
+            // Every connection signed out, the measured ones after reading the bodies still due.
+            Thread.sleep(300)
+            assertEquals(0, server.abandoned.get())
+            assertEquals(0, server.open.get())
+        }
+    }
+
+    @Test fun `a finished step waits for the bodies still due, within bounds`() {
+        // 16 connections, 4 bodies of 0.7 MB each, at 20 MB/s: 2.24 s expected, waited up to twice that.
+        assertEquals(4480L, TunePlan.drainMs(16, 4, 700_000.0, 20_000_000.0))
+        assertEquals(TunePlan.MIN_DRAIN_MS, TunePlan.drainMs(4, 4, 700_000.0, 20_000_000.0))
+        assertEquals(TunePlan.MAX_DRAIN_MS, TunePlan.drainMs(48, 4, 700_000.0, 1_000_000.0))
+        assertEquals(TunePlan.MIN_DRAIN_MS, TunePlan.drainMs(8, 4, 0.0, 20_000_000.0))
+        assertEquals(TunePlan.MIN_DRAIN_MS, TunePlan.drainMs(8, 4, 700_000.0, 0.0))
+    }
+
+    @Test fun `stopping while measuring signs every connection out`() = runBlocking {
+        FakeProvider(limit = 30).use { server ->
+            val measuring = CompletableDeferred<Unit>()
+            val run = launch(Dispatchers.IO) {
+                tuner().tune(provider(server.port, connections = 20), true, 4) {
+                    if (it.phase == TuneProgress.Phase.CONNECTIONS) measuring.complete(Unit)
+                }
+            }
+            withTimeout(30_000) { measuring.await() }
+            delay(200)
+            val start = System.nanoTime()
+            run.cancelAndJoin()
+            assertTrue((System.nanoTime() - start) / 1_000_000 < TunePlan.MIN_DRAIN_MS + 2_000)
+            Thread.sleep(300)
+            assertEquals(0, server.abandoned.get())
+            assertEquals(0, server.open.get())
         }
     }
 

@@ -7,8 +7,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReferenceArray
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.concurrent.thread
@@ -157,6 +159,22 @@ internal object TunePlan {
         return noGain(speeds.lastIndex) && noGain(speeds.lastIndex - 1)
     }
 
+    /** A finished step waits at least this long for the replies still due after QUIT, and at most [MAX_DRAIN_MS]. */
+    const val MIN_DRAIN_MS = 3_000L
+    const val MAX_DRAIN_MS = 15_000L
+
+    /**
+     * How long a finished step waits for the replies still in flight after QUIT: twice the time
+     * [pipeline] bodies per connection take at the step's speed, within bounds. Some servers keep
+     * counting a connection closed in the middle of a reply for minutes; past the bound it is
+     * closed anyway.
+     */
+    fun drainMs(connections: Int, pipeline: Int, bodyBytes: Double, bytesPerSecond: Double): Long {
+        if (bodyBytes <= 0 || bytesPerSecond <= 0) return MIN_DRAIN_MS
+        val expectedMs = connections * pipeline * bodyBytes / bytesPerSecond * 1000
+        return (2 * expectedMs).toLong().coerceIn(MIN_DRAIN_MS, MAX_DRAIN_MS)
+    }
+
     /** Message ids of an NZB's segments, in order. */
     fun messageIds(nzb: String): List<String> =
         Regex("<segment\\b[^>]*>\\s*<?([^<>\\s]+?)>?\\s*</segment>").findAll(nzb).map { it.groupValues[1] }.toList()
@@ -231,7 +249,7 @@ class NntpProviderTuner internal constructor(
                     }
                 }
             } finally {
-                held.forEach { session -> runCatching { session.command("QUIT") }; session.close() }
+                signOut(held)
             }
             val tried = if (limit == null) held.size else limit + 1
             settle()
@@ -289,29 +307,33 @@ class NntpProviderTuner internal constructor(
 
         /** Opens [count] connections at once; each result keeps its session when it signed in. */
         fun openBatch(target: UsenetProvider, count: Int): List<OpenResult> {
-            val results = arrayOfNulls<OpenResult>(count)
+            val results = AtomicReferenceArray<OpenResult>(count)
             val done = CountDownLatch(count)
-            val sockets = mutableListOf<Socket>()
+            val sockets = List(count) { mutableListOf<Socket>() }
             var cancelled = false
-            fun newSocket(): Socket = synchronized(sockets) {
+            fun newSocket(i: Int): Socket = synchronized(sockets) {
                 if (cancelled) throw IOException("Connection batch cancelled")
-                Socket().also(sockets::add)
+                Socket().also(sockets[i]::add)
             }
             repeat(count) { i ->
                 thread(isDaemon = true, name = "usenet-tune-open") {
-                    try { results[i] = tester.open(target, allowPrivate, addresses, ::newSocket) }
-                    catch (_: Exception) { results[i] = OpenResult(ProviderTestResult.UNREACHABLE) }
+                    try { results.set(i, tester.open(target, allowPrivate, addresses) { newSocket(i) }) }
+                    catch (_: Exception) { results.set(i, OpenResult(ProviderTestResult.UNREACHABLE)) }
                     finally { done.countDown() }
                 }
             }
+            fun all() = List(count) { results.get(it) ?: OpenResult(ProviderTestResult.UNREACHABLE) }
             try { done.await() } catch (e: InterruptedException) {
+                // Unblock the sign-ins still in progress; the sessions already open are signed out.
                 synchronized(sockets) { cancelled = true }
-                sockets.forEach { runCatching { it.close() } }
+                sockets.forEachIndexed { i, opened ->
+                    if (results.get(i)?.session == null) opened.forEach { runCatching { it.close() } }
+                }
                 done.await()
-                results.forEach { it?.session?.close() }
+                signOut(all().mapNotNull { it.session })
                 throw e
             }
-            return results.map { it ?: OpenResult(ProviderTestResult.UNREACHABLE) }
+            return all()
         }
 
         /**
@@ -330,9 +352,15 @@ class NntpProviderTuner internal constructor(
                 return null
             }
             val received = AtomicLong()
+            val bodies = AtomicInteger()
             val answered = AtomicInteger()
             val missing = AtomicInteger()
-            val workers = sessions.map { session -> thread(isDaemon = true, name = "usenet-tune") { download(session, received, answered, missing) } }
+            val ending = AtomicBoolean()
+            val workers = sessions.map { session ->
+                thread(isDaemon = true, name = "usenet-tune") { download(session, received, bodies, answered, missing, ending) }
+            }
+            var bytesPerSecond = 0.0
+            var stopped = false
             try {
                 Thread.sleep(warmupMs)
                 val startBytes = received.get()
@@ -346,6 +374,7 @@ class NntpProviderTuner internal constructor(
                 }
                 val seconds = (System.nanoTime() - start) / 1e9
                 val bytes = received.get() - startBytes
+                bytesPerSecond = bytes / seconds
                 if (answered.get() >= MISSING_SAMPLE && missing.get() * 2 > answered.get()) {
                     failure = TuneFailure.MISSING_ARTICLES
                     return null
@@ -355,17 +384,55 @@ class NntpProviderTuner internal constructor(
                 readings += reading
                 progress(phase, connections, port, tls)
                 return reading
+            } catch (e: InterruptedException) {
+                stopped = true
+                throw e
             } finally {
-                sessions.forEach { it.close() }
-                workers.forEach { it.join(1_000) }
+                val drainMs = if (stopped) TunePlan.MIN_DRAIN_MS
+                    else TunePlan.drainMs(sessions.size, pipeline, received.get().toDouble() / bodies.get().coerceAtLeast(1), bytesPerSecond)
+                val spent = finish(sessions, workers, ending, drainMs)
                 downloaded.addAndGet(received.get())
-                settle()
+                // Signed-out slots are freed while the replies drain, so only the rest of the settle
+                // time is left. A connection closed in the middle of a reply gets the whole of it.
+                Thread.sleep(if (spent == null) settleMs else (settleMs - spent).coerceAtLeast(0))
             }
         }
 
-        /** BODY requests, [pipeline] in flight, until the session is closed. */
-        fun download(session: NntpSession, received: AtomicLong, answered: AtomicInteger, missing: AtomicInteger) {
+        /**
+         * Ends a step: each worker sends QUIT after its next reply and reads the replies still due
+         * up to the goodbye, within [drainMs]. Then every session is closed. Returns the time spent
+         * when every worker was done in time, or null when some were closed in the middle of a reply.
+         */
+        fun finish(sessions: List<NntpSession>, workers: List<Thread>, ending: AtomicBoolean, drainMs: Long): Long? {
+            ending.set(true)
+            val start = System.nanoTime()
+            val deadline = start + drainMs * 1_000_000
+            var interrupted = false
+            try {
+                for (worker in workers) {
+                    val left = (deadline - System.nanoTime()) / 1_000_000
+                    if (left <= 0) break
+                    worker.join(left)
+                }
+            } catch (_: InterruptedException) {
+                // Stopped while draining: close at once.
+                interrupted = true
+            }
+            val done = workers.none { it.isAlive }
+            sessions.forEach { it.close() }
+            workers.forEach { it.join(1_000) }
+            if (interrupted) throw InterruptedException()
+            return if (done) (System.nanoTime() - start) / 1_000_000 else null
+        }
+
+        /**
+         * BODY requests, [pipeline] in flight. Once [ending] is set: QUIT after the next reply, then
+         * the replies still due up to the goodbye. Until then, or until the session is closed.
+         */
+        fun download(session: NntpSession, received: AtomicLong, bodies: AtomicInteger, answered: AtomicInteger,
+            missing: AtomicInteger, ending: AtomicBoolean) {
             fun nextId() = articles[Math.floorMod(next.getAndIncrement(), articles.size)]
+            var quitting = false
             try {
                 session.timeoutMs = READ_TIMEOUT_MS
                 session.commands(List(pipeline) { "BODY <${nextId()}>" })
@@ -373,11 +440,18 @@ class NntpProviderTuner internal constructor(
                     val status = session.readLine() ?: return
                     answered.incrementAndGet()
                     when (status.take(3)) {
-                        "222" -> session.skipBody { received.addAndGet(it.toLong()) }
+                        "222" -> { session.skipBody { received.addAndGet(it.toLong()) }; bodies.incrementAndGet() }
                         "430", "423" -> missing.incrementAndGet()
+                        // The goodbye after QUIT, or an error.
                         else -> return
                     }
-                    session.command("BODY <${nextId()}>")
+                    if (quitting) continue
+                    if (ending.get()) {
+                        quitting = true
+                        session.command("QUIT")
+                    } else {
+                        session.command("BODY <${nextId()}>")
+                    }
                 }
             } catch (_: IOException) {
                 // Closed at the end of the step, or the connection failed: either way this worker is done.
@@ -402,6 +476,23 @@ class NntpProviderTuner internal constructor(
         const val MIN_ARTICLES = 50
         /** Missing articles are judged once this many replies arrived. */
         const val MISSING_SAMPLE = 10
+
+        /** How long idle sessions being signed out wait for their goodbyes, all together. */
+        const val SIGN_OUT_MS = 2_000
+
+        /**
+         * Signs idle sessions out and waits briefly for each goodbye before closing. Some servers
+         * keep counting a connection closed without QUIT for minutes, and a rerun would hit it.
+         */
+        fun signOut(sessions: List<NntpSession>) {
+            sessions.forEach { session -> runCatching { session.command("QUIT") } }
+            val deadline = System.nanoTime() + SIGN_OUT_MS * 1_000_000L
+            sessions.forEach { session ->
+                val left = ((deadline - System.nanoTime()) / 1_000_000).toInt()
+                if (left > 0) runCatching { session.timeoutMs = left; session.readLine() }
+                session.close()
+            }
+        }
 
         private val http by lazy {
             OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
