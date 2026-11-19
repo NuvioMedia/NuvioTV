@@ -64,8 +64,6 @@ class CatalogOrderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
     val uiState: StateFlow<CatalogOrderUiState> = _uiState.asStateFlow()
     private var persistedDisabledKeys: Set<String> = emptySet()
-    private var lastDiskOrderKeys: List<String> = emptyList()
-    private var failedSaveGeneration = -1
     private var persistedItemsCache: List<CatalogOrderItem> = emptyList()
     private var draftOrderKeys: List<String>? = null
     private var moveBaselineItems: List<CatalogOrderItem>? = null
@@ -142,7 +140,6 @@ class CatalogOrderViewModel @Inject constructor(
         pendingSavedOrderKeys = draft
         pendingSavedOrderKeysAt = SystemClock.elapsedRealtime()
         val sessionBaseline = moveBaselineItems
-        val diskKeysAtConfirm = lastDiskOrderKeys
         draftOrderKeys = null
         moveBaselineItems = null
         Log.d(
@@ -185,7 +182,6 @@ class CatalogOrderViewModel @Inject constructor(
                     "stillCurrent=${generation == persistGeneration} pending=${pendingSavedOrderKeys != null}",
             )
             if (!wrote && generation == persistGeneration) {
-                failedSaveGeneration = generation
                 pendingSavedOrderKeys = null
                 val current = _uiState.value
                 if (current.movingKey == null && current.items == confirmedItems) {
@@ -199,20 +195,8 @@ class CatalogOrderViewModel @Inject constructor(
 
         viewModelScope.launch {
             delay(PENDING_SAVED_ORDER_TIMEOUT_MS + 500)
-            val current = _uiState.value
-            if (pendingSavedOrderKeys == draft && generation == persistGeneration &&
-                current.movingKey == null && current.items == confirmedItems
-            ) {
+            if (pendingSavedOrderKeys == draft && generation == persistGeneration) {
                 pendingSavedOrderKeys = null
-                if (failedSaveGeneration == generation &&
-                    lastDiskOrderKeys == diskKeysAtConfirm && sessionBaseline != null
-                ) {
-                    Log.w(TAG, "pending order expired, reverting UI to pre-move order")
-                    persistedItemsCache = sessionBaseline
-                    _uiState.update { it.copy(items = sessionBaseline) }
-                } else {
-                    Log.w(TAG, "pending order expired, keeping current UI order")
-                }
             }
         }
     }
@@ -390,11 +374,19 @@ class CatalogOrderViewModel @Inject constructor(
     ): List<CatalogOrderItem> {
         if (current.isEmpty() || manifestKeys.isEmpty()) return current
         val byKey = current.associateBy { it.key }
-        val addons = manifestKeys.mapNotNull { key -> byKey[key] }
-        if (addons.isEmpty()) return current
-        val placed = addons.mapTo(HashSet()) { it.key }
-        val rest = current.filter { it.key !in placed }
-        return addons + rest
+        val addonKeys = manifestKeys.filter { it in byKey }
+        if (addonKeys.isEmpty()) return current
+        val collectionKeys = current.asSequence()
+            .map { it.key }
+            .filter { it.startsWith("collection_") }
+            .toSet()
+        val orderedKeys = computeFollowAddonsOrderKeys(
+            addonKeys = addonKeys,
+            collectionKeys = collectionKeys,
+            referenceOrderKeys = current.map { it.key },
+            addonIdForKey = { key -> byKey[key]?.addonId },
+        )
+        return orderedKeys.mapNotNull { byKey[it] }
     }
 
     fun toggleCatalogEnabled(disableKey: String) {
@@ -493,7 +485,6 @@ class CatalogOrderViewModel @Inject constructor(
                 )
                 Triple(items, followAddons, savedOrderKeys)
             }.collectLatest { (orderedItems, followAddons, diskOrderKeys) ->
-                lastDiskOrderKeys = diskOrderKeys
                 var pendingKeys = pendingSavedOrderKeys
                 if (pendingKeys != null && diskOrderKeys != pendingKeys &&
                     SystemClock.elapsedRealtime() - pendingSavedOrderKeysAt >
@@ -580,61 +571,15 @@ class CatalogOrderViewModel @Inject constructor(
 
         val effectiveOrder: List<String>
         if (followAddonsOrder) {
-            // In follow mode, addon catalogs stay in manifest order.
-            // Collections are positioned based on their relative position in savedOrderKeys.
             val addonKeys = defaultEntries.map { it.key }
             val collectionKeys = collectionEntries.map { it.key }.toSet()
-
             val savedValid = savedOrderKeys.filter { it in availableMap }.distinct()
-
-            if (savedValid.isNotEmpty()) {
-                // Rebuild order: take saved order but replace addon sequence with manifest order.
-                // Strategy: walk through savedValid, output addon keys in manifest order,
-                // insert collections at their saved positions relative to addon boundaries.
-                val result = mutableListOf<String>()
-                var addonPointer = 0 // pointer into addonKeys (manifest order)
-
-                for (savedKey in savedValid) {
-                    if (savedKey in collectionKeys) {
-                        // Place collection here - but first flush any addon keys up to this point
-                        // that haven't been placed yet
-                        result.add(savedKey)
-                    } else {
-                        // It's an addon catalog key in saved order - advance manifest pointer
-                        // to include all addon keys up to and including this one
-                        val targetManifestIdx = addonKeys.indexOf(savedKey)
-                        if (targetManifestIdx >= 0) {
-                            while (addonPointer <= targetManifestIdx) {
-                                val ak = addonKeys[addonPointer]
-                                if (ak !in result) {
-                                    result.add(ak)
-                                }
-                                addonPointer++
-                            }
-                        }
-                    }
-                }
-                // Append any remaining addon keys not yet placed
-                while (addonPointer < addonKeys.size) {
-                    val ak = addonKeys[addonPointer]
-                    if (ak !in result) {
-                        result.add(ak)
-                    }
-                    addonPointer++
-                }
-                // Append any collections not in savedValid
-                for (ck in collectionKeys) {
-                    if (ck !in result) {
-                        result.add(ck)
-                    }
-                }
-                // Normalize: ensure collections sit at addon block boundaries, not mid-block.
-                // If a collection is between two catalogs of the same addon, push it after that block.
-                effectiveOrder = normalizeCollectionPositions(result, availableMap)
-            } else {
-                // No saved order - addon manifest order + collections at end
-                effectiveOrder = addonKeys + collectionKeys.toList()
-            }
+            effectiveOrder = computeFollowAddonsOrderKeys(
+                addonKeys = addonKeys,
+                collectionKeys = collectionKeys,
+                referenceOrderKeys = savedValid,
+                addonIdForKey = { key -> availableMap[key]?.addonId },
+            )
         } else {
             val savedValid = savedOrderKeys
                 .asSequence()
@@ -683,6 +628,49 @@ class CatalogOrderViewModel @Inject constructor(
         }
     }
 
+    private fun computeFollowAddonsOrderKeys(
+        addonKeys: List<String>,
+        collectionKeys: Set<String>,
+        referenceOrderKeys: List<String>,
+        addonIdForKey: (String) -> String?,
+    ): List<String> {
+        if (referenceOrderKeys.isEmpty()) {
+            return addonKeys + collectionKeys.toList()
+        }
+        val result = mutableListOf<String>()
+        var addonPointer = 0
+
+        for (savedKey in referenceOrderKeys) {
+            if (savedKey in collectionKeys) {
+                result.add(savedKey)
+            } else {
+                val targetManifestIdx = addonKeys.indexOf(savedKey)
+                if (targetManifestIdx >= 0) {
+                    while (addonPointer <= targetManifestIdx) {
+                        val ak = addonKeys[addonPointer]
+                        if (ak !in result) {
+                            result.add(ak)
+                        }
+                        addonPointer++
+                    }
+                }
+            }
+        }
+        while (addonPointer < addonKeys.size) {
+            val ak = addonKeys[addonPointer]
+            if (ak !in result) {
+                result.add(ak)
+            }
+            addonPointer++
+        }
+        for (ck in collectionKeys) {
+            if (ck !in result) {
+                result.add(ck)
+            }
+        }
+        return normalizeCollectionPositions(result, addonIdForKey)
+    }
+
     /**
      * Ensures collections are positioned at addon block boundaries.
      * If a collection ended up between two catalogs of the same addon,
@@ -690,7 +678,7 @@ class CatalogOrderViewModel @Inject constructor(
      */
     private fun normalizeCollectionPositions(
         order: List<String>,
-        availableMap: Map<String, CatalogOrderEntry>
+        addonIdForKey: (String) -> String?
     ): List<String> {
         val result = order.toMutableList()
         var changed = true
@@ -703,14 +691,14 @@ class CatalogOrderViewModel @Inject constructor(
                     i++
                     continue
                 }
-                val prevAddonId = findAddonIdBefore(result, i, availableMap)
-                val nextAddonId = findAddonIdAfter(result, i, availableMap)
+                val prevAddonId = findAddonIdBefore(result, i, addonIdForKey)
+                val nextAddonId = findAddonIdAfter(result, i, addonIdForKey)
                 if (prevAddonId != null && nextAddonId != null && prevAddonId == nextAddonId) {
                     result.removeAt(i)
                     var insertPos = i
                     while (insertPos < result.size &&
                         !result[insertPos].startsWith("collection_") &&
-                        availableMap[result[insertPos]]?.addonId == prevAddonId
+                        addonIdForKey(result[insertPos]) == prevAddonId
                     ) {
                         insertPos++
                     }
@@ -728,11 +716,11 @@ class CatalogOrderViewModel @Inject constructor(
     private fun findAddonIdBefore(
         order: List<String>,
         index: Int,
-        availableMap: Map<String, CatalogOrderEntry>
+        addonIdForKey: (String) -> String?
     ): String? {
         for (j in index - 1 downTo 0) {
             if (!order[j].startsWith("collection_")) {
-                return availableMap[order[j]]?.addonId
+                return addonIdForKey(order[j])
             }
         }
         return null
@@ -741,11 +729,11 @@ class CatalogOrderViewModel @Inject constructor(
     private fun findAddonIdAfter(
         order: List<String>,
         index: Int,
-        availableMap: Map<String, CatalogOrderEntry>
+        addonIdForKey: (String) -> String?
     ): String? {
         for (j in index + 1 until order.size) {
             if (!order[j].startsWith("collection_")) {
-                return availableMap[order[j]]?.addonId
+                return addonIdForKey(order[j])
             }
         }
         return null
