@@ -119,11 +119,22 @@ fun TmdbSourcePickerContent(
     val modeFocusRequesters = remember {
         TmdbBuilderMode.values().associateWith { FocusRequester() }
     }
-    var lastFocusedMode by remember { mutableStateOf(TmdbBuilderMode.PRESETS) }
+    val initialModeIndex = remember {
+        TmdbBuilderMode.values().indexOf(uiState.tmdbBuilderMode).coerceAtLeast(0)
+    }
+    val modeRowState = rememberLazyListState(initialFirstVisibleItemIndex = initialModeIndex)
+    val tmdbPickerListState = rememberLazyListState()
+    var lastFocusedMode by remember { mutableStateOf(uiState.tmdbBuilderMode) }
 
     LaunchedEffect(Unit) {
-        repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-        try { modeFocusRequesters[uiState.tmdbBuilderMode]?.requestFocus() } catch (_: Exception) {}
+        val requester = modeFocusRequesters[uiState.tmdbBuilderMode] ?: return@LaunchedEffect
+        requestFocusWhenReady(requester)
+    }
+
+    LaunchedEffect(uiState.tmdbBuilderMode) {
+        if (tmdbPickerListState.firstVisibleItemIndex != 0 || tmdbPickerListState.firstVisibleItemScrollOffset != 0) {
+            tmdbPickerListState.scrollToItem(0)
+        }
     }
 
     Column(
@@ -149,6 +160,7 @@ fun TmdbSourcePickerContent(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         LazyRow(
+            state = modeRowState,
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRestorer(modeFocusRequesters[lastFocusedMode] ?: FocusRequester.Default),
@@ -189,7 +201,6 @@ fun TmdbSourcePickerContent(
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
         }
 
-        val tmdbPickerListState = rememberLazyListState()
         Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = tmdbPickerListState,

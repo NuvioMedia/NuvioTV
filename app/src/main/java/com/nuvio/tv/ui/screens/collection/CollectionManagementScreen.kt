@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -95,18 +96,78 @@ fun CollectionManagementScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var lastFocusedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val collectionsScrollState = rememberScrollState()
+    val collectionRowHeightCache = remember { mutableMapOf<String, Float>() }
+    var lastFocusedTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingFocusTarget by remember { mutableStateOf<String?>(null) }
+    var hasAppliedInitialFocus by remember { mutableStateOf(false) }
+    val importButtonFocusRequester = remember { FocusRequester() }
+    val newButtonFocusRequester = remember { FocusRequester() }
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val itemDeleteFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     var collectionToDelete by remember { mutableStateOf<Collection?>(null) }
     val deleteDialogFocusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(uiState.collections) {
+        val validIds = uiState.collections.mapTo(mutableSetOf()) { it.id }
+        itemFocusRequesters.keys.retainAll(validIds)
+        itemDeleteFocusRequesters.keys.retainAll(validIds)
+    }
+
     LaunchedEffect(collectionToDelete) {
         if (collectionToDelete != null) {
-            repeat(3) { withFrameNanos { } }
-            try {
-                deleteDialogFocusRequester.requestFocus()
-            } catch (_: Exception) {}
+            requestFocusWhenReady(deleteDialogFocusRequester)
+        }
+    }
+
+    val activeFocusTarget = pendingFocusTarget ?: if (!hasAppliedInitialFocus) {
+        lastFocusedTarget ?: "new"
+    } else {
+        null
+    }
+    val ensureComposedCollectionId = when {
+        activeFocusTarget == null -> null
+        activeFocusTarget.startsWith("edit:") -> activeFocusTarget.removePrefix("edit:")
+        activeFocusTarget.startsWith("delete:") -> activeFocusTarget.removePrefix("delete:")
+        else -> null
+    }
+
+    LaunchedEffect(uiState.isLoading, uiState.showImportDialog, collectionToDelete, pendingFocusTarget, uiState.collections.size) {
+        if (uiState.isLoading || uiState.showImportDialog || collectionToDelete != null) return@LaunchedEffect
+        val target = pendingFocusTarget ?: if (!hasAppliedInitialFocus) {
+            lastFocusedTarget ?: "new"
+        } else {
+            return@LaunchedEffect
+        }
+        val requester = when {
+            target == "import" -> importButtonFocusRequester
+            target == "new" -> newButtonFocusRequester
+            target.startsWith("edit:") -> {
+                val id = target.removePrefix("edit:")
+                if (uiState.collections.any { it.id == id }) {
+                    itemFocusRequesters.getOrPut(id) { FocusRequester() }
+                } else {
+                    newButtonFocusRequester
+                }
+            }
+            target.startsWith("delete:") -> {
+                val id = target.removePrefix("delete:")
+                if (uiState.collections.any { it.id == id }) {
+                    itemDeleteFocusRequesters.getOrPut(id) { FocusRequester() }
+                } else {
+                    newButtonFocusRequester
+                }
+            }
+            else -> newButtonFocusRequester
+        }
+        val focused = requestFocusWhenReady(requester)
+        if (!focused && requester !== newButtonFocusRequester) {
+            requestFocusWhenReady(newButtonFocusRequester)
+        }
+        hasAppliedInitialFocus = true
+        if (pendingFocusTarget == target) {
+            pendingFocusTarget = null
         }
     }
 
@@ -126,6 +187,7 @@ fun CollectionManagementScreen(
     }
 
     if (uiState.showImportDialog) {
+        BackHandler { viewModel.hideImportDialog() }
         ImportContent(
             importText = uiState.importText,
             importError = uiState.importError,
@@ -167,12 +229,6 @@ fun CollectionManagementScreen(
                 style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
                 color = NuvioTheme.colors.TextPrimary,
             )
-            val newButtonFocusRequester = remember { FocusRequester() }
-            LaunchedEffect(Unit) {
-                repeat(3) { withFrameNanos { } }
-                val targetRequester = lastFocusedId?.let { itemFocusRequesters[it] } ?: newButtonFocusRequester
-                try { targetRequester.requestFocus() } catch (_: Exception) {}
-            }
             val headerActionsEnabled = uiState.movingCollectionKey == null
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 if (uiState.collections.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -216,14 +272,19 @@ fun CollectionManagementScreen(
                     }
                 }
                 NuvioButton(
-                    onClick = { viewModel.showImportDialog() },
+                    onClick = {
+                        lastFocusedTarget = "import"
+                        pendingFocusTarget = "import"
+                        viewModel.showImportDialog()
+                    },
+                    modifier = Modifier.focusRequester(importButtonFocusRequester),
                     enabled = headerActionsEnabled
                 ) {
                     Text(stringResource(R.string.collections_import))
                 }
                 NuvioButton(
                     onClick = {
-                        lastFocusedId = null
+                        lastFocusedTarget = "new"
                         onNavigateToEditor(null)
                     },
                     modifier = Modifier.focusRequester(newButtonFocusRequester),
@@ -250,7 +311,6 @@ fun CollectionManagementScreen(
                 )
             }
         } else {
-            val collectionsScrollState = rememberScrollState()
             val collectionsMovingIndex = uiState.collections.indexOfFirst { it.id == uiState.movingCollectionKey }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             TvReorderList(
@@ -264,16 +324,20 @@ fun CollectionManagementScreen(
                 onCancelMove = viewModel::cancelCollectionMove,
                 modifier = Modifier.fillMaxSize(),
                 scrollState = collectionsScrollState,
+                ensureComposedKey = ensureComposedCollectionId,
+                rowHeightCache = collectionRowHeightCache,
             ) { collection, isMoving, onStartMove, onConfirmMove ->
                 val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
+                val deleteFocusRequester = itemDeleteFocusRequesters.getOrPut(collection.id) { FocusRequester() }
                 CollectionListItem(
                     collection = collection,
                     isMoving = isMoving,
                     canMove = uiState.collections.size > 1,
                     actionsEnabled = uiState.movingCollectionKey == null || isMoving,
                     editFocusRequester = editFocusRequester,
+                    deleteFocusRequester = deleteFocusRequester,
                     onEdit = {
-                        lastFocusedId = collection.id
+                        lastFocusedTarget = "edit:${collection.id}"
                         onNavigateToEditor(collection.id)
                     },
                     onDelete = { collectionToDelete = collection },
@@ -293,7 +357,10 @@ fun CollectionManagementScreen(
 
     collectionToDelete?.let { collection ->
         NuvioDialog(
-            onDismiss = { collectionToDelete = null },
+            onDismiss = {
+                collectionToDelete = null
+                pendingFocusTarget = "delete:${collection.id}"
+            },
             title = stringResource(R.string.collections_delete_confirm_title),
             subtitle = stringResource(R.string.collections_delete_confirm_subtitle, collection.title),
             suppressFirstKeyUp = false
@@ -303,7 +370,10 @@ fun CollectionManagementScreen(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
             ) {
                 Button(
-                    onClick = { collectionToDelete = null },
+                    onClick = {
+                        collectionToDelete = null
+                        pendingFocusTarget = "delete:${collection.id}"
+                    },
                     modifier = Modifier
                         .focusRequester(deleteDialogFocusRequester)
                         .semantics { role = Role.Button }
@@ -312,8 +382,18 @@ fun CollectionManagementScreen(
                 }
                 Button(
                     onClick = {
+                        val currentIndex = uiState.collections.indexOfFirst { it.id == collection.id }
+                        val nextTargetId = uiState.collections
+                            .filterNot { it.id == collection.id }
+                            .let { remaining ->
+                                if (remaining.isEmpty()) null
+                                else remaining[currentIndex.coerceIn(0, remaining.lastIndex)].id
+                            }
                         viewModel.deleteCollection(collection.id)
                         collectionToDelete = null
+                        val nextTarget = nextTargetId?.let { "edit:$it" } ?: "new"
+                        lastFocusedTarget = nextTarget
+                        pendingFocusTarget = nextTarget
                     },
                     modifier = Modifier.semantics { role = Role.Button }
                 ) {
@@ -327,7 +407,7 @@ fun CollectionManagementScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ImportContent(
+internal fun ImportContent(
     importText: String,
     importError: String?,
     onTextChange: (String) -> Unit,
@@ -347,8 +427,7 @@ private fun ImportContent(
 ) {
     val fileTabFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
-        repeat(3) { withFrameNanos { } }
-        fileTabFocusRequester.requestFocus()
+        requestFocusWhenReady(fileTabFocusRequester)
     }
 
     Column(
@@ -400,39 +479,37 @@ private fun ImportContent(
                         } else {
                             Modifier
                         }
-                        if (mode == importMode) {
-                            Button(
-                                onClick = { onModeChange(mode) },
-                                modifier = tabModifier.semantics {
-                                    role = Role.Tab
-                                    this.selected = true
-                                },
-                                colors = ButtonDefaults.colors(
+                        val isSelected = mode == importMode
+                        Button(
+                            onClick = { onModeChange(mode) },
+                            modifier = tabModifier.semantics {
+                                role = Role.Tab
+                                this.selected = isSelected
+                            },
+                            colors = if (isSelected) {
+                                ButtonDefaults.colors(
                                     containerColor = NuvioTheme.colors.Primary,
                                     contentColor = NuvioTheme.colors.Background,
                                     focusedContainerColor = NuvioTheme.colors.Primary,
                                     focusedContentColor = NuvioTheme.colors.Background
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Text(label)
-                            }
-                        } else {
-                            NuvioButton(
-                                onClick = { onModeChange(mode) },
-                                modifier = tabModifier.semantics {
-                                    role = Role.Tab
-                                    this.selected = false
-                                }
-                            ) {
-                                Text(label)
-                            }
+                                )
+                            } else {
+                                ButtonDefaults.colors(
+                                    containerColor = NuvioTheme.colors.BackgroundCard,
+                                    contentColor = NuvioTheme.colors.TextPrimary,
+                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                    focusedContentColor = NuvioTheme.colors.Primary
+                                )
+                            },
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                )
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Text(label)
                         }
                     }
                 }
@@ -616,6 +693,7 @@ private fun CollectionListItem(
     canMove: Boolean,
     actionsEnabled: Boolean,
     editFocusRequester: FocusRequester? = null,
+    deleteFocusRequester: FocusRequester? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onStartMove: () -> Unit,
@@ -721,6 +799,7 @@ private fun CollectionListItem(
                 Button(
                     onClick = onDelete,
                     enabled = actionsEnabled && !isMoving,
+                    modifier = if (deleteFocusRequester != null) Modifier.focusRequester(deleteFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextSecondary,

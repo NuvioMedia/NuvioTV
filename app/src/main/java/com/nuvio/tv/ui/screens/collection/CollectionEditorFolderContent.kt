@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -102,6 +103,91 @@ fun FolderEditorContent(
 ) {
     val folder = uiState.editingFolder ?: return
 
+    val sourcesScrollState = key(folder.id) { rememberScrollState() }
+    val sourceRowHeightCache = remember(folder.id) { mutableMapOf<String, Float>() }
+    val titleFocusRequester = remember(folder.id) { FocusRequester() }
+    val emojiCoverFocusRequester = remember(folder.id) { FocusRequester() }
+    val addCatalogFocusRequester = remember(folder.id) { FocusRequester() }
+    val addTmdbFocusRequester = remember(folder.id) { FocusRequester() }
+    val addTraktFocusRequester = remember(folder.id) { FocusRequester() }
+    val sourceGenreFocusRequesters = remember(folder.id) { mutableMapOf<String, FocusRequester>() }
+    val sourceEditFocusRequesters = remember(folder.id) { mutableMapOf<String, FocusRequester>() }
+    val sourceRemoveFocusRequesters = remember(folder.id) { mutableMapOf<String, FocusRequester>() }
+    var pendingFocusTarget by remember(folder.id) {
+        mutableStateOf<FolderFocusTarget?>(FolderFocusTarget.Title)
+    }
+
+    val sourceKeys = remember(folder.sources) { collectionSourceKeys(folder.sources) }
+
+    LaunchedEffect(sourceKeys) {
+        val validKeys = sourceKeys.toSet()
+        sourceGenreFocusRequesters.keys.retainAll(validKeys)
+        sourceEditFocusRequesters.keys.retainAll(validKeys)
+        sourceRemoveFocusRequesters.keys.retainAll(validKeys)
+    }
+
+    val genrePickerIndex = uiState.genrePickerSourceIndex
+    val genrePickerSource = genrePickerIndex?.let { folder.sources.getOrNull(it) as? AddonCatalogCollectionSource }
+    val genrePickerCatalog = genrePickerSource?.let { source ->
+        uiState.availableCatalogs.find {
+            it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId
+        }
+    }
+    val showGenrePicker = genrePickerIndex != null &&
+        genrePickerSource != null &&
+        genrePickerCatalog != null &&
+        genrePickerCatalog.genreOptions.isNotEmpty()
+    val activePickerOpen = uiState.showCatalogPicker ||
+        uiState.showTmdbSourcePicker ||
+        uiState.showTraktSourcePicker ||
+        uiState.showEmojiPicker ||
+        showGenrePicker
+
+    val ensureComposedSourceKey = when (val target = pendingFocusTarget) {
+        is FolderFocusTarget.SourceGenre -> sourceKeys.getOrNull(target.sourceIndex)
+        is FolderFocusTarget.SourceEdit -> sourceKeys.getOrNull(target.sourceIndex)
+        is FolderFocusTarget.SourceRemove -> sourceKeys.takeIf { it.isNotEmpty() }
+            ?.let { it[target.sourceIndex.coerceIn(0, it.lastIndex)] }
+        else -> null
+    }
+
+    LaunchedEffect(folder.id, activePickerOpen, pendingFocusTarget, sourceKeys) {
+        if (activePickerOpen) return@LaunchedEffect
+        val target = pendingFocusTarget ?: return@LaunchedEffect
+        val requester = when (target) {
+            FolderFocusTarget.Title -> titleFocusRequester
+            FolderFocusTarget.EmojiCover -> emojiCoverFocusRequester
+            FolderFocusTarget.AddCatalog -> addCatalogFocusRequester
+            FolderFocusTarget.AddTmdb -> addTmdbFocusRequester
+            FolderFocusTarget.AddTrakt -> addTraktFocusRequester
+            is FolderFocusTarget.SourceGenre -> {
+                sourceKeys.getOrNull(target.sourceIndex)
+                    ?.let { sourceGenreFocusRequesters.getOrPut(it) { FocusRequester() } }
+                    ?: addCatalogFocusRequester
+            }
+            is FolderFocusTarget.SourceEdit -> {
+                sourceKeys.getOrNull(target.sourceIndex)
+                    ?.let { sourceEditFocusRequesters.getOrPut(it) { FocusRequester() } }
+                    ?: addCatalogFocusRequester
+            }
+            is FolderFocusTarget.SourceRemove -> {
+                if (sourceKeys.isEmpty()) {
+                    addCatalogFocusRequester
+                } else {
+                    val targetKey = sourceKeys[target.sourceIndex.coerceIn(0, sourceKeys.lastIndex)]
+                    sourceRemoveFocusRequesters.getOrPut(targetKey) { FocusRequester() }
+                }
+            }
+        }
+        val focused = requestFocusWhenReady(requester)
+        if (!focused && requester !== titleFocusRequester) {
+            requestFocusWhenReady(addCatalogFocusRequester) || requestFocusWhenReady(titleFocusRequester)
+        }
+        if (pendingFocusTarget == target) {
+            pendingFocusTarget = null
+        }
+    }
+
     if (uiState.showCatalogPicker) {
         BackHandler { viewModel.hideCatalogPicker() }
         CatalogPickerContent(
@@ -169,28 +255,18 @@ fun FolderEditorContent(
         return
     }
 
-    val genrePickerIndex = uiState.genrePickerSourceIndex
-    val genrePickerSource = genrePickerIndex?.let { folder.sources.getOrNull(it) as? AddonCatalogCollectionSource }
-    val genrePickerCatalog = genrePickerSource?.let { source ->
-        uiState.availableCatalogs.find {
-            it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId
-        }
-    }
-
-    if (
-        genrePickerIndex != null &&
-        genrePickerSource != null &&
-        genrePickerCatalog != null &&
-        genrePickerCatalog.genreOptions.isNotEmpty()
-    ) {
+    if (showGenrePicker) {
+        val activeGenreIndex = genrePickerIndex
+        val activeGenreSource = genrePickerSource
+        val activeGenreCatalog = genrePickerCatalog
         BackHandler { viewModel.hideGenrePicker() }
         GenrePickerContent(
-            title = genrePickerCatalog.catalogName,
-            selectedGenre = genrePickerSource.genre,
-            genreOptions = genrePickerCatalog.genreOptions,
-            allowAll = !genrePickerCatalog.genreRequired,
+            title = activeGenreCatalog.catalogName,
+            selectedGenre = activeGenreSource.genre,
+            genreOptions = activeGenreCatalog.genreOptions,
+            allowAll = !activeGenreCatalog.genreRequired,
             onSelect = { genre ->
-                viewModel.updateCatalogSourceGenre(genrePickerIndex, genre)
+                viewModel.updateCatalogSourceGenre(activeGenreIndex, genre)
                 viewModel.hideGenrePicker()
             },
             onBack = { viewModel.hideGenrePicker() }
@@ -206,13 +282,6 @@ fun FolderEditorContent(
             uiState.hasUnsavedFolderChanges -> showUnsavedFolderDialog = true
             else -> viewModel.cancelFolderEdit()
         }
-    }
-
-    val titleFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        repeat(5) { androidx.compose.runtime.withFrameNanos { } }
-        try { titleFocusRequester.requestFocus() } catch (_: Exception) {}
     }
 
     Column(
@@ -251,28 +320,12 @@ fun FolderEditorContent(
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
-        val catalogFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-        val sourceKeys = remember(folder.sources) { collectionSourceKeys(folder.sources) }
         val sourceItems = remember(sourceKeys, folder.sources) {
             sourceKeys.zip(folder.sources).mapIndexed { index, (key, source) ->
                 FolderSourceItem(key = key, index = index, source = source)
             }
         }
-        var pendingFocusIndex by remember { mutableStateOf(-1) }
 
-        LaunchedEffect(pendingFocusIndex, folder.sources.size) {
-            if (pendingFocusIndex >= 0) {
-                val targetIndex = pendingFocusIndex.coerceAtMost(folder.sources.lastIndex)
-                if (targetIndex >= 0) {
-                    val targetKey = sourceKeys[targetIndex]
-                    repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-                    try { catalogFocusRequesters[targetKey]?.requestFocus() } catch (_: Exception) {}
-                }
-                pendingFocusIndex = -1
-            }
-        }
-
-        val sourcesScrollState = rememberScrollState()
         val sourcesMovingIndex = sourceItems.indexOfFirst { it.key == uiState.movingSourceKey }
         Box(modifier = Modifier.fillMaxSize()) {
         TvReorderList(
@@ -286,6 +339,8 @@ fun FolderEditorContent(
             onCancelMove = viewModel::cancelSourceMove,
             modifier = Modifier.fillMaxSize(),
             scrollState = sourcesScrollState,
+            ensureComposedKey = ensureComposedSourceKey,
+            rowHeightCache = sourceRowHeightCache,
             contentPadding = PaddingValues(
                 start = NuvioTheme.spacing.xs,
                 end = NuvioTheme.spacing.xs,
@@ -340,11 +395,16 @@ fun FolderEditorContent(
                     ) { Text(stringResource(R.string.collections_editor_cover_none)) }
 
                     Button(
-                        onClick = { viewModel.showEmojiPicker() },
-                        modifier = Modifier.semantics {
-                            role = Role.RadioButton
-                            selected = coverMode == "emoji"
+                        onClick = {
+                            pendingFocusTarget = FolderFocusTarget.EmojiCover
+                            viewModel.showEmojiPicker()
                         },
+                        modifier = Modifier
+                            .focusRequester(emojiCoverFocusRequester)
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = coverMode == "emoji"
+                            },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "emoji") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "emoji") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -570,9 +630,9 @@ fun FolderEditorContent(
                 val shapeFocusRequesters = remember { PosterShape.entries.associateWith { FocusRequester() } }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                    modifier = Modifier.focusRestorer {
+                    modifier = Modifier.focusRestorer(
                         shapeFocusRequesters[folder.tileShape] ?: FocusRequester.Default
-                    }
+                    )
                 ) {
                     PosterShape.entries.forEach { shape ->
                         val label = when (shape) {
@@ -689,17 +749,38 @@ fun FolderEditorContent(
                 modifier = Modifier.padding(top = if (sourceItems.isEmpty()) 0.dp else NuvioTheme.spacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
-                NuvioButton(onClick = { viewModel.showCatalogPicker() }, enabled = uiState.movingSourceKey == null) {
+                NuvioButton(
+                    onClick = {
+                        pendingFocusTarget = FolderFocusTarget.AddCatalog
+                        viewModel.showCatalogPicker()
+                    },
+                    modifier = Modifier.focusRequester(addCatalogFocusRequester),
+                    enabled = uiState.movingSourceKey == null
+                ) {
                     Icon(Icons.Default.Add, null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(stringResource(R.string.collections_editor_add_catalog))
                 }
-                NuvioButton(onClick = { viewModel.showTmdbSourcePicker() }, enabled = uiState.movingSourceKey == null) {
+                NuvioButton(
+                    onClick = {
+                        pendingFocusTarget = FolderFocusTarget.AddTmdb
+                        viewModel.showTmdbSourcePicker()
+                    },
+                    modifier = Modifier.focusRequester(addTmdbFocusRequester),
+                    enabled = uiState.movingSourceKey == null
+                ) {
                     Icon(Icons.Default.Add, null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(stringResource(R.string.collections_editor_add_tmdb_source))
                 }
-                NuvioButton(onClick = { viewModel.showTraktSourcePicker() }, enabled = uiState.movingSourceKey == null) {
+                NuvioButton(
+                    onClick = {
+                        pendingFocusTarget = FolderFocusTarget.AddTrakt
+                        viewModel.showTraktSourcePicker()
+                    },
+                    modifier = Modifier.focusRequester(addTraktFocusRequester),
+                    enabled = uiState.movingSourceKey == null
+                ) {
                     Icon(Icons.Default.Add, null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(stringResource(R.string.collections_editor_add_trakt_source))
@@ -725,7 +806,9 @@ fun FolderEditorContent(
         }
         val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
         val sourceKey = item.key
-        val removeFocusRequester = catalogFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val genreFocusRequester = sourceGenreFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val editFocusRequester = sourceEditFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val removeFocusRequester = sourceRemoveFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
         val genreLabel = addonSource?.genre ?: if (catalog?.genreRequired == true) {
             stringResource(R.string.collections_editor_select_genre)
         } else {
@@ -817,8 +900,12 @@ fun FolderEditorContent(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Button(
-                                onClick = { viewModel.showGenrePicker(index) },
-                                        enabled = !reorderActive,
+                                onClick = {
+                                    pendingFocusTarget = FolderFocusTarget.SourceGenre(index)
+                                    viewModel.showGenrePicker(index)
+                                },
+                                enabled = !reorderActive,
+                                modifier = Modifier.focusRequester(genreFocusRequester),
                                 colors = ButtonDefaults.colors(
                                     containerColor = NuvioTheme.colors.BackgroundElevated,
                                     contentColor = NuvioTheme.colors.TextSecondary,
@@ -841,8 +928,12 @@ fun FolderEditorContent(
                 Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
                     if (tmdbSource != null) {
                         Button(
-                            onClick = { viewModel.editTmdbSource(index) },
+                            onClick = {
+                                pendingFocusTarget = FolderFocusTarget.SourceEdit(index)
+                                viewModel.editTmdbSource(index)
+                            },
                             enabled = !reorderActive,
+                            modifier = Modifier.focusRequester(editFocusRequester),
                             colors = ButtonDefaults.colors(
                                 containerColor = NuvioTheme.colors.BackgroundCard,
                                 contentColor = NuvioTheme.colors.TextSecondary,
@@ -862,8 +953,12 @@ fun FolderEditorContent(
                     }
                     if (traktSource != null) {
                         Button(
-                            onClick = { viewModel.editTraktSource(index) },
+                            onClick = {
+                                pendingFocusTarget = FolderFocusTarget.SourceEdit(index)
+                                viewModel.editTraktSource(index)
+                            },
                             enabled = !reorderActive,
+                            modifier = Modifier.focusRequester(editFocusRequester),
                             colors = ButtonDefaults.colors(
                                 containerColor = NuvioTheme.colors.BackgroundCard,
                                 contentColor = NuvioTheme.colors.TextSecondary,
@@ -905,7 +1000,7 @@ fun FolderEditorContent(
                     }
                     Button(
                         onClick = {
-                            pendingFocusIndex = index
+                            pendingFocusTarget = FolderFocusTarget.SourceRemove(index)
                             viewModel.removeCatalogSource(index)
                         },
                         enabled = !reorderActive,
@@ -962,6 +1057,17 @@ fun FolderEditorContent(
             onDismiss = { showUnsavedFolderDialog = false }
         )
     }
+}
+
+private sealed interface FolderFocusTarget {
+    data object Title : FolderFocusTarget
+    data object EmojiCover : FolderFocusTarget
+    data object AddCatalog : FolderFocusTarget
+    data object AddTmdb : FolderFocusTarget
+    data object AddTrakt : FolderFocusTarget
+    data class SourceGenre(val sourceIndex: Int) : FolderFocusTarget
+    data class SourceEdit(val sourceIndex: Int) : FolderFocusTarget
+    data class SourceRemove(val sourceIndex: Int) : FolderFocusTarget
 }
 
 private data class FolderSourceItem(

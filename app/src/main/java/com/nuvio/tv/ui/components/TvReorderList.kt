@@ -27,6 +27,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.SubcomposeLayoutState
 import androidx.compose.ui.layout.SubcomposeSlotReusePolicy
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
@@ -84,6 +86,8 @@ fun <T> TvReorderList(
     footer: @Composable (() -> Unit)? = null,
     useHeaderAwareBringIntoView: Boolean = false,
     scrollToTopOnEdgeItem: Boolean = false,
+    ensureComposedKey: String? = null,
+    rowHeightCache: MutableMap<String, Float> = remember { mutableMapOf() },
     itemContent: @Composable (
         item: T,
         isMoving: Boolean,
@@ -97,11 +101,18 @@ fun <T> TvReorderList(
     val contentTopPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
 
     val rowHeightPx = remember { FloatArray(1) }
-    val headerHeightPx = remember { FloatArray(1) }
+    val liveHeaderHeightPx = remember { FloatArray(1) }
+    var headerHeightPx by remember { mutableFloatStateOf(0f) }
     val viewportHeightPx = remember { FloatArray(1) }
-    val measuredRowHeights = remember { mutableMapOf<String, Float>() }
+    val measuredRowHeights = rowHeightCache
 
-    fun listOriginPx(): Float = contentTopPaddingPx + headerHeightPx[0]
+    fun currentHeaderHeightPx(): Float {
+        val stateHeight = headerHeightPx
+        val liveHeight = liveHeaderHeightPx[0]
+        return if (liveHeight > 0f) liveHeight else stateHeight
+    }
+
+    fun listOriginPx(): Float = contentTopPaddingPx + currentHeaderHeightPx()
 
     fun defaultRowHeightPx(): Float {
         if (measuredRowHeights.isNotEmpty()) {
@@ -159,7 +170,8 @@ fun <T> TvReorderList(
                 containerSize: Float,
             ): Float {
                 if (containerSize <= 0f || size <= 0f) return 0f
-                if (headerHeightPx[0] <= 0f || rowHeightPx[0] <= 0f) {
+                val measuredHeaderHeight = currentHeaderHeightPx()
+                if (measuredHeaderHeight <= 0f || rowHeightPx[0] <= 0f) {
                     return inheritedBringIntoViewSpec.calculateScrollDistance(
                         offset, size, containerSize,
                     )
@@ -167,7 +179,7 @@ fun <T> TvReorderList(
                 val listOrigin = listOriginPx()
                 val itemTopInContent = scrollState.value + offset
                 val firstRowBottom = listOrigin + if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
-                if (headerHeightPx[0] > 0f && itemTopInContent < firstRowBottom) {
+                if (measuredHeaderHeight > 0f && itemTopInContent < firstRowBottom) {
                     return -scrollState.value.toFloat()
                 }
                 return inheritedBringIntoViewSpec.calculateScrollDistance(offset, size, containerSize)
@@ -544,10 +556,18 @@ fun <T> TvReorderList(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    liveHeaderHeightPx[0] = placeable.height.toFloat()
+                                    layout(placeable.width, placeable.height) {
+                                        placeable.place(0, 0)
+                                    }
+                                }
                                 .onSizeChanged { size ->
                                     val measured = size.height.toFloat()
-                                    if (headerHeightPx[0] != measured) {
-                                        headerHeightPx[0] = measured
+                                    liveHeaderHeightPx[0] = measured
+                                    if (headerHeightPx != measured) {
+                                        headerHeightPx = measured
                                     }
                                 },
                         ) {
@@ -653,6 +673,9 @@ fun <T> TvReorderList(
                         }
                         if (extraItemIndex != null) {
                             measuredIndices.add(extraItemIndex)
+                        }
+                        if (ensureComposedKey != null) {
+                            itemIndexByKey[ensureComposedKey]?.let { measuredIndices.add(it) }
                         }
                         for (index in measuredIndices) {
                             measureSlot(index)

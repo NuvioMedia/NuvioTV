@@ -20,8 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextDirection
@@ -51,6 +54,12 @@ fun TraktSourcePickerContent(
     onAddResult: (TraktPublicListSearchResult) -> Unit,
     onBack: () -> Unit
 ) {
+    val inputFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        requestFocusWhenReady(inputFocusRequester)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -90,6 +99,7 @@ fun TraktSourcePickerContent(
                 TraktSourceForm(
                     uiState = uiState,
                     isEditing = isEditing,
+                    inputFocusRequester = inputFocusRequester,
                     onInputChange = onInputChange,
                     onTitleChange = onTitleChange,
                     onMediaTypeChange = onMediaTypeChange,
@@ -128,6 +138,7 @@ fun TraktSourcePickerContent(
 private fun TraktSourceForm(
     uiState: CollectionEditorUiState,
     isEditing: Boolean,
+    inputFocusRequester: FocusRequester,
     onInputChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
     onMediaTypeChange: (TmdbCollectionMediaType) -> Unit,
@@ -142,7 +153,8 @@ private fun TraktSourceForm(
             label = stringResource(R.string.collections_editor_trakt_list),
             value = uiState.traktInput,
             onValueChange = onInputChange,
-            placeholder = stringResource(R.string.collection_editor_trakt_search_placeholder)
+            placeholder = stringResource(R.string.collection_editor_trakt_search_placeholder),
+            focusRequester = inputFocusRequester
         )
         TraktLabeledField(
             label = stringResource(R.string.collections_editor_tmdb_display_title),
@@ -180,7 +192,8 @@ private fun TraktLabeledField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String
+    placeholder: String,
+    focusRequester: FocusRequester? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = NuvioTheme.colors.TextPrimary)
@@ -188,7 +201,8 @@ private fun TraktLabeledField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = placeholder
+            placeholder = placeholder,
+            focusRequester = focusRequester
         )
     }
 }

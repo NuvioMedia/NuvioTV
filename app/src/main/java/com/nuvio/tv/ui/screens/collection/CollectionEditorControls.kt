@@ -93,6 +93,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.TextStyle
 
+internal suspend fun requestFocusWhenReady(
+    requester: FocusRequester,
+    maxFrames: Int = 8
+): Boolean {
+    repeat(maxFrames) {
+        val focused = runCatching { requester.requestFocus() }.getOrDefault(false)
+        if (focused) return true
+        withFrameNanos { }
+    }
+    return false
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun NuvioTextField(
@@ -109,8 +121,7 @@ fun NuvioTextField(
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
-            repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-            try { textFieldFocusRequester.requestFocus() } catch (_: Exception) {}
+            requestFocusWhenReady(textFieldFocusRequester)
         }
     }
 
@@ -153,7 +164,7 @@ fun NuvioTextField(
                     onDone = {
                         isEditing = false
                         keyboardController?.hide()
-                        surfaceFocusRequester.requestFocus()
+                        runCatching { surfaceFocusRequester.requestFocus() }
                     }
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -219,12 +230,7 @@ internal fun UnsavedChangesDialog(
     val primaryFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        repeat(10) {
-            withFrameNanos { }
-            try {
-                primaryFocusRequester.requestFocus()
-            } catch (_: Exception) {}
-        }
+        requestFocusWhenReady(primaryFocusRequester, maxFrames = 10)
     }
 
     NuvioDialog(

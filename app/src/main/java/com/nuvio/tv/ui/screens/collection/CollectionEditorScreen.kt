@@ -104,30 +104,82 @@ fun CollectionEditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    var lastFocusedFolderId by rememberSaveable { mutableStateOf<String?>(null) }
+    val foldersScrollState = rememberScrollState()
+    val folderRowHeightCache = remember { mutableMapOf<String, Float>() }
+    var lastFocusedFolderTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingFocusTarget by remember { mutableStateOf<String?>(null) }
+    var hasAppliedInitialFocus by remember { mutableStateOf(false) }
+
+    val titleFocusRequester = remember { FocusRequester() }
+    val addFolderFocusRequester = remember { FocusRequester() }
     val folderFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val folderDeleteFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     var folderToDelete by remember { mutableStateOf<CollectionFolder?>(null) }
     val deleteDialogFocusRequester = remember { FocusRequester() }
     var showUnsavedCollectionDialog by remember { mutableStateOf(false) }
 
+    LaunchedEffect(uiState.folders) {
+        val validIds = uiState.folders.mapTo(mutableSetOf()) { it.id }
+        folderFocusRequesters.keys.retainAll(validIds)
+        folderDeleteFocusRequesters.keys.retainAll(validIds)
+    }
+
     LaunchedEffect(folderToDelete) {
         if (folderToDelete != null) {
-            repeat(3) { withFrameNanos { } }
-            try {
-                deleteDialogFocusRequester.requestFocus()
-            } catch (_: Exception) {}
+            requestFocusWhenReady(deleteDialogFocusRequester)
         }
     }
 
-    LaunchedEffect(uiState.showFolderEditor) {
-        if (!uiState.showFolderEditor && lastFocusedFolderId != null) {
-            val targetId = lastFocusedFolderId!!
-            repeat(3) { withFrameNanos { } }
+    val activeFocusTarget = pendingFocusTarget ?: if (!hasAppliedInitialFocus) {
+        lastFocusedFolderTarget ?: "title"
+    } else {
+        null
+    }
+    val ensureComposedFolderId = when {
+        activeFocusTarget == null -> null
+        activeFocusTarget.startsWith("folder_edit:") -> activeFocusTarget.removePrefix("folder_edit:")
+        activeFocusTarget.startsWith("folder_delete:") -> activeFocusTarget.removePrefix("folder_delete:")
+        else -> null
+    }
 
-            try {
-                folderFocusRequesters[targetId]?.requestFocus()
-            } catch (_: Exception) {}
+    LaunchedEffect(uiState.isLoading, uiState.showFolderEditor, folderToDelete, showUnsavedCollectionDialog, pendingFocusTarget, uiState.folders.size) {
+        if (uiState.isLoading || uiState.showFolderEditor || folderToDelete != null || showUnsavedCollectionDialog) {
+            return@LaunchedEffect
+        }
+        val target = pendingFocusTarget ?: if (!hasAppliedInitialFocus) {
+            lastFocusedFolderTarget ?: "title"
+        } else {
+            return@LaunchedEffect
+        }
+        val requester = when {
+            target == "title" -> titleFocusRequester
+            target == "add_folder" -> addFolderFocusRequester
+            target.startsWith("folder_edit:") -> {
+                val id = target.removePrefix("folder_edit:")
+                if (uiState.folders.any { it.id == id }) {
+                    folderFocusRequesters.getOrPut(id) { FocusRequester() }
+                } else {
+                    addFolderFocusRequester
+                }
+            }
+            target.startsWith("folder_delete:") -> {
+                val id = target.removePrefix("folder_delete:")
+                if (uiState.folders.any { it.id == id }) {
+                    folderDeleteFocusRequesters.getOrPut(id) { FocusRequester() }
+                } else {
+                    addFolderFocusRequester
+                }
+            }
+            else -> titleFocusRequester
+        }
+        val focused = requestFocusWhenReady(requester)
+        if (!focused && requester !== titleFocusRequester) {
+            requestFocusWhenReady(addFolderFocusRequester) || requestFocusWhenReady(titleFocusRequester)
+        }
+        hasAppliedInitialFocus = true
+        if (pendingFocusTarget == target) {
+            pendingFocusTarget = null
         }
     }
 
@@ -157,7 +209,6 @@ fun CollectionEditorScreen(
         }
     }
 
-    val foldersScrollState = rememberScrollState()
     val foldersMovingIndex = uiState.folders.indexOfFirst { it.id == uiState.movingFolderKey }
     Box(modifier = Modifier.fillMaxSize()) {
     TvReorderList(
@@ -171,6 +222,8 @@ fun CollectionEditorScreen(
         onCancelMove = viewModel::cancelFolderMove,
         modifier = Modifier.fillMaxSize(),
         scrollState = foldersScrollState,
+        ensureComposedKey = ensureComposedFolderId,
+        rowHeightCache = folderRowHeightCache,
         contentPadding = PaddingValues(
             top = NuvioTheme.spacing.xxxl,
             start = NuvioTheme.spacing.xxxl,
@@ -201,7 +254,8 @@ fun CollectionEditorScreen(
                         value = uiState.title,
                         onValueChange = { viewModel.setTitle(it) },
                         modifier = Modifier.weight(1f),
-                        placeholder = stringResource(R.string.collections_editor_placeholder_name)
+                        placeholder = stringResource(R.string.collections_editor_placeholder_name),
+                        focusRequester = titleFocusRequester
                     )
                     NuvioButton(onClick = { viewModel.save { onBack() } }, enabled = uiState.canSaveCollection) {
                         Text(stringResource(R.string.collections_editor_save))
@@ -464,7 +518,6 @@ fun CollectionEditorScreen(
             }
         },
         footer = {
-            val addFolderFocusRequester = folderFocusRequesters.getOrPut("add_folder") { FocusRequester() }
             Box(
                 modifier = Modifier.padding(
                     start = NuvioTheme.spacing.sm,
@@ -474,7 +527,8 @@ fun CollectionEditorScreen(
             ) {
                 NuvioButton(
                     onClick = {
-                        lastFocusedFolderId = "add_folder"
+                        lastFocusedFolderTarget = "add_folder"
+                        pendingFocusTarget = "add_folder"
                         viewModel.addFolder()
                     },
                     enabled = uiState.movingFolderKey == null,
@@ -488,6 +542,7 @@ fun CollectionEditorScreen(
         },
     ) { folder, isMoving, onStartMove, onConfirmMove ->
         val editFocusRequester = folderFocusRequesters.getOrPut(folder.id) { FocusRequester() }
+        val deleteFocusRequester = folderDeleteFocusRequesters.getOrPut(folder.id) { FocusRequester() }
         Box(modifier = Modifier.padding(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm)) {
             FolderListItem(
                 folder = folder,
@@ -495,8 +550,10 @@ fun CollectionEditorScreen(
                 canMove = uiState.folders.size > 1,
                 actionsEnabled = uiState.movingFolderKey == null || isMoving,
                 editFocusRequester = editFocusRequester,
+                deleteFocusRequester = deleteFocusRequester,
                 onEdit = {
-                    lastFocusedFolderId = folder.id
+                    lastFocusedFolderTarget = "folder_edit:${folder.id}"
+                    pendingFocusTarget = "folder_edit:${folder.id}"
                     viewModel.editFolder(folder.id)
                 },
                 onDelete = { folderToDelete = folder },
@@ -515,7 +572,10 @@ fun CollectionEditorScreen(
 
     folderToDelete?.let { folder ->
         NuvioDialog(
-            onDismiss = { folderToDelete = null },
+            onDismiss = {
+                folderToDelete = null
+                pendingFocusTarget = "folder_delete:${folder.id}"
+            },
             title = stringResource(R.string.collections_editor_delete_folder_title),
             subtitle = stringResource(R.string.collections_editor_delete_folder_subtitle, folder.title),
             suppressFirstKeyUp = false
@@ -525,7 +585,10 @@ fun CollectionEditorScreen(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
             ) {
                 Button(
-                    onClick = { folderToDelete = null },
+                    onClick = {
+                        folderToDelete = null
+                        pendingFocusTarget = "folder_delete:${folder.id}"
+                    },
                     modifier = Modifier
                         .focusRequester(deleteDialogFocusRequester)
                         .semantics { role = Role.Button }
@@ -534,8 +597,18 @@ fun CollectionEditorScreen(
                 }
                 Button(
                     onClick = {
+                        val currentIndex = uiState.folders.indexOfFirst { it.id == folder.id }
+                        val nextTargetId = uiState.folders
+                            .filterNot { it.id == folder.id }
+                            .let { remaining ->
+                                if (remaining.isEmpty()) null
+                                else remaining[currentIndex.coerceIn(0, remaining.lastIndex)].id
+                            }
                         viewModel.removeFolder(folder.id)
                         folderToDelete = null
+                        val nextTarget = nextTargetId?.let { "folder_edit:$it" } ?: "add_folder"
+                        lastFocusedFolderTarget = nextTarget
+                        pendingFocusTarget = nextTarget
                     },
                     modifier = Modifier.semantics { role = Role.Button }
                 ) {
@@ -586,6 +659,7 @@ private fun FolderListItem(
     canMove: Boolean,
     actionsEnabled: Boolean,
     editFocusRequester: FocusRequester? = null,
+    deleteFocusRequester: FocusRequester? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onStartMove: () -> Unit,
@@ -694,6 +768,7 @@ private fun FolderListItem(
                 Button(
                     onClick = onDelete,
                     enabled = actionsEnabled && !isMoving,
+                    modifier = if (deleteFocusRequester != null) Modifier.focusRequester(deleteFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextSecondary,

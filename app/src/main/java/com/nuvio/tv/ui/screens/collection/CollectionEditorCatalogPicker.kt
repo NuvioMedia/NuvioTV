@@ -100,6 +100,16 @@ fun CatalogPickerContent(
     onToggle: (AvailableCatalog) -> Unit,
     onBack: () -> Unit
 ) {
+    val firstCatalogFocusRequester = remember { FocusRequester() }
+    val doneButtonFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        val target = if (catalogs.isNotEmpty()) firstCatalogFocusRequester else doneButtonFocusRequester
+        if (!requestFocusWhenReady(target) && target !== doneButtonFocusRequester) {
+            requestFocusWhenReady(doneButtonFocusRequester)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -115,7 +125,10 @@ fun CatalogPickerContent(
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioTheme.colors.TextPrimary
             )
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_done)) }
+            NuvioButton(
+                onClick = onBack,
+                modifier = Modifier.focusRequester(doneButtonFocusRequester)
+            ) { Text(stringResource(R.string.collections_editor_done)) }
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -131,7 +144,7 @@ fun CatalogPickerContent(
             itemsIndexed(
                 items = catalogs,
                 key = { index, c -> "${c.addonId}_${c.type}_${c.catalogId}_$index" }
-            ) { _, catalog ->
+            ) { index, catalog ->
                 val isAdded = alreadyAdded.any {
                     it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && catalogTypesMatch(it.type, catalog.type) && it.catalogId == catalog.catalogId
                 }
@@ -139,6 +152,7 @@ fun CatalogPickerContent(
                     onClick = { onToggle(catalog) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .then(if (index == 0) Modifier.focusRequester(firstCatalogFocusRequester) else Modifier)
                         .semantics {
                             role = Role.Checkbox
                             toggleableState = if (isAdded) ToggleableState.On else ToggleableState.Off
