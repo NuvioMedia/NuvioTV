@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.collection
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
@@ -31,6 +33,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.trakt.TraktPublicListSearchResult
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -75,7 +78,10 @@ fun TraktSourcePickerContent(
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
         }
 
+        val traktListState = rememberLazyListState()
+        Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
+            state = traktListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
@@ -112,6 +118,8 @@ fun TraktSourcePickerContent(
                     TraktResultCard(result = result, onClick = { onAddResult(result) })
                 }
             }
+        }
+        SettingsVerticalScrollIndicators(state = traktListState)
         }
     }
 }

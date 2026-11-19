@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -88,6 +89,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
@@ -155,6 +157,9 @@ fun CollectionEditorScreen(
         }
     }
 
+    val foldersScrollState = rememberScrollState()
+    val foldersMovingIndex = uiState.folders.indexOfFirst { it.id == uiState.movingFolderKey }
+    Box(modifier = Modifier.fillMaxSize()) {
     TvReorderList(
         items = uiState.folders,
         key = { it.id },
@@ -165,6 +170,7 @@ fun CollectionEditorScreen(
         onConfirmMove = { viewModel.confirmFolderMove() },
         onCancelMove = viewModel::cancelFolderMove,
         modifier = Modifier.fillMaxSize(),
+        scrollState = foldersScrollState,
         contentPadding = PaddingValues(
             top = NuvioTheme.spacing.xxxl,
             start = NuvioTheme.spacing.xxxl,
@@ -498,6 +504,13 @@ fun CollectionEditorScreen(
                 onConfirmMove = onConfirmMove
             )
         }
+    }
+    SettingsVerticalScrollIndicators(
+        state = foldersScrollState,
+        suppressBackward = foldersMovingIndex == 0,
+        suppressForward = foldersMovingIndex >= 0 &&
+            foldersMovingIndex == uiState.folders.lastIndex
+    )
     }
 
     folderToDelete?.let { folder ->

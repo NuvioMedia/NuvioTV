@@ -105,6 +105,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.ui.components.TrackingAddonConsentDialog
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -470,6 +471,9 @@ fun AddonManagerScreen(
         null -> null
     }
 
+    val addonOrderScrollState = rememberScrollState()
+    val addonOrderMovingIndex = uiState.installedAddons.indexOfFirst { it.baseUrl == uiState.movingAddonKey }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -499,6 +503,7 @@ fun AddonManagerScreen(
                     },
                     fallbackRequester = deleteRestoreFallback ?: surfaceFocusRequester
                 ),
+            scrollState = addonOrderScrollState,
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = 28.dp),
             header = {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -754,6 +759,13 @@ fun AddonManagerScreen(
                 removeFocusRequester = if (viewModel.isReadOnly) null else removeFocusRequesterFor(addon.baseUrl)
             )
         }
+
+        SettingsVerticalScrollIndicators(
+            state = addonOrderScrollState,
+            suppressBackward = addonOrderMovingIndex == 0,
+            suppressForward = addonOrderMovingIndex >= 0 &&
+                addonOrderMovingIndex == uiState.installedAddons.lastIndex
+        )
 
         if (uiState.isQrModeActive || uiState.pendingChange != null) {
             if (uiState.isQrModeActive) {

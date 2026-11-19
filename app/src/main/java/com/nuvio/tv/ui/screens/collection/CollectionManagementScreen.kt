@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -72,6 +73,7 @@ import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
@@ -248,6 +250,9 @@ fun CollectionManagementScreen(
                 )
             }
         } else {
+            val collectionsScrollState = rememberScrollState()
+            val collectionsMovingIndex = uiState.collections.indexOfFirst { it.id == uiState.movingCollectionKey }
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             TvReorderList(
                 items = uiState.collections,
                 key = { it.id },
@@ -257,9 +262,8 @@ fun CollectionManagementScreen(
                 onMoveBy = viewModel::moveCollectionDuringDrag,
                 onConfirmMove = { viewModel.confirmCollectionMove() },
                 onCancelMove = viewModel::cancelCollectionMove,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxSize(),
+                scrollState = collectionsScrollState,
             ) { collection, isMoving, onStartMove, onConfirmMove ->
                 val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
                 CollectionListItem(
@@ -276,6 +280,13 @@ fun CollectionManagementScreen(
                     onStartMove = onStartMove,
                     onConfirmMove = onConfirmMove
                 )
+            }
+            SettingsVerticalScrollIndicators(
+                state = collectionsScrollState,
+                suppressBackward = collectionsMovingIndex == 0,
+                suppressForward = collectionsMovingIndex >= 0 &&
+                    collectionsMovingIndex == uiState.collections.lastIndex
+            )
             }
         }
     }

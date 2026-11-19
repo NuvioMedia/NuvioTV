@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -87,6 +88,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
@@ -270,6 +272,9 @@ fun FolderEditorContent(
             }
         }
 
+        val sourcesScrollState = rememberScrollState()
+        val sourcesMovingIndex = sourceItems.indexOfFirst { it.key == uiState.movingSourceKey }
+        Box(modifier = Modifier.fillMaxSize()) {
         TvReorderList(
             items = sourceItems,
             key = { it.key },
@@ -280,6 +285,7 @@ fun FolderEditorContent(
             onConfirmMove = { viewModel.confirmSourceMove() },
             onCancelMove = viewModel::cancelSourceMove,
             modifier = Modifier.fillMaxSize(),
+            scrollState = sourcesScrollState,
             contentPadding = PaddingValues(
                 start = NuvioTheme.spacing.xs,
                 end = NuvioTheme.spacing.xs,
@@ -923,6 +929,13 @@ fun FolderEditorContent(
                 }
             }
         }
+        }
+        SettingsVerticalScrollIndicators(
+            state = sourcesScrollState,
+            suppressBackward = sourcesMovingIndex == 0,
+            suppressForward = sourcesMovingIndex >= 0 &&
+                sourcesMovingIndex == sourceItems.lastIndex
+        )
         }
     }
 

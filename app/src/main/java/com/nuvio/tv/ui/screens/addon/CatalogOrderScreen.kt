@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
@@ -61,6 +62,7 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
@@ -127,6 +129,9 @@ fun CatalogOrderScreen(
             }
 
             else -> {
+                val reorderScrollState = rememberScrollState()
+                val movingIndex = uiState.items.indexOfFirst { it.key == uiState.movingKey }
+                Box(modifier = Modifier.fillMaxSize()) {
                 TvReorderList(
                     items = uiState.items,
                     key = { it.key },
@@ -137,6 +142,7 @@ fun CatalogOrderScreen(
                     onConfirmMove = { viewModel.confirmMove() },
                     onCancelMove = { viewModel.cancelMove() },
                     modifier = Modifier.fillMaxSize(),
+                    scrollState = reorderScrollState,
                     header = {
                         CatalogOrderHeader(
                             followAddonsOrder = uiState.followAddonsOrder,
@@ -159,6 +165,12 @@ fun CatalogOrderScreen(
                         onToggleEnabled = { viewModel.toggleCatalogEnabled(item.disableKey) },
                         actionsEnabled = uiState.movingKey == null || isMoving,
                     )
+                }
+                SettingsVerticalScrollIndicators(
+                    state = reorderScrollState,
+                    suppressBackward = movingIndex == 0,
+                    suppressForward = movingIndex >= 0 && movingIndex == uiState.items.lastIndex
+                )
                 }
             }
         }

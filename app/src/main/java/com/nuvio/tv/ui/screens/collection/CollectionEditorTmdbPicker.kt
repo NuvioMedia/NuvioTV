@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -88,6 +89,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
@@ -187,7 +189,10 @@ fun TmdbSourcePickerContent(
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
         }
 
+        val tmdbPickerListState = rememberLazyListState()
+        Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
+            state = tmdbPickerListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
@@ -339,6 +344,8 @@ fun TmdbSourcePickerContent(
                     }
                 }
             }
+        }
+        SettingsVerticalScrollIndicators(state = tmdbPickerListState)
         }
     }
 }
