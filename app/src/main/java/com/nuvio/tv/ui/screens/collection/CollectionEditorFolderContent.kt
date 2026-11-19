@@ -1066,7 +1066,9 @@ fun FolderEditorContent(
             state = sourcesScrollState,
             suppressBackward = sourcesMovingIndex == 0,
             suppressForward = sourcesMovingIndex >= 0 &&
-                sourcesMovingIndex == sourceItems.lastIndex
+                sourcesMovingIndex == sourceItems.lastIndex,
+            forceBackward = sourcesMovingIndex > 0,
+            forceForward = sourcesMovingIndex in 0 until sourceItems.lastIndex
         )
     }
 

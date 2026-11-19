@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -91,12 +92,15 @@ fun CatalogOrderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioTheme.colors.Background)
-            .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
+            .background(NuvioTheme.colors.Background),
     ) {
         when {
             uiState.isLoading -> {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
+                ) {
                     CatalogOrderHeader(
                         followAddonsOrder = uiState.followAddonsOrder,
                         movingKey = uiState.movingKey,
@@ -114,7 +118,11 @@ fun CatalogOrderScreen(
             }
 
             uiState.items.isEmpty() -> {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
+                ) {
                     CatalogOrderHeader(
                         followAddonsOrder = uiState.followAddonsOrder,
                         movingKey = uiState.movingKey,
@@ -130,7 +138,9 @@ fun CatalogOrderScreen(
 
             else -> {
                 val reorderScrollState = rememberScrollState()
-                val movingIndex = uiState.items.indexOfFirst { it.key == uiState.movingKey }
+                val movingItem = uiState.movingKey?.let { movingKey ->
+                    uiState.items.firstOrNull { it.key == movingKey }
+                }
                 Box(modifier = Modifier.fillMaxSize()) {
                 TvReorderList(
                     items = uiState.items,
@@ -143,6 +153,12 @@ fun CatalogOrderScreen(
                     onCancelMove = { viewModel.cancelMove() },
                     modifier = Modifier.fillMaxSize(),
                     scrollState = reorderScrollState,
+                    contentPadding = PaddingValues(
+                        start = NuvioTheme.spacing.xxxl,
+                        end = NuvioTheme.spacing.xxxl,
+                        top = NuvioTheme.spacing.xl,
+                        bottom = NuvioTheme.spacing.xxxl,
+                    ),
                     header = {
                         CatalogOrderHeader(
                             followAddonsOrder = uiState.followAddonsOrder,
@@ -168,8 +184,10 @@ fun CatalogOrderScreen(
                 }
                 SettingsVerticalScrollIndicators(
                     state = reorderScrollState,
-                    suppressBackward = movingIndex == 0,
-                    suppressForward = movingIndex >= 0 && movingIndex == uiState.items.lastIndex
+                    suppressBackward = movingItem != null && !movingItem.canMoveUp,
+                    suppressForward = movingItem != null && !movingItem.canMoveDown,
+                    forceBackward = movingItem?.canMoveUp == true,
+                    forceForward = movingItem?.canMoveDown == true
                 )
                 }
             }
@@ -179,7 +197,9 @@ fun CatalogOrderScreen(
             visible = pinnedNoticeMessage != null,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
         ) {
             val visibleMessage = pinnedNoticeMessage ?: return@AnimatedVisibility
             Surface(

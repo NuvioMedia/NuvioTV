@@ -764,7 +764,9 @@ fun AddonManagerScreen(
             state = addonOrderScrollState,
             suppressBackward = addonOrderMovingIndex == 0,
             suppressForward = addonOrderMovingIndex >= 0 &&
-                addonOrderMovingIndex == uiState.installedAddons.lastIndex
+                addonOrderMovingIndex == uiState.installedAddons.lastIndex,
+            forceBackward = addonOrderMovingIndex > 0,
+            forceForward = addonOrderMovingIndex in 0 until uiState.installedAddons.lastIndex
         )
 
         if (uiState.isQrModeActive || uiState.pendingChange != null) {

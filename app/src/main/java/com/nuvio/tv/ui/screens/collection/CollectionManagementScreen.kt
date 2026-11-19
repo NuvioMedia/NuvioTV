@@ -376,7 +376,9 @@ fun CollectionManagementScreen(
                 state = collectionsScrollState,
                 suppressBackward = collectionsMovingIndex == 0,
                 suppressForward = collectionsMovingIndex >= 0 &&
-                    collectionsMovingIndex == uiState.collections.lastIndex
+                    collectionsMovingIndex == uiState.collections.lastIndex,
+                forceBackward = collectionsMovingIndex > 0,
+                forceForward = collectionsMovingIndex in 0 until uiState.collections.lastIndex
             )
         }
 

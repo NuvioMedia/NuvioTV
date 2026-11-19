@@ -259,7 +259,9 @@ internal fun MDBListSettingsBody(
                 SettingsVerticalScrollIndicators(
                     state = mdbScrollState,
                     suppressBackward = movingIndex == 0,
-                    suppressForward = movingIndex >= 0 && movingIndex == ratingItems.lastIndex
+                    suppressForward = movingIndex >= 0 && movingIndex == ratingItems.lastIndex,
+                    forceBackward = movingIndex > 0,
+                    forceForward = movingIndex in 0 until ratingItems.lastIndex
                 )
             }
         }

@@ -33,10 +33,12 @@ internal fun BoxScope.SettingsVerticalScrollIndicators(
     state: ScrollableState,
     modifier: Modifier = Modifier,
     suppressBackward: Boolean = false,
-    suppressForward: Boolean = false
+    suppressForward: Boolean = false,
+    forceBackward: Boolean = false,
+    forceForward: Boolean = false
 ) {
     AnimatedVisibility(
-        visible = state.canScrollBackward && !suppressBackward,
+        visible = (state.canScrollBackward || forceBackward) && !suppressBackward,
         modifier = modifier
             .align(Alignment.TopCenter)
             .padding(top = IndicatorEdgeInset),
@@ -51,7 +53,7 @@ internal fun BoxScope.SettingsVerticalScrollIndicators(
         )
     }
     AnimatedVisibility(
-        visible = state.canScrollForward && !suppressForward,
+        visible = (state.canScrollForward || forceForward) && !suppressForward,
         modifier = modifier
             .align(Alignment.BottomCenter)
             .padding(bottom = IndicatorEdgeInset),

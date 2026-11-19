@@ -582,7 +582,9 @@ fun CollectionEditorScreen(
         state = foldersScrollState,
         suppressBackward = foldersMovingIndex == 0,
         suppressForward = foldersMovingIndex >= 0 &&
-            foldersMovingIndex == uiState.folders.lastIndex
+            foldersMovingIndex == uiState.folders.lastIndex,
+        forceBackward = foldersMovingIndex > 0,
+        forceForward = foldersMovingIndex in 0 until uiState.folders.lastIndex
     )
     }
 
