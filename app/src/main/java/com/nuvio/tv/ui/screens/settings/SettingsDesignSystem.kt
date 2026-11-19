@@ -1193,8 +1193,8 @@ internal fun SettingsDialogActionButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier,
         enabled = enabled,
+        modifier = modifier,
         colors = ButtonDefaults.colors(
             containerColor = if (primary) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
             contentColor = NuvioTheme.colors.TextPrimary
