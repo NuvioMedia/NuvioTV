@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -219,10 +220,13 @@ fun FolderEditorContent(
                 color = NuvioTheme.colors.TextPrimary,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                NuvioButton(onClick = { viewModel.cancelFolderEdit() }) {
+                NuvioButton(
+                    onClick = { viewModel.cancelFolderEdit() },
+                    enabled = uiState.movingSourceKey == null
+                ) {
                     Text(stringResource(R.string.collections_cancel))
                 }
-                val canSaveFolder = folder.sources.isNotEmpty()
+                val canSaveFolder = folder.sources.isNotEmpty() && uiState.movingSourceKey == null
                 NuvioButton(onClick = { viewModel.saveFolderEdit() }, enabled = canSaveFolder) {
                     Text(stringResource(R.string.collections_editor_save))
                 }
@@ -255,13 +259,18 @@ fun FolderEditorContent(
         TvReorderList(
             items = sourceItems,
             key = { it.key },
-            canMove = { true },
+            canMove = { sourceItems.size > 1 && uiState.movingSourceKey == null },
             movingKey = uiState.movingSourceKey,
             onStartMove = viewModel::enterSourceMoveMode,
             onMoveBy = viewModel::moveSourceDuringDrag,
             onConfirmMove = { viewModel.confirmSourceMove() },
             onCancelMove = viewModel::cancelSourceMove,
             modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = NuvioTheme.spacing.xs,
+                end = NuvioTheme.spacing.xs,
+                bottom = NuvioTheme.spacing.xxxl
+            ),
             header = {
                 Column {
                 Text(stringResource(R.string.collections_editor_folder_title), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
@@ -273,6 +282,7 @@ fun FolderEditorContent(
                     placeholder = stringResource(R.string.collections_editor_placeholder_folder),
                     focusRequester = titleFocusRequester
                 )
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
                 val hasEmoji = !folder.coverEmoji.isNullOrBlank()
                 val coverMode = when {
@@ -534,6 +544,7 @@ fun FolderEditorContent(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Text(stringResource(R.string.collections_editor_tile_shape), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 val shapeFocusRequesters = remember { PosterShape.entries.associateWith { FocusRequester() } }
@@ -581,6 +592,7 @@ fun FolderEditorContent(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Card(
                     onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
                     modifier = Modifier
@@ -636,6 +648,7 @@ fun FolderEditorContent(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -648,10 +661,14 @@ fun FolderEditorContent(
                         color = NuvioTheme.colors.TextTertiary
                     )
                 }
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 }
             },
             footer = {
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+            Row(
+                modifier = Modifier.padding(top = if (sourceItems.isEmpty()) 0.dp else NuvioTheme.spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+            ) {
                 NuvioButton(onClick = { viewModel.showCatalogPicker() }, enabled = uiState.movingSourceKey == null) {
                     Icon(Icons.Default.Add, null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
@@ -846,6 +863,7 @@ fun FolderEditorContent(
                     }
                     Button(
                         onClick = if (isMoving) onConfirmMove else onStartMove,
+                        enabled = isMoving || (sourceItems.size > 1 && !reorderActive),
                         colors = ButtonDefaults.colors(
                             containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,

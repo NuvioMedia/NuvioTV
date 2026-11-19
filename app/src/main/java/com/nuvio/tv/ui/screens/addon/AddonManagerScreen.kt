@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -476,7 +477,12 @@ fun AddonManagerScreen(
         TvReorderList(
             items = uiState.installedAddons,
             key = { it.baseUrl },
-            canMove = { !viewModel.isReadOnly && !isEssential },
+            canMove = {
+                !viewModel.isReadOnly &&
+                    !isEssential &&
+                    uiState.installedAddons.size > 1 &&
+                    uiState.movingAddonKey == null
+            },
             movingKey = uiState.movingAddonKey,
             onStartMove = viewModel::enterAddonMoveMode,
             onMoveBy = viewModel::moveAddonDuringDrag,
@@ -484,7 +490,6 @@ fun AddonManagerScreen(
             onCancelMove = viewModel::cancelAddonMove,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 36.dp, vertical = 28.dp)
                 .addonManagerFocusRestorer(
                     pendingRequester = when (pendingFocusRestore) {
                         AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
@@ -493,6 +498,7 @@ fun AddonManagerScreen(
                     },
                     fallbackRequester = deleteRestoreFallback ?: surfaceFocusRequester
                 ),
+            contentPadding = PaddingValues(horizontal = 36.dp, vertical = 28.dp),
             header = {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text(
@@ -732,7 +738,8 @@ fun AddonManagerScreen(
             AddonCard(
                 addon = addon,
                 isMoving = isMoving,
-                canMove = !isEssential,
+                canMove = !isEssential && uiState.installedAddons.size > 1,
+                actionsEnabled = uiState.movingAddonKey == null || isMoving,
                 onStartMove = onStartMove,
                 onConfirmMove = onConfirmMove,
                 onRemove = {
@@ -1544,6 +1551,7 @@ private fun AddonCard(
     addon: Addon,
     isMoving: Boolean,
     canMove: Boolean,
+    actionsEnabled: Boolean,
     onStartMove: () -> Unit,
     onConfirmMove: () -> Unit,
     onRemove: () -> Unit,
@@ -1608,6 +1616,7 @@ private fun AddonCard(
                 isReadOnly = false,
                 isMoving = isMoving,
                 canMove = canMove,
+                actionsEnabled = actionsEnabled,
                 onStartMove = onStartMove,
                 onConfirmMove = onConfirmMove,
                 onRemove = onRemove,
@@ -1627,6 +1636,7 @@ private fun AddonCardContent(
     isReadOnly: Boolean,
     isMoving: Boolean = false,
     canMove: Boolean = false,
+    actionsEnabled: Boolean = true,
     onStartMove: () -> Unit = {},
     onConfirmMove: () -> Unit = {},
     onRemove: () -> Unit = {},
@@ -1677,7 +1687,7 @@ private fun AddonCardContent(
                 ) {
                     Surface(
                         onClick = {
-                            if (!isMoving) onEnabledChange(!addon.enabled)
+                            if (actionsEnabled && !isMoving) onEnabledChange(!addon.enabled)
                         },
                         modifier = Modifier
                             .focusRequester(toggleFocusRequester ?: remember { FocusRequester() })
@@ -1716,7 +1726,7 @@ private fun AddonCardContent(
                     if (showReorder) {
                         Button(
                             onClick = if (isMoving) onConfirmMove else onStartMove,
-                            enabled = isMoving || canMove,
+                            enabled = isMoving || (canMove && actionsEnabled),
                             modifier = Modifier.semantics { role = Role.Button },
                             colors = ButtonDefaults.colors(
                                 containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
@@ -1746,7 +1756,7 @@ private fun AddonCardContent(
                     }
                     Button(
                         onClick = onRemove,
-                        enabled = !isMoving,
+                        enabled = actionsEnabled && !isMoving,
                         modifier = removeButtonModifier.semantics { role = Role.Button },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioTheme.colors.BackgroundCard,

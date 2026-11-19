@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -143,15 +144,19 @@ fun CollectionEditorScreen(
     TvReorderList(
         items = uiState.folders,
         key = { it.id },
-        canMove = { true },
+        canMove = { uiState.folders.size > 1 && uiState.movingFolderKey == null },
         movingKey = uiState.movingFolderKey,
         onStartMove = viewModel::enterFolderMoveMode,
         onMoveBy = viewModel::moveFolderDuringDrag,
         onConfirmMove = { viewModel.confirmFolderMove() },
         onCancelMove = viewModel::cancelFolderMove,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = NuvioTheme.spacing.xxxl,
+            start = NuvioTheme.spacing.xxxl,
+            end = NuvioTheme.spacing.xxxl,
+            bottom = NuvioTheme.spacing.xxxl
+        ),
         header = {
             Column {
                 Text(
@@ -178,7 +183,7 @@ fun CollectionEditorScreen(
                         modifier = Modifier.weight(1f),
                         placeholder = stringResource(R.string.collections_editor_placeholder_name)
                     )
-                    val canSaveCollection = uiState.title.isNotBlank() && uiState.folders.isNotEmpty()
+                    val canSaveCollection = uiState.title.isNotBlank() && uiState.folders.isNotEmpty() && uiState.movingFolderKey == null
                     NuvioButton(onClick = { viewModel.save { onBack() } }, enabled = canSaveCollection) {
                         Text(stringResource(R.string.collections_editor_save))
                     }
@@ -441,12 +446,19 @@ fun CollectionEditorScreen(
         },
         footer = {
             val addFolderFocusRequester = folderFocusRequesters.getOrPut("add_folder") { FocusRequester() }
-            Box(modifier = Modifier.padding(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs)) {
+            Box(
+                modifier = Modifier.padding(
+                    start = NuvioTheme.spacing.sm,
+                    end = NuvioTheme.spacing.sm,
+                    top = if (uiState.folders.isEmpty()) NuvioTheme.spacing.xs else NuvioTheme.spacing.lg
+                )
+            ) {
                 NuvioButton(
                     onClick = {
                         lastFocusedFolderId = "add_folder"
                         viewModel.addFolder()
                     },
+                    enabled = uiState.movingFolderKey == null,
                     modifier = Modifier.focusRequester(addFolderFocusRequester)
                 ) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = null)
@@ -461,6 +473,8 @@ fun CollectionEditorScreen(
             FolderListItem(
                 folder = folder,
                 isMoving = isMoving,
+                canMove = uiState.folders.size > 1,
+                actionsEnabled = uiState.movingFolderKey == null || isMoving,
                 editFocusRequester = editFocusRequester,
                 onEdit = {
                     lastFocusedFolderId = folder.id
@@ -508,6 +522,8 @@ fun CollectionEditorScreen(
 private fun FolderListItem(
     folder: CollectionFolder,
     isMoving: Boolean,
+    canMove: Boolean,
+    actionsEnabled: Boolean,
     editFocusRequester: FocusRequester? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -569,11 +585,25 @@ private fun FolderListItem(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
-                NuvioButton(
+                Button(
                     onClick = if (isMoving) onConfirmMove else onStartMove,
+                    enabled = isMoving || (canMove && actionsEnabled),
                     modifier = Modifier.semantics {
                         role = Role.Button
-                    }
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                        contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
+                    ),
+                    border = ButtonDefaults.border(
+                        focusedBorder = Border(
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                        )
+                    ),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Text(
                         text = stringResource(
@@ -583,12 +613,12 @@ private fun FolderListItem(
                 }
                 NuvioButton(
                     onClick = onEdit,
-                    enabled = !isMoving,
+                    enabled = actionsEnabled && !isMoving,
                     modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier
                 ) {
                     Icon(Icons.Default.Edit, stringResource(R.string.cd_edit), tint = NuvioTheme.colors.TextSecondary)
                 }
-                NuvioButton(onClick = onDelete, enabled = !isMoving) {
+                NuvioButton(onClick = onDelete, enabled = actionsEnabled && !isMoving) {
                     Icon(Icons.Default.Delete, stringResource(R.string.cd_delete), tint = NuvioTheme.colors.TextSecondary)
                 }
             }

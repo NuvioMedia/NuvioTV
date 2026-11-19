@@ -225,6 +225,7 @@ class CollectionEditorViewModel @Inject constructor(
     }
 
     fun addFolder() {
+        clearFolderMoveState()
         val newFolder = CollectionFolder(
             id = collectionsDataStore.generateId(),
             title = "",
@@ -232,18 +233,23 @@ class CollectionEditorViewModel @Inject constructor(
             sources = emptyList()
         )
         _uiState.update {
-            it.copy(editingFolder = newFolder, showFolderEditor = true)
+            it.copy(editingFolder = newFolder, showFolderEditor = true, movingFolderKey = null)
         }
     }
 
     fun editFolder(folderId: String) {
         val folder = _uiState.value.folders.find { it.id == folderId } ?: return
-        _uiState.update { it.copy(editingFolder = folder, showFolderEditor = true) }
+        clearFolderMoveState()
+        _uiState.update { it.copy(editingFolder = folder, showFolderEditor = true, movingFolderKey = null) }
     }
 
     fun removeFolder(folderId: String) {
+        clearFolderMoveState()
         _uiState.update { state ->
-            state.copy(folders = state.folders.filter { it.id != folderId })
+            state.copy(
+                folders = state.folders.filter { it.id != folderId },
+                movingFolderKey = null
+            )
         }
     }
 
@@ -252,8 +258,19 @@ class CollectionEditorViewModel @Inject constructor(
     private var sourceMoveBaseline: List<CollectionSource>? = null
     private var sourceDraftPairs: List<Pair<String, CollectionSource>>? = null
 
+    private fun clearFolderMoveState() {
+        folderDraftOrder = null
+        folderMoveBaseline = null
+    }
+
+    private fun clearSourceMoveState() {
+        sourceDraftPairs = null
+        sourceMoveBaseline = null
+    }
+
     fun enterSourceMoveMode(sourceKey: String) {
         val folder = _uiState.value.editingFolder ?: return
+        if (folder.sources.size <= 1) return
         val keys = collectionSourceKeys(folder.sources)
         if (keys.none { it == sourceKey }) return
         sourceMoveBaseline = folder.sources
@@ -302,7 +319,7 @@ class CollectionEditorViewModel @Inject constructor(
 
     fun enterFolderMoveMode(folderId: String) {
         val current = _uiState.value.folders
-        if (current.none { it.id == folderId }) return
+        if (current.size <= 1 || current.none { it.id == folderId }) return
         folderMoveBaseline = current
         folderDraftOrder = current.map { it.id }
         _uiState.update { it.copy(movingFolderKey = folderId) }
@@ -1153,6 +1170,7 @@ class CollectionEditorViewModel @Inject constructor(
     fun saveFolderEdit() {
         val rawFolder = _uiState.value.editingFolder ?: return
         if (rawFolder.sources.isEmpty()) return
+        clearSourceMoveState()
         val cleanedFolder = rawFolder.copy(
             title = rawFolder.title.ifBlank { string(R.string.collection_editor_untitled_folder) },
             coverImageUrl = rawFolder.coverImageUrl?.ifBlank { null },
@@ -1176,12 +1194,14 @@ class CollectionEditorViewModel @Inject constructor(
                 showTmdbSourcePicker = false,
                 showTraktSourcePicker = false,
                 genrePickerSourceIndex = null,
-                showEmojiPicker = false
+                showEmojiPicker = false,
+                movingSourceKey = null
             )
         }
     }
 
     fun cancelFolderEdit() {
+        clearSourceMoveState()
         _uiState.update {
             it.copy(
                 showFolderEditor = false,
@@ -1190,12 +1210,15 @@ class CollectionEditorViewModel @Inject constructor(
                 showTmdbSourcePicker = false,
                 showTraktSourcePicker = false,
                 genrePickerSourceIndex = null,
-                showEmojiPicker = false
+                showEmojiPicker = false,
+                movingSourceKey = null
             )
         }
     }
 
     fun save(onComplete: () -> Unit) {
+        clearFolderMoveState()
+        _uiState.update { it.copy(movingFolderKey = null) }
         val state = _uiState.value
         if (state.folders.isEmpty()) return
         viewModelScope.launch {

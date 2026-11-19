@@ -82,33 +82,6 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun NuvioButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        colors = ButtonDefaults.colors(
-            containerColor = NuvioTheme.colors.BackgroundCard,
-            contentColor = NuvioTheme.colors.TextPrimary,
-            focusedContainerColor = NuvioTheme.colors.FocusBackground,
-            focusedContentColor = NuvioTheme.colors.Primary
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                shape = RoundedCornerShape(NuvioTheme.radii.md)
-            )
-        ),
-        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-        content = { content() }
-    )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
 fun CollectionManagementScreen(
     viewModel: CollectionManagementViewModel = hiltViewModel(),
     onNavigateToEditor: (String?) -> Unit,
@@ -197,35 +170,39 @@ fun CollectionManagementScreen(
                 val targetRequester = lastFocusedId?.let { itemFocusRequesters[it] } ?: newButtonFocusRequester
                 try { targetRequester.requestFocus() } catch (_: Exception) {}
             }
+            val headerActionsEnabled = uiState.movingCollectionKey == null
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 if (uiState.collections.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    NuvioButton(onClick = {
-                        scope.launch {
-                            try {
-                                val json = viewModel.getExportJson()
-                                withContext(Dispatchers.IO) {
-                                    val resolver = context.contentResolver
-                                    // Delete existing file first
-                                    val existingUri = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                                    resolver.delete(
-                                        existingUri,
-                                        "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?",
-                                        arrayOf("nuvio-collections.json")
-                                    )
-                                    // Write new file
-                                    val values = android.content.ContentValues().apply {
-                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "nuvio-collections.json")
-                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                    NuvioButton(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    val json = viewModel.getExportJson()
+                                    withContext(Dispatchers.IO) {
+                                        val resolver = context.contentResolver
+                                        // Delete existing file first
+                                        val existingUri = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                                        resolver.delete(
+                                            existingUri,
+                                            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?",
+                                            arrayOf("nuvio-collections.json")
+                                        )
+                                        // Write new file
+                                        val values = android.content.ContentValues().apply {
+                                            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "nuvio-collections.json")
+                                            put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                                        }
+                                        val uri = resolver.insert(existingUri, values)
+                                        uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) } }
                                     }
-                                    val uri = resolver.insert(existingUri, values)
-                                    uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) } }
+                                    exportMessage = "saved"
+                                } catch (_: Exception) {
+                                    exportMessage = "failed"
                                 }
-                                exportMessage = "saved"
-                            } catch (_: Exception) {
-                                exportMessage = "failed"
                             }
-                        }
-                    }) {
+                        },
+                        enabled = headerActionsEnabled
+                    ) {
                         Text(exportMessage?.let {
                             when (it) {
                                 "saved" -> stringResource(R.string.collections_saved_downloads)
@@ -235,7 +212,10 @@ fun CollectionManagementScreen(
                         } ?: stringResource(R.string.collections_export_file))
                     }
                 }
-                NuvioButton(onClick = { viewModel.showImportDialog() }) {
+                NuvioButton(
+                    onClick = { viewModel.showImportDialog() },
+                    enabled = headerActionsEnabled
+                ) {
                     Text(stringResource(R.string.collections_import))
                 }
                 NuvioButton(
@@ -243,7 +223,8 @@ fun CollectionManagementScreen(
                         lastFocusedId = null
                         onNavigateToEditor(null)
                     },
-                    modifier = Modifier.focusRequester(newButtonFocusRequester)
+                    modifier = Modifier.focusRequester(newButtonFocusRequester),
+                    enabled = headerActionsEnabled
                 ) {
                     Text(stringResource(R.string.collections_new))
                 }
@@ -269,7 +250,7 @@ fun CollectionManagementScreen(
             TvReorderList(
                 items = uiState.collections,
                 key = { it.id },
-                canMove = { true },
+                canMove = { uiState.collections.size > 1 && uiState.movingCollectionKey == null },
                 movingKey = uiState.movingCollectionKey,
                 onStartMove = viewModel::enterCollectionMoveMode,
                 onMoveBy = viewModel::moveCollectionDuringDrag,
@@ -283,6 +264,8 @@ fun CollectionManagementScreen(
                 CollectionListItem(
                     collection = collection,
                     isMoving = isMoving,
+                    canMove = uiState.collections.size > 1,
+                    actionsEnabled = uiState.movingCollectionKey == null || isMoving,
                     editFocusRequester = editFocusRequester,
                     onEdit = {
                         lastFocusedId = collection.id
@@ -615,6 +598,8 @@ private fun ImportContent(
 private fun CollectionListItem(
     collection: Collection,
     isMoving: Boolean,
+    canMove: Boolean,
+    actionsEnabled: Boolean,
     editFocusRequester: FocusRequester? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -669,6 +654,7 @@ private fun CollectionListItem(
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
                 Button(
                     onClick = if (isMoving) onConfirmMove else onStartMove,
+                    enabled = isMoving || (canMove && actionsEnabled),
                     colors = ButtonDefaults.colors(
                         containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
                         contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
@@ -692,7 +678,7 @@ private fun CollectionListItem(
 
                 Button(
                     onClick = onEdit,
-                    enabled = !isMoving,
+                    enabled = actionsEnabled && !isMoving,
                     modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
@@ -713,7 +699,7 @@ private fun CollectionListItem(
 
                 Button(
                     onClick = onDelete,
-                    enabled = !isMoving,
+                    enabled = actionsEnabled && !isMoving,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextSecondary,
