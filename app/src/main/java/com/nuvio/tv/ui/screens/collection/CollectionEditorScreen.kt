@@ -246,7 +246,9 @@ fun CollectionEditorScreen(
                 )
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusEntryTarget(titleFocusRequester),
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -272,7 +274,9 @@ fun CollectionEditorScreen(
                 NuvioTextField(
                     value = uiState.backdropImageUrl,
                     onValueChange = { viewModel.setBackdropImageUrl(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_backdrop)
                 )
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -281,6 +285,7 @@ fun CollectionEditorScreen(
                     onClick = { viewModel.setPinToTop(!uiState.pinToTop) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blockHorizontalFocus()
                         .semantics {
                             role = Role.Switch
                             toggleableState = if (uiState.pinToTop) ToggleableState.On else ToggleableState.Off
@@ -337,6 +342,7 @@ fun CollectionEditorScreen(
                     onClick = { viewModel.setFocusGlowEnabled(!uiState.focusGlowEnabled) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blockHorizontalFocus()
                         .semantics {
                             role = Role.Switch
                             toggleableState = if (uiState.focusGlowEnabled) ToggleableState.On else ToggleableState.Off
@@ -395,8 +401,13 @@ fun CollectionEditorScreen(
                     color = NuvioTheme.colors.TextSecondary
                 )
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                val viewModeFocusRequesters = remember {
+                    FolderViewMode.entries.associateWith { FocusRequester() }
+                }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusEntryTarget(viewModeFocusRequesters[uiState.viewMode] ?: FocusRequester.Default),
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                 ) {
                     val viewModes = listOf(
@@ -408,10 +419,12 @@ fun CollectionEditorScreen(
                         val isSelected = uiState.viewMode == mode
                         Button(
                             onClick = { viewModel.setViewMode(mode) },
-                            modifier = Modifier.semantics {
-                                role = Role.RadioButton
-                                selected = isSelected
-                            },
+                            modifier = Modifier
+                                .focusRequester(viewModeFocusRequesters.getValue(mode))
+                                .semantics {
+                                    role = Role.RadioButton
+                                    selected = isSelected
+                                },
                             colors = ButtonDefaults.colors(
                                 containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                                 contentColor = if (isSelected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -441,6 +454,7 @@ fun CollectionEditorScreen(
                         onClick = { viewModel.setShowAllTab(!uiState.showAllTab) },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .blockHorizontalFocus()
                             .semantics {
                                 role = Role.Switch
                                 toggleableState = if (uiState.showAllTab) ToggleableState.On else ToggleableState.Off
@@ -532,7 +546,9 @@ fun CollectionEditorScreen(
                         viewModel.addFolder()
                     },
                     enabled = uiState.movingFolderKey == null,
-                    modifier = Modifier.focusRequester(addFolderFocusRequester)
+                    modifier = Modifier
+                        .focusRequester(addFolderFocusRequester)
+                        .blockHorizontalFocus()
                 ) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
@@ -719,7 +735,10 @@ private fun FolderListItem(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.trapHorizontalFocus()
+            ) {
                 Button(
                     onClick = if (isMoving) onConfirmMove else onStartMove,
                     enabled = isMoving || (canMove && actionsEnabled),

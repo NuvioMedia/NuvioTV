@@ -23,8 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextDirection
@@ -60,41 +62,48 @@ fun TraktSourcePickerContent(
         requestFocusWhenReady(inputFocusRequester)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(
-                    if (isEditing) R.string.collections_editor_edit_trakt_source else R.string.collections_editor_trakt_sources
-                ),
-                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
-                color = NuvioTheme.colors.TextPrimary,
-            )
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
-        }
-
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-
-        uiState.traktSearchError?.takeIf { it.isNotBlank() }?.let { error ->
-            Text(error, color = NuvioTheme.colors.Error, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-        }
-
-        val traktListState = rememberLazyListState()
-        Box(modifier = Modifier.fillMaxSize()) {
+    val traktListState = rememberLazyListState()
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = traktListState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.xxxl),
+            contentPadding = PaddingValues(
+                top = NuvioTheme.spacing.xxxl,
+                start = NuvioTheme.spacing.xxxl,
+                end = NuvioTheme.spacing.xxxl,
+                bottom = NuvioTheme.spacing.xxxl
+            ),
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
+            item(key = "trakt_header") {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (isEditing) R.string.collections_editor_edit_trakt_source else R.string.collections_editor_trakt_sources
+                            ),
+                            style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                            color = NuvioTheme.colors.TextPrimary,
+                        )
+                        NuvioButton(
+                            onClick = onBack,
+                            modifier = Modifier.blockHorizontalFocus()
+                        ) { Text(stringResource(R.string.collections_editor_back)) }
+                    }
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+                }
+            }
+
+            uiState.traktSearchError?.takeIf { it.isNotBlank() }?.let { error ->
+                item(key = "trakt_error") {
+                    Text(error, color = NuvioTheme.colors.Error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
             item {
                 TraktSourceForm(
                     uiState = uiState,
@@ -130,7 +139,6 @@ fun TraktSourcePickerContent(
             }
         }
         SettingsVerticalScrollIndicators(state = traktListState)
-        }
     }
 }
 
@@ -172,8 +180,16 @@ private fun TraktSourceForm(
             onSortChange = onSortChange,
             onSortHowChange = onSortHowChange
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-            TmdbActionButton(onClick = onSearch, primary = false) {
+        val searchButtonFocusRequester = remember { FocusRequester() }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+            modifier = Modifier.focusEntryTarget(searchButtonFocusRequester)
+        ) {
+            TmdbActionButton(
+                onClick = onSearch,
+                primary = false,
+                modifier = Modifier.focusRequester(searchButtonFocusRequester)
+            ) {
                 Icon(Icons.Default.Search, contentDescription = null)
                 Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                 Text(stringResource(R.string.collections_editor_tmdb_search))
@@ -200,13 +216,16 @@ private fun TraktLabeledField(
         NuvioTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .blockHorizontalFocus(),
             placeholder = placeholder,
             focusRequester = focusRequester
         )
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun TraktMediaSortControls(
     mediaType: TmdbCollectionMediaType,
@@ -219,41 +238,73 @@ private fun TraktMediaSortControls(
     onSortHowChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-        TmdbOptionRow(label = stringResource(R.string.library_filter_type)) {
+        val movieRequester = remember { FocusRequester() }
+        val seriesRequester = remember { FocusRequester() }
+        val bothRequester = remember { FocusRequester() }
+        val selectedMediaRequester = when {
+            bothSelected -> bothRequester
+            mediaType == TmdbCollectionMediaType.TV -> seriesRequester
+            else -> movieRequester
+        }
+        TmdbOptionRow(
+            label = stringResource(R.string.library_filter_type),
+            fallbackFocusRequester = selectedMediaRequester
+        ) {
             TmdbChoiceButton(
                 label = stringResource(R.string.type_movie),
                 selected = mediaType == TmdbCollectionMediaType.MOVIE && !bothSelected,
+                modifier = Modifier.focusRequester(movieRequester),
                 onClick = { onMediaTypeChange(TmdbCollectionMediaType.MOVIE) }
             )
             TmdbChoiceButton(
                 label = stringResource(R.string.type_series),
                 selected = mediaType == TmdbCollectionMediaType.TV && !bothSelected,
+                modifier = Modifier.focusRequester(seriesRequester),
                 onClick = { onMediaTypeChange(TmdbCollectionMediaType.TV) }
             )
             TmdbChoiceButton(
                 label = stringResource(R.string.collection_editor_choice_both),
                 selected = bothSelected,
+                modifier = Modifier.focusRequester(bothRequester),
                 onClick = { onBothChange(true) }
             )
         }
-        TmdbOptionRow(label = stringResource(R.string.library_filter_sort)) {
-            traktSortOptions().forEach { (value, label) ->
+        val sortOptions = traktSortOptions()
+        val sortRequesters = remember(sortOptions.map { it.first }) {
+            sortOptions.associate { it.first to FocusRequester() }
+        }
+        val selectedSortRequester = sortRequesters[sortBy]
+            ?: sortOptions.firstOrNull()?.first?.let { sortRequesters[it] }
+            ?: FocusRequester.Default
+        TmdbOptionRow(
+            label = stringResource(R.string.library_filter_sort),
+            fallbackFocusRequester = selectedSortRequester
+        ) {
+            sortOptions.forEach { (value, label) ->
                 TmdbChoiceButton(
                     label = label,
                     selected = sortBy == value,
+                    modifier = Modifier.focusRequester(sortRequesters.getValue(value)),
                     onClick = { onSortChange(value) }
                 )
             }
         }
-        TmdbOptionRow(label = stringResource(R.string.collections_editor_trakt_direction)) {
+        val ascRequester = remember { FocusRequester() }
+        val descRequester = remember { FocusRequester() }
+        TmdbOptionRow(
+            label = stringResource(R.string.collections_editor_trakt_direction),
+            fallbackFocusRequester = if (sortHow == "desc") descRequester else ascRequester
+        ) {
             TmdbChoiceButton(
                 label = stringResource(R.string.collections_editor_trakt_ascending),
                 selected = sortHow == "asc",
+                modifier = Modifier.focusRequester(ascRequester),
                 onClick = { onSortHowChange("asc") }
             )
             TmdbChoiceButton(
                 label = stringResource(R.string.collections_editor_trakt_descending),
                 selected = sortHow == "desc",
+                modifier = Modifier.focusRequester(descRequester),
                 onClick = { onSortHowChange("desc") }
             )
         }

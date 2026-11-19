@@ -5,6 +5,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,9 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -105,6 +107,45 @@ internal suspend fun requestFocusWhenReady(
     return false
 }
 
+internal fun Modifier.trapHorizontalFocus(): Modifier = this
+    .focusProperties {
+        onExit = {
+            if (requestedFocusDirection == FocusDirection.Left ||
+                requestedFocusDirection == FocusDirection.Right
+            ) {
+                cancelFocusChange()
+            }
+        }
+    }
+    .focusGroup()
+
+internal fun Modifier.blockHorizontalFocus(): Modifier = this
+    .focusProperties {
+        left = FocusRequester.Cancel
+        right = FocusRequester.Cancel
+    }
+
+internal fun Modifier.focusEntryTarget(
+    target: FocusRequester
+): Modifier = this
+    .focusProperties {
+        onEnter = {
+            if (requestedFocusDirection == FocusDirection.Up ||
+                requestedFocusDirection == FocusDirection.Down
+            ) {
+                runCatching { target.requestFocus() }
+            }
+        }
+        onExit = {
+            if (requestedFocusDirection == FocusDirection.Left ||
+                requestedFocusDirection == FocusDirection.Right
+            ) {
+                cancelFocusChange()
+            }
+        }
+    }
+    .focusGroup()
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun NuvioTextField(
@@ -123,6 +164,12 @@ fun NuvioTextField(
         if (isEditing) {
             requestFocusWhenReady(textFieldFocusRequester)
         }
+    }
+
+    BackHandler(enabled = isEditing) {
+        isEditing = false
+        keyboardController?.hide()
+        runCatching { surfaceFocusRequester.requestFocus() }
     }
 
     Surface(
@@ -151,6 +198,7 @@ fun NuvioTextField(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusProperties { canFocus = isEditing }
                     .focusRequester(textFieldFocusRequester)
                     .onFocusChanged {
                         if (!it.isFocused && isEditing) {

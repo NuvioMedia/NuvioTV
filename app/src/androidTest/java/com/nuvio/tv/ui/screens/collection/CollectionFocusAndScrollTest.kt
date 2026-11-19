@@ -22,7 +22,9 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -41,6 +43,8 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.CollectionSource
+import com.nuvio.tv.domain.model.TmdbCollectionMediaType
+import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.TvReorderList
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -554,5 +558,450 @@ class CollectionFocusAndScrollTest {
             "Smooth BringIntoView remount should preserve scroll without jumping (was $scrollBefore, now ${capturedScrollState.value})",
             abs(capturedScrollState.value - scrollBefore) <= 32
         )
+    }
+
+    @Test
+    fun nuvioTextField_dpadDownAndUpMoveDirectlyBetweenFieldsWithoutGhostStops() {
+        composeRule.setContent {
+            NuvioTheme {
+                val firstFieldFocus = remember { FocusRequester() }
+                LaunchedEffect(Unit) { requestFocusWhenReady(firstFieldFocus) }
+                Column(modifier = Modifier.fillMaxSize()) {
+                    NuvioTextField(
+                        value = "",
+                        onValueChange = {},
+                        modifier = Modifier.fillMaxWidth().testTag("field_1"),
+                        placeholder = "First field",
+                        focusRequester = firstFieldFocus
+                    )
+                    NuvioTextField(
+                        value = "",
+                        onValueChange = {},
+                        modifier = Modifier.fillMaxWidth().testTag("field_2"),
+                        placeholder = "Second field"
+                    )
+                    Button(
+                        onClick = {},
+                        modifier = Modifier.testTag("after_fields_btn")
+                    ) {
+                        Text("Next")
+                    }
+                }
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("field_1").assertIsFocused()
+
+        // Single DPAD DOWN must move directly to field_2 (not inner BasicTextField of field_1)
+        composeRule.onNodeWithTag("field_1").performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("field_2").assertIsFocused()
+
+        // Single DPAD DOWN must move directly to button below
+        composeRule.onNodeWithTag("field_2").performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("after_fields_btn").assertIsFocused()
+
+        // Single DPAD UP must return directly to field_2 Surface
+        composeRule.onNodeWithTag("after_fields_btn").performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("field_2").assertIsFocused()
+
+        // Single DPAD UP must return directly to field_1 Surface
+        composeRule.onNodeWithTag("field_2").performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("field_1").assertIsFocused()
+    }
+
+    @Test
+    fun genrePicker_dpadUpFromDeepSelectedGenreMovesToPreviousGenreNotBackButton() {
+        val genres = (0 until 30).map { "Genre $it" }
+
+        composeRule.setContent {
+            NuvioTheme {
+                GenrePickerContent(
+                    title = "Movies",
+                    selectedGenre = "Genre 22",
+                    genreOptions = genres,
+                    allowAll = true,
+                    onSelect = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("Genre 22").assertIsFocused()
+
+        composeRule.onNodeWithContentDescription("Genre 22").performKeyInput {
+            pressKey(Key.DirectionUp)
+        }
+        composeRule.waitForIdle()
+
+        val backLabel = context.getString(R.string.collections_editor_back)
+        composeRule.onNodeWithText(backLabel).assertIsNotFocused()
+        composeRule.onNodeWithContentDescription("Genre 21").assertIsFocused()
+    }
+
+    @Test
+    fun emojiPicker_dpadUpFromDeepCategoryMovesToPreviousCategoryNotBackButton() {
+        val targetEmoji = "🇹🇷"
+        val description = context.getString(R.string.cd_emoji_option, targetEmoji)
+
+        composeRule.setContent {
+            NuvioTheme {
+                EmojiPickerContent(
+                    selectedEmoji = targetEmoji,
+                    onSelect = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription(description).assertIsFocused()
+
+        composeRule.onNodeWithContentDescription(description).performKeyInput {
+            pressKey(Key.DirectionUp)
+        }
+        composeRule.waitForIdle()
+
+        val backLabel = context.getString(R.string.collections_editor_back)
+        composeRule.onNodeWithText(backLabel).assertIsNotFocused()
+    }
+
+    @Test
+    fun traktPicker_dpadDownSelectsActiveOptionButtonsNotRightmostButtons() {
+        composeRule.setContent {
+            NuvioTheme {
+                TraktSourcePickerContent(
+                    uiState = CollectionEditorUiState(
+                        isLoading = false,
+                        traktMediaType = TmdbCollectionMediaType.MOVIE,
+                        traktMediaBoth = false,
+                        traktSortBy = "rank",
+                        traktSortHow = "asc"
+                    ),
+                    isEditing = false,
+                    onInputChange = {},
+                    onTitleChange = {},
+                    onMediaTypeChange = {},
+                    onMediaBothChange = {},
+                    onSortChange = {},
+                    onSortHowChange = {},
+                    onSearch = {},
+                    onAddFromInput = {},
+                    onAddResult = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        val inputPlaceholder = context.getString(R.string.collection_editor_trakt_search_placeholder)
+        val titlePlaceholder = context.getString(R.string.collection_editor_trakt_name_placeholder)
+        val movieLabel = context.getString(R.string.type_movie)
+        val sortListOrderLabel = context.getString(R.string.collections_editor_sort_list_order)
+        val ascLabel = context.getString(R.string.collections_editor_trakt_ascending)
+        val searchLabel = context.getString(R.string.collections_editor_tmdb_search)
+
+        val inputSurface = composeRule.onNode(isFocused() and hasAnyDescendant(hasText(inputPlaceholder)))
+        inputSurface.assertExists()
+
+        // Down -> Display Title field (single step, no ghost stop)
+        inputSurface.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        val titleSurface = composeRule.onNode(isFocused() and hasAnyDescendant(hasText(titlePlaceholder)))
+        titleSurface.assertExists()
+
+        // Down -> Type row must land on selected "Movie" (not rightmost "Both")
+        titleSurface.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(movieLabel).assertIsFocused()
+
+        // Down -> Sort row must land on selected "List Order" (not rightmost "Votes")
+        composeRule.onNodeWithText(movieLabel).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(sortListOrderLabel).assertIsFocused()
+
+        // Down -> Direction row must land on selected "Ascending" (not rightmost "Descending")
+        composeRule.onNodeWithText(sortListOrderLabel).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(ascLabel).assertIsFocused()
+
+        // Down -> Action row must land on "Search"
+        composeRule.onNodeWithText(ascLabel).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(searchLabel).assertIsFocused()
+    }
+
+    @Test
+    fun tmdbPicker_discoverModeDpadDownLandsOnSelectedTypeAndSortNotRightmostButtons() {
+        composeRule.setContent {
+            NuvioTheme {
+                TmdbSourcePickerContent(
+                    uiState = CollectionEditorUiState(
+                        isLoading = false,
+                        tmdbBuilderMode = TmdbBuilderMode.DISCOVER,
+                        tmdbMediaType = TmdbCollectionMediaType.MOVIE,
+                        tmdbMediaBoth = false,
+                        tmdbSortBy = TmdbCollectionSort.POPULAR_DESC.value
+                    ),
+                    presets = emptyList(),
+                    isEditing = false,
+                    onModeChange = {},
+                    onInputChange = {},
+                    onTitleChange = {},
+                    onMediaTypeChange = {},
+                    onMediaBothChange = {},
+                    onSortChange = {},
+                    onFiltersChange = {},
+                    onSearchCompanies = {},
+                    onSearchCollections = {},
+                    onAddSource = {},
+                    onAddSources = {},
+                    onAddFromInput = {},
+                    onAddDiscover = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        val discoverLabel = context.getString(R.string.collections_editor_tmdb_mode_custom)
+        val titlePlaceholder = context.getString(R.string.collections_editor_tmdb_tv_title_placeholder)
+        val movieLabel = context.getString(R.string.type_movie)
+        val popularLabel = context.getString(R.string.tmdb_entity_rail_popular)
+
+        composeRule.onNodeWithText(discoverLabel).assertIsFocused()
+
+        // Down from mode tab -> Display Title
+        composeRule.onNodeWithText(discoverLabel).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        val titleSurface = composeRule.onNode(isFocused() and hasAnyDescendant(hasText(titlePlaceholder)))
+        titleSurface.assertExists()
+
+        // Down from full-width Display Title -> selected "Movie" (NOT rightmost "Both")
+        titleSurface.performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(movieLabel).assertIsFocused()
+
+        // Down from "Movie" -> selected "Popular" (NOT rightmost "Recent")
+        composeRule.onNodeWithText(movieLabel).performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(popularLabel).assertIsFocused()
+    }
+
+    @Test
+    fun traktPicker_horizontalDpadDoesNotEscapeOptionRowsOrFields() {
+        composeRule.setContent {
+            NuvioTheme {
+                TraktSourcePickerContent(
+                    uiState = CollectionEditorUiState(
+                        isLoading = false,
+                        traktMediaType = TmdbCollectionMediaType.MOVIE,
+                        traktMediaBoth = false,
+                        traktSortBy = "rank",
+                        traktSortHow = "asc"
+                    ),
+                    isEditing = false,
+                    onInputChange = {},
+                    onTitleChange = {},
+                    onMediaTypeChange = {},
+                    onMediaBothChange = {},
+                    onSortChange = {},
+                    onSortHowChange = {},
+                    onSearch = {},
+                    onAddFromInput = {},
+                    onAddResult = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        val inputPlaceholder = context.getString(R.string.collection_editor_trakt_search_placeholder)
+        val movieLabel = context.getString(R.string.type_movie)
+        val seriesLabel = context.getString(R.string.type_series)
+        val bothLabel = context.getString(R.string.collection_editor_choice_both)
+
+        val inputSurface = composeRule.onNode(isFocused() and hasAnyDescendant(hasText(inputPlaceholder)))
+        inputSurface.assertExists()
+
+        // Left/Right on standalone input field must not escape to Back or elsewhere
+        inputSurface.performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.waitForIdle()
+        composeRule.onNode(isFocused() and hasAnyDescendant(hasText(inputPlaceholder))).assertExists()
+
+        inputSurface.performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNode(isFocused() and hasAnyDescendant(hasText(inputPlaceholder))).assertExists()
+
+        // Move down to Type row ("Movie")
+        inputSurface.performKeyInput {
+            pressKey(Key.DirectionDown)
+            pressKey(Key.DirectionDown)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(movieLabel).assertIsFocused()
+
+        // Left at left edge of Type row stays on "Movie"
+        composeRule.onNodeWithText(movieLabel).performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(movieLabel).assertIsFocused()
+
+        // Right moves within Type row: Movie -> Series -> Both
+        composeRule.onNodeWithText(movieLabel).performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(seriesLabel).assertIsFocused()
+
+        composeRule.onNodeWithText(seriesLabel).performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(bothLabel).assertIsFocused()
+
+        // Right at right edge of Type row stays on "Both" (never escapes to Back or another row)
+        composeRule.onNodeWithText(bothLabel).performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(bothLabel).assertIsFocused()
+    }
+
+    @Test
+    fun tmdbPicker_horizontalDpadAtLastModeTabDoesNotEscapeToBack() {
+        composeRule.setContent {
+            NuvioTheme {
+                TmdbSourcePickerContent(
+                    uiState = CollectionEditorUiState(
+                        isLoading = false,
+                        tmdbBuilderMode = TmdbBuilderMode.DISCOVER,
+                        tmdbMediaType = TmdbCollectionMediaType.MOVIE,
+                        tmdbMediaBoth = false,
+                        tmdbSortBy = TmdbCollectionSort.POPULAR_DESC.value
+                    ),
+                    presets = emptyList(),
+                    isEditing = false,
+                    onModeChange = {},
+                    onInputChange = {},
+                    onTitleChange = {},
+                    onMediaTypeChange = {},
+                    onMediaBothChange = {},
+                    onSortChange = {},
+                    onFiltersChange = {},
+                    onSearchCompanies = {},
+                    onSearchCollections = {},
+                    onAddSource = {},
+                    onAddSources = {},
+                    onAddFromInput = {},
+                    onAddDiscover = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        val discoverLabel = context.getString(R.string.collections_editor_tmdb_mode_custom)
+        val directorLabel = context.getString(R.string.collections_editor_tmdb_mode_director)
+        val backLabel = context.getString(R.string.collections_editor_back)
+
+        composeRule.onNodeWithText(discoverLabel).assertIsFocused()
+
+        // Right on last mode tab must stay on Discover (must NOT jump to Back)
+        composeRule.onNodeWithText(discoverLabel).performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(discoverLabel).assertIsFocused()
+        composeRule.onNodeWithText(backLabel).assertIsNotFocused()
+
+        // Left on Discover must still move inside the LazyRow to Director
+        composeRule.onNodeWithText(discoverLabel).performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(directorLabel).assertIsFocused()
+    }
+
+    @Test
+    fun emojiPicker_horizontalDpadScrollsWithinRowAndStopsAtEdges() {
+        val targetEmoji = "🇹🇷"
+        val prevEmoji = "🇹🇳"
+        val targetDescription = context.getString(R.string.cd_emoji_option, targetEmoji)
+        val prevDescription = context.getString(R.string.cd_emoji_option, prevEmoji)
+
+        composeRule.setContent {
+            NuvioTheme {
+                EmojiPickerContent(
+                    selectedEmoji = targetEmoji,
+                    onSelect = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription(targetDescription).assertIsFocused()
+
+        // Left from deep initial emoji in Flags LazyRow MUST scroll to previous item ("🇹🇳")
+        composeRule.onNodeWithContentDescription(targetDescription).performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription(prevDescription).assertIsFocused()
+    }
+
+    @Test
+    fun emojiPicker_horizontalDpadAtStartEdgeDoesNotEscapeToBack() {
+        val firstEmoji = "🎬"
+        val firstDescription = context.getString(R.string.cd_emoji_option, firstEmoji)
+        val backLabel = context.getString(R.string.collections_editor_back)
+
+        composeRule.setContent {
+            NuvioTheme {
+                EmojiPickerContent(
+                    selectedEmoji = firstEmoji,
+                    onSelect = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription(firstDescription).assertIsFocused()
+
+        // Left at index 0 must stay on "🎬" (never jump to Back or another row)
+        composeRule.onNodeWithContentDescription(firstDescription).performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription(firstDescription).assertIsFocused()
+        composeRule.onNodeWithText(backLabel).assertIsNotFocused()
+    }
+
+    @Test
+    fun genrePicker_horizontalDpadOnCardsDoesNotEscapeToBack() {
+        val genres = (1..10).map { "Genre $it" }
+        val backLabel = context.getString(R.string.collections_editor_back)
+
+        composeRule.setContent {
+            NuvioTheme {
+                GenrePickerContent(
+                    title = "Addon Catalog",
+                    selectedGenre = "Genre 1",
+                    genreOptions = genres,
+                    allowAll = true,
+                    onSelect = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Genre 1").assertIsFocused()
+
+        composeRule.onNodeWithText("Genre 1").performKeyInput { pressKey(Key.DirectionLeft) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Genre 1").assertIsFocused()
+        composeRule.onNodeWithText(backLabel).assertIsNotFocused()
+
+        composeRule.onNodeWithText("Genre 1").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Genre 1").assertIsFocused()
+        composeRule.onNodeWithText(backLabel).assertIsNotFocused()
     }
 }

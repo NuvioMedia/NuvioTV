@@ -44,8 +44,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -102,6 +102,7 @@ fun CatalogPickerContent(
 ) {
     val firstCatalogFocusRequester = remember { FocusRequester() }
     val doneButtonFocusRequester = remember { FocusRequester() }
+    val pickerListState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         val target = if (catalogs.isNotEmpty()) firstCatalogFocusRequester else doneButtonFocusRequester
@@ -127,13 +128,15 @@ fun CatalogPickerContent(
             )
             NuvioButton(
                 onClick = onBack,
-                modifier = Modifier.focusRequester(doneButtonFocusRequester)
+                modifier = Modifier
+                    .focusRequester(doneButtonFocusRequester)
+                    .focusProperties { canFocus = pickerListState.firstVisibleItemIndex == 0 }
+                    .blockHorizontalFocus()
             ) { Text(stringResource(R.string.collections_editor_done)) }
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-        val pickerListState = rememberLazyListState()
         Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = pickerListState,
@@ -152,6 +155,7 @@ fun CatalogPickerContent(
                     onClick = { onToggle(catalog) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blockHorizontalFocus()
                         .then(if (index == 0) Modifier.focusRequester(firstCatalogFocusRequester) else Modifier)
                         .semantics {
                             role = Role.Checkbox

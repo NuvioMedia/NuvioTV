@@ -44,8 +44,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -144,7 +144,10 @@ fun GenrePickerContent(
             }
             NuvioButton(
                 onClick = onBack,
-                modifier = Modifier.focusRequester(backButtonFocusRequester)
+                modifier = Modifier
+                    .focusRequester(backButtonFocusRequester)
+                    .focusProperties { canFocus = listState.firstVisibleItemIndex == 0 }
+                    .blockHorizontalFocus()
             ) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
@@ -199,6 +202,7 @@ fun GenrePickerOptionCard(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
+            .blockHorizontalFocus()
             .semantics(mergeDescendants = true) {
                 contentDescription = title
                 role = Role.RadioButton
@@ -335,7 +339,12 @@ fun EmojiPickerContent(
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioTheme.colors.TextPrimary
             )
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
+            NuvioButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .focusProperties { canFocus = columnState.firstVisibleItemIndex == 0 }
+                    .blockHorizontalFocus()
+            ) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -360,6 +369,7 @@ fun EmojiPickerContent(
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                         LazyRow(
                             state = rowState,
+                            modifier = Modifier.trapHorizontalFocus(),
                             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs)
                         ) {

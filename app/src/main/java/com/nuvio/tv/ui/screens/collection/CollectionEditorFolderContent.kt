@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -106,7 +105,9 @@ fun FolderEditorContent(
     val sourcesScrollState = key(folder.id) { rememberScrollState() }
     val sourceRowHeightCache = remember(folder.id) { mutableMapOf<String, Float>() }
     val titleFocusRequester = remember(folder.id) { FocusRequester() }
+    val noneCoverFocusRequester = remember(folder.id) { FocusRequester() }
     val emojiCoverFocusRequester = remember(folder.id) { FocusRequester() }
+    val imageCoverFocusRequester = remember(folder.id) { FocusRequester() }
     val addCatalogFocusRequester = remember(folder.id) { FocusRequester() }
     val addTmdbFocusRequester = remember(folder.id) { FocusRequester() }
     val addTraktFocusRequester = remember(folder.id) { FocusRequester() }
@@ -284,50 +285,14 @@ fun FolderEditorContent(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.collections_editor_edit_folder),
-                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
-                color = NuvioTheme.colors.TextPrimary,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                NuvioButton(
-                    onClick = {
-                        if (uiState.hasUnsavedFolderChanges) {
-                            showUnsavedFolderDialog = true
-                        } else {
-                            viewModel.cancelFolderEdit()
-                        }
-                    },
-                    enabled = uiState.movingSourceKey == null
-                ) {
-                    Text(stringResource(R.string.collections_cancel))
-                }
-                NuvioButton(onClick = { viewModel.saveFolderEdit() }, enabled = uiState.canSaveFolder) {
-                    Text(stringResource(R.string.collections_editor_save))
-                }
-            }
+    val sourceItems = remember(sourceKeys, folder.sources) {
+        sourceKeys.zip(folder.sources).mapIndexed { index, (key, source) ->
+            FolderSourceItem(key = key, index = index, source = source)
         }
+    }
 
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
-
-        val sourceItems = remember(sourceKeys, folder.sources) {
-            sourceKeys.zip(folder.sources).mapIndexed { index, (key, source) ->
-                FolderSourceItem(key = key, index = index, source = source)
-            }
-        }
-
-        val sourcesMovingIndex = sourceItems.indexOfFirst { it.key == uiState.movingSourceKey }
-        Box(modifier = Modifier.fillMaxSize()) {
+    val sourcesMovingIndex = sourceItems.indexOfFirst { it.key == uiState.movingSourceKey }
+    Box(modifier = Modifier.fillMaxSize()) {
         TvReorderList(
             items = sourceItems,
             key = { it.key },
@@ -342,18 +307,64 @@ fun FolderEditorContent(
             ensureComposedKey = ensureComposedSourceKey,
             rowHeightCache = sourceRowHeightCache,
             contentPadding = PaddingValues(
-                start = NuvioTheme.spacing.xs,
-                end = NuvioTheme.spacing.xs,
+                top = NuvioTheme.spacing.xxxl,
+                start = NuvioTheme.spacing.xxxl,
+                end = NuvioTheme.spacing.xxxl,
                 bottom = NuvioTheme.spacing.xxxl
             ),
             header = {
                 Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.collections_editor_edit_folder),
+                        style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                        color = NuvioTheme.colors.TextPrimary,
+                    )
+                    val cancelButtonFocusRequester = remember(folder.id) { FocusRequester() }
+                    val saveButtonFocusRequester = remember(folder.id) { FocusRequester() }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                        modifier = Modifier.focusEntryTarget(
+                            if (uiState.canSaveFolder) saveButtonFocusRequester else cancelButtonFocusRequester
+                        )
+                    ) {
+                        NuvioButton(
+                            onClick = {
+                                if (uiState.hasUnsavedFolderChanges) {
+                                    showUnsavedFolderDialog = true
+                                } else {
+                                    viewModel.cancelFolderEdit()
+                                }
+                            },
+                            modifier = Modifier.focusRequester(cancelButtonFocusRequester),
+                            enabled = uiState.movingSourceKey == null
+                        ) {
+                            Text(stringResource(R.string.collections_cancel))
+                        }
+                        NuvioButton(
+                            onClick = { viewModel.saveFolderEdit() },
+                            modifier = Modifier.focusRequester(saveButtonFocusRequester),
+                            enabled = uiState.canSaveFolder
+                        ) {
+                            Text(stringResource(R.string.collections_editor_save))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+
                 Text(stringResource(R.string.collections_editor_folder_title), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 NuvioTextField(
                     value = folder.title,
                     onValueChange = { viewModel.updateFolderTitle(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_folder),
                     focusRequester = titleFocusRequester
                 )
@@ -365,16 +376,26 @@ fun FolderEditorContent(
                     hasEmoji -> "emoji"
                     else -> "none"
                 }
+                val selectedCoverFocusRequester = when (coverMode) {
+                    "emoji" -> emojiCoverFocusRequester
+                    "image" -> imageCoverFocusRequester
+                    else -> noneCoverFocusRequester
+                }
 
                 Text(stringResource(R.string.collections_editor_cover), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    modifier = Modifier.focusEntryTarget(selectedCoverFocusRequester)
+                ) {
                     Button(
                         onClick = { viewModel.clearFolderCover() },
-                        modifier = Modifier.semantics {
-                            role = Role.RadioButton
-                            selected = coverMode == "none"
-                        },
+                        modifier = Modifier
+                            .focusRequester(noneCoverFocusRequester)
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = coverMode == "none"
+                            },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "none") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "none") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -432,10 +453,12 @@ fun FolderEditorContent(
 
                     Button(
                         onClick = { viewModel.switchToImageMode() },
-                        modifier = Modifier.semantics {
-                            role = Role.RadioButton
-                            selected = coverMode == "image"
-                        },
+                        modifier = Modifier
+                            .focusRequester(imageCoverFocusRequester)
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = coverMode == "image"
+                            },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "image") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "image") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -465,18 +488,18 @@ fun FolderEditorContent(
                         NuvioTextField(
                             value = folder.coverImageUrl ?: "",
                             onValueChange = { viewModel.updateFolderCoverImage(it) },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .blockHorizontalFocus(),
                             placeholder = stringResource(R.string.collections_editor_url_short_placeholder)
                         )
                         if (!folder.coverImageUrl.isNullOrBlank()) {
-                            Card(
-                                onClick = {},
+                            Surface(
                                 modifier = Modifier
                                     .width(NuvioTheme.spacing.huge)
                                     .height(NuvioTheme.spacing.huge),
-                                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                                colors = CardDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                                scale = CardDefaults.scale(focusedScale = 1f)
+                                shape = RoundedCornerShape(NuvioTheme.radii.md),
+                                colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard)
                             ) {
                                 AsyncImage(
                                     model = folder.coverImageUrl,
@@ -497,7 +520,9 @@ fun FolderEditorContent(
                 NuvioTextField(
                     value = folder.focusGifUrl.orEmpty(),
                     onValueChange = { viewModel.updateFolderFocusGifUrl(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_gif)
                 )
 
@@ -506,6 +531,7 @@ fun FolderEditorContent(
                     onClick = { viewModel.updateFolderFocusGifEnabled(!folder.focusGifEnabled) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blockHorizontalFocus()
                         .semantics {
                             role = Role.Switch
                             toggleableState = if (folder.focusGifEnabled) ToggleableState.On else ToggleableState.Off
@@ -554,18 +580,18 @@ fun FolderEditorContent(
                     NuvioTextField(
                         value = folder.heroBackdropUrl.orEmpty(),
                         onValueChange = { viewModel.updateFolderHeroBackdropUrl(it) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .blockHorizontalFocus(),
                         placeholder = stringResource(R.string.collections_editor_placeholder_hero_backdrop)
                     )
                     if (!folder.heroBackdropUrl.isNullOrBlank()) {
-                        Card(
-                            onClick = {},
+                        Surface(
                             modifier = Modifier
                                 .width(NuvioTheme.spacing.huge)
                                 .height(NuvioTheme.spacing.huge),
-                            shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                            colors = CardDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                            scale = CardDefaults.scale(focusedScale = 1f)
+                            shape = RoundedCornerShape(NuvioTheme.radii.md),
+                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard)
                         ) {
                             AsyncImage(
                                 model = folder.heroBackdropUrl,
@@ -585,7 +611,9 @@ fun FolderEditorContent(
                 NuvioTextField(
                     value = folder.heroVideoUrl.orEmpty(),
                     onValueChange = { viewModel.updateFolderHeroVideoUrl(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_hero_video)
                 )
 
@@ -599,18 +627,18 @@ fun FolderEditorContent(
                     NuvioTextField(
                         value = folder.titleLogoUrl.orEmpty(),
                         onValueChange = { viewModel.updateFolderTitleLogoUrl(it) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .blockHorizontalFocus(),
                         placeholder = stringResource(R.string.collections_editor_placeholder_title_logo)
                     )
                     if (!folder.titleLogoUrl.isNullOrBlank()) {
-                        Card(
-                            onClick = {},
+                        Surface(
                             modifier = Modifier
                                 .width(100.dp)
                                 .height(NuvioTheme.spacing.huge),
-                            shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                            colors = CardDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                            scale = CardDefaults.scale(focusedScale = 1f)
+                            shape = RoundedCornerShape(NuvioTheme.radii.md),
+                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard)
                         ) {
                             AsyncImage(
                                 model = folder.titleLogoUrl,
@@ -630,7 +658,7 @@ fun FolderEditorContent(
                 val shapeFocusRequesters = remember { PosterShape.entries.associateWith { FocusRequester() } }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                    modifier = Modifier.focusRestorer(
+                    modifier = Modifier.focusEntryTarget(
                         shapeFocusRequesters[folder.tileShape] ?: FocusRequester.Default
                     )
                 ) {
@@ -677,6 +705,7 @@ fun FolderEditorContent(
                     onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blockHorizontalFocus()
                         .semantics {
                             role = Role.Switch
                             toggleableState = if (folder.hideTitle) ToggleableState.On else ToggleableState.Off
@@ -746,7 +775,9 @@ fun FolderEditorContent(
             },
             footer = {
             Row(
-                modifier = Modifier.padding(top = if (sourceItems.isEmpty()) 0.dp else NuvioTheme.spacing.lg),
+                modifier = Modifier
+                    .padding(top = if (sourceItems.isEmpty()) 0.dp else NuvioTheme.spacing.lg)
+                    .focusEntryTarget(addCatalogFocusRequester),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 NuvioButton(
@@ -899,33 +930,39 @@ fun FolderEditorContent(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Button(
-                                onClick = {
-                                    pendingFocusTarget = FolderFocusTarget.SourceGenre(index)
-                                    viewModel.showGenrePicker(index)
-                                },
-                                enabled = !reorderActive,
-                                modifier = Modifier.focusRequester(genreFocusRequester),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundElevated,
-                                    contentColor = NuvioTheme.colors.TextSecondary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.Primary
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Text(stringResource(R.string.collections_editor_choose_genre))
-                            }
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.trapHorizontalFocus()
+                ) {
+                    if (hasGenreOptions) {
+                        Button(
+                            onClick = {
+                                pendingFocusTarget = FolderFocusTarget.SourceGenre(index)
+                                viewModel.showGenrePicker(index)
+                            },
+                            enabled = !reorderActive,
+                            modifier = Modifier.focusRequester(genreFocusRequester),
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundElevated,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                )
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Text(stringResource(R.string.collections_editor_choose_genre))
+                        }
+                    }
                     if (tmdbSource != null) {
                         Button(
                             onClick = {
@@ -1031,7 +1068,6 @@ fun FolderEditorContent(
             suppressForward = sourcesMovingIndex >= 0 &&
                 sourcesMovingIndex == sourceItems.lastIndex
         )
-        }
     }
 
     if (showUnsavedFolderDialog) {

@@ -51,7 +51,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
@@ -137,77 +136,84 @@ fun TmdbSourcePickerContent(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(
-                    if (isEditing) R.string.collections_editor_edit_tmdb_source else R.string.collections_editor_tmdb_sources
-                ),
-                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
-                color = NuvioTheme.colors.TextPrimary,
-            )
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
-        }
-
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-
-        LazyRow(
-            state = modeRowState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRestorer(modeFocusRequesters[lastFocusedMode] ?: FocusRequester.Default),
-            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
-            contentPadding = PaddingValues(end = NuvioTheme.spacing.lg, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xs)
-        ) {
-            items(TmdbBuilderMode.values().toList()) { mode ->
-                val selected = uiState.tmdbBuilderMode == mode
-                Button(
-                    onClick = { onModeChange(mode) },
-                    modifier = Modifier
-                        .focusRequester(modeFocusRequesters[mode]!!)
-                        .semantics {
-                            role = Role.Tab
-                            this.selected = selected
-                        }
-                        .onFocusChanged {
-                            if (it.isFocused) lastFocusedMode = mode
-                        },
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
-                        contentColor = if (selected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                    scale = ButtonDefaults.scale(focusedScale = 1f)
-                ) {
-                    Text(tmdbModeLabel(mode))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-
-        uiState.tmdbSearchError?.takeIf { it.isNotBlank() }?.let { error ->
-            Text(error, color = NuvioTheme.colors.Error, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-        }
-
-        Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = tmdbPickerListState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.xxxl),
+            contentPadding = PaddingValues(
+                top = NuvioTheme.spacing.xxxl,
+                start = NuvioTheme.spacing.xxxl,
+                end = NuvioTheme.spacing.xxxl,
+                bottom = NuvioTheme.spacing.xxxl
+            ),
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
+            item(key = "tmdb_header") {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (isEditing) R.string.collections_editor_edit_tmdb_source else R.string.collections_editor_tmdb_sources
+                            ),
+                            style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                            color = NuvioTheme.colors.TextPrimary,
+                        )
+                        NuvioButton(
+                            onClick = onBack,
+                            modifier = Modifier.blockHorizontalFocus()
+                        ) { Text(stringResource(R.string.collections_editor_back)) }
+                    }
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+                }
+            }
+
+            item(key = "tmdb_modes") {
+                LazyRow(
+                    state = modeRowState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusEntryTarget(modeFocusRequesters[lastFocusedMode] ?: FocusRequester.Default),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                    contentPadding = PaddingValues(end = NuvioTheme.spacing.lg, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xs)
+                ) {
+                    items(TmdbBuilderMode.values().toList()) { mode ->
+                        val selected = uiState.tmdbBuilderMode == mode
+                        Button(
+                            onClick = { onModeChange(mode) },
+                            modifier = Modifier
+                                .focusRequester(modeFocusRequesters[mode]!!)
+                                .semantics {
+                                    role = Role.Tab
+                                    this.selected = selected
+                                }
+                                .onFocusChanged {
+                                    if (it.isFocused) lastFocusedMode = mode
+                                },
+                            colors = ButtonDefaults.colors(
+                                containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
+                                contentColor = if (selected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+                            scale = ButtonDefaults.scale(focusedScale = 1f)
+                        ) {
+                            Text(tmdbModeLabel(mode))
+                        }
+                    }
+                }
+            }
+
+            uiState.tmdbSearchError?.takeIf { it.isNotBlank() }?.let { error ->
+                item(key = "tmdb_error") {
+                    Text(error, color = NuvioTheme.colors.Error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
             item {
                 TmdbModeHelp(mode = uiState.tmdbBuilderMode)
             }
@@ -357,7 +363,6 @@ fun TmdbSourcePickerContent(
             }
         }
         SettingsVerticalScrollIndicators(state = tmdbPickerListState)
-        }
     }
 }
 
@@ -721,7 +726,9 @@ private fun TmdbLabeledField(
         NuvioTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .blockHorizontalFocus(),
             placeholder = placeholder
         )
         if (helper.isNotBlank()) {
@@ -730,22 +737,34 @@ private fun TmdbLabeledField(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun TmdbActionButtons(
     onSearch: (() -> Unit)?,
     onAdd: () -> Unit,
     addLabel: String
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+    val primaryActionFocusRequester = remember { FocusRequester() }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+        modifier = Modifier.focusEntryTarget(primaryActionFocusRequester)
+    ) {
         onSearch?.let {
-            TmdbActionButton(onClick = it, primary = false) {
+            TmdbActionButton(
+                onClick = it,
+                primary = false,
+                modifier = Modifier.focusRequester(primaryActionFocusRequester)
+            ) {
                 Icon(Icons.Default.Search, contentDescription = null)
                 Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                 Text(stringResource(R.string.collections_editor_tmdb_search))
             }
         }
-        TmdbActionButton(onClick = onAdd, primary = true) {
+        TmdbActionButton(
+            onClick = onAdd,
+            primary = true,
+            modifier = if (onSearch == null) Modifier.focusRequester(primaryActionFocusRequester) else Modifier
+        ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
             Text(addLabel)
@@ -758,10 +777,12 @@ fun TmdbActionButtons(
 fun TmdbActionButton(
     onClick: () -> Unit,
     primary: Boolean,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     Button(
         onClick = onClick,
+        modifier = modifier,
         colors = ButtonDefaults.colors(
             containerColor = if (primary) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
             contentColor = if (primary) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
@@ -802,23 +823,28 @@ private fun TmdbModeHelp(mode: TmdbBuilderMode) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary)
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun TmdbQuickChips(
     label: String,
     chips: List<Pair<String, String>>,
     onSelect: (String) -> Unit
 ) {
+    val firstChipFocusRequester = remember { FocusRequester() }
     Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = NuvioTheme.colors.TextSecondary)
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusEntryTarget(firstChipFocusRequester),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
         ) {
-            items(chips) { (chipLabel, value) ->
+            itemsIndexed(chips) { index, (chipLabel, value) ->
                 TmdbChoiceButton(
                     label = chipLabel,
                     selected = false,
+                    modifier = if (index == 0) Modifier.focusRequester(firstChipFocusRequester) else Modifier,
                     onClick = { onSelect(value) }
                 )
             }
@@ -871,7 +897,7 @@ private fun tmdbTitleForMedia(
     return "$title $suffix"
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun TmdbMediaSortControls(
     mediaType: TmdbCollectionMediaType,
@@ -887,43 +913,67 @@ fun TmdbMediaSortControls(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
         if (showMediaControls) {
-            TmdbOptionRow(label = stringResource(R.string.library_filter_type)) {
+            val movieRequester = remember { FocusRequester() }
+            val seriesRequester = remember { FocusRequester() }
+            val bothRequester = remember { FocusRequester() }
+            val selectedMediaRequester = when {
+                bothSelected -> bothRequester
+                mediaType == TmdbCollectionMediaType.TV -> seriesRequester
+                else -> movieRequester
+            }
+            TmdbOptionRow(
+                label = stringResource(R.string.library_filter_type),
+                fallbackFocusRequester = selectedMediaRequester
+            ) {
                 TmdbChoiceButton(
                     label = stringResource(R.string.type_movie),
                     selected = mediaType == TmdbCollectionMediaType.MOVIE && !bothSelected,
+                    modifier = Modifier.focusRequester(movieRequester),
                     onClick = { onMediaTypeChange(TmdbCollectionMediaType.MOVIE) }
                 )
                 TmdbChoiceButton(
                     label = stringResource(R.string.type_series),
                     selected = mediaType == TmdbCollectionMediaType.TV && !bothSelected,
+                    modifier = Modifier.focusRequester(seriesRequester),
                     onClick = { onMediaTypeChange(TmdbCollectionMediaType.TV) }
                 )
                 TmdbChoiceButton(
                     label = stringResource(R.string.collection_editor_choice_both),
                     selected = bothSelected,
+                    modifier = Modifier.focusRequester(bothRequester),
                     onClick = { onBothChange(true) }
                 )
             }
         }
         if (showSortControls) {
-            TmdbOptionRow(label = stringResource(R.string.library_filter_sort)) {
-                val sorts = buildList {
-                    if (showOriginalSort) add(TmdbCollectionSort.ORIGINAL.value to stringResource(R.string.collections_editor_sort_original))
-                    if (showPopularSort) add(TmdbCollectionSort.POPULAR_DESC.value to stringResource(R.string.tmdb_entity_rail_popular))
-                    add(TmdbCollectionSort.VOTE_AVERAGE_DESC.value to stringResource(R.string.tmdb_entity_rail_top_rated))
-                    add(TmdbCollectionSort.VOTE_COUNT_DESC.value to stringResource(R.string.tmdb_entity_rail_most_voted))
-                    add(
-                        if (mediaType == TmdbCollectionMediaType.TV && !bothSelected) {
-                            TmdbCollectionSort.FIRST_AIR_DATE_DESC.value to stringResource(R.string.tmdb_entity_rail_recent)
-                        } else {
-                            TmdbCollectionSort.RELEASE_DATE_DESC.value to stringResource(R.string.tmdb_entity_rail_recent)
-                        }
-                    )
-                }
+            val sorts = buildList {
+                if (showOriginalSort) add(TmdbCollectionSort.ORIGINAL.value to stringResource(R.string.collections_editor_sort_original))
+                if (showPopularSort) add(TmdbCollectionSort.POPULAR_DESC.value to stringResource(R.string.tmdb_entity_rail_popular))
+                add(TmdbCollectionSort.VOTE_AVERAGE_DESC.value to stringResource(R.string.tmdb_entity_rail_top_rated))
+                add(TmdbCollectionSort.VOTE_COUNT_DESC.value to stringResource(R.string.tmdb_entity_rail_most_voted))
+                add(
+                    if (mediaType == TmdbCollectionMediaType.TV && !bothSelected) {
+                        TmdbCollectionSort.FIRST_AIR_DATE_DESC.value to stringResource(R.string.tmdb_entity_rail_recent)
+                    } else {
+                        TmdbCollectionSort.RELEASE_DATE_DESC.value to stringResource(R.string.tmdb_entity_rail_recent)
+                    }
+                )
+            }
+            val sortRequesters = remember(sorts.map { it.first }) {
+                sorts.associate { it.first to FocusRequester() }
+            }
+            val selectedSortRequester = sortRequesters[sortBy]
+                ?: sorts.firstOrNull()?.first?.let { sortRequesters[it] }
+                ?: FocusRequester.Default
+            TmdbOptionRow(
+                label = stringResource(R.string.library_filter_sort),
+                fallbackFocusRequester = selectedSortRequester
+            ) {
                 sorts.forEach { (value, label) ->
                     TmdbChoiceButton(
                         label = label,
                         selected = sortBy == value,
+                        modifier = Modifier.focusRequester(sortRequesters.getValue(value)),
                         onClick = { onSortChange(value) }
                     )
                 }
@@ -932,9 +982,11 @@ fun TmdbMediaSortControls(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun TmdbOptionRow(
     label: String,
+    fallbackFocusRequester: FocusRequester = FocusRequester.Default,
     content: @Composable () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
@@ -943,7 +995,10 @@ fun TmdbOptionRow(
             style = MaterialTheme.typography.labelMedium,
             color = NuvioTheme.colors.TextSecondary
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+            modifier = Modifier.focusEntryTarget(fallbackFocusRequester)
+        ) {
             content()
         }
     }
@@ -955,12 +1010,13 @@ fun TmdbChoiceButton(
     label: String,
     selected: Boolean,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.semantics {
+        modifier = modifier.semantics {
             role = Role.RadioButton
             this.selected = selected
         },
@@ -982,7 +1038,9 @@ fun TmdbChoiceButton(
 fun TmdbPickerCard(title: String, subtitle: String, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .blockHorizontalFocus(),
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground

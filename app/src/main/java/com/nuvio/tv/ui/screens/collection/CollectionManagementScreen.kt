@@ -47,6 +47,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -213,12 +214,7 @@ fun CollectionManagementScreen(
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-    ) {
+    val collectionsHeader: @Composable () -> Unit = {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -230,7 +226,10 @@ fun CollectionManagementScreen(
                 color = NuvioTheme.colors.TextPrimary,
             )
             val headerActionsEnabled = uiState.movingCollectionKey == null
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.focusEntryTarget(newButtonFocusRequester)
+            ) {
                 if (uiState.collections.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     NuvioButton(
                         onClick = {
@@ -282,37 +281,53 @@ fun CollectionManagementScreen(
                 ) {
                     Text(stringResource(R.string.collections_import))
                 }
+                val firstCollectionEditRequester = uiState.collections.firstOrNull()?.id?.let { firstId ->
+                    itemFocusRequesters.getOrPut(firstId) { FocusRequester() }
+                }
                 NuvioButton(
                     onClick = {
                         lastFocusedTarget = "new"
                         onNavigateToEditor(null)
                     },
-                    modifier = Modifier.focusRequester(newButtonFocusRequester),
+                    modifier = Modifier
+                        .focusRequester(newButtonFocusRequester)
+                        .focusProperties {
+                            if (firstCollectionEditRequester != null) {
+                                down = firstCollectionEditRequester
+                            }
+                        },
                     enabled = headerActionsEnabled
                 ) {
                     Text(stringResource(R.string.collections_new))
                 }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
-
+    Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.collections.isEmpty()) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
             ) {
-                Text(
-                    text = stringResource(R.string.collections_empty),
-                    color = NuvioTheme.colors.TextSecondary,
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                collectionsHeader()
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.collections_empty),
+                        color = NuvioTheme.colors.TextSecondary,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
             }
         } else {
             val collectionsMovingIndex = uiState.collections.indexOfFirst { it.id == uiState.movingCollectionKey }
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             TvReorderList(
                 items = uiState.collections,
                 key = { it.id },
@@ -326,6 +341,18 @@ fun CollectionManagementScreen(
                 scrollState = collectionsScrollState,
                 ensureComposedKey = ensureComposedCollectionId,
                 rowHeightCache = collectionRowHeightCache,
+                contentPadding = PaddingValues(
+                    top = NuvioTheme.spacing.xxxl,
+                    start = NuvioTheme.spacing.xxxl,
+                    end = NuvioTheme.spacing.xxxl,
+                    bottom = NuvioTheme.spacing.xxxl
+                ),
+                header = {
+                    Column {
+                        collectionsHeader()
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+                    }
+                },
             ) { collection, isMoving, onStartMove, onConfirmMove ->
                 val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
                 val deleteFocusRequester = itemDeleteFocusRequesters.getOrPut(collection.id) { FocusRequester() }
@@ -351,9 +378,7 @@ fun CollectionManagementScreen(
                 suppressForward = collectionsMovingIndex >= 0 &&
                     collectionsMovingIndex == uiState.collections.lastIndex
             )
-            }
         }
-    }
 
     collectionToDelete?.let { collection ->
         NuvioDialog(
@@ -425,102 +450,112 @@ internal fun ImportContent(
     onPickFile: () -> Unit,
     onConfirmImport: () -> Unit
 ) {
-    val fileTabFocusRequester = remember { FocusRequester() }
+    val modeFocusRequesters = remember {
+        ImportMode.entries.associateWith { FocusRequester() }
+    }
+    val fileTabFocusRequester = modeFocusRequesters.getValue(ImportMode.FILE)
     LaunchedEffect(Unit) {
-        requestFocusWhenReady(fileTabFocusRequester)
+        requestFocusWhenReady(modeFocusRequesters[importMode] ?: fileTabFocusRequester)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = NuvioTheme.spacing.xxxl,
+            start = NuvioTheme.spacing.xxxl,
+            end = NuvioTheme.spacing.xxxl,
+            bottom = NuvioTheme.spacing.xxxl
+        ),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.none)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.collections_import_header),
-                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
-                color = NuvioTheme.colors.TextPrimary,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_cancel)) }
+        item(key = "import_header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.collections_import_header),
+                    style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                    color = NuvioTheme.colors.TextPrimary,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+                    NuvioButton(
+                        onClick = onBack,
+                        modifier = Modifier.blockHorizontalFocus()
+                    ) { Text(stringResource(R.string.collections_cancel)) }
+                }
             }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
         }
 
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+        item {
+            Text(
+                text = stringResource(R.string.collections_import_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextSecondary
+            )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.none)
-        ) {
-            item {
-                Text(
-                    text = stringResource(R.string.collections_import_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioTheme.colors.TextSecondary
-                )
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-
-                // Mode tabs
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                    ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
-                        val label = when (mode) {
-                            ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
-                            ImportMode.FILE -> stringResource(R.string.collections_mode_file)
-                            ImportMode.URL -> stringResource(R.string.collections_mode_url)
-                        }
-                        val tabModifier = if (mode == ImportMode.FILE) {
-                            Modifier.focusRequester(fileTabFocusRequester)
+            // Mode tabs
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.focusEntryTarget(modeFocusRequesters[importMode] ?: fileTabFocusRequester)
+            ) {
+                ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
+                    val label = when (mode) {
+                        ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
+                        ImportMode.FILE -> stringResource(R.string.collections_mode_file)
+                        ImportMode.URL -> stringResource(R.string.collections_mode_url)
+                    }
+                    val tabModifier = Modifier.focusRequester(modeFocusRequesters.getValue(mode))
+                    val isSelected = mode == importMode
+                    Button(
+                        onClick = { onModeChange(mode) },
+                        modifier = tabModifier.semantics {
+                            role = Role.Tab
+                            this.selected = isSelected
+                        },
+                        colors = if (isSelected) {
+                            ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.Primary,
+                                contentColor = NuvioTheme.colors.Background,
+                                focusedContainerColor = NuvioTheme.colors.Primary,
+                                focusedContentColor = NuvioTheme.colors.Background
+                            )
                         } else {
-                            Modifier
-                        }
-                        val isSelected = mode == importMode
-                        Button(
-                            onClick = { onModeChange(mode) },
-                            modifier = tabModifier.semantics {
-                                role = Role.Tab
-                                this.selected = isSelected
-                            },
-                            colors = if (isSelected) {
-                                ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.Primary,
-                                    contentColor = NuvioTheme.colors.Background,
-                                    focusedContainerColor = NuvioTheme.colors.Primary,
-                                    focusedContentColor = NuvioTheme.colors.Background
-                                )
-                            } else {
-                                ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextPrimary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.Primary
-                                )
-                            },
-                            border = ButtonDefaults.border(
-                                focusedBorder = Border(
-                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                )
-                            ),
-                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                        ) {
-                            Text(label)
-                        }
+                            ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextPrimary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            )
+                        },
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Text(label)
                     }
                 }
-
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+        }
 
             item {
                 when (importMode) {
                     ImportMode.PASTE -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                            modifier = Modifier.trapHorizontalFocus()
+                        ) {
                             NuvioButton(onClick = onPaste) { Text(stringResource(R.string.collections_paste_clipboard)) }
                             if (importText.isNotBlank()) {
                                 NuvioButton(onClick = onValidate) { Text(stringResource(R.string.collections_validate)) }
@@ -573,7 +608,10 @@ internal fun ImportContent(
                             color = NuvioTheme.colors.TextTertiary
                         )
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                        NuvioButton(onClick = onPickFile) { Text(stringResource(R.string.collections_load_file)) }
+                        NuvioButton(
+                            onClick = onPickFile,
+                            modifier = Modifier.blockHorizontalFocus()
+                        ) { Text(stringResource(R.string.collections_load_file)) }
 
                         if (importText.isNotBlank()) {
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -586,46 +624,21 @@ internal fun ImportContent(
                     }
 
                     ImportMode.URL -> {
-                        Surface(
-                            shape = RoundedCornerShape(NuvioTheme.radii.md),
-                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundElevated),
-                            border = Border(
-                                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
-                                shape = RoundedCornerShape(NuvioTheme.radii.md)
-                            ),
+                        NuvioTextField(
+                            value = importUrl,
+                            onValueChange = onUrlChange,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(NuvioTheme.spacing.huge)
-                        ) {
-                            Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.md), contentAlignment = Alignment.CenterStart) {
-                                BasicTextField(
-                                    value = importUrl,
-                                    onValueChange = onUrlChange,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                        color = NuvioTheme.colors.TextPrimary,
-                                            textDirection = TextDirection.Content
-                                    ),
-                                    cursorBrush = SolidColor(NuvioTheme.colors.Primary),
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    decorationBox = { innerTextField ->
-                                        if (importUrl.isEmpty()) {
-                                            Text(
-                                                text = stringResource(R.string.collections_import_url_placeholder),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = NuvioTheme.colors.TextTertiary
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                )
-                            }
-                        }
+                                .blockHorizontalFocus(),
+                            placeholder = stringResource(R.string.collections_import_url_placeholder)
+                        )
 
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-                        NuvioButton(onClick = onFetchUrl) {
+                        NuvioButton(
+                            onClick = onFetchUrl,
+                            modifier = Modifier.blockHorizontalFocus()
+                        ) {
                             Text(if (isLoadingImport) stringResource(R.string.collections_fetching) else stringResource(R.string.collections_fetch_url))
                         }
 
@@ -663,7 +676,10 @@ internal fun ImportContent(
                                 color = NuvioTheme.colors.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-                            NuvioButton(onClick = onConfirmImport) {
+                            NuvioButton(
+                                onClick = onConfirmImport,
+                                modifier = Modifier.blockHorizontalFocus()
+                            ) {
                                 Text(stringResource(R.string.collections_confirm_import))
                             }
                         }
@@ -681,7 +697,6 @@ internal fun ImportContent(
                     )
                 }
             }
-        }
     }
 }
 
@@ -751,7 +766,10 @@ private fun CollectionListItem(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.trapHorizontalFocus()
+            ) {
                 Button(
                     onClick = if (isMoving) onConfirmMove else onStartMove,
                     enabled = isMoving || (canMove && actionsEnabled),
