@@ -44,7 +44,14 @@ import com.nuvio.tv.core.player.LetterboxSampler
 import com.nuvio.tv.core.player.LetterboxTracker
 import com.nuvio.tv.core.player.LocalTrailerPlayerPool
 import com.nuvio.tv.core.player.TrailerPlayerPool
+import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.trailer.TrailerSubtitleTrack
+import com.nuvio.tv.ui.screens.player.SUBTITLE_BASE_TEXT_SP
+import com.nuvio.tv.ui.screens.player.rememberSubtitleTypeface
+import android.graphics.Typeface
+import android.util.TypedValue
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.nuvio.tv.data.trailer.YoutubeChunkedDataSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
@@ -119,6 +126,10 @@ fun TrailerPlayer(
     var hasRenderedFirstFrame by remember(trailerUrl) { mutableStateOf(seamlessHandoff) }
     var subtitleTrack by remember(trailerUrl) { mutableStateOf<TrailerSubtitleTrack?>(null) }
     val currentSubtitleTrack by rememberUpdatedState(subtitleTrack)
+    val subtitleStyle by remember(resolvedPool) {
+        resolvedPool?.subtitleStyle ?: MutableStateFlow(SubtitleStyleSettings())
+    }.collectAsState()
+    val subtitleTypeface = rememberSubtitleTypeface(subtitleStyle.fontId)
     val playerAlphaState = animateFloatAsState(
         targetValue = if (isPlaying && hasRenderedFirstFrame) 1f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -351,16 +362,6 @@ fun TrailerPlayer(
                         subtitleView?.apply {
                             setApplyEmbeddedStyles(false)
                             setApplyEmbeddedFontSizes(false)
-                            setStyle(
-                                CaptionStyleCompat(
-                                    android.graphics.Color.WHITE,
-                                    android.graphics.Color.TRANSPARENT,
-                                    android.graphics.Color.TRANSPARENT,
-                                    CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-                                    android.graphics.Color.BLACK,
-                                    null
-                                )
-                            )
                             setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION)
                         }
                         resizeMode = if (cropToFill) {
@@ -375,6 +376,7 @@ fun TrailerPlayer(
                     if (view.player !== trailerPlayer) {
                         view.player = trailerPlayer
                     }
+                    view.subtitleView?.applyTrailerSubtitleStyle(subtitleStyle, subtitleTypeface)
                     view.resizeMode = if (cropToFill) {
                         AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     } else {
@@ -401,6 +403,37 @@ fun TrailerPlayer(
             )
         }
     }
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+private fun SubtitleView.applyTrailerSubtitleStyle(style: SubtitleStyleSettings, typeface: Typeface?) {
+    val metrics = resources.displayMetrics
+    val textSizePx = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_SP,
+        SUBTITLE_BASE_TEXT_SP * style.size / 100f,
+        metrics
+    )
+    setFractionalTextSize(textSizePx / min(metrics.widthPixels, metrics.heightPixels).coerceAtLeast(1))
+    val edgeType = when {
+        style.outlineEnabled -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+        style.shadowEnabled -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
+        else -> CaptionStyleCompat.EDGE_TYPE_NONE
+    }
+    val edgeColor = if (style.outlineEnabled) {
+        style.outlineColor
+    } else {
+        android.graphics.Color.argb(style.shadowOpacity.coerceIn(0, 100) * 255 / 100, 0, 0, 0)
+    }
+    setStyle(
+        CaptionStyleCompat(
+            style.textColor,
+            style.backgroundColor,
+            android.graphics.Color.TRANSPARENT,
+            edgeType,
+            edgeColor,
+            Typeface.create(typeface ?: Typeface.DEFAULT, if (style.bold) Typeface.BOLD else Typeface.NORMAL)
+        )
+    )
 }
 
 private fun Rect.coversView(viewWidth: Int, viewHeight: Int): Boolean {

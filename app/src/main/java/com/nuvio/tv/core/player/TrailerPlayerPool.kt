@@ -18,6 +18,7 @@ import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.trailer.InAppYouTubeExtractor
 import com.nuvio.tv.data.trailer.TrailerSubtitleTrack
@@ -84,6 +85,9 @@ class TrailerPlayerPool @Inject constructor(
     private val _isTrailerPlaying = MutableStateFlow(false)
     val isTrailerPlaying: StateFlow<Boolean> = _isTrailerPlaying.asStateFlow()
 
+    private val _subtitleStyle = MutableStateFlow(SubtitleStyleSettings())
+    val subtitleStyle: StateFlow<SubtitleStyleSettings> = _subtitleStyle.asStateFlow()
+
     @Volatile
     private var cachedForceNative: Boolean = false
 
@@ -116,7 +120,10 @@ class TrailerPlayerPool @Inject constructor(
         }
         settingsScope.launch {
             runCatching {
-                playerSettingsDataStore.playerSettings.collect { cachedPlayerSettings = it }
+                playerSettingsDataStore.playerSettings.collect {
+                    cachedPlayerSettings = it
+                    _subtitleStyle.value = it.subtitleStyle
+                }
             }
         }
     }
