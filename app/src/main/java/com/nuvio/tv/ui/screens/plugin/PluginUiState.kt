@@ -11,6 +11,9 @@ data class PluginUiState(
     val groupStreamsByRepository: Boolean = false,
     val repositories: List<PluginRepository> = emptyList(),
     val scrapers: List<ScraperInfo> = emptyList(),
+    val scraperSettings: Map<String, Map<String, Any>> = emptyMap(),
+    val editingSettingsFor: String? = null,
+    val settingsLayoutJson: String? = null,
     val isLoading: Boolean = false,
     val isAddingRepo: Boolean = false,
     val isTesting: Boolean = false,
@@ -49,6 +52,9 @@ sealed interface PluginUiEvent {
     data class ToggleScraper(val scraperId: String, val enabled: Boolean) : PluginUiEvent
     data class ToggleAllScrapersForRepo(val repoId: String, val enabled: Boolean) : PluginUiEvent
     data class TestScraper(val scraperId: String) : PluginUiEvent
+    data class SaveScraperSettings(val scraperId: String, val settings: Map<String, Any>) : PluginUiEvent
+    data class EditScraperSettings(val scraperId: String) : PluginUiEvent
+    object DismissScraperSettings : PluginUiEvent
     data class SetPluginsEnabled(val enabled: Boolean) : PluginUiEvent
     data class SetGroupStreamsByRepository(val enabled: Boolean) : PluginUiEvent
     object ClearTestResults : PluginUiEvent

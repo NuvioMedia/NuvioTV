@@ -81,6 +81,11 @@ class PluginDataStore @Inject constructor(
     private val groupStreamsByRepositoryKey = booleanPreferencesKey(GROUP_STREAMS_BY_REPOSITORY)
     private val pluginProviderPlaysKey = stringPreferencesKey("plugin_provider_plays")
     private val scraperSettingsKey = stringPreferencesKey("scraper_settings")
+    private val scraperLocalStorageType = Types.newParameterizedType(
+        Map::class.java,
+        String::class.java,
+        String::class.java
+    )
     private val pluginProviderPlaysAdapter = moshi.adapter<List<String>>(
         Types.newParameterizedType(List::class.java, String::class.java)
     )
@@ -236,6 +241,51 @@ class PluginDataStore @Inject constructor(
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             File(codeDir, "$scraperId.js").delete()
         }
+    }
+
+    /**
+     * Reads browser-like storage owned by one scraper. Keeping each scraper in
+     * its own file avoids growing the profile's preferences record indefinitely.
+     */
+    suspend fun getScraperLocalStorage(scraperId: String): MutableMap<String, String> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val file = scraperLocalStorageFile(scraperId)
+            try {
+                val json = file.openRead().bufferedReader().use { it.readText() }
+                moshi.adapter<Map<String, String>>(scraperLocalStorageType)
+                    .fromJson(json)?.toMutableMap() ?: mutableMapOf()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                mutableMapOf()
+            }
+        }
+
+    suspend fun saveScraperLocalStorage(scraperId: String, values: Map<String, String>) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val file = scraperLocalStorageFile(scraperId)
+            file.baseFile.parentFile?.mkdirs()
+            var output: java.io.FileOutputStream? = null
+            try {
+                output = file.startWrite()
+                output.write(moshi.adapter<Map<String, String>>(scraperLocalStorageType)
+                    .toJson(values).toByteArray(Charsets.UTF_8))
+                file.finishWrite(output)
+            } catch (error: Exception) {
+                if (output != null) file.failWrite(output)
+                throw error
+            }
+        }
+    }
+
+    suspend fun deleteScraperLocalStorage(scraperId: String) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            scraperLocalStorageFile(scraperId).delete()
+        }
+    }
+
+    private fun scraperLocalStorageFile(scraperId: String): android.util.AtomicFile {
+        return android.util.AtomicFile(File(codeDir, "$scraperId.localStorage.json"))
     }
 
     suspend fun clearAllScraperCode() {
