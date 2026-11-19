@@ -283,7 +283,7 @@ internal class AudioSyncTracker(
         if (estimate.scale != 1.0) return estimate
         val neighbour = speech.estimate(track, doubleArrayOf(NEAR_RATE, 1.0 / NEAR_RATE)) ?: return estimate
         if (neighbour.atSearchEdge || neighbour.peak < estimate.peak + STRETCH_OVERLAP_MARGIN) return estimate
-        val starts = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+        val starts = preparedStarts(segments)
             ?: return estimate
         val plainStarts = starts.estimate(track.starts, doubleArrayOf(1.0)) ?: return estimate
         val stretchedStarts = starts.estimate(track.starts, doubleArrayOf(neighbour.scale)) ?: return estimate
@@ -306,7 +306,7 @@ internal class AudioSyncTracker(
         val neighbour = speech.estimate(track, doubleArrayOf(rate23976)) ?: return estimate
         if (neighbour.atSearchEdge) return estimate
         if (estimate.peak < neighbour.peak + STRETCH_OVERLAP_MARGIN) return neighbour
-        val starts = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+        val starts = preparedStarts(segments)
             ?: return estimate
         val baseStarts = starts.estimate(track.starts, doubleArrayOf(estimate.scale)) ?: return estimate
         val neighbourStarts = starts.estimate(track.starts, doubleArrayOf(rate23976)) ?: return estimate
@@ -740,13 +740,7 @@ internal class AudioSyncTracker(
             track: SubtitleSpeechTrack,
             penalty: Double,
         ): Boolean {
-            val starts = SubtitleAudioAligner.estimate(
-                segments = SubtitleAudioAligner.speechStarts(segments),
-                track = track.starts,
-                scales = doubleArrayOf(estimate.scale),
-                minShiftMs = -MAX_SHIFT_MS,
-                maxShiftMs = MAX_SHIFT_MS,
-            ) ?: return false
+            val starts = preparedStarts(segments)?.estimate(track.starts, doubleArrayOf(estimate.scale)) ?: return false
             return !starts.atSearchEdge &&
                 abs(starts.shiftMs - estimate.shiftMs) <= STARTS_AGREEMENT_MS &&
                 starts.separation >= ACCEPT_START_SEPARATION + penalty / 2
@@ -763,7 +757,7 @@ internal class AudioSyncTracker(
             rival: SubtitleAudioAligner.Estimate,
             track: SubtitleSpeechTrack,
         ): Boolean {
-            val starts = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+            val starts = preparedStarts(segments)
                 ?: return false
             val own = starts.estimate(track.starts, doubleArrayOf(estimate.scale)) ?: return false
             val other = starts.estimate(track.starts, doubleArrayOf(rival.scale))?.peak ?: Double.NEGATIVE_INFINITY
@@ -804,6 +798,17 @@ internal class AudioSyncTracker(
         }
 
         /** Splits [segments] in time into two parts holding half of the known frames each. */
+        /** The last line-start search prepared on this thread, reused while the same [segments] are checked. */
+        private val lastStarts = ThreadLocal<Pair<List<SpeechSegment>, SubtitleAudioAligner.PreparedSpeech?>>()
+
+        /** Line starts of [segments] prepared for a full-range search; one search checks them several times. */
+        private fun preparedStarts(segments: List<SpeechSegment>): SubtitleAudioAligner.PreparedSpeech? {
+            lastStarts.get()?.let { (key, prepared) -> if (key === segments) return prepared }
+            val prepared = SubtitleAudioAligner.prepare(SubtitleAudioAligner.speechStarts(segments), -MAX_SHIFT_MS, MAX_SHIFT_MS)
+            lastStarts.set(segments to prepared)
+            return prepared
+        }
+
         private fun splitByKnownFrames(segments: List<SpeechSegment>): List<List<SpeechSegment>> {
             val half = segments.sumOf { it.knownFrames } / 2
             val first = ArrayList<SpeechSegment>()

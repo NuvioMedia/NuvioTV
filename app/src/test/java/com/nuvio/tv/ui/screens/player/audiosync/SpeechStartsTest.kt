@@ -13,16 +13,17 @@ class SpeechStartsTest {
         val p = FloatArray(40) { if (it in 10 until 25) 0.9f else 0.05f }
         p[35] = Float.NaN
         val rises = SubtitleAudioAligner.speechStarts(listOf(SpeechSegment(100, p))).single()
-        assertEquals(100, rises.fromFrame)
+        // The 3 frames at either end, with no neighbour on one side, are left out.
+        assertEquals(103, rises.fromFrame)
+        assertEquals(34, rises.probabilities.size)
+        val at = { frame: Int -> rises.probabilities[frame - 3] }
         // Rises around the start of speech, not inside it or where it ends.
-        assertTrue(rises.probabilities[10] > 0.8f, "start ${rises.probabilities[10]}")
-        assertEquals(0f, rises.probabilities[17])
-        assertEquals(0f, rises.probabilities[25])
+        assertTrue(at(10) > 0.8f, "start ${at(10)}")
+        assertEquals(0f, at(17))
+        assertEquals(0f, at(25))
         // Unknown where either side, or the frame itself, is unknown.
-        assertTrue(rises.probabilities[0].isNaN())
-        assertTrue(rises.probabilities[32].isNaN())
-        assertTrue(rises.probabilities[35].isNaN())
-        assertTrue(rises.probabilities[38].isNaN())
+        assertTrue(at(32).isNaN())
+        assertTrue(at(35).isNaN())
     }
 
     @Test

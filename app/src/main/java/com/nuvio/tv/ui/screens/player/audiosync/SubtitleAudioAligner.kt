@@ -565,14 +565,19 @@ internal object SubtitleAudioAligner {
      * either side of each frame (0 where it falls or stays), unknown where either side is unknown.
      * Correlated with a track's [SubtitleSpeechTrack.starts].
      */
-    fun speechStarts(segments: List<SpeechSegment>): List<SpeechSegment> = segments.map { segment ->
+    fun speechStarts(segments: List<SpeechSegment>): List<SpeechSegment> = segments.mapNotNull { segment ->
         val p = segment.probabilities
-        val rises = FloatArray(p.size) { i ->
-            val before = p.getOrNull(i - START_SPAN_FRAMES) ?: Float.NaN
-            val after = p.getOrNull(i + START_SPAN_FRAMES) ?: Float.NaN
+        // The first and last START_SPAN_FRAMES have no neighbour on one side: left out rather than
+        // kept unknown, so a stretch with no gaps keeps the cheaper gap-free correlation.
+        val size = p.size - 2 * START_SPAN_FRAMES
+        if (size <= 0) return@mapNotNull null
+        val rises = FloatArray(size) { j ->
+            val i = j + START_SPAN_FRAMES
+            val before = p[i - START_SPAN_FRAMES]
+            val after = p[i + START_SPAN_FRAMES]
             if (before.isNaN() || after.isNaN() || p[i].isNaN()) Float.NaN else maxOf(after - before, 0f)
         }
-        SpeechSegment(segment.fromFrame, rises)
+        SpeechSegment(segment.fromFrame + START_SPAN_FRAMES, rises)
     }
 
     /** Frames either side of a frame compared by [speechStarts]: about 100 ms. */
