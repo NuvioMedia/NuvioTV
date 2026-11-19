@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.collection
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -105,6 +106,7 @@ fun CollectionEditorScreen(
 
     var folderToDelete by remember { mutableStateOf<CollectionFolder?>(null) }
     val deleteDialogFocusRequester = remember { FocusRequester() }
+    var showUnsavedCollectionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(folderToDelete) {
         if (folderToDelete != null) {
@@ -139,6 +141,17 @@ fun CollectionEditorScreen(
             uiState = uiState
         )
         return
+    }
+
+    BackHandler(
+        enabled = (uiState.hasUnsavedCollectionChanges || uiState.isSaving) &&
+            uiState.movingFolderKey == null &&
+            folderToDelete == null &&
+            !showUnsavedCollectionDialog
+    ) {
+        if (!uiState.isSaving) {
+            showUnsavedCollectionDialog = true
+        }
     }
 
     TvReorderList(
@@ -183,8 +196,7 @@ fun CollectionEditorScreen(
                         modifier = Modifier.weight(1f),
                         placeholder = stringResource(R.string.collections_editor_placeholder_name)
                     )
-                    val canSaveCollection = uiState.title.isNotBlank() && uiState.folders.isNotEmpty() && uiState.movingFolderKey == null
-                    NuvioButton(onClick = { viewModel.save { onBack() } }, enabled = canSaveCollection) {
+                    NuvioButton(onClick = { viewModel.save { onBack() } }, enabled = uiState.canSaveCollection) {
                         Text(stringResource(R.string.collections_editor_save))
                     }
                 }
@@ -498,22 +510,57 @@ fun CollectionEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
             ) {
-                NuvioButton(
+                Button(
                     onClick = { folderToDelete = null },
-                    modifier = Modifier.focusRequester(deleteDialogFocusRequester)
+                    modifier = Modifier
+                        .focusRequester(deleteDialogFocusRequester)
+                        .semantics { role = Role.Button }
                 ) {
                     Text(stringResource(R.string.collections_cancel))
                 }
-                NuvioButton(
+                Button(
                     onClick = {
                         viewModel.removeFolder(folder.id)
                         folderToDelete = null
-                    }
+                    },
+                    modifier = Modifier.semantics { role = Role.Button }
                 ) {
                     Text(stringResource(R.string.cd_delete))
                 }
             }
         }
+    }
+
+    if (showUnsavedCollectionDialog) {
+        val canSave = uiState.canSaveCollection
+        val dialogTitle = stringResource(
+            if (canSave) R.string.collections_editor_unsaved_title
+            else R.string.collections_editor_unsaved_incomplete_title
+        )
+        val dialogSubtitle = stringResource(
+            when {
+                canSave -> R.string.collections_editor_unsaved_subtitle
+                uiState.title.isBlank() && uiState.folders.isEmpty() ->
+                    R.string.collections_editor_unsaved_missing_title_and_folder
+                uiState.title.isBlank() -> R.string.collections_editor_unsaved_missing_title
+                else -> R.string.collections_editor_unsaved_missing_folder
+            }
+        )
+        UnsavedChangesDialog(
+            title = dialogTitle,
+            subtitle = dialogSubtitle,
+            canSave = canSave,
+            isSaving = uiState.isSaving,
+            onSave = {
+                showUnsavedCollectionDialog = false
+                viewModel.save { onBack() }
+            },
+            onDiscard = {
+                showUnsavedCollectionDialog = false
+                onBack()
+            },
+            onDismiss = { showUnsavedCollectionDialog = false }
+        )
     }
 }
 

@@ -195,7 +195,15 @@ fun FolderEditorContent(
         return
     }
 
-    BackHandler { viewModel.cancelFolderEdit() }
+    var showUnsavedFolderDialog by remember(folder.id) { mutableStateOf(false) }
+
+    BackHandler(enabled = uiState.movingSourceKey == null) {
+        when {
+            showUnsavedFolderDialog -> showUnsavedFolderDialog = false
+            uiState.hasUnsavedFolderChanges -> showUnsavedFolderDialog = true
+            else -> viewModel.cancelFolderEdit()
+        }
+    }
 
     val titleFocusRequester = remember { FocusRequester() }
 
@@ -221,13 +229,18 @@ fun FolderEditorContent(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 NuvioButton(
-                    onClick = { viewModel.cancelFolderEdit() },
+                    onClick = {
+                        if (uiState.hasUnsavedFolderChanges) {
+                            showUnsavedFolderDialog = true
+                        } else {
+                            viewModel.cancelFolderEdit()
+                        }
+                    },
                     enabled = uiState.movingSourceKey == null
                 ) {
                     Text(stringResource(R.string.collections_cancel))
                 }
-                val canSaveFolder = folder.sources.isNotEmpty() && uiState.movingSourceKey == null
-                NuvioButton(onClick = { viewModel.saveFolderEdit() }, enabled = canSaveFolder) {
+                NuvioButton(onClick = { viewModel.saveFolderEdit() }, enabled = uiState.canSaveFolder) {
                     Text(stringResource(R.string.collections_editor_save))
                 }
             }
@@ -911,6 +924,30 @@ fun FolderEditorContent(
             }
         }
         }
+    }
+
+    if (showUnsavedFolderDialog) {
+        val canSave = uiState.canSaveFolder
+        UnsavedChangesDialog(
+            title = stringResource(
+                if (canSave) R.string.collections_editor_folder_unsaved_title
+                else R.string.collections_editor_folder_unsaved_incomplete_title
+            ),
+            subtitle = stringResource(
+                if (canSave) R.string.collections_editor_folder_unsaved_subtitle
+                else R.string.collections_editor_folder_unsaved_missing_source
+            ),
+            canSave = canSave,
+            onSave = {
+                showUnsavedFolderDialog = false
+                viewModel.saveFolderEdit()
+            },
+            onDiscard = {
+                showUnsavedFolderDialog = false
+                viewModel.cancelFolderEdit()
+            },
+            onDismiss = { showUnsavedFolderDialog = false }
+        )
     }
 }
 

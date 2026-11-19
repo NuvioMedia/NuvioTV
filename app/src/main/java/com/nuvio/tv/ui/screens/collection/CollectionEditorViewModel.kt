@@ -31,13 +31,25 @@ import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+data class CollectionEditorDraftSnapshot(
+    val title: String = "",
+    val backdropImageUrl: String = "",
+    val pinToTop: Boolean = false,
+    val focusGlowEnabled: Boolean = true,
+    val viewMode: FolderViewMode = FolderViewMode.TABBED_GRID,
+    val showAllTab: Boolean = true,
+    val folders: List<CollectionFolder> = emptyList()
+)
 
 data class CollectionEditorUiState(
     val isNew: Boolean = true,
@@ -86,8 +98,42 @@ data class CollectionEditorUiState(
     val genrePickerSourceIndex: Int? = null,
     val showEmojiPicker: Boolean = false,
     val movingFolderKey: String? = null,
-    val movingSourceKey: String? = null
-)
+    val movingSourceKey: String? = null,
+    val isSaving: Boolean = false,
+    val initialCollectionSnapshot: CollectionEditorDraftSnapshot? = null,
+    val initialEditingFolder: CollectionFolder? = null
+) {
+    val hasUnsavedCollectionChanges: Boolean
+        get() {
+            val baseline = initialCollectionSnapshot ?: return false
+            return currentCollectionSnapshot() != baseline
+        }
+
+    val hasUnsavedFolderChanges: Boolean
+        get() {
+            if (!showFolderEditor) return false
+            val current = editingFolder ?: return false
+            val baseline = initialEditingFolder ?: return false
+            return current.normalizedForDirtyCheck() != baseline.normalizedForDirtyCheck()
+        }
+
+    val canSaveCollection: Boolean
+        get() = title.isNotBlank() && folders.isNotEmpty() && movingFolderKey == null && !isSaving
+
+    val canSaveFolder: Boolean
+        get() = (editingFolder?.sources?.isNotEmpty() == true) && movingSourceKey == null
+
+    internal fun currentCollectionSnapshot(): CollectionEditorDraftSnapshot =
+        CollectionEditorDraftSnapshot(
+            title = title,
+            backdropImageUrl = backdropImageUrl.ifBlank { "" },
+            pinToTop = pinToTop,
+            focusGlowEnabled = focusGlowEnabled,
+            viewMode = viewMode,
+            showAllTab = showAllTab,
+            folders = folders.map { it.normalizedForDirtyCheck() }
+        )
+}
 
 data class AvailableCatalog(
     val addonId: String,
@@ -174,6 +220,15 @@ class CollectionEditorViewModel @Inject constructor(
                 val collections = collectionsDataStore.collections.first()
                 val existing = collections.find { it.id == collectionIdArg }
                 if (existing != null) {
+                    val initialSnapshot = CollectionEditorDraftSnapshot(
+                        title = existing.title,
+                        backdropImageUrl = existing.backdropImageUrl.orEmpty().ifBlank { "" },
+                        pinToTop = existing.pinToTop,
+                        focusGlowEnabled = existing.focusGlowEnabled,
+                        viewMode = existing.viewMode,
+                        showAllTab = existing.showAllTab,
+                        folders = existing.folders.map { it.normalizedForDirtyCheck() }
+                    )
                     _uiState.update {
                         it.copy(
                             isNew = false,
@@ -188,7 +243,8 @@ class CollectionEditorViewModel @Inject constructor(
                             availableCatalogs = availableCatalogs,
                             installedAddonIds = addons.map { addon -> addon.id }.toSet(),
                             addonCatalogInfoByKey = addonCatalogInfoByKey,
-                            isLoading = false
+                            isLoading = false,
+                            initialCollectionSnapshot = initialSnapshot
                         )
                     }
                     return@launch
@@ -202,7 +258,8 @@ class CollectionEditorViewModel @Inject constructor(
                     availableCatalogs = availableCatalogs,
                     installedAddonIds = addons.map { addon -> addon.id }.toSet(),
                     addonCatalogInfoByKey = addonCatalogInfoByKey,
-                    isLoading = false
+                    isLoading = false,
+                    initialCollectionSnapshot = CollectionEditorDraftSnapshot()
                 )
             }
         }
@@ -233,14 +290,26 @@ class CollectionEditorViewModel @Inject constructor(
             sources = emptyList()
         )
         _uiState.update {
-            it.copy(editingFolder = newFolder, showFolderEditor = true, movingFolderKey = null)
+            it.copy(
+                editingFolder = newFolder,
+                initialEditingFolder = newFolder,
+                showFolderEditor = true,
+                movingFolderKey = null
+            )
         }
     }
 
     fun editFolder(folderId: String) {
         val folder = _uiState.value.folders.find { it.id == folderId } ?: return
         clearFolderMoveState()
-        _uiState.update { it.copy(editingFolder = folder, showFolderEditor = true, movingFolderKey = null) }
+        _uiState.update {
+            it.copy(
+                editingFolder = folder,
+                initialEditingFolder = folder,
+                showFolderEditor = true,
+                movingFolderKey = null
+            )
+        }
     }
 
     fun removeFolder(folderId: String) {
@@ -1190,6 +1259,7 @@ class CollectionEditorViewModel @Inject constructor(
                 folders = newFolders,
                 showFolderEditor = false,
                 editingFolder = null,
+                initialEditingFolder = null,
                 showCatalogPicker = false,
                 showTmdbSourcePicker = false,
                 showTraktSourcePicker = false,
@@ -1206,6 +1276,7 @@ class CollectionEditorViewModel @Inject constructor(
             it.copy(
                 showFolderEditor = false,
                 editingFolder = null,
+                initialEditingFolder = null,
                 showCatalogPicker = false,
                 showTmdbSourcePicker = false,
                 showTraktSourcePicker = false,
@@ -1217,29 +1288,49 @@ class CollectionEditorViewModel @Inject constructor(
     }
 
     fun save(onComplete: () -> Unit) {
-        clearFolderMoveState()
-        _uiState.update { it.copy(movingFolderKey = null) }
         val state = _uiState.value
-        if (state.folders.isEmpty()) return
+        if (state.isSaving || state.title.isBlank() || state.folders.isEmpty()) return
+        clearFolderMoveState()
+        _uiState.update { it.copy(movingFolderKey = null, isSaving = true) }
         viewModelScope.launch {
-            val collection = Collection(
-                id = state.collectionId,
-                title = state.title.ifBlank { string(R.string.collection_editor_untitled_collection) },
-                backdropImageUrl = state.backdropImageUrl.ifBlank { null },
-                pinToTop = state.pinToTop,
-                focusGlowEnabled = state.focusGlowEnabled,
-                viewMode = state.viewMode,
-                showAllTab = state.showAllTab,
-                folders = state.folders
-            ).withResolvedCatalogTypes(addonRepository.getInstalledAddons().first())
+            var saved = false
+            try {
+                withContext(NonCancellable) {
+                    val collection = Collection(
+                        id = state.collectionId,
+                        title = state.title.ifBlank { string(R.string.collection_editor_untitled_collection) },
+                        backdropImageUrl = state.backdropImageUrl.ifBlank { null },
+                        pinToTop = state.pinToTop,
+                        focusGlowEnabled = state.focusGlowEnabled,
+                        viewMode = state.viewMode,
+                        showAllTab = state.showAllTab,
+                        folders = state.folders
+                    ).withResolvedCatalogTypes(addonRepository.getInstalledAddons().first())
 
-            if (state.isNew) {
-                collectionsDataStore.addCollection(collection)
-            } else {
-                collectionsDataStore.updateCollection(collection)
+                    if (state.isNew) {
+                        collectionsDataStore.addCollection(collection)
+                    } else {
+                        collectionsDataStore.updateCollection(collection)
+                    }
+                    collectionSyncService.triggerPush()
+                    saved = true
+                }
+            } finally {
+                _uiState.update { current ->
+                    if (saved) {
+                        current.copy(
+                            isNew = false,
+                            isSaving = false,
+                            initialCollectionSnapshot = current.currentCollectionSnapshot()
+                        )
+                    } else {
+                        current.copy(isSaving = false)
+                    }
+                }
             }
-            collectionSyncService.triggerPush()
-            onComplete()
+            if (saved) {
+                onComplete()
+            }
         }
     }
 
@@ -1253,6 +1344,15 @@ class CollectionEditorViewModel @Inject constructor(
     }
 
 }
+
+private fun CollectionFolder.normalizedForDirtyCheck(): CollectionFolder = copy(
+    coverImageUrl = coverImageUrl?.ifBlank { null },
+    focusGifUrl = focusGifUrl?.ifBlank { null },
+    coverEmoji = coverEmoji?.ifBlank { null },
+    heroBackdropUrl = heroBackdropUrl?.ifBlank { null },
+    heroVideoUrl = heroVideoUrl?.ifBlank { null },
+    titleLogoUrl = titleLogoUrl?.ifBlank { null }
+)
 
 private fun String.isTraktListIdentifierInput(): Boolean {
     val normalized = trim()

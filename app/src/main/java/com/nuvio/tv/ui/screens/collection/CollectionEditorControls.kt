@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.activity.compose.BackHandler
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -82,8 +83,13 @@ import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.R
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.TextStyle
 
@@ -197,6 +203,63 @@ fun NuvioButton(
         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         content = { content() }
     )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun UnsavedChangesDialog(
+    title: String,
+    subtitle: String,
+    canSave: Boolean,
+    isSaving: Boolean = false,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        repeat(10) {
+            withFrameNanos { }
+            try {
+                primaryFocusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
+
+    NuvioDialog(
+        onDismiss = { if (!isSaving) onDismiss() },
+        title = title,
+        subtitle = subtitle,
+        width = 560.dp,
+        suppressFirstKeyUp = false
+    ) {
+        BackHandler(enabled = !isSaving) { onDismiss() }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
+        ) {
+            Button(
+                onClick = onDiscard,
+                enabled = !isSaving,
+                modifier = (if (canSave) Modifier else Modifier.focusRequester(primaryFocusRequester))
+                    .semantics { role = Role.Button }
+            ) {
+                Text(stringResource(R.string.collections_cancel))
+            }
+            if (canSave) {
+                Button(
+                    onClick = onSave,
+                    enabled = !isSaving,
+                    modifier = Modifier
+                        .focusRequester(primaryFocusRequester)
+                        .semantics { role = Role.Button }
+                ) {
+                    Text(stringResource(R.string.collections_editor_save))
+                }
+            }
+        }
+    }
 }
 
 fun collectionSourceKeys(sources: List<CollectionSource>): List<String> {

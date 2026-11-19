@@ -290,17 +290,20 @@ fun CollectionManagementScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
             ) {
-                NuvioButton(
+                Button(
                     onClick = { collectionToDelete = null },
-                    modifier = Modifier.focusRequester(deleteDialogFocusRequester)
+                    modifier = Modifier
+                        .focusRequester(deleteDialogFocusRequester)
+                        .semantics { role = Role.Button }
                 ) {
                     Text(stringResource(R.string.collections_cancel))
                 }
-                NuvioButton(
+                Button(
                     onClick = {
                         viewModel.deleteCollection(collection.id)
                         collectionToDelete = null
-                    }
+                    },
+                    modifier = Modifier.semantics { role = Role.Button }
                 ) {
                     Text(stringResource(R.string.collections_delete_confirm))
                 }

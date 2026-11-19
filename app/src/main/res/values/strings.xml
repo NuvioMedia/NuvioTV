@@ -2717,6 +2717,16 @@
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Row Title</string>
     <string name="collections_editor_save">Save</string>
+    <string name="collections_editor_unsaved_title">Save changes?</string>
+    <string name="collections_editor_unsaved_subtitle">You have unsaved changes to this collection.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Unsaved changes</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Enter a title and add at least one folder to save this collection.</string>
+    <string name="collections_editor_unsaved_missing_title">Enter a collection title to save your changes.</string>
+    <string name="collections_editor_unsaved_missing_folder">Add at least one folder to save this collection.</string>
+    <string name="collections_editor_folder_unsaved_title">Save folder changes?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">You have unsaved changes to this folder.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Unsaved folder changes</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Add at least one source to save this folder.</string>
     <string name="collections_editor_backdrop">Backdrop Image</string>
     <string name="collections_editor_pin_above">Pin Above Catalogs</string>
     <string name="collections_editor_pin_above_desc">Show this collection above all regular home catalogs. Multiple pinned collections follow collection creation order.</string>
