@@ -33,7 +33,7 @@ internal object SubtitleAudioAligner {
     private const val PROMINENCE_EXCLUSION_MS = 2_500.0
 
     /** Peaks this close to either end of the searched shift range are flagged as unreliable. */
-    private const val EDGE_MARGIN_MS = 1_500.0
+    const val EDGE_MARGIN_MS = 1_500.0
 
     /** Keeps a mistaken ~0.1% ratio from winning on noise over the plain 1.0 hypothesis. */
     private const val SCALE_PREFERENCE_MARGIN = 0.01

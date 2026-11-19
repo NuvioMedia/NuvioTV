@@ -517,8 +517,10 @@ internal class AudioSyncTracker(
     private fun relock(timeline: SpeechTimeline, local: SubtitleAudioAligner.Estimate, oldScale: Double): Outcome {
         val heard = timeline.segments(maxFrames = MAX_ANALYSIS_FRAMES)
         val scales = if (oldScale == 1.0) doubleArrayOf(1.0) else doubleArrayOf(1.0, oldScale)
+        // The edge margin is added so the whole ±REFINE_RANGE_MS around [local] counts, not only its centre.
+        val reach = REFINE_RANGE_MS + SubtitleAudioAligner.EDGE_MARGIN_MS
         val refined = SubtitleAudioAligner.prepare(heard, -MAX_SHIFT_MS, MAX_SHIFT_MS)
-            ?.estimate(track, scales, local.shiftMs - REFINE_RANGE_MS, local.shiftMs + REFINE_RANGE_MS)
+            ?.estimate(track, scales, local.shiftMs - reach, local.shiftMs + reach)
             ?.takeIf { !it.atSearchEdge }
             ?: local
         val relocked = SubtitleSyncModel(listOf(SubtitleSyncSegment(0L, refined.scale, refined.shiftMs)))

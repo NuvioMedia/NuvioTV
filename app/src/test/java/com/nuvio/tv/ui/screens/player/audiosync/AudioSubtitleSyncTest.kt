@@ -87,6 +87,24 @@ class AudioSubtitleSyncTest {
     }
 
     @Test
+    fun narrowSearchNeedsTheEdgeMarginAddedToUseItsWholeRange() {
+        val cues = syntheticCues(Random(7), durationMs = 8 * 60_000L)
+        val truth = SubtitleSyncSegment(0L, 1.0, 10_684.0)
+        val timeline = speechFor(cues, truth, Random(11))
+        val range = timeline.knownRange()!!
+        val speech = assertNotNull(
+            SubtitleAudioAligner.prepare(timeline.snapshot(range.first, range.last + 1), range.first, -60_000.0, 60_000.0),
+        )
+        val track = SubtitleSpeechTrack.fromCues(cues)
+        // A ±1.5 s search around 10 s finds 10,684 ms but is all edge margin.
+        assertTrue(assertNotNull(speech.estimate(track, doubleArrayOf(1.0), 8_500.0, 11_500.0)).atSearchEdge)
+        val reach = 1_500.0 + SubtitleAudioAligner.EDGE_MARGIN_MS
+        val widened = assertNotNull(speech.estimate(track, doubleArrayOf(1.0), 10_000.0 - reach, 10_000.0 + reach))
+        assertFalse(widened.atSearchEdge)
+        assertTrue(abs(widened.shiftMs - truth.shiftMs) < 50.0, "shift ${widened.shiftMs}")
+    }
+
+    @Test
     fun alignerDetectsFrameRateMismatch() {
         val cues = syntheticCues(Random(3), durationMs = 12 * 60_000L)
         val truth = SubtitleSyncSegment(0L, 25.0 / 23.976, -1_200.0)
