@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -43,6 +44,7 @@ import androidx.compose.ui.layout.SubcomposeSlotReusePolicy
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -75,6 +77,8 @@ fun <T> TvReorderList(
     onConfirmMove: (String) -> Unit,
     onCancelMove: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
+    rowSpacing: Dp = NuvioTheme.spacing.lg,
     contentPadding: PaddingValues = PaddingValues(bottom = NuvioTheme.spacing.xl),
     header: @Composable (() -> Unit)? = null,
     footer: @Composable (() -> Unit)? = null,
@@ -87,10 +91,9 @@ fun <T> TvReorderList(
         onConfirmMove: () -> Unit,
     ) -> Unit,
 ) {
-    val scrollState = rememberScrollState()
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val rowSpacingPx = with(density) { NuvioTheme.spacing.lg.toPx() }
+    val rowSpacingPx = with(density) { rowSpacing.toPx() }
     val contentTopPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
 
     val rowHeightPx = remember { FloatArray(1) }
@@ -494,45 +497,42 @@ fun <T> TvReorderList(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .then(
-                        if (movingKey != null || suppressStartMove) {
-                            Modifier.onPreviewKeyEvent { event ->
-                                val native = event.nativeKeyEvent
-                                val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                                    native.keyCode == KeyEvent.KEYCODE_ENTER ||
-                                    native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
-                                    native.keyCode == KeyEvent.KEYCODE_SPACE ||
-                                    native.keyCode == KeyEvent.KEYCODE_BUTTON_A
-                                when {
-                                    isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
-                                        if (suppressStartMove) {
-                                            suppressStartMove = false
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-
-                                    movingKey != null && isConfirmKey &&
-                                        native.action == KeyEvent.ACTION_DOWN -> {
-                                        if (native.repeatCount == 0) {
-                                            confirmFromUi(fromOkKey = true)
-                                        }
-                                        true
-                                    }
-
-                                    movingKey != null &&
-                                        native.keyCode == KeyEvent.KEYCODE_TAB -> {
-                                        true
-                                    }
-
-                                    else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
+                    .onPreviewKeyEvent { event ->
+                        if (movingKey == null && !suppressStartMove) {
+                            return@onPreviewKeyEvent false
+                        }
+                        val native = event.nativeKeyEvent
+                        val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_ENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_SPACE ||
+                            native.keyCode == KeyEvent.KEYCODE_BUTTON_A
+                        when {
+                            isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
+                                if (suppressStartMove) {
+                                    suppressStartMove = false
+                                    true
+                                } else {
+                                    false
                                 }
                             }
-                        } else {
-                            Modifier
-                        },
-                    )
+
+                            movingKey != null && isConfirmKey &&
+                                native.action == KeyEvent.ACTION_DOWN -> {
+                                if (native.repeatCount == 0) {
+                                    confirmFromUi(fromOkKey = true)
+                                }
+                                true
+                            }
+
+                            movingKey != null &&
+                                native.keyCode == KeyEvent.KEYCODE_TAB -> {
+                                true
+                            }
+
+                            else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
+                        }
+                    }
                     .focusGroup(),
             ) {
                 Column(

@@ -1286,7 +1286,7 @@ internal fun SettingsChoiceChip(
 }
 
 @Composable
-private fun SettingsTogglePill(
+internal fun SettingsTogglePill(
     checked: Boolean,
     enabled: Boolean
 ) {

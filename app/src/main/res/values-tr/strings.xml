@@ -1283,7 +1283,7 @@
     <string name="mdblist_show_on_hero_title">Hero Alanında Puanları Göster</string>
     <string name="mdblist_show_on_hero_subtitle">Hero karuselinde MDBList puanlarını göster (modern ve klasik/ızgara)</string>
     <string name="mdblist_rating_order_title">Puan Sıralaması</string>
-    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için okları kullanın.</string>
+    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için Taşı\'yı seçin.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>

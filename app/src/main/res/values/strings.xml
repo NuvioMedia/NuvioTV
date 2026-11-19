@@ -1330,7 +1330,7 @@
     <string name="mdblist_show_on_hero_title">Use Ratings on Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Show MDBList ratings on hero carousel (modern and classic/grid)</string>
     <string name="mdblist_rating_order_title">Rating Order</string>
-    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use arrows to reorder.</string>
+    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Select Move to reorder.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
