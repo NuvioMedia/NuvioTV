@@ -3496,4 +3496,21 @@
     <string name="web_subtitle_font_error">Nepodarilo sa importovať toto písmo. Vyberte platný súbor .ttf alebo .otf menší ako 10 MB.</string>
     <string name="web_subtitle_font_connection_error">Chyba pripojenia</string>
     <string name="autosync_toast_no_fit">Synchronizácia zlyhala: tieto titulky sa nezhodujú s touto verziou videa.</string>
+
+    <string name="about_update_optimize_install_title">Optimalizovať aktualizácie počas inštalácie</string>
+    <string name="about_update_optimize_install_subtitle">Rýchlejšie prvé spustenie po aktualizácii, ale aplikácia sa počas inštalácie na približne minútu zatvorí. Vypnite, ak chcete radšej použiť inštalačnú obrazovku systému Android</string>
+    <string name="sub_outline_width">Šírka obrysu</string>
+    <string name="addon_tracking_consent_title">Doplnok na sledovanie</string>
+    <string name="addon_tracking_consent_body">%1$s je doplnok na sledovanie. Nuvio mu bude odosielať vašu aktivitu: čo prehrávate, pozastavíte a zastavíte s pozíciou prehrávania, čo pridáte do knižnice alebo z nej odstránite, a čo označíte ako pozreté alebo nepozreté. Tieto údaje opúšťajú Nuvio a spracúva ich vývojár doplnku a služba, ku ktorej sa pripája.</string>
+    <string name="addon_tracking_consent_checkbox">Súhlasím so zdieľaním aktivity sledovania a knižnice s týmto doplnkom</string>
+    <string name="addon_tracking_consent_checked">Začiarknuté</string>
+    <string name="addon_tracking_consent_unchecked">Nezačiarknuté</string>
+    <string name="addon_tracking_consent_cancel">Zrušiť</string>
+    <string name="addon_tracking_consent_install">Inštalovať</string>
+    <string name="library_empty_title">Žiadne položky na zobrazenie</string>
+    <string name="library_empty_local_hint">Zmeňte filtre alebo si začnite ukladať obľúbené položky, aby sa tu zobrazili</string>
+    <string name="library_empty_trakt_hint">Zmeňte filtre alebo použite tlačidlo + v detailoch na pridanie položiek do zoznamu sledovaných alebo iných zoznamov</string>
+    <string name="library_empty_simkl_hint">Zmeňte filtre alebo použite tlačidlo + v detailoch na pridanie položiek do stavu v službe Simkl</string>
+    <string name="update_ready_closes">Sťahovanie je dokončené. Aplikácia sa počas inštalácie aktualizácie zatvorí, čo môže trvať minútu. Potom ju opäť otvorte.</string>
+    <string name="update_ready_closes_and_reopens">Sťahovanie je dokončené. Aplikácia sa počas inštalácie aktualizácie zatvorí a sama sa opäť otvorská, čo môže trvať minútu.</string>
 </resources>

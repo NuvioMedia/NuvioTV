@@ -2446,7 +2446,7 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="nav_addons">Complementos</string>
     <string name="nav_movies">Películas</string>
     <string name="nav_series">Series</string>
-    <string name="nav_settings">Configuración</string>
+    <string name="nav_settings">Ajustes</string>
     <string name="action_select">Seleccionar</string>
     <string name="settings_rounded_ui">Interfaz redondeada</string>
     <string name="cd_expand_sidebar">Expandir barra lateral</string>

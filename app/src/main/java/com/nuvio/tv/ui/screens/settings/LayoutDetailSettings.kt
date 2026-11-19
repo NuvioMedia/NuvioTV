@@ -39,6 +39,12 @@ internal fun LayoutDetailPageSection(
         onToggle = { onEvent(LayoutSettingsEvent.SetRandomEpisodeEnabled(!uiState.randomEpisodeEnabled)) }
     )
     SettingsToggleRow(
+        title = stringResource(R.string.layout_season_posters),
+        subtitle = stringResource(R.string.layout_season_posters_sub),
+        checked = uiState.detailSeasonPostersEnabled,
+        onToggle = { onEvent(LayoutSettingsEvent.SetDetailSeasonPostersEnabled(!uiState.detailSeasonPostersEnabled)) }
+    )
+    SettingsToggleRow(
         title = stringResource(R.string.layout_blur_unwatched),
         subtitle = stringResource(R.string.layout_blur_unwatched_sub),
         checked = uiState.blurUnwatchedEpisodes,
@@ -97,6 +103,12 @@ internal fun LayoutDetailPageSection(
             subtitle = stringResource(R.string.layout_trailer_4k_sub),
             checked = uiState.trailer4kEnabled,
             onToggle = { onEvent(LayoutSettingsEvent.SetTrailer4kEnabled(!uiState.trailer4kEnabled)) }
+        )
+        SettingsToggleRow(
+            title = stringResource(R.string.layout_trailer_subtitles),
+            subtitle = stringResource(R.string.layout_trailer_subtitles_sub),
+            checked = uiState.trailerSubtitlesEnabled,
+            onToggle = { onEvent(LayoutSettingsEvent.SetTrailerSubtitlesEnabled(!uiState.trailerSubtitlesEnabled)) }
         )
     }
     SettingsToggleRow(

@@ -459,6 +459,8 @@
     <string name="layout_use_episode_thumbnails_cw_sub">Używaj miniatur odcinków jako domyślnego obrazu. Po wyłączeniu używa tła serii.</string>
     <string name="layout_hide_unreleased">Ukryj niewydane treści</string>
     <string name="layout_hide_unreleased_sub">Ukryj filmy i seriale, które jeszcze nie zostały wydane.</string>
+    <string name="layout_season_posters">Plakaty sezonów</string>
+    <string name="layout_season_posters_sub">Pokazuj sezony jako plakaty zamiast zakładek tekstowych, jeśli są dostępne.</string>
     <string name="layout_blur_unwatched">Rozmyj nieobejrzane odcinki</string>
     <string name="layout_blur_unwatched_sub">Rozmyj miniatury odcinków do czasu obejrzenia, aby uniknąć spoilerów.</string>
     <string name="layout_blur_cw_next_up">Rozmyj nieobejrzane w Kontynuuj oglądanie</string>
@@ -491,6 +493,8 @@
     <string name="layout_trailer_muted">Odtwarzaj zwiastun bez dźwięku</string>
     <string name="layout_trailer_muted_sub_preview">Wycisz audio zwiastuna podczas podglądu auto-play.</string>
     <string name="layout_trailer_muted_sub_expanded">Wycisz audio zwiastuna w rozszerzonych kartach.</string>
+    <string name="layout_trailer_continue_in_details">Kontynuuj zwiastun w szczegółach</string>
+    <string name="layout_trailer_continue_in_details_sub">Zwiastun gra dalej po otwarciu strony szczegółów.</string>
     <string name="layout_section_sidebar">Pasek boczny i nawigacja</string>
     <string name="layout_section_sidebar_desc">Styl paska bocznego i lokalizacja sekcji Odkrywaj.</string>
     <string name="layout_section_card_depth_desc">Efekt krawędzi światła i połysku na kartach obrazów.</string>
@@ -503,6 +507,7 @@
     <string name="layout_trailer_location_sub">Wybierz gdzie odtwarzać podgląd zwiastuna w Modern Home.</string>
     <string name="layout_trailer_expanded_card">Rozszerzona karta</string>
     <string name="layout_trailer_hero_media">Media hero</string>
+    <string name="layout_trailer_hero_media_no_expand">Media hero (bez rozszerzania)</string>
     <string name="layout_preset_compact">Kompaktowy</string>
     <string name="layout_preset_dense">Gęsty</string>
     <string name="layout_preset_standard">Standardowy</string>
@@ -654,6 +659,8 @@
     <string name="tmdb_networks_subtitle">Sieci z logo z TMDB</string>
     <string name="tmdb_episodes_title">Odcinki</string>
     <string name="tmdb_episodes_subtitle">Tytuły, opisy, miniatury i czas trwania odcinków z TMDB</string>
+    <string name="tmdb_season_posters_title">Plakaty sezonów</string>
+    <string name="tmdb_season_posters_subtitle">Plakaty sezonów z TMDB w zakładkach sezonów na stronie szczegółów</string>
     <string name="tmdb_more_like_this_title">Podobne</string>
     <string name="tmdb_more_like_this_subtitle">Tła rekomendacji TMDB na stronie szczegółów</string>
     <string name="tmdb_collections_title">Kolekcje</string>
@@ -3488,6 +3495,8 @@
 
     <string name="layout_trailer_4k">Zwiastuny 4K</string>
     <string name="layout_trailer_4k_sub">Odtwarzaj zwiastuny w rozdzielczości powyżej 1080p, gdy są dostępne. Zużywa znacznie więcej pamięci; domyślnie wyłączone na urządzeniach z 2 GB RAM lub mniej.</string>
+    <string name="layout_trailer_subtitles">Napisy w zwiastunach</string>
+    <string name="layout_trailer_subtitles_sub">Pokazuj napisy w zwiastunach w preferowanym języku napisów, jeśli są dostępne.</string>
 
     <string name="layout_detail_group_episodes">Odcinki</string>
     <string name="layout_detail_group_metadata">Metadane</string>

@@ -1118,6 +1118,8 @@
     <string name="layout_cw_enabled_sub">Show the Continue Watching row on the home screen.</string>
     <string name="layout_use_episode_thumbnails_cw">Use Episode Thumbnails in Continue Watching</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Use episode thumbnails as default image. When disabled, uses backdrop.</string>
+    <string name="layout_season_posters">Season Posters</string>
+    <string name="layout_season_posters_sub">Show seasons as posters instead of text tabs when available.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>
     <string name="layout_blur_unwatched_sub">Blur episode thumbnails until watched to avoid spoilers.</string>
     <string name="layout_episode_options_overlay">Episode Options Overlay</string>
@@ -1162,6 +1164,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Pause the trailer when you scroll down and resume it when you return to the top.</string>
     <string name="layout_trailer_4k">4K Trailers</string>
     <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
+    <string name="layout_trailer_subtitles">Trailer Subtitles</string>
+    <string name="layout_trailer_subtitles_sub">Show captions on trailers in your preferred subtitle language, when available.</string>
     <string name="layout_detail_group_episodes">Episodes</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>
@@ -1182,6 +1186,8 @@
     <string name="layout_trailer_muted">Play Trailer Muted</string>
     <string name="layout_trailer_muted_sub_preview">Mute trailer audio during autoplay preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Mute trailer audio in expanded cards.</string>
+    <string name="layout_trailer_continue_in_details">Continue Trailer in Details</string>
+    <string name="layout_trailer_continue_in_details_sub">Keep the trailer playing when you open the details page.</string>
     <string name="layout_section_card_style">Poster Card</string>
     <string name="layout_section_card_style_desc">Tune card width and corner radius.</string>
     <string name="settings_card_depth_title">Card Depth Effect</string>
@@ -1217,6 +1223,7 @@
     <string name="layout_trailer_location_sub">Choose where trailer preview plays in Modern Home.</string>
     <string name="layout_trailer_expanded_card">Expanded Card</string>
     <string name="layout_trailer_hero_media">Hero Media</string>
+    <string name="layout_trailer_hero_media_no_expand">Hero Media (No Expand)</string>
     <string name="layout_preset_compact">Compact</string>
     <string name="layout_preset_dense">Dense</string>
     <string name="layout_preset_standard">Standard</string>
@@ -1547,6 +1554,8 @@
     <string name="tmdb_networks_subtitle">Networks with logos from TMDB</string>
     <string name="tmdb_episodes_title">Episodes</string>
     <string name="tmdb_episodes_subtitle">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
+    <string name="tmdb_season_posters_title">Season Posters</string>
+    <string name="tmdb_season_posters_subtitle">Season posters from TMDB for the season tabs on the details page</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="tmdb_more_like_this_title">More Like This</string>
