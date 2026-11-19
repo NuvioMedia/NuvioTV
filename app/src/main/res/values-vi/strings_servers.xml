@@ -1,6 +1,6 @@
 <resources>
     <string name="settings_media_servers">Máy chủ đa phương tiện</string>
-    <string name="settings_media_servers_subtitle">Kết nối Jellyfin hoặc Emby để duyệt và phát thư viện của riêng bạn.</string>
+    <string name="settings_media_servers_subtitle">Kết nối Jellyfin, Emby, Plex hoặc Silo để duyệt và phát thư viện của riêng bạn.</string>
     <string name="servers_section_connected">Máy chủ</string>
     <string name="servers_section_add">Thêm Máy chủ</string>
     <string name="servers_empty">Chưa kết nối máy chủ nào</string>
@@ -61,7 +61,7 @@
     <string name="plex_add_description">Đăng nhập bằng mã tại plex.tv/link.</string>
     <string name="plex_sign_in_subtitle">Liên kết TV này với tài khoản Plex của bạn. Mật khẩu Plex của bạn sẽ không bao giờ được nhập tại đây.</string>
     <string name="servers_code_starting">Đang lấy mã…</string>
-    <string name="plex_code_instructions">Trên điện thoại hoặc máy tính, hãy mở %1$s, đăng nhập vào Plex và nhập mã này.</string>
+    <string name="plex_code_instructions">Trên điện thoại hoặc máy tính, mở %1$s, đăng nhập vào Plex và nhập mã này.</string>
     <string name="plex_code_waiting">Đang chờ nhập mã…</string>
     <string name="servers_code_expired">Mã này đã hết hạn.</string>
     <string name="servers_new_code">Mã mới</string>

@@ -658,7 +658,7 @@
     <string name="playback_subtitle">Cấu hình phát lại video và tùy chọn phụ đề</string>
     <string name="cd_decrease">Giảm</string>
     <string name="cd_increase">Tăng</string>
-    <string name="action_cancel">Huỷ</string>
+    <string name="action_cancel">Hủy</string>
     <string name="action_switch">Chuyển</string>
     <string name="action_apply">Áp dụng</string>
     <string name="sub_opacity">Độ mờ</string>
@@ -1116,8 +1116,10 @@
     <string name="layout_section_continue_watching_desc">Cài đặt cho mục Tiếp tục xem</string>
     <string name="layout_cw_enabled">Hiển thị mục Tiếp tục xem</string>
     <string name="layout_cw_enabled_sub">Hiển thị hàng Tiếp tục xem trên màn hình chính.</string>
-    <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ của tập phim trong Tiếp tục xem.</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ của tập phim làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
+    <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ tập phim trong Tiếp tục xem</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ tập phim làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
+    <string name="layout_season_posters">Poster từng mùa</string>
+    <string name="layout_season_posters_sub">Hiển thị poster riêng cho từng mùa khi có sẵn thay vì thẻ văn bản.</string>
     <string name="layout_blur_unwatched">Làm mờ tập phim chưa xem.</string>
     <string name="layout_blur_unwatched_sub">Làm mờ ảnh thu nhỏ các tập phim chưa xem để tránh tiết lộ nội dung.</string>
     <string name="layout_episode_options_overlay">Lớp phủ tùy chọn tập phim</string>
@@ -1146,7 +1148,7 @@
     <string name="layout_cw_sort_split_upcoming">Tách hàng Sắp phát sóng</string>
     <string name="layout_cw_sort_split_upcoming_desc">Chuyển các tập chưa phát sóng vào hàng Sắp phát sóng riêng biệt.</string>
     <string name="layout_cw_click_action">Khi chọn</string>
-    <string name="layout_cw_click_action_sub">Mở gì khi bạn chọn một mục trong danh sách Tiếp tục xem</string>
+    <string name="layout_cw_click_action_sub">Mở gì khi bạn chọn một mục trong Tiếp tục xem</string>
     <string name="layout_cw_click_stream">Mở luồng phát</string>
     <string name="layout_cw_click_stream_desc">Chọn một nguồn hoặc tiếp tục phát</string>
     <string name="layout_cw_click_details">Mở Chi tiết</string>
@@ -1162,6 +1164,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Tạm dừng trailer khi cuộn xuống và tiếp tục phát khi quay lại đầu trang.</string>
     <string name="layout_trailer_4k">Trailer 4K</string>
     <string name="layout_trailer_4k_sub">Phát trailer trên 1080p khi có thể. Tùy chọn này sử dụng nhiều bộ nhớ hơn; mặc định tắt trên các thiết bị có 2 GB RAM trở xuống.</string>
+    <string name="layout_trailer_subtitles">Phụ đề trailer</string>
+    <string name="layout_trailer_subtitles_sub">Hiển thị phụ đề trên trailer bằng ngôn ngữ ưu tiên của bạn khi có sẵn.</string>
     <string name="layout_detail_group_episodes">Tập phim</string>
     <string name="layout_detail_group_trailers">Trailer</string>
     <string name="layout_detail_group_metadata">Siêu dữ liệu</string>
@@ -1182,6 +1186,8 @@
     <string name="layout_trailer_muted">Phát trailer đã tắt tiếng</string>
     <string name="layout_trailer_muted_sub_preview">Tắt âm thanh trailer khi tự động phát bản xem trước.</string>
     <string name="layout_trailer_muted_sub_expanded">Tắt âm thanh trailer trong thẻ mở rộng.</string>
+    <string name="layout_trailer_continue_in_details">Tiếp tục trailer trong Chi tiết</string>
+    <string name="layout_trailer_continue_in_details_sub">Tiếp tục phát trailer khi bạn mở trang chi tiết.</string>
     <string name="layout_section_card_style">Thẻ poster</string>
     <string name="layout_section_card_style_desc">Điều chỉnh độ rộng và bo tròn góc của thẻ.</string>
     <string name="settings_card_depth_title">Hiệu ứng chiều sâu thẻ</string>
@@ -1216,7 +1222,8 @@
     <string name="layout_trailer_location">Vị trí phát trailer (Hiện đại)</string>
     <string name="layout_trailer_location_sub">Chọn nơi phát bản xem trước trailer trong Trang chủ Hiện đại..</string>
     <string name="layout_trailer_expanded_card">Thẻ mở rộng</string>
-    <string name="layout_trailer_hero_media">Phương tiện Khu vực Nổi bật</string>
+    <string name="layout_trailer_hero_media">Khu vực Nổi bật</string>
+    <string name="layout_trailer_hero_media_no_expand">Khu vực Nổi bật (Không Mở rộng)</string>
     <string name="layout_preset_compact">Thu gọn</string>
     <string name="layout_preset_dense">Dày đặc</string>
     <string name="layout_preset_standard">Tiêu chuẩn</string>
@@ -1547,6 +1554,8 @@
     <string name="tmdb_networks_subtitle">Đơn vị phát sóng kèm logo từ TMDB</string>
     <string name="tmdb_episodes_title">Tập phim</string>
     <string name="tmdb_episodes_subtitle">Tiêu đề, mô tả, ảnh thu nhỏ và thời lượng tập phim từ TMDB</string>
+    <string name="tmdb_season_posters_title">Poster từng mùa</string>
+    <string name="tmdb_season_posters_subtitle">Poster từng mùa từ TMDB cho các thẻ mùa trên trang chi tiết.</string>
     <string name="tmdb_trailers_title">Trailer</string>
     <string name="tmdb_trailers_subtitle">Đề xuất trailer từ TMDB cho mục trailer chi tiết</string>
     <string name="tmdb_more_like_this_title">Nội dung tương tự</string>
@@ -2476,7 +2485,7 @@
     <string name="account_sync_code_description">Đồng bộ giữa các thiết bị mà không cần tạo tài khoản.</string>
     <string name="account_linked_devices">Thiết bị đã liên kết (%1$d)</string>
     <string name="account_no_linked_devices">Không có thiết bị đã liên kết</string>
-    <string name="account_unlink">Huỷ liên kết</string>
+    <string name="account_unlink">Hủy liên kết</string>
 
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Đang tải điểm đánh giá các tập phim...</string>
