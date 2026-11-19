@@ -1,18 +1,29 @@
 package com.nuvio.tv.core.player
 
 import android.content.Context
+import android.text.Layout
 import android.util.Log
 import androidx.compose.ui.geometry.Rect
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.text.Cue
+import androidx.media3.common.text.CueGroup
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
+import com.nuvio.tv.data.trailer.InAppYouTubeExtractor
+import com.nuvio.tv.data.trailer.TrailerSubtitleTrack
+import com.nuvio.tv.data.trailer.pickTrailerSubtitle
+import com.nuvio.tv.ui.screens.player.SdhFilteringTextOutput
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicBoolean
@@ -26,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -46,7 +58,8 @@ import kotlinx.coroutines.launch
 class TrailerPlayerPool @Inject constructor(
     @ApplicationContext private val context: Context,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
-    private val trailerSettingsDataStore: TrailerSettingsDataStore
+    private val trailerSettingsDataStore: TrailerSettingsDataStore,
+    private val youTubeExtractor: InAppYouTubeExtractor
 ) {
     companion object {
         private const val TAG = "TrailerPlayerPool"
@@ -71,6 +84,9 @@ class TrailerPlayerPool @Inject constructor(
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _isTrailerPlaying = MutableStateFlow(false)
     val isTrailerPlaying: StateFlow<Boolean> = _isTrailerPlaying.asStateFlow()
+
+    private val _subtitleStyle = MutableStateFlow(SubtitleStyleSettings())
+    val subtitleStyle: StateFlow<SubtitleStyleSettings> = _subtitleStyle.asStateFlow()
 
     @Volatile
     private var cachedForceNative: Boolean = false
@@ -104,9 +120,27 @@ class TrailerPlayerPool @Inject constructor(
         }
         settingsScope.launch {
             runCatching {
-                playerSettingsDataStore.playerSettings.collect { cachedPlayerSettings = it }
+                playerSettingsDataStore.playerSettings.collect {
+                    cachedPlayerSettings = it
+                    _subtitleStyle.value = it.subtitleStyle
+                }
             }
         }
+    }
+
+    /**
+     * Resolves the subtitle track to sideload for [streamUrl], or null when trailer
+     * subtitles are off, the trailer has no captions, or none of them match.
+     */
+    suspend fun subtitleFor(streamUrl: String): TrailerSubtitleTrack? {
+        val settings = trailerSettingsDataStore.settings.first()
+        if (!settings.subtitlesEnabled) return null
+        val style = playerSettingsDataStore.playerSettings.first().subtitleStyle
+        return pickTrailerSubtitle(
+            youTubeExtractor.captionTracks(streamUrl),
+            style.preferredLanguage,
+            style.secondaryPreferredLanguage
+        )
     }
 
     /**
@@ -329,7 +363,24 @@ class TrailerPlayerPool @Inject constructor(
                     .setMaxVideoSize(Integer.MAX_VALUE, Integer.MAX_VALUE)
             )
         }
-        return ExoPlayer.Builder(context)
+        val renderersFactory = object : DefaultRenderersFactory(context) {
+            override fun buildTextRenderers(
+                context: Context,
+                output: TextOutput,
+                outputLooper: android.os.Looper,
+                extensionRendererMode: Int,
+                out: ArrayList<Renderer>
+            ) {
+                super.buildTextRenderers(
+                    context,
+                    SdhFilteringTextOutput(CenteredTextOutput(output)) { cachedPlayerSettings?.subtitleStyle?.stripSdh == true },
+                    outputLooper,
+                    extensionRendererMode,
+                    out
+                )
+            }
+        }
+        return ExoPlayer.Builder(context, renderersFactory)
             .setLoadControl(loadControl)
             .setTrackSelector(trackSelector)
             .setBandwidthMeter(
@@ -358,6 +409,33 @@ class TrailerPlayerPool @Inject constructor(
             ?: return tierCapMb
         return userTargetMb.coerceAtMost(tierCapMb)
     }
+}
+
+/**
+ * YouTube caption tracks carry their own placement (commonly `align:start
+ * position:0%`), which drops trailer subtitles into a corner. Clearing the cue
+ * geometry lets SubtitleView fall back to its standard centred bottom position.
+ */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+private class CenteredTextOutput(private val delegate: TextOutput) : TextOutput {
+    override fun onCues(cueGroup: CueGroup) {
+        delegate.onCues(CueGroup(cueGroup.cues.map(::center), cueGroup.presentationTimeUs))
+    }
+
+    @Suppress("DEPRECATION")
+    @Deprecated("Uses the deprecated Media3 callback for text outputs.")
+    override fun onCues(cues: List<Cue>) {
+        delegate.onCues(cues.map(::center))
+    }
+
+    private fun center(cue: Cue): Cue = cue.buildUpon()
+        .setPosition(Cue.DIMEN_UNSET)
+        .setPositionAnchor(Cue.TYPE_UNSET)
+        .setLine(Cue.DIMEN_UNSET, Cue.LINE_TYPE_FRACTION)
+        .setLineAnchor(Cue.TYPE_UNSET)
+        .setSize(Cue.DIMEN_UNSET)
+        .setTextAlignment(Layout.Alignment.ALIGN_CENTER)
+        .build()
 }
 
 data class TrailerHandoff(

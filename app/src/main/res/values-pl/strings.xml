@@ -3497,6 +3497,8 @@
 
     <string name="layout_trailer_4k">Zwiastuny 4K</string>
     <string name="layout_trailer_4k_sub">Odtwarzaj zwiastuny w rozdzielczości powyżej 1080p, gdy są dostępne. Zużywa znacznie więcej pamięci; domyślnie wyłączone na urządzeniach z 2 GB RAM lub mniej.</string>
+    <string name="layout_trailer_subtitles">Napisy w zwiastunach</string>
+    <string name="layout_trailer_subtitles_sub">Pokazuj napisy w zwiastunach w preferowanym języku napisów, jeśli są dostępne.</string>
 
     <string name="layout_detail_group_episodes">Odcinki</string>
     <string name="layout_detail_group_metadata">Metadane</string>
