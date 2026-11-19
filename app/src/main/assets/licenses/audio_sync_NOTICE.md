@@ -34,9 +34,13 @@ https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
 The build pins the upstream AAR's SHA-256. The optional English model is the
 int8 Zipformer GigaSpeech 2023-12-12 model (Apache-2.0) from:
 https://huggingface.co/k2-fsa/sherpa-onnx-zipformer-gigaspeech-2023-12-12
-The model is not bundled with the app. Its original ONNX files are downloaded on demand into
-private app storage, directly from the repository above, pinned to commit
-f7515a672ffb69232794aaaa44a0a360f7f25cd1. Every file's size and SHA-256 is verified before use.
+The model is not bundled with the app. Its files are downloaded on demand into private app
+storage. The preferred files are an ORT-format conversion of that model (onnxruntime 1.28.0,
+CPU, extended optimizations), mirrored with its license, notice and conversion details in the
+gigaspeech-2023-12-12-ort-v1 release of https://github.com/NuvioMedia/speech-models. When
+they cannot be fetched, the original ONNX files are downloaded directly from the repository
+above, pinned to commit f7515a672ffb69232794aaaa44a0a360f7f25cd1. Every file's size and
+SHA-256 is verified before use.
 
 
                                  Apache License

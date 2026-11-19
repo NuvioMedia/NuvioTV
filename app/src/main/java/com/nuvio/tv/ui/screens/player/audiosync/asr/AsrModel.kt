@@ -16,10 +16,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * when the user selects Download in Settings; playback never fetches it.
  * Progress and errors are published to [SubtitleSyncStatus.speechModel].
  *
- * The files come from the upstream k2-fsa repository, pinned to a commit. A pre-optimized ORT
- * conversion loads faster and is used when [ORT_DOWNLOAD] names a host for it; no such host is
- * configured, so only upstream files are fetched. Every file of either format is pinned by size
- * and SHA-256 in [AsrModelFiles], so the host does not have to be trusted.
+ * A pre-optimized ORT conversion, which loads faster, comes from Nuvio's mirror at [ORT_DOWNLOAD].
+ * When it cannot be fetched, the original ONNX files come from the upstream k2-fsa repository,
+ * pinned to a commit. Every file of either format is pinned by size and SHA-256 in
+ * [AsrModelFiles], so the host does not have to be trusted.
  */
 internal object AsrModel {
     const val TOKENS = "tokens.txt"
@@ -33,7 +33,8 @@ internal object AsrModel {
      * ONNX files only. Should only ever point at a Nuvio-controlled release; the files are pinned
      * in [AsrModelFiles.optimized] either way.
      */
-    private val ORT_DOWNLOAD: String? = null
+    private val ORT_DOWNLOAD: String? =
+        "https://github.com/NuvioMedia/speech-models/releases/download/$ORT_VERSION/"
 
     /** The upstream model repository, pinned to a commit so its files cannot change under us. */
     private const val ONNX_DOWNLOAD =
