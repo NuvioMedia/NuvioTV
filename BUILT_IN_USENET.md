@@ -133,8 +133,10 @@ two minutes and has three steps:
    the limit less a tenth (at least one), and stops after two steps that add
    less than 3%. It also measures the saved allowance when within the usable
    range. Before raising it, the tuner repeats the saved and proposed counts
-   and requires a speed gain in both comparisons. Otherwise it repeats the
-   two best counts. Readings are averaged.
+   and requires a speed gain in both comparisons; readings are averaged. When
+   no raise is possible (the proposed count is not above the saved one, or the
+   saved one was not measured), nothing is repeated, since the result would be
+   the same.
 
 The recommended allowance is the current one, lowered to the limit less a
 tenth when a limit was found and the allowance is above that, or raised when more connections measured clearly
@@ -152,8 +154,10 @@ and reads the replies still due before it closes, for up to twice the time
 they should take at the measured speed (3 to 15 seconds; 3 after **Stop**).
 Some servers keep counting a connection closed in the middle of a reply for
 minutes, so the next step or a rerun would be refused. The 2.5-second pause
-between steps runs during that wait. A run downloads up to about 1 GB, which counts
-against a block account; the result shows how much. A provider that lacks the
+between steps runs during that wait. A run downloads about 1 GB on a line of
+about 100 Mbps. On a fast line with a high limit it can download several GB,
+because each step reaches the 250 MB mark and the ladder climbs further. This
+counts against a block account; the result shows how much. A provider that lacks the
 test articles cannot be measured, and the run says so.
 
 Searches use advertised movie/TV capabilities, preferring IMDb, then TVDB (TV
