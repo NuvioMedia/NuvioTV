@@ -934,7 +934,7 @@ fun FolderEditorContent(
                     }
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.trapHorizontalFocus()
                 ) {
@@ -962,6 +962,28 @@ fun FolderEditorContent(
                         ) {
                             Text(stringResource(R.string.collections_editor_choose_genre))
                         }
+                    }
+                    Button(
+                        onClick = if (isMoving) onConfirmMove else onStartMove,
+                        enabled = isMoving || (sourceItems.size > 1 && !reorderActive),
+                        colors = ButtonDefaults.colors(
+                            containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                            contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                            focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Reorder,
+                            contentDescription = stringResource(R.string.cd_reorder)
+                        )
                     }
                     if (tmdbSource != null) {
                         Button(
@@ -1012,28 +1034,6 @@ fun FolderEditorContent(
                         ) {
                             Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                         }
-                    }
-                    Button(
-                        onClick = if (isMoving) onConfirmMove else onStartMove,
-                        enabled = isMoving || (sourceItems.size > 1 && !reorderActive),
-                        colors = ButtonDefaults.colors(
-                            containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
-                            contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
-                            focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
-                            focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
-                        ),
-                        border = ButtonDefaults.border(
-                            focusedBorder = Border(
-                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                shape = RoundedCornerShape(NuvioTheme.radii.md)
-                            )
-                        ),
-                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Reorder,
-                            contentDescription = stringResource(R.string.cd_reorder)
-                        )
                     }
                     Button(
                         onClick = {
