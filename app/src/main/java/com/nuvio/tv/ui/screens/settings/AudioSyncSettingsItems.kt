@@ -2,8 +2,12 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.screens.player.audiosync.AudioSamplingMode
@@ -45,27 +49,48 @@ internal fun audioSyncSettingsItems(enabled: Boolean) {
                 else SubtitleSyncStatus.modelActions?.download()
             },
         )
+        var showSamplingDialog by remember { mutableStateOf(false) }
         SettingsActionRow(
             title = stringResource(R.string.audio_sync_sampling_title),
-            subtitle = stringResource(
-                when (sampling) {
-                    AudioSamplingMode.OFF -> R.string.audio_sync_sampling_off_description
-                    AudioSamplingMode.LOW -> R.string.audio_sync_sampling_low_description
-                    AudioSamplingMode.HIGH -> R.string.audio_sync_sampling_high_description
-                },
-            ),
-            value = stringResource(
-                when (sampling) {
-                    AudioSamplingMode.OFF -> R.string.audio_sync_sampling_off
-                    AudioSamplingMode.LOW -> R.string.audio_sync_sampling_low
-                    AudioSamplingMode.HIGH -> R.string.audio_sync_sampling_high
-                },
-            ),
+            subtitle = stringResource(R.string.audio_sync_sampling_description),
+            value = samplingLabel(sampling),
             enabled = enabled,
-            onClick = {
-                val modes = AudioSamplingMode.entries
-                AudioSyncSettings.setSamplingMode(modes[(sampling.ordinal + 1) % modes.size])
-            },
+            onClick = { showSamplingDialog = true },
         )
+        if (showSamplingDialog) {
+            SettingsSingleChoiceDialog(
+                title = stringResource(R.string.audio_sync_sampling_title),
+                subtitle = stringResource(R.string.audio_sync_sampling_description),
+                options = AudioSamplingMode.entries.map { mode ->
+                    SettingsPickerOption(mode, samplingLabel(mode), samplingDescription(mode))
+                },
+                selectedValue = sampling,
+                onOptionSelected = { mode ->
+                    AudioSyncSettings.setSamplingMode(mode)
+                    showSamplingDialog = false
+                },
+                onDismiss = { showSamplingDialog = false },
+                width = 460.dp,
+                maxHeight = 420.dp,
+            )
+        }
     }
 }
+
+@Composable
+private fun samplingLabel(mode: AudioSamplingMode): String = stringResource(
+    when (mode) {
+        AudioSamplingMode.OFF -> R.string.audio_sync_sampling_off
+        AudioSamplingMode.LOW -> R.string.audio_sync_sampling_low
+        AudioSamplingMode.HIGH -> R.string.audio_sync_sampling_high
+    },
+)
+
+@Composable
+private fun samplingDescription(mode: AudioSamplingMode): String = stringResource(
+    when (mode) {
+        AudioSamplingMode.OFF -> R.string.audio_sync_sampling_off_description
+        AudioSamplingMode.LOW -> R.string.audio_sync_sampling_low_description
+        AudioSamplingMode.HIGH -> R.string.audio_sync_sampling_high_description
+    },
+)
