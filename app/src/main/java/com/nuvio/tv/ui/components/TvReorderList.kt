@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -77,6 +78,7 @@ fun <T> TvReorderList(
     onConfirmMove: (String) -> Unit,
     onCancelMove: () -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(bottom = NuvioTheme.spacing.xl),
     header: @Composable (() -> Unit)? = null,
     footer: @Composable (() -> Unit)? = null,
     useHeaderAwareBringIntoView: Boolean = false,
@@ -92,11 +94,14 @@ fun <T> TvReorderList(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val rowSpacingPx = with(density) { NuvioTheme.spacing.lg.toPx() }
+    val contentTopPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
 
     val rowHeightPx = remember { FloatArray(1) }
     val headerHeightPx = remember { FloatArray(1) }
     val viewportHeightPx = remember { FloatArray(1) }
     val measuredRowHeights = remember { mutableMapOf<String, Float>() }
+
+    fun listOriginPx(): Float = contentTopPaddingPx + headerHeightPx[0]
 
     fun slotStridePx(): Float {
         val height = rowHeightPx[0]
@@ -164,8 +169,9 @@ fun <T> TvReorderList(
                         offset, size, containerSize,
                     )
                 }
+                val listOrigin = listOriginPx()
                 val itemTopInContent = scrollState.value + offset
-                val firstRowBottom = headerHeightPx[0] + if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
+                val firstRowBottom = listOrigin + if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
                 if (headerHeightPx[0] > 0f && itemTopInContent < firstRowBottom) {
                     return -scrollState.value.toFloat()
                 }
@@ -361,13 +367,14 @@ fun <T> TvReorderList(
         if (orderKeys.isEmpty()) return
         val clampedIndex = newIndex.coerceIn(0, orderKeys.lastIndex)
         val tops = slotTopsFor(orderKeys)
-        val movingTop = headerHeightPx[0] + tops[clampedIndex]
+        val listOrigin = listOriginPx()
+        val movingTop = listOrigin + tops[clampedIndex]
         val movingHeight = heightForItemKey(orderKeys[clampedIndex])
         val peek = movingHeight
         if (movingHeight <= 0f) return
         if (newIndex <= 0 &&
             (scrollToTopOnEdgeItem ||
-                headerHeightPx[0] + movingHeight * 2f <= viewport)
+                listOrigin + movingHeight * 2f <= viewport)
         ) {
             runtime.neighborScrollJob?.cancel()
             Log.d(
@@ -422,6 +429,7 @@ fun <T> TvReorderList(
 
     fun confirmFromUi(source: String) {
         val activeKey = movingKey ?: return
+        stopRepeat()
         pinScroll(source)
         suppressStartMove = source == "ok-confirm"
         Log.d(LIST_TAG, "list confirm source=$source suppressStartMove ${visualSnapshot(source)}")
@@ -476,6 +484,7 @@ fun <T> TvReorderList(
             runtime.cancelScrollJob = null
             runtime.cancelReturnSlot = animatedIndices[movingKey]
             runtime.cancelReturnOrderKeys = slotOrderKeys
+            runtime.cancelReturnScrollPx = scrollState.value
             val movingIndex = animatedIndices[movingKey]
             if (scrollToTopOnEdgeItem &&
                 movingIndex == 0 &&
@@ -523,13 +532,19 @@ fun <T> TvReorderList(
     }
 
     BackHandler(enabled = movingKey != null) {
+        stopRepeat()
         val returnSlot = runtime.cancelReturnSlot
         val returnOrderKeys = runtime.cancelReturnOrderKeys ?: slotOrderKeys
         if (returnSlot != null && returnSlot in returnOrderKeys.indices) {
             val tops = slotTopsFor(returnOrderKeys)
-            val target = tops[returnSlot]
-                .roundToInt()
-                .coerceIn(0, scrollState.maxValue)
+            val target = computeCancelScrollTargetPx(
+                slotTopPx = tops[returnSlot],
+                slotHeightPx = heightForItemKey(returnOrderKeys[returnSlot]),
+                headerOffsetPx = listOriginPx(),
+                viewportHeightPx = viewportHeightPx[0],
+                initialScrollPx = runtime.cancelReturnScrollPx,
+                maxScrollPx = scrollState.maxValue,
+            )
             runtime.neighborScrollJob?.cancel()
             runtime.cancelScrollJob = scope.launch {
                 scrollState.animateScrollTo(target, ReorderTravelSpec)
@@ -595,7 +610,7 @@ fun <T> TvReorderList(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = NuvioTheme.spacing.xl),
+                        .padding(contentPadding),
                 ) {
                     if (header != null) {
                         Column(
@@ -687,19 +702,21 @@ fun <T> TvReorderList(
                             itemIndexByKey[orderKeys[0]]?.let { measureSlot(it) }
                         }
                         val cachedTops = slotTopsFor(orderKeys)
-                        val topEdge = scrollState.value - headerHeightPx[0] - viewportPx
+                        val listOrigin = listOriginPx()
+                        val topEdge = scrollState.value - listOrigin - viewportPx
                         val bottomEdge = scrollState.value + viewportPx -
-                            headerHeightPx[0] + viewportPx
+                            listOrigin + viewportPx
                         val visibleSlots = if (viewportPx <= 0f) {
                             0 until orderKeys.size
                         } else {
                             visibleSlotRangeFromTops(cachedTops, topEdge, bottomEdge)
                         }
-                        val movingSlot = movingKey?.let { animatedIndices[it] }
+                        val activeMovingKey = movingKey
+                        val movingSlot = activeMovingKey?.let { animatedIndices[it] }
                         val extraItemIndex = if (
-                            movingSlot != null && movingSlot !in visibleSlots
+                            activeMovingKey != null && movingSlot != null && movingSlot !in visibleSlots
                         ) {
-                            movingKey?.let { itemIndexByKey[it] }
+                            itemIndexByKey[activeMovingKey]
                         } else {
                             null
                         }
@@ -761,6 +778,7 @@ private class TvReorderListRuntime(
     var latestMovingKey: String? = initialMovingKey
     var cancelReturnSlot: Int? = null
     var cancelReturnOrderKeys: List<String>? = null
+    var cancelReturnScrollPx: Int? = null
     var cancelScrollJob: Job? = null
 }
 
@@ -814,6 +832,33 @@ internal class TvReorderRowCache<T, C> {
     fun retainKeys(validKeys: Set<String>) {
         entries.keys.retainAll(validKeys)
     }
+}
+
+internal fun computeCancelScrollTargetPx(
+    slotTopPx: Float,
+    slotHeightPx: Float,
+    headerOffsetPx: Float,
+    viewportHeightPx: Float,
+    initialScrollPx: Int?,
+    maxScrollPx: Int,
+): Int {
+    val safeMax = maxScrollPx.coerceAtLeast(0)
+    val safeSlotHeight = slotHeightPx.coerceAtLeast(0f)
+    val absoluteTop = headerOffsetPx + slotTopPx
+    val absoluteBottom = absoluteTop + safeSlotHeight
+    if (initialScrollPx != null && viewportHeightPx > 0f) {
+        val clampedInitial = initialScrollPx.coerceIn(0, safeMax)
+        if (absoluteTop >= clampedInitial && absoluteBottom <= clampedInitial + viewportHeightPx) {
+            return clampedInitial
+        }
+    }
+    if (viewportHeightPx > 0f && absoluteBottom <= viewportHeightPx) {
+        return 0
+    }
+    return (absoluteTop - safeSlotHeight)
+        .coerceAtLeast(0f)
+        .roundToInt()
+        .coerceIn(0, safeMax)
 }
 
 internal fun computeSlotTops(

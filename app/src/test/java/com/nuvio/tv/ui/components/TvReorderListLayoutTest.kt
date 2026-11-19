@@ -225,4 +225,58 @@ class TvReorderListLayoutTest {
 
         assertNotSame(first, recreated)
     }
+
+    @Test
+    fun `cancel scroll restores initial scroll position when cancelled slot stays visible under tall header`() {
+        val target = computeCancelScrollTargetPx(
+            slotTopPx = 0f,
+            slotHeightPx = 100f,
+            headerOffsetPx = 1200f,
+            viewportHeightPx = 1000f,
+            initialScrollPx = 900,
+            maxScrollPx = 3000,
+        )
+        assertEquals(900, target)
+    }
+
+    @Test
+    fun `cancel scroll accounts for tall header when initial scroll is missing or out of view`() {
+        val target = computeCancelScrollTargetPx(
+            slotTopPx = 0f,
+            slotHeightPx = 100f,
+            headerOffsetPx = 1200f,
+            viewportHeightPx = 1000f,
+            initialScrollPx = 0,
+            maxScrollPx = 3000,
+        )
+        // Slot occupies [1200, 1300]; scrolling to 0 would push it off-screen below viewport 1000.
+        assertTrue("target=$target should keep [1200, 1300] inside viewport", target in 300..1200)
+        assertEquals(1100, target)
+    }
+
+    @Test
+    fun `cancel scroll shows short header when top slot fits inside viewport from scroll zero`() {
+        val target = computeCancelScrollTargetPx(
+            slotTopPx = 0f,
+            slotHeightPx = 100f,
+            headerOffsetPx = 200f,
+            viewportHeightPx = 1000f,
+            initialScrollPx = null,
+            maxScrollPx = 3000,
+        )
+        assertEquals(0, target)
+    }
+
+    @Test
+    fun `cancel scroll clamps to maxScrollPx`() {
+        val target = computeCancelScrollTargetPx(
+            slotTopPx = 2500f,
+            slotHeightPx = 100f,
+            headerOffsetPx = 500f,
+            viewportHeightPx = 1000f,
+            initialScrollPx = null,
+            maxScrollPx = 2200,
+        )
+        assertEquals(2200, target)
+    }
 }
