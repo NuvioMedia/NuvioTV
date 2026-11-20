@@ -427,9 +427,7 @@ private fun RatingOrderRow(
     val contentAlpha = if (enabled) 1f else 0.4f
     val rowShape = settingsRowShape()
     val toggleShape = RoundedCornerShape(NuvioTheme.radii.md)
-    val moveButtonShape = RoundedCornerShape(
-        if (flat) 10.dp else SettingsPillRadius
-    )
+    val moveButtonShape = RoundedCornerShape(NuvioTheme.radii.md)
     val canToggle = enabled && actionsEnabled && !isMoving
     val moveButtonEnabled = isMoving || (canMove && actionsEnabled)
 
