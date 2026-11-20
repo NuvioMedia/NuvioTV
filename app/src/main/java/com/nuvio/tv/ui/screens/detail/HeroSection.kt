@@ -59,8 +59,15 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import android.util.Log
 import com.nuvio.tv.R
+import com.nuvio.tv.core.tracking.TrackingRatingState
 import com.nuvio.tv.core.util.isMovieInTheaters
 import com.nuvio.tv.core.util.resolveMovieReleaseWindows
 import com.nuvio.tv.domain.model.ContentType
@@ -68,12 +75,15 @@ import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.NextToWatch
+import com.nuvio.tv.domain.model.isWatchedAsOneItem
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.MDBListRatingsRow
 import com.nuvio.tv.ui.components.SynopsisDescription
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalConfiguration
@@ -104,6 +114,8 @@ fun HeroContentSection(
     isMovieWatched: Boolean,
     isMovieWatchedPending: Boolean,
     onToggleMovieWatched: () -> Unit,
+    ratingState: TrackingRatingState = TrackingRatingState(),
+    onRateClick: () -> Unit = {},
     trailerAvailable: Boolean = false,
     onTrailerClick: () -> Unit = {},
     showRandomEpisodeButton: Boolean = false,
@@ -278,7 +290,7 @@ fun HeroContentSection(
                             onFocused = onHeroActionFocused
                         )
 
-                        if (meta.apiType == "movie") {
+                        if (meta.isWatchedAsOneItem()) {
                             ActionIconButton(
                                 icon = if (isMovieWatched) {
                                     Icons.Default.Visibility
@@ -293,8 +305,17 @@ fun HeroContentSection(
                                 onClick = onToggleMovieWatched,
                                 enabled = !isMovieWatchedPending,
                                 selected = isMovieWatched,
+                                toggleable = true,
                                 selectedContainerColor = Color.White,
                                 selectedContentColor = Color.Black,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
+
+                        if (ratingState.isAvailable) {
+                            RatingActionButton(
+                                rating = ratingState.rating,
+                                onClick = onRateClick,
                                 onFocused = onHeroActionFocused
                             )
                         }
@@ -309,10 +330,12 @@ fun HeroContentSection(
                         }
 
                         if (showRandomEpisodeButton) {
-                            ShuffleButton(
-                                active = episodeShuffle.enabled,
-                                pending = shuffleActionPending,
-                                onClick = onRandomEpisodeClick,
+                            ActionIconButton(
+                                icon = if (episodeShuffle.enabled) Icons.Default.Stop else Icons.Default.Shuffle,
+                                contentDescription = stringResource(
+                                    if (episodeShuffle.enabled) R.string.shuffle_stop else R.string.random_episode_title
+                                ),
+                                onClick = { if (!shuffleActionPending) onRandomEpisodeClick() },
                                 focusRequester = randomEpisodeFocusRequester,
                                 onFocused = onHeroActionFocused
                             )
@@ -380,6 +403,7 @@ internal fun PlayButton(
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
+    val playFallbackLabel = stringResource(R.string.hero_play)
 
     LaunchedEffect(restoreFocusToken) {
         if (restoreFocusToken > 0 && focusRequester != null) {
@@ -436,7 +460,14 @@ internal fun PlayButton(
                 }
                 false
             }
-            .focusProperties { up = FocusRequester.Cancel },
+            .focusProperties { up = FocusRequester.Cancel }
+            .then(
+                if (text == null) {
+                    Modifier.semantics { this.contentDescription = playFallbackLabel }
+                } else {
+                    Modifier
+                }
+            ),
         colors = ButtonDefaults.colors(
             containerColor = androidx.compose.ui.graphics.Color.White,
             focusedContainerColor = androidx.compose.ui.graphics.Color.White,
@@ -535,6 +566,9 @@ private fun ActionIconButton(
     onLongPress: (() -> Unit)? = null,
     enabled: Boolean = true,
     selected: Boolean = false,
+    // When true this icon button is a state toggle (watched/unwatched) and announces itself as
+    // such; the library add/remove button is a plain action and leaves this off.
+    toggleable: Boolean = false,
     selectedContainerColor: Color = Color(0xFF7CFF9B),
     selectedContentColor: Color = Color.Black,
     onFocused: () -> Unit = {},
@@ -590,7 +624,13 @@ private fun ActionIconButton(
                 }
                 false
             }
-            .focusProperties { up = FocusRequester.Cancel },
+            .focusProperties { up = FocusRequester.Cancel }
+            .semantics {
+                if (toggleable) {
+                    role = Role.Checkbox
+                    toggleableState = if (selected) ToggleableState.On else ToggleableState.Off
+                }
+            },
         colors = IconButtonDefaults.colors(
             containerColor = if (selected) selectedContainerColor else NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.Secondary,

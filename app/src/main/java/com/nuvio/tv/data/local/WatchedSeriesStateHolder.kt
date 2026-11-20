@@ -56,19 +56,21 @@ class WatchedSeriesStateHolder @Inject constructor(
 
     suspend fun loadFromDisk(profileId: Int = profileManager.activeProfileId.value) {
         if (loadedForProfileId == profileId) return
+        // Ids still in memory belong to the previously loaded profile.
+        val switchingProfile = loadedForProfileId != null
         val prefs = store(profileId).data.first()
         val persisted = prefs[KEY] ?: emptySet()
         val resetVersion = prefs[VALIDATION_RESET_KEY] ?: 0
         if (resetVersion < VALIDATION_RESET_VERSION) {
             revalidateAfterMap = emptyMap()
-            store().edit { p ->
+            store(profileId).edit { p ->
                 p.remove(REVALIDATE_KEY)
                 p[VALIDATION_RESET_KEY] = VALIDATION_RESET_VERSION
             }
         } else {
             revalidateAfterMap = parseTimestamps(prefs[REVALIDATE_KEY])
         }
-        if (_fullyWatchedSeriesIds.value.isEmpty() && persisted.isNotEmpty()) {
+        if (switchingProfile || (_fullyWatchedSeriesIds.value.isEmpty() && persisted.isNotEmpty())) {
             _fullyWatchedSeriesIds.value = persisted
         }
         loadedForProfileId = profileId

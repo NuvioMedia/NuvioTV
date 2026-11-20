@@ -36,6 +36,8 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
@@ -241,7 +243,15 @@ fun ContentCard(
         } else {
             baseCardWidth
         }
-        val requestWidthPx = remember(maxRequestCardWidth, density) {
+        val imageRequestCardWidth = if (effectiveExpandEnabled && isBackdropExpanded) {
+            maxRequestCardWidth
+        } else {
+            baseCardWidth
+        }
+        val requestWidthPx = remember(imageRequestCardWidth, density) {
+            with(density) { imageRequestCardWidth.roundToPx() }.coerceAtLeast(1)
+        }
+        val logoRequestWidthPx = remember(maxRequestCardWidth, density) {
             with(density) { maxRequestCardWidth.roundToPx() }.coerceAtLeast(1)
         }
         val requestHeightPx = remember(baseCardHeight, density) {
@@ -285,13 +295,13 @@ fun ContentCard(
         val logoRequestHeightPx = remember(density) {
             with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
         }
-        val logoModel = remember(item.logo, requestWidthPx, logoRequestHeightPx) {
+        val logoModel = remember(item.logo, logoRequestWidthPx, logoRequestHeightPx) {
             item.logo?.let { logoUrl ->
                 ImageRequest.Builder(context)
                     .data(logoUrl)
                     .crossfade(false)
-                    .memoryCacheKey("${logoUrl}_${requestWidthPx}x${logoRequestHeightPx}")
-                    .size(width = requestWidthPx, height = logoRequestHeightPx)
+                    .memoryCacheKey("${logoUrl}_${logoRequestWidthPx}x${logoRequestHeightPx}")
+                    .size(width = logoRequestWidthPx, height = logoRequestHeightPx)
                     .build()
             }
         }
@@ -408,6 +418,7 @@ fun ContentCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .semantics { this.contentDescription = item.name }
                             .placeholderCardShimmer(
                                 shimmerOffsetState = effectivePlaceholderShimmerOffsetState,
                                 backgroundColor = NuvioTheme.colors.BackgroundCard
@@ -424,7 +435,7 @@ fun ContentCard(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    MonochromePosterPlaceholder()
+                    MonochromePosterPlaceholder(contentDescription = item.name)
                 }
 
                 // Landscape mode: show clearlogo or title overlay on backdrop cards

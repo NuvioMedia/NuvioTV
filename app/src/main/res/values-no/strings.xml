@@ -363,15 +363,6 @@
     <string name="sub_libass">Bruk libass for ASS/SSA-undertekster</string>
     <string name="sub_libass_sub">Eksperimentell: avansert ASS/SSA-gjengivelse (stiler, plassering, animasjoner)</string>
     <string name="sub_libass_mode">Libass gjengivelsmodus</string>
-    <string name="sub_mode_overlay_gl">Overlegg OpenGL (anbefalt)</string>
-    <string name="sub_mode_overlay_gl_sub">Best kvalitet med HDR-støtte. Gjengiver undertekster på en separat tråd.</string>
-    <string name="sub_mode_overlay_canvas">Overlegg lerret</string>
-    <string name="sub_mode_effects_gl">Effekter OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animasjonsstøtte ved bruk av Media3-effekter. Raskere enn lerret.</string>
-    <string name="sub_mode_effects_canvas">Effekter lerret</string>
-    <string name="sub_mode_effects_canvas_sub">Animasjonsstøtte ved bruk av Media3-effekter med lerretgjengivelse.</string>
-    <string name="sub_mode_standard">Standardtips</string>
-    <string name="sub_mode_standard_sub">Grunnleggende undertekstgjengivelse uten animasjonsstøtte. Mest kompatibel.</string>
     <string name="sub_org_none">Ingen (standardrekkefølge)</string>
     <string name="sub_org_by_lang">Etter språk</string>
     <string name="sub_org_by_addon">Etter tillegg</string>
@@ -514,7 +505,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList-vurderinger</string>
-    <string name="mdblist_subtitle">Konfigurer eksterne vurderinger vist i helt-delen av detaljer</string>
     <string name="mdblist_enable_title">Aktiver MDBList-vurderinger</string>
     <string name="mdblist_enable_subtitle">Hent vurderinger fra eksterne leverandører i detaljedskjermen for metadata</string>
     <string name="mdblist_api_key_title">API-nøkkel</string>
@@ -801,7 +791,6 @@
     <string name="parental_severity_moderate">Moderat</string>
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Slutter klokken %1$s</string>
-    <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Undertekst forsinkelse</string>
     <string name="player_error_title">Avspillingsfeil</string>
     <string name="player_go_back">Gå tilbake</string>
@@ -943,11 +932,6 @@
     <string name="library_delete_confirm">Slett</string>
     <string name="library_source_local">LOKAL</string>
     <string name="library_type_all">Alle</string>
-    <string name="library_type_items">elementer</string>
-    <string name="library_empty_local_title">Ingen %1$s ennå</string>
-    <string name="library_empty_trakt_title">Ingen %1$s i denne listen</string>
-    <string name="library_empty_local_subtitle">Start lagring av favoritter for å se dem her</string>
-    <string name="library_empty_trakt_subtitle">Bruk + i detaljer for å legge til elementer i ønskelisten eller lister</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Laster\u2026</string>

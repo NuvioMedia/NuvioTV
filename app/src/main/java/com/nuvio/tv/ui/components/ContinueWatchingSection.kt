@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.components
 
-import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+import com.nuvio.tv.ui.screens.home.continueWatchingItemKey
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
@@ -69,6 +69,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
+import com.nuvio.tv.ui.screens.home.canMarkWatched
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
@@ -131,6 +132,7 @@ fun ContinueWatchingSection(
     onStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     showManualPlayOption: Boolean = false,
     onPlayManually: (ContinueWatchingItem) -> Unit = {},
+    onMarkWatched: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
     title: String? = null,
     focusedItemIndex: Int = -1,
@@ -245,14 +247,7 @@ fun ContinueWatchingSection(
         ) {
             itemsIndexed(
                 items = items,
-                key = { _, progress ->
-                    progress.shuffleFocusKey ?: when (progress) {
-                        is ContinueWatchingItem.InProgress ->
-                            "cw_${progress.progress.contentId}_${progress.progress.videoId}_${progress.progress.season ?: -1}_${progress.progress.episode ?: -1}"
-                        is ContinueWatchingItem.NextUp ->
-                            "nextup_${progress.info.contentId}_${progress.info.videoId}_${progress.info.season}_${progress.info.episode}"
-                    }
-                }
+                key = { _, progress -> continueWatchingItemKey(progress) }
             ) { index, progress ->
                 val requester = focusRequesters.getOrPut(index) { FocusRequester() }
                 val focusModifier = Modifier.focusRequester(requester)
@@ -316,6 +311,11 @@ fun ContinueWatchingSection(
             showPlayManually = showManualPlayOption,
             onPlayManually = {
                 onPlayManually(menuItem)
+                optionsItem = null
+            },
+            onMarkWatched = {
+                pendingFocusIndex = if (items.size <= 1) null else minOf(lastFocusedIndex, items.lastIndex)
+                onMarkWatched(menuItem)
                 optionsItem = null
             }
         )
@@ -748,7 +748,7 @@ fun ContinueWatchingCard(
                 } else {
                     AsyncImage(
                         model = imageRequest,
-                        contentDescription = titleText,
+                        contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
@@ -963,7 +963,7 @@ private fun WideCardContent(
             } else {
                 AsyncImage(
                     model = imageRequest,
-                    contentDescription = titleText,
+                    contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
                         .then(if (shouldBlur) Modifier.blur(12.dp) else Modifier),
@@ -1121,7 +1121,8 @@ fun ContinueWatchingOptionsDialog(
     onDetails: () -> Unit,
     onStartFromBeginning: () -> Unit = {},
     showPlayManually: Boolean = false,
-    onPlayManually: () -> Unit = {}
+    onPlayManually: () -> Unit = {},
+    onMarkWatched: () -> Unit = {}
 ) {
     val isPlayEnabled = LocalPlaybackAvailability.current.canStream(item)
     val title = when (item) {
@@ -1176,6 +1177,19 @@ fun ContinueWatchingOptionsDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.cw_action_start_from_beginning))
+            }
+        }
+
+        if (item.canMarkWatched()) {
+            Button(
+                onClick = onMarkWatched,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.hero_mark_watched))
             }
         }
 

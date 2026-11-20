@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -43,12 +44,17 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,6 +87,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 
@@ -94,11 +101,23 @@ fun GenrePickerContent(
     onSelect: (String?) -> Unit,
     onBack: () -> Unit
 ) {
-    val firstOptionFocusRequester = remember { FocusRequester() }
+    val initialOptionFocusRequester = remember { FocusRequester() }
+    val backButtonFocusRequester = remember { FocusRequester() }
+    val initialSelectedIndex = remember(selectedGenre, genreOptions, allowAll) {
+        val optionOffset = if (allowAll) 1 else 0
+        when {
+            selectedGenre == null -> 0
+            else -> genreOptions.indexOf(selectedGenre).takeIf { it >= 0 }?.plus(optionOffset) ?: 0
+        }
+    }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialSelectedIndex)
 
-    LaunchedEffect(title, selectedGenre, genreOptions) {
-        repeat(5) { androidx.compose.runtime.withFrameNanos { } }
-        try { firstOptionFocusRequester.requestFocus() } catch (_: Exception) {}
+    LaunchedEffect(title, genreOptions) {
+        val hasOptions = allowAll || genreOptions.isNotEmpty()
+        val target = if (hasOptions) initialOptionFocusRequester else backButtonFocusRequester
+        if (!requestFocusWhenReady(target) && target !== backButtonFocusRequester) {
+            requestFocusWhenReady(backButtonFocusRequester)
+        }
     }
 
     Column(
@@ -123,41 +142,50 @@ fun GenrePickerContent(
                     color = NuvioTheme.colors.TextSecondary
                 )
             }
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
+            NuvioButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .focusRequester(backButtonFocusRequester)
+                    .focusProperties { canFocus = listState.firstVisibleItemIndex == 0 }
+                    .blockHorizontalFocus()
+            ) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-        ) {
-            var optionIndex = 0
-            if (allowAll) {
-                item(key = "genre_all") {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+            ) {
+                val optionOffset = if (allowAll) 1 else 0
+                if (allowAll) {
+                    item(key = "genre_all") {
+                        GenrePickerOptionCard(
+                            title = stringResource(R.string.collections_editor_all_genres),
+                            selected = selectedGenre == null,
+                            onClick = { onSelect(null) },
+                            modifier = if (initialSelectedIndex == 0) Modifier.focusRequester(initialOptionFocusRequester) else Modifier
+                        )
+                    }
+                }
+
+                itemsIndexed(
+                    items = genreOptions,
+                    key = { _, genre -> genre }
+                ) { index, genre ->
+                    val absoluteIndex = index + optionOffset
                     GenrePickerOptionCard(
-                        title = stringResource(R.string.collections_editor_all_genres),
-                        selected = selectedGenre == null,
-                        onClick = { onSelect(null) },
-                        modifier = Modifier.focusRequester(firstOptionFocusRequester)
+                        title = genre,
+                        selected = selectedGenre == genre,
+                        onClick = { onSelect(genre) },
+                        modifier = if (absoluteIndex == initialSelectedIndex) Modifier.focusRequester(initialOptionFocusRequester) else Modifier
                     )
                 }
-                optionIndex += 1
             }
-
-            itemsIndexed(
-                items = genreOptions,
-                key = { _, genre -> genre }
-            ) { index, genre ->
-                val useFirstRequester = optionIndex == 0 && index == 0
-                GenrePickerOptionCard(
-                    title = genre,
-                    selected = selectedGenre == genre,
-                    onClick = { onSelect(genre) },
-                    modifier = if (useFirstRequester) Modifier.focusRequester(firstOptionFocusRequester) else Modifier
-                )
-            }
+            SettingsVerticalScrollIndicators(state = listState)
         }
     }
 }
@@ -172,7 +200,14 @@ fun GenrePickerOptionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .blockHorizontalFocus()
+            .semantics(mergeDescendants = true) {
+                contentDescription = title
+                role = Role.RadioButton
+                this.selected = selected
+            },
         colors = CardDefaults.colors(
             containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -271,11 +306,22 @@ fun EmojiPickerContent(
     onSelect: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val firstEmojiFocusRequester = remember { FocusRequester() }
+    val initialEmojiFocusRequester = remember { FocusRequester() }
+    val categoryEntries = remember { emojiCategories.entries.toList() }
+    val initialPosition = remember(selectedEmoji) {
+        if (!selectedEmoji.isNullOrBlank()) {
+            categoryEntries.forEachIndexed { catIndex, (_, emojis) ->
+                val emojiIndex = emojis.indexOf(selectedEmoji)
+                if (emojiIndex >= 0) return@remember catIndex to emojiIndex
+            }
+        }
+        0 to 0
+    }
+    val (initialCategoryIndex, initialEmojiIndex) = initialPosition
+    val columnState = rememberLazyListState(initialFirstVisibleItemIndex = initialCategoryIndex)
 
     LaunchedEffect(Unit) {
-        repeat(5) { androidx.compose.runtime.withFrameNanos { } }
-        try { firstEmojiFocusRequester.requestFocus() } catch (_: Exception) {}
+        requestFocusWhenReady(initialEmojiFocusRequester)
     }
 
     Column(
@@ -293,72 +339,91 @@ fun EmojiPickerContent(
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioTheme.colors.TextPrimary
             )
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
+            NuvioButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .focusProperties { canFocus = columnState.firstVisibleItemIndex == 0 }
+                    .blockHorizontalFocus()
+            ) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            val firstCategory = emojiCategories.keys.first()
-            emojiCategories.forEach { (category, emojis) ->
-                item(key = "category_$category") {
-                    Text(
-                        text = stringResource(emojiCategoryLabel(category)),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NuvioTheme.colors.TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
-                        contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs)
-                    ) {
-                        items(
-                            count = emojis.size,
-                            key = { "${category}_${emojis[it]}" }
-                        ) { index ->
-                            val emoji = emojis[index]
-                            val isSelected = emoji == selectedEmoji
-                            val isFirstEmoji = category == firstCategory && index == 0
-                            Card(
-                                onClick = { onSelect(emoji) },
-                                modifier = (if (isFirstEmoji) Modifier.focusRequester(firstEmojiFocusRequester) else Modifier)
-                                    .width(NuvioTheme.spacing.huge)
-                                    .height(NuvioTheme.spacing.huge),
-                                colors = CardDefaults.colors(
-                                    containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground
-                                ),
-                                border = CardDefaults.border(
-                                    border = if (isSelected) Border(
-                                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Secondary),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    ) else Border.None,
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                                scale = CardDefaults.scale(focusedScale = 1.1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = columnState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                categoryEntries.forEachIndexed { catIndex, (category, emojis) ->
+                    item(key = "category_$category") {
+                        val rowState = rememberLazyListState(
+                            initialFirstVisibleItemIndex = if (catIndex == initialCategoryIndex) initialEmojiIndex else 0
+                        )
+                        Text(
+                            text = stringResource(emojiCategoryLabel(category)),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = NuvioTheme.colors.TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                        LazyRow(
+                            state = rowState,
+                            modifier = Modifier.trapHorizontalFocus(),
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs)
+                        ) {
+                            items(
+                                count = emojis.size,
+                                key = { "${category}_${emojis[it]}" }
+                            ) { index ->
+                                val emoji = emojis[index]
+                                val isSelected = emoji == selectedEmoji
+                                val isInitialTarget = catIndex == initialCategoryIndex && index == initialEmojiIndex
+                                val emojiDescription = stringResource(R.string.cd_emoji_option, emoji)
+                                Card(
+                                    onClick = { onSelect(emoji) },
+                                    modifier = (if (isInitialTarget) Modifier.focusRequester(initialEmojiFocusRequester) else Modifier)
+                                        .semantics(mergeDescendants = true) {
+                                            contentDescription = emojiDescription
+                                            role = Role.RadioButton
+                                            selected = isSelected
+                                        }
+                                        .width(NuvioTheme.spacing.huge)
+                                        .height(NuvioTheme.spacing.huge),
+                                    colors = CardDefaults.colors(
+                                        containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
+                                        focusedContainerColor = NuvioTheme.colors.FocusBackground
+                                    ),
+                                    border = CardDefaults.border(
+                                        border = if (isSelected) Border(
+                                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Secondary),
+                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                        ) else Border.None,
+                                        focusedBorder = Border(
+                                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                        )
+                                    ),
+                                    shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+                                    scale = CardDefaults.scale(focusedScale = 1.1f)
                                 ) {
-                                    Text(
-                                        text = emoji,
-                                        fontSize = 28.sp
-                                    )
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = emoji,
+                                            fontSize = 28.sp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            SettingsVerticalScrollIndicators(state = columnState)
         }
     }
 }

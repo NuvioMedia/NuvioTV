@@ -674,7 +674,13 @@ internal fun PlayerRuntimeController.rememberAddonSubtitleSelection(subtitle: Su
 }
 
 private fun PlayerRuntimeController.currentTrackPreferenceForPersistence(): PlayerRuntimeController.TrackPreference {
-    return rememberedTrackPreference ?: persistedTrackPreference ?: PlayerRuntimeController.TrackPreference()
+    // A restored selection is cleared from persistedTrackPreference once applied, so a later
+    // save (e.g. AutoSync resetting the delay) must fall back to the loaded snapshot instead,
+    // or it would overwrite the stored subtitle with nothing.
+    return rememberedTrackPreference
+        ?: loadedTrackPreference
+        ?: persistedTrackPreference
+        ?: PlayerRuntimeController.TrackPreference()
 }
 
 internal fun PlayerRuntimeController.persistTrackPreference() {

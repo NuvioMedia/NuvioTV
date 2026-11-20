@@ -1,9 +1,11 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.activity.compose.BackHandler
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,9 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -82,10 +85,67 @@ import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.tvReorderDisabledFocusBorder
 import com.nuvio.tv.R
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.TextStyle
+
+internal suspend fun requestFocusWhenReady(
+    requester: FocusRequester,
+    maxFrames: Int = 8
+): Boolean {
+    repeat(maxFrames) {
+        val focused = runCatching { requester.requestFocus() }.getOrDefault(false)
+        if (focused) return true
+        withFrameNanos { }
+    }
+    return false
+}
+
+internal fun Modifier.trapHorizontalFocus(): Modifier = this
+    .focusProperties {
+        onExit = {
+            if (requestedFocusDirection == FocusDirection.Left ||
+                requestedFocusDirection == FocusDirection.Right
+            ) {
+                cancelFocusChange()
+            }
+        }
+    }
+    .focusGroup()
+
+internal fun Modifier.blockHorizontalFocus(): Modifier = this
+    .focusProperties {
+        left = FocusRequester.Cancel
+        right = FocusRequester.Cancel
+    }
+
+internal fun Modifier.focusEntryTarget(
+    target: FocusRequester
+): Modifier = this
+    .focusProperties {
+        onEnter = {
+            if (requestedFocusDirection == FocusDirection.Up ||
+                requestedFocusDirection == FocusDirection.Down
+            ) {
+                runCatching { target.requestFocus() }
+            }
+        }
+        onExit = {
+            if (requestedFocusDirection == FocusDirection.Left ||
+                requestedFocusDirection == FocusDirection.Right
+            ) {
+                cancelFocusChange()
+            }
+        }
+    }
+    .focusGroup()
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -103,9 +163,14 @@ fun NuvioTextField(
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
-            repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-            try { textFieldFocusRequester.requestFocus() } catch (_: Exception) {}
+            requestFocusWhenReady(textFieldFocusRequester)
         }
+    }
+
+    BackHandler(enabled = isEditing) {
+        isEditing = false
+        keyboardController?.hide()
+        runCatching { surfaceFocusRequester.requestFocus() }
     }
 
     Surface(
@@ -134,6 +199,7 @@ fun NuvioTextField(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusProperties { canFocus = isEditing }
                     .focusRequester(textFieldFocusRequester)
                     .onFocusChanged {
                         if (!it.isFocused && isEditing) {
@@ -147,7 +213,7 @@ fun NuvioTextField(
                     onDone = {
                         isEditing = false
                         keyboardController?.hide()
-                        surfaceFocusRequester.requestFocus()
+                        runCatching { surfaceFocusRequester.requestFocus() }
                     }
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -192,18 +258,81 @@ fun NuvioButton(
             focusedBorder = Border(
                 border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
-            )
+            ),
+            focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
         ),
         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         content = { content() }
     )
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+internal fun UnsavedChangesDialog(
+    title: String,
+    subtitle: String,
+    canSave: Boolean,
+    isSaving: Boolean = false,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        requestFocusWhenReady(primaryFocusRequester, maxFrames = 10)
+    }
+
+    NuvioDialog(
+        onDismiss = { if (!isSaving) onDismiss() },
+        title = title,
+        subtitle = subtitle,
+        width = 560.dp,
+        suppressFirstKeyUp = false
+    ) {
+        BackHandler(enabled = !isSaving) { onDismiss() }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
+        ) {
+            Button(
+                onClick = onDiscard,
+                enabled = !isSaving,
+                modifier = (if (canSave) Modifier else Modifier.focusRequester(primaryFocusRequester))
+                    .semantics { role = Role.Button }
+            ) {
+                Text(stringResource(R.string.collections_cancel))
+            }
+            if (canSave) {
+                Button(
+                    onClick = onSave,
+                    enabled = !isSaving,
+                    modifier = Modifier
+                        .focusRequester(primaryFocusRequester)
+                        .semantics { role = Role.Button }
+                ) {
+                    Text(stringResource(R.string.collections_editor_save))
+                }
+            }
+        }
+    }
+}
+
+fun collectionSourceKeys(sources: List<CollectionSource>): List<String> {
+    val seen = HashMap<String, Int>()
+    return sources.map { source ->
+        val key = collectionSourceKey(source)
+        val occurrence = seen.getOrDefault(key, 0)
+        seen[key] = occurrence + 1
+        if (occurrence == 0) key else "$key#$occurrence"
+    }
+}
+
 fun collectionSourceKey(source: CollectionSource): String {
     return when (source) {
         is AddonCatalogCollectionSource -> "addon_${source.addonId}_${source.type}_${source.catalogId}_${source.genre.orEmpty()}"
-        is TmdbCollectionSource -> "tmdb_${source.sourceType}_${source.tmdbId}_${source.mediaType}_${source.sortBy}_${source.filters.hashCode()}"
-        is TraktCollectionSource -> "trakt_${source.traktListId}_${source.mediaType}_${source.sortBy}_${source.sortHow}"
+        is TmdbCollectionSource -> "tmdb_${source.sourceType}_${source.tmdbId}_${source.mediaType}_${source.sortBy}_${source.title}_${source.filters.hashCode()}"
+        is TraktCollectionSource -> "trakt_${source.traktListId}_${source.mediaType}_${source.sortBy}_${source.sortHow}_${source.title}"
     }
 }
 

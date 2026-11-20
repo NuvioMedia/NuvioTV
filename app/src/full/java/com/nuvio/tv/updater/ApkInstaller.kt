@@ -2,6 +2,7 @@ package com.nuvio.tv.updater
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
@@ -11,6 +12,10 @@ import com.nuvio.tv.BuildConfig
 import java.io.File
 
 object ApkInstaller {
+
+    /** Install sessions accept dex metadata from Android 9. */
+    val supportsDexMetadata: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
 
     fun canRequestPackageInstalls(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -46,6 +51,9 @@ object ApkInstaller {
         val packageInstaller = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
+            // Sessions default to internal-only, which the system rejects for an app the user moved to adopted
+            // storage. Auto keeps the update on the volume the app is already on.
+            setInstallLocation(PackageInfo.INSTALL_LOCATION_AUTO)
             if (background && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
@@ -60,6 +68,7 @@ object ApkInstaller {
             packageInstaller.openSession(sessionId).use { session ->
                 session.writeFile("base.apk", apkFile)
                 dexMetadata?.let { session.writeFile("base.dm", it) }
+                if (!background) UpdateRelaunchReceiver.requestReopen(context)
                 session.commit(
                     UpdateInstallResultReceiver.statusReceiver(
                         context = context,
@@ -78,8 +87,12 @@ object ApkInstaller {
         }
     }
 
-    /** Hands the APK to the system installer screen, used when the session install cannot be completed. */
+    /**
+     * Hands the APK to the system installer screen, which stays up while the app is closed for the install and
+     * offers to open it again.
+     */
     fun launchSystemInstaller(context: Context, apkFile: File) {
+        UpdateRelaunchReceiver.cancelReopen(context)
         val authority = "${BuildConfig.APPLICATION_ID}.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, apkFile)
 

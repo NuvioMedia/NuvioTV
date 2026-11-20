@@ -414,9 +414,13 @@
     <string name="about_title">אודות</string>
     <string name="about_subtitle">מידע על האפליקציה, עדכונים וקישורים משפטיים</string>
     <string name="about_made_with_love">נוצר באהבה ❤️ על ידי Tapframe וחברים</string>
-    <string name="about_version">גרסה %1$s</string>
+    <string name="about_version">גרסה ‎%1$s</string>
     <string name="about_update_banner_title">באנר עדכון אוטומטי</string>
     <string name="about_update_banner_subtitle">הצגת באנר כאשר גרסה חדשה זמינה</string>
+    <string name="about_update_auto_install_title">התקנת עדכונים אוטומטית</string>
+    <string name="about_update_auto_install_subtitle">הורדת גרסאות חדשות ברקע והתקנתן כשהמכשיר במצב סרק</string>
+    <string name="about_update_auto_install_notice_title">הודעה לאחר עדכונים אוטומטיים</string>
+    <string name="about_update_auto_install_notice_subtitle">הצגת באנר בהפעלה הבאה לאחר שהאפליקציה מתעדכנת בעצמה</string>
     <string name="about_update_channel_title">ערוץ עדכון</string>
     <string name="about_update_channel_subtitle">בחירת ערוץ העדכונים המועדף</string>
     <string name="about_check_updates">בדיקת עדכונים</string>
@@ -776,6 +780,18 @@
     <string name="playback_engine_mvplayer">Libmpv (בטא)</string>
     <string name="playback_auto_switch_internal_player_on_error">החלפת מנוע אוטומטית בשגיאת הפעלה</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">אם הפעלת המקור נכשלת, החלפה אוטומטית בין ExoPlayer ל-Libmpv</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">יש לכבות את המעבר למקור התואם הבא כדי להשתמש באפשרות זו.</string>
+    <string name="autoplay_fallback_next_source">מעבר למקור התואם הבא בעת כשל</string>
+    <string name="autoplay_fallback_next_source_sub">אם המקור שנבחר אוטומטית נכשל או אינו מתחיל בזמן, ינוסו בשקט המקורות התואמים הבאים.</string>
+    <string name="autoplay_fallback_max_sources">מספר מקורות לניסיון בעת כשל</string>
+    <string name="autoplay_fallback_max_sources_sub">כמה מקורות תואמים נוספים לנסות לפני הצגת השגיאה.</string>
+    <string name="autoplay_fallback_startup_timeout">זמן להתחלת מקור</string>
+    <string name="autoplay_fallback_startup_timeout_sub">כמה זמן להמתין להתחלת מקור לפני מעבר לבא.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$d שנ׳</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">יש לכבות את המעבר האוטומטי בין מנועים בעת שגיאת הפעלה כדי להשתמש באפשרות זו.</string>
+    <string name="player_error_source_startup_timeout">המקור לא התחיל תוך %1$d שניות.</string>
+    <string name="playback_release_decoder_on_background">שחרור המפענח ברקע</string>
+    <string name="playback_release_decoder_on_background_sub">שחרור מפענח הווידאו כש-Nuvio עוברת לרקע. כדאי להפעיל אם ההפעלה נכשלת בשגיאת מפענח לאחר חזרה לאפליקציה. הנגן נטען מחדש בחזרה, גם לאחר שומר המסך</string>
     <string name="playback_external_forward_subtitles">העברת כתוביות לנגן חיצוני</string>
     <string name="playback_external_forward_subtitles_sub">משיכת כתוביות בשפה המועדפת מתוספים, והעברתן לנגן החיצוני.</string>
     <string name="playback_external_send_skip_segments">שליחת חותמות זמן של פתיח וסיום</string>
@@ -808,6 +824,10 @@
     <string name="video_section">וידאו</string>
     <string name="playback_true_black_letterbox">פסים שחורים אמיתיים</string>
     <string name="playback_true_black_letterbox_sub">השארת הפסים סביב התמונה ללא צביעה, כדי ש-HDR יישאר שחור אמיתי. כדאי להשאיר זאת כבוי אם מופיע קו בהיר על הפסים.</string>
+    <string name="playback_exo_chapters_title">הצגת מקטעים</string>
+    <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם.</string>
+    <string name="playback_chapter_title_title">הצגת שם המקטע</string>
+    <string name="playback_chapter_title_sub">הצגת שם המקטע הנוכחי מעל סרגל ההתקדמות.</string>
     <string name="audio_trailer_section">טריילר</string>
     <string name="audio_autoplay_trailers">הפעלה אוטומטית של טריילרים</string>
     <string name="audio_autoplay_trailers_sub">הפעלת טריילרים אוטומטית במסך הפרטים לאחר תקופת חוסר פעילות</string>
@@ -820,6 +840,17 @@
     <string name="audio_preferred_lang">שפת שמע מועדפת</string>
     <string name="audio_skip_silence">דילוג על שקט</string>
     <string name="audio_skip_silence_sub">זיהוי ודילוג אוטומטי על קטעים שקטים במהלך הניגון</string>
+    <string name="audio_night_mode">מצב לילה</string>
+    <string name="audio_night_mode_sub">מגביר דיאלוגים וצלילים שקטים, כדי שאפשר יהיה להשאיר את עוצמת הקול נמוכה</string>
+    <string name="audio_night_mode_desc">מגביר דיאלוגים וצלילים שקטים; סצנות רועשות נשארות כפי שמיקסו. פועל על שמע שמפוענח על ידי האפליקציה. Dolby ו-DTS שנשלחים למקלט או לסאונדבר במעבר ישיר (passthrough) נשארים ללא שינוי.</string>
+    <string name="audio_night_mode_value">מצב לילה: %1$s</string>
+    <string name="audio_night_mode_off">כבוי</string>
+    <string name="audio_night_mode_light">קל</string>
+    <string name="audio_night_mode_light_desc">הגברה עדינה, עד ‎+6 dB</string>
+    <string name="audio_night_mode_medium">בינוני</string>
+    <string name="audio_night_mode_medium_desc">דיאלוג מוגבר בבירור, עד ‎+10 dB</string>
+    <string name="audio_night_mode_strong">חזק</string>
+    <string name="audio_night_mode_strong_desc">עד ‎+15 dB, לצפייה בשעות הלילה המאוחרות בעוצמת קול נמוכה</string>
     <string name="audio_remember_delay_per_device">זכירת עיכוב שמע לפי מכשיר</string>
     <string name="audio_remember_delay_per_device_sub">שמירה ושחזור של עיכוב השמע בנגן עבור נתיב פלט השמע הנוכחי</string>
     <string name="audio_advanced_section">שמע מתקדם</string>
@@ -909,19 +940,47 @@
     <string name="sub_outline">קו מתאר</string>
     <string name="sub_outline_sub">הוספת קו מתאר סביב טקסט הכתוביות לנראות טובה יותר</string>
     <string name="sub_outline_color">צבע קו מתאר</string>
+    <string name="sub_hdr_style">סגנון נפרד ל-HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">שימוש בצבע טקסט שונה ובבהירות מעומעמת יותר לכתוביות בווידאו HDR ו-Dolby Vision</string>
+    <string name="sub_hdr_text_color">צבע טקסט ב-HDR</string>
+    <string name="sub_hdr_brightness">בהירות כתוביות ב-HDR</string>
+    <string name="sub_hdr_dim_player_controls">עמעום פקדי הנגן ב-HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">החלת בהירות ה-HDR על פקדי הנגן והתפריטים המוצגים מעל וידאו HDR ו-Dolby Vision</string>
+    <string name="sub_appearance">מראה הכתוביות</string>
+    <string name="sub_appearance_desc">גופן, צבעים, רקע וצל</string>
+    <string name="sub_appearance_hint">חל על כתוביות טקסט. כתוביות ASS מעוצבות וכתוביות תמונה שומרות על מראן המקורי.</string>
+    <string name="sub_preview">תצוגה מקדימה</string>
+    <string name="sub_preview_text">כל סיפור מתחיל בקצת סקרנות.</string>
+    <string name="sub_font">גופן</string>
+    <string name="sub_font_default">ברירת מחדל</string>
+    <string name="sub_font_serif">סריף</string>
+    <string name="sub_font_mono">מונוספייס</string>
+    <string name="sub_font_import">ייבוא מהטלפון</string>
+    <string name="sub_font_import_desc">הוספת גופן ttf או otf בגודל של עד 10 MB. גופנים שיובאו נשארים בטלוויזיה הזו.</string>
+    <string name="sub_font_import_qr">יש לסרוק בטלפון כדי להוסיף גופן ttf או otf</string>
+    <string name="sub_font_missing">הגופן אינו זמין במכשיר זה. משתמשים בגופן ברירת המחדל.</string>
+    <string name="sub_font_remove">הסרת %1$s</string>
+    <string name="sub_background">רקע</string>
+    <string name="sub_bg_opacity">שקיפות הרקע</string>
+    <string name="sub_bg_roundness">עיגול פינות</string>
+    <string name="sub_shadow">צל</string>
+    <string name="sub_shadow_desc">הפרדת הטקסט מסצנות בהירות</string>
+    <string name="sub_shadow_opacity">שקיפות הצל</string>
+    <string name="sub_shadow_size">גודל הצל</string>
+    <string name="sub_reset_appearance">איפוס מראה</string>
     <string name="sub_advanced_section">הצגת כתוביות מתקדמת</string>
     <string name="sub_libass">שימוש ב-libass לכתוביות ASS/SSA</string>
     <string name="sub_libass_sub">ניסיוני: תמיכה בכתוביות עם עיצוב מיוחד, כמו אנימציות ומיקום משתנה על המסך</string>
     <string name="sub_libass_mode">אופן הצגת הכתוביות המעוצבות</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (מומלץ)</string>
-    <string name="sub_mode_overlay_gl_sub">האיכות הטובה ביותר עם תמיכה ב-HDR. מציג את הכתוביות בערוץ עיבוד (thread) נפרד לביצועים חלקים יותר.</string>
-    <string name="sub_mode_overlay_canvas">שכבת-על Canvas</string>
-    <string name="sub_mode_effects_gl">אפקטים OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">תומך באנימציות באמצעות אפקטי Media3. מהיר יותר משיטת Canvas.</string>
-    <string name="sub_mode_effects_canvas">אפקטים Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">תומך באנימציות באמצעות אפקטי Media3 עם עיבוד בשיטת Canvas.</string>
-    <string name="sub_mode_standard">כתוביות רגילות</string>
-    <string name="sub_mode_standard_sub">הצגת כתוביות בסיסית ללא תמיכה באנימציות. התואם ביותר.</string>
+    <string name="sub_libass_render_scale">רזולוציית עיבוד כתוביות</string>
+    <string name="sub_libass_render_scale_sub">רזולוציה נמוכה יותר משפרת ביצועים בכתוביות מורכבות, במחיר של חדות נמוכה יותר</string>
+    <string name="sub_libass_render_mode">מצב עיבוד ASS</string>
+    <string name="sub_libass_render_mode_sub">האופן שבו כתוביות ASS/SSA מצוירות על הווידאו</string>
+    <string name="sub_libass_render_mode_tunneled_sub">הפעלה במנהרה (Tunneled) עוקפת את צינור אפקטי הווידאו. מצב שכבת-על (Overlay) נבחר אוטומטית.</string>
+    <string name="sub_libass_render_mode_video_effect">אפקט וידאו</string>
+    <string name="sub_libass_render_mode_video_effect_sub">מצייר כתוביות ישירות על כל פריים של הווידאו. תזמון מדויק לפריים בכל החומרה. תוכן HDR עובר מיפוי גוונים ל-SDR.</string>
+    <string name="sub_libass_render_mode_overlay">שכבת-על</string>
+    <string name="sub_libass_render_mode_overlay_sub">מעבד כתוביות על שכבת משטח נפרדת. שומר על פלט HDR. תזמון הכתוביות עשוי לא להיות מדויק לחלוטין בחלק מהמכשירים.</string>
     <string name="sub_org_none">ללא (סדר ברירת מחדל)</string>
     <string name="sub_org_by_lang">לפי שפה</string>
     <string name="sub_org_by_addon">לפי תוסף</string>
@@ -1087,6 +1146,14 @@
     <string name="layout_cw_sort_streaming_desc">פריטים שיצאו תחילה, עתידיים בסוף</string>
     <string name="layout_cw_sort_split_upcoming">שורת \"עתידי\" נפרדת</string>
     <string name="layout_cw_sort_split_upcoming_desc">העברת פרקים שטרם שודרו לשורת \"עתידי\" נפרדת</string>
+    <string name="layout_cw_click_action">בעת בחירת פריט</string>
+    <string name="layout_cw_click_action_sub">מה ייפתח בעת בחירת פריט בשורת המשך הצפייה</string>
+    <string name="layout_cw_click_stream">פתיחת מקור צפייה</string>
+    <string name="layout_cw_click_stream_desc">בחירת מקור צפייה או המשך הפעלה</string>
+    <string name="layout_cw_click_details">פתיחת פרטים</string>
+    <string name="layout_cw_click_details_desc">פתיחת עמוד הפרטים של הכותרת</string>
+    <string name="layout_cw_click_details_upcoming">פרטים עבור פרקים עתידיים בלבד</string>
+    <string name="layout_cw_click_details_upcoming_desc">פתיחת פרטי הפרקים שטרם שודרו, ומקור הצפייה עבור שאר הפרקים</string>
     <string name="upcoming_section_title">עתידי</string>
     <string name="layout_trailer_button">הצגת כפתור טריילר</string>
     <string name="layout_trailer_button_sub">הצגת כפתור טריילר בעמוד הפרטים (רק כשטריילר זמין).</string>
@@ -1189,6 +1256,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">תמיד רקע עם לוגו עבור פוסטרים לרוחב</string>
     <string name="layout_always_show_landscape_clearlogo_sub">התעלמות מפוסטר לרוחב מהתוסף, ושימוש ברקע עם שכבת לוגו שקוף במקום.</string>
+    <string name="layout_hero_description_auto_scroll">גלילה אוטומטית של תיאורים</string>
+    <string name="layout_hero_description_auto_scroll_sub">גלילה איטית של תיאורים ארוכים במסך הבית במקום חיתוכם.</string>
     <string name="web_custom_poster_title">מקור פוסטרים מותאם אישית</string>
     <string name="web_custom_poster_subtitle">יש להדביק למטה תבנית כתובת URL לפוסטר וללחוץ על שמירה.</string>
     <string name="web_custom_poster_label">תבנית URL</string>
@@ -1205,6 +1274,13 @@
     <string name="web_custom_poster_none">לא הוגדרה תבנית</string>
     <string name="web_custom_poster_loading">טוען…</string>
     <string name="web_custom_poster_placeholders_info">מציינים: {id} מעביר את כל מזהי התוכן. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} מיועדים לסוג מזהה בודד - אם הוא לא זמין, הפוסטר המקורי נשמר. {imdb_id|tmdb_id|kitsu_id} מציין סוגי מזהים נתמכים - נעשה שימוש בסוג המתאים, או שהפוסטר המקורי נשמר. הוספת ? הופכת מציין לאופציונלי, כך שיוחלף בערך ריק במקום לדלג: {imdb_id?}. מציינים נוספים: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">גופני כתוביות</string>
+    <string name="web_subtitle_font_subtitle">.יש לבחור קובץ TTF או OTF לשימוש ככתוביות בטלוויזיה</string>
+    <string name="web_subtitle_font_choose">בחירת קובץ גופן</string>
+    <string name="web_subtitle_font_uploading">…מעלה</string>
+    <string name="web_subtitle_font_added">נוסף לטלוויזיה שלך</string>
+    <string name="web_subtitle_font_error">.לא ניתן היה לייבא את הגופן הזה. יש לבחור קובץ TTF או OTF תקין בגודל של עד 10 MB</string>
+    <string name="web_subtitle_font_connection_error">שגיאת חיבור</string>
     
 
     <string name="mdblist_name">MDBList</string>
@@ -1228,7 +1304,6 @@
     <string name="mdblist_rate_limited">מגבלת הבקשות של MDBList מוצתה. הסנכרון יתחדש לאחר איפוס המגבלה.</string>
     <string name="mdblist_revoke_failed">הניתוק בוצע במכשיר זה. כדי לבטל את הגישה לגמרי, יש להסיר את האפליקציה בהגדרות חשבון ה-MDBList.</string>
     <string name="mdblist_title">דירוגי MDBList</string>
-    <string name="mdblist_subtitle">הגדרת דירוגים חיצוניים המוצגים בבאנר הראשי של דף הפרטים</string>
     <string name="mdblist_enable_title">אפשור דירוגי MDBList</string>
     <string name="mdblist_enable_subtitle">משיכת דירוגים מספקים חיצוניים במסך הפרטים</string>
     <string name="mdblist_api_key_title">מפתח API</string>
@@ -1255,7 +1330,6 @@
     <string name="mdblist_show_on_hero_title">הצגת דירוגים בבאנר הראשי</string>
     <string name="mdblist_show_on_hero_subtitle">הצגת דירוגי MDBList בקרוסלת הבאנר הראשי (מודרני וקלאסי/רשת)</string>
     <string name="mdblist_rating_order_title">סדר דירוגים</string>
-    <string name="mdblist_rating_order_subtitle">שלושת הדירוגים הראשונים הפעילים והזמינים מוצגים בבאנר הראשי המודרני. ניתן להשתמש בחצים לשינוי הסדר.</string>
     <string name="mdblist_dialog_title">מפתח API של MDBList</string>
     <string name="mdblist_dialog_subtitle">הזנת מפתח ה-API לאחזור דירוגים חיצוניים</string>
     <string name="mdblist_dialog_placeholder">מפתח API של MDBList</string>
@@ -1400,6 +1474,11 @@
     <string name="settings_stream_badges_section">סגנון Fusion</string>
     <string name="settings_stream_size_badges_title">תגי גודל</string>
     <string name="settings_stream_size_badges_description">הצגת תגי גודל קובץ בתוצאות מקור ובפאנלי מקור בנגן.</string>
+    <string name="settings_stream_badges_in_player_title">הצגה בנגן</string>
+    <string name="settings_stream_badges_in_player_description">הצגת תגים לווידאו ולאודיו שמופעלים, מתחת לכותרת הנגן. נדרשת חבילת תגים שמתאימה לטקסט רגיל, כמו 2160p או Atmos.</string>
+    <string name="settings_stream_player_badges_title">תגי נגן</string>
+    <string name="settings_stream_player_badges_description">בחירת חבילת התגים שבה הנגן משתמש.</string>
+    <string name="settings_stream_player_badges_same">זהה לתגי המקור</string>
     <string name="settings_stream_addon_logo_title">הצגת לוגו התוסף</string>
     <string name="settings_stream_addon_logo_description">הצגת לוגו ושם תוסף לצד המקורות.</string>
     <string name="settings_stream_display_section">תצוגה</string>
@@ -1790,9 +1869,9 @@
     <string name="settings_p2p_cache_size_title">גודל מטמון טורנט</string>
     <string name="settings_p2p_cache_size_description">נתוני טורנט שהורדו נשמרים במכשיר זה להפעלה חוזרת מהירה יותר</string>
     <string name="settings_p2p_cache_none">ללא מטמון קבוע</string>
-    <string name="settings_p2p_cache_2_gb">2 GB</string>
-    <string name="settings_p2p_cache_5_gb">5 GB</string>
-    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_cache_2_gb">‎2 GB</string>
+    <string name="settings_p2p_cache_5_gb">‎5 GB</string>
+    <string name="settings_p2p_cache_10_gb">‎10 GB</string>
     <string name="settings_p2p_clear_cache_title">ניקוי מטמון טורנט</string>
     <string name="settings_p2p_clear_cache_usage">%1$s בשימוש כרגע</string>
     <string name="settings_p2p_clear_cache_usage_pending">השימוש נמדד לאחר הפעלת P2P; ניתן לבחור כדי לנקות נתוני טורנט שמורים במטמון</string>
@@ -1825,6 +1904,8 @@
     <string name="player_engine_switching_title">מחליף מנוע הפעלה</string>
     <string name="player_engine_switching_message">האתחול נכשל. מחליף ל-%1$s…</string>
     <string name="player_engine_switching_manual_message">מחליף ל-%1$s…</string>
+    <string name="player_engine_switch_title">לעבור ל-%1$s?</string>
+    <string name="player_engine_switch_message">הווידאו ייטען מחדש מהנקודה שאליה הגעת.</string>
     <string name="playback_show_loading_status">הצגת סטטוס טעינה</string>
     <string name="playback_show_loading_status_sub">הצגת התקדמות שלב-אחר-שלב בזמן שהנגן מאתחל.</string>
     <string name="player_sync_line">סנכרון לפי שורה</string>
@@ -1850,7 +1931,6 @@
     <string name="parental_severity_mild">קל</string>
     <string name="player_ends_at">מסתיים ב-%1$s</string>
     <string name="player_live_watched">LIVE  %1$s</string>
-    <string name="player_via">דרך %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">עיכוב כתוביות</string>
@@ -1926,13 +2006,13 @@
     <string name="audio_dialog_tab_tracks">שמע</string>
     <string name="audio_dialog_tab_mix">מיקס</string>
     <string name="audio_delay_label">השהיית שמע</string>
-    <string name="audio_delay_range">טווח: %1$.2f שנ׳ עד %2$.2f שנ׳</string>
+    <string name="audio_delay_range">טווח: ‎%1$.2f שנ׳ עד ‎%2$.2f שנ׳</string>
     <string name="audio_mix_label">הגברה (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">שמירה בין הפעלות: פועל</string>
     <string name="audio_mix_persist_off">שמירה בין הפעלות: כבוי</string>
-    <string name="audio_mix_range">טווח: %1$d dB עד %2$d dB</string>
-    <string name="audio_mix_range_saved">טווח: %1$d dB עד %2$d dB (שמור)</string>
+    <string name="audio_mix_range">טווח: ‎%1$d dB עד ‎%2$d dB</string>
+    <string name="audio_mix_range_saved">טווח: ‎%1$d dB עד ‎%2$d dB (שמור)</string>
     <string name="audio_mix_unavailable">הגברה אינה זמינה במכשיר זה</string>
     <string name="audio_center_mix_label">Downmix: רמת מיקס מרכזי</string>
     <string name="audio_center_mix_value_db">%1$d dB</string>
@@ -1940,6 +2020,12 @@
     <string name="audio_center_mix_unavailable">מיקס מרכזי זמין רק כאשר downmix של FFmpeg פעיל.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">שמירה על שמע מקורי ב-downmix</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">כשמושבת, נורמליזציית downmix עלולה להפחית את עוצמת הקול הכוללת.</string>
+    <string name="audio_downmix_lfe_level">רמת LFE ב-Downmix</string>
+    <string name="audio_downmix_lfe_level_sub">מערבב את ערוץ הסאבוופר (LFE) אל שאר הרמקולים במקום להשמיט אותו. רק לפריסות ללא LFE, כמו 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">בשימוש כשלפריסת ה-Downmix אין ערוץ LFE. חל מההפעלה הבאה.</string>
+    <string name="audio_downmix_lfe_level_off">כבוי</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
 
     <string name="subtitle_dialog_title">כתוביות</string>
     <string name="subtitle_no_builtin">אין כתוביות מובנות זמינות</string>
@@ -1973,6 +2059,9 @@
     <string name="subtitle_style_bold">מודגש:</string>
     <string name="subtitle_style_text_color">צבע הטקסט:</string>
     <string name="subtitle_style_text_opacity">שקיפות טקסט</string>
+    <string name="subtitle_style_text_color_hdr">צבע הטקסט (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">שקיפות טקסט (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">בהירות (HDR)</string>
     <string name="subtitle_style_outline">קו מתאר:</string>
     <string name="subtitle_style_bottom_offset">מרווח תחתון:</string>
     <string name="subtitle_style_defaults">ברירות מחדל</string>
@@ -2130,15 +2219,8 @@
     <string name="library_status_dropped">ננטש</string>
     <string name="library_syncing_library">מסנכרן ספרייה…</string>
     <string name="library_type_all">הכול</string>
-    <string name="library_type_items">פריטים</string>
-    <string name="library_empty_local_title">אין עדיין פריטים ב\"%1$s\"</string>
-    <string name="library_empty_trakt_title">אין %1$s ברשימה זו</string>
-    <string name="library_empty_local_subtitle">אפשר להתחיל לשמור מועדפים כדי לראותם כאן</string>
-    <string name="library_empty_trakt_subtitle">שימוש ב-+ בפרטים להוספת פריטים לרשימת צפייה</string>
     <string name="library_empty_trakt_not_auth_title">Trakt לא מחובר</string>
     <string name="library_empty_trakt_not_auth_subtitle">יש לחבר את חשבון ה-Trakt בהגדרות כדי לצפות בספריית ה-Trakt</string>
-    <string name="library_empty_simkl_title">אין %1$s בסטטוס זה</string>
-    <string name="library_empty_simkl_subtitle">יש ללחוץ על + בפרטים כדי להוסיף פריטים לסטטוס Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl לא מחובר</string>
     <string name="library_empty_simkl_not_auth_subtitle">יש לחבר את חשבון ה-Simkl בהגדרות כדי לראות את ספריית ה-Simkl</string>
     <string name="library_list_create_dialog_title">יצירת רשימה</string>
@@ -2433,6 +2515,7 @@
     <string name="update_checking">בודק עדכונים…</string>
     <string name="update_waiting_for_stable">הגרסה היציבה הבאה תתקבל כשתהיה זמינה</string>
     <string name="update_download_complete">ההורדה הושלמה. מוכן להתקנה.</string>
+    <string name="update_installed_automatically">עודכן אוטומטית כשהמכשיר היה במצב סרק</string>
     <string name="update_up_to_date">ברשותך הגרסה העדכנית ביותר. שינויים אחרונים:</string>
     <string name="update_close">סגירה</string>
     <string name="update_open_settings">פתיחת הגדרות</string>
@@ -2512,7 +2595,6 @@
     <string name="player_error_failed_start_torrent">התחלת הטורנט נכשלה: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">תמיכה ב-HDR עם עיבוד Canvas. עלול לחסום את שרשור הממשק.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2524,6 +2606,10 @@
     <string name="cd_sources">מקורות</string>
     <string name="cd_switch_player_engine">החלפת מנוע נגן</string>
     <string name="cd_episodes">פרקים</string>
+    <string name="player_chapter_number">מקטע %1$d</string>
+    <string name="player_chapters">מקטעים</string>
+    <string name="player_chapters_title">מקטעים (%1$d)</string>
+    <string name="player_chapter_remaining">נותרו %1$s</string>
     <string name="cd_playback_speed">מהירות הפעלה</string>
     <string name="cd_aspect_ratio">יחס גובה-רוחב</string>
     <string name="cd_open_external_player">פתיחה בנגן חיצוני</string>
@@ -2545,6 +2631,12 @@
     <string name="cd_remove">הסרה</string>
     <string name="cd_preview">תצוגה מקדימה</string>
     <string name="cd_test">בדיקה</string>
+    <string name="cd_enable_scraper">הפעלת %1$s</string>
+    <string name="cd_enable_addon">הפעלת %1$s</string>
+    <string name="cd_color_swatch">צבע %1$s</string>
+    <string name="cd_emoji_option">אימוג׳י %1$s</string>
+    <string name="cd_trailer_controls">פקדי טריילר</string>
+    <string name="cd_seek_bar">סרגל הדילוג</string>
     <string name="cd_unlink">ביטול קישור</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">לוגו Trakt</string>
@@ -3053,8 +3145,8 @@
     <string name="sponsors_error_api_http">שגיאת API של נותני חסות: %1$d</string>
 
     <!-- Contributor role badges -->
-    <string name="contributor_role_translator">מתרגם/ת</string>
-    <string name="contributor_role_maintainer">מתחזק/ת</string>
+    <string name="contributor_role_translator">תרגום</string>
+    <string name="contributor_role_maintainer">תחזוקה</string>
 
     <!-- Network / safe API errors -->
     <string name="network_error_empty_response_body">גוף תגובה ריק</string>
@@ -3214,7 +3306,7 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">אגירת נתונים ורשת</string>
     <string name="playback_section_buffer_network_desc">כמה תוכן לשמור בזיכרון וכיצד למשוך מקורות.</string>
-    <string name="playback_net_device_memory_info">זיכרון המכשיר: %1$s | מגבלת בטיחות מומלצת: %2$d MB</string>
+    <string name="playback_net_device_memory_info">זיכרון המכשיר: ‎%1$s | מגבלת בטיחות מומלצת: ‎%2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">זיכרון מקורי של ExoPlayer</string>
     <string name="playback_net_nuvio_performance_mode_sub">הפעלת הקצאת זיכרון מקורית מחוץ לערימה ואופטימיזציות גלילה.</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">תכונה זו אינה נתמכת במכשיר.</string>
@@ -3233,14 +3325,14 @@
     <string name="playback_buffer_after_rebuffer_sub">כמה תוכן לאגור אחרי שההפעלה נעצרת בגלל טעינה. ערכים גבוהים יותר מפחיתים הפסקות חוזרות.</string>
     <string name="playback_buffer_back">זיכרון לחזרה אחורה</string>
     <string name="playback_buffer_back_sub">כמה מהתוכן שכבר נצפה נשמר בזיכרון, כדי לאפשר חזרה אחורה בלי לחכות לטעינה מחדש. ניתן להגדיר ל-0 כדי להשבית ולחסוך בזיכרון.</string>
-    <string name="playback_buffer_back_reserve">נשמרים כ-%1$dMB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
+    <string name="playback_buffer_back_reserve">נשמרים כ-‎%1$d MB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
     <string name="playback_buffer_managed">ניהול זיכרון אוטומטי</string>
     <string name="playback_buffer_managed_sub">האפליקציה בוחרת בעצמה כמה זיכרון להשתמש כדי לא לפגוע במכשיר. כדאי לכבות רק כדי לקבוע ידנית את כמות הזיכרון (לא מומלץ למשתמשים רגילים).</string>
     <string name="playback_buffer_target">כמות זיכרון לטעינה מראש</string>
     <string name="playback_buffer_target_sub">כמה זיכרון מותר לאפליקציה להשתמש כדי לטעון תוכן מראש.</string>
     <string name="playback_buffer_target_managed_hint">מנוהל על ידי תקציב הזיכרון של המכשיר. יש לכבות את תקציב הזיכרון המנוהל כדי להגדיר זאת.</string>
-    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
-    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (%1$d MB). סיכון גבוה לקריסה.</string>
+    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (‎%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
+    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (‎%1$d MB). סיכון גבוה לקריסה.</string>
     <string name="playback_buffer_allow_large">אפשור זיכרון גדול יותר</string>
     <string name="playback_buffer_allow_large_sub">הסרת ההגבלה הרגילה. עלול לגרום לקריסת האפליקציה במכשירים עם מעט זיכרון.</string>
     <string name="playback_cache_header">מטמון דיסק</string>
@@ -3325,7 +3417,7 @@
     <string name="unit_speed_mb_s">%1$s MB/s</string>
 
     <!-- Misc fallbacks -->
-    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: %1$d / %2$d MB</string>
+    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: ‎%1$d / %2$d MB</string>
     <string name="profile_default_name">פרופיל %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">אוסף TMDB %1$d</string>
@@ -3337,19 +3429,19 @@
     <string name="stream_test_no_stream">לא נרשמה הפעלה. יש להפעיל וידאו כדי להריץ בדיקות אבחון על השרת שלו.</string>
     <string name="stream_test_btn_start">התחלת בדיקה</string>
     <string name="stream_test_btn_measuring_baseline">מודד קו בסיס…</string>
-    <string name="stream_test_btn_measuring_parallel1">מודד מקבילי (1MB)…</string>
-    <string name="stream_test_btn_measuring_parallel4">מודד מקבילי (4MB)…</string>
-    <string name="stream_test_btn_measuring_parallel8">מודד מקבילי (8MB)…</string>
-    <string name="stream_test_btn_measuring_parallel16">מודד מקבילי (16MB)…</string>
+    <string name="stream_test_btn_measuring_parallel1">מודד מקבילי (‎1 חיבור)…</string>
+    <string name="stream_test_btn_measuring_parallel4">מודד מקבילי (‎4 חיבורים)…</string>
+    <string name="stream_test_btn_measuring_parallel8">מודד מקבילי (‎8 חיבורים)…</string>
+    <string name="stream_test_btn_measuring_parallel16">מודד מקבילי (‎16 חיבורים)…</string>
     <string name="stream_test_btn_run_again">הרצה חוזרת</string>
     <string name="stream_test_btn_running">פועל…</string>
     <string name="stream_test_label_baseline">חיבור בודד סטנדרטי (קו בסיס)</string>
-    <string name="stream_test_label_parallel1">חיבור מקבילי (מקטעי 1 MB)</string>
-    <string name="stream_test_label_parallel4">חיבור מקבילי (מקטעי 4 MB)</string>
-    <string name="stream_test_label_parallel8">חיבור מקבילי (מקטעי 8 MB)</string>
-    <string name="stream_test_label_parallel16">חיבור מקבילי (מקטעי 16MB)</string>
+    <string name="stream_test_label_parallel1">חיבור מקבילי (‎1 חיבור)</string>
+    <string name="stream_test_label_parallel4">חיבור מקבילי (‎4 חיבורים)</string>
+    <string name="stream_test_label_parallel8">חיבור מקבילי (‎8 חיבורים)</string>
+    <string name="stream_test_label_parallel16">חיבור מקבילי (‎16 חיבורים)</string>
     <string name="stream_test_error_prefix">שגיאה: %1$s</string>
-    <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: %1$s</string>
+    <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: ‎%1$s</string>
     <string name="stream_test_error_connection">החיבור נכשל. ייתכן שקישור הסטרים האחרון שהופעל פג תוקף או שאינו נגיש. כדאי להפעיל את הווידאו שוב ולנסות שוב.</string>
 
     <string name="random_episode_title">ערבוב</string>
@@ -3383,8 +3475,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
     <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ורצועות מוטמעות נוספות לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, נעשה שימוש בהתאמה החזקה הראשונה שנמצאה, מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
-    <string name="autosync_toast_failed">הסנכרון נכשל: הסנכרון האוטומטי לא הצליח להתאים את הכתוביות לסרטון.</string>
-    <string name="autosync_toast_failed_no_reference">הסנכרון נכשל: אין בסרטון הזה כתוביות מוטמעות להשוואה.</string>
-    <string name="autosync_toast_failed_unsupported">הסנכרון נכשל: הסנכרון האוטומטי לא תומך בפורמט הכתוביות הזה.</string>
     <string name="autosync_label_synced">מסונכרן אוטומטית</string>
+    <string name="stream_resume_from_time">המשך מ-%1$s</string>
+    <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>
 </resources>

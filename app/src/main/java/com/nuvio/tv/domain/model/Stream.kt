@@ -29,7 +29,10 @@ data class Stream(
     val debridCacheStatus: StreamDebridCacheStatus? = null,
     val badges: List<StreamBadge> = emptyList(),
     val subtitles: List<Subtitle> = emptyList(),
-    val serverTarget: ServerPlaybackTarget? = null
+    val serverTarget: ServerPlaybackTarget? = null,
+    val pluginSourceName: String? = null,
+    /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
+    val debridResolved: Boolean = false
 ) {
     /**
      * Returns the primary stream source URL
@@ -203,6 +206,10 @@ fun Number?.toStreamAudioDelayMs(): Int? =
         ?.roundToInt()
         ?.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
 
+/** Normalizes a `behaviorHints.audioDelayLanguage` value: trimmed language code, blank or oversized values dropped. */
+fun String?.toStreamAudioDelayLanguage(): String? =
+    this?.trim()?.takeIf { it.isNotEmpty() && it.length <= 35 }
+
 @Immutable
 data class StreamBehaviorHints(
     val notWebReady: Boolean?,
@@ -213,7 +220,9 @@ data class StreamBehaviorHints(
     val videoSize: Long? = null,
     val filename: String? = null,
     // Extra audio delay for this stream (ms, >0 = audio later), added on top of the user's/device delay.
-    val audioDelayMs: Int? = null
+    val audioDelayMs: Int? = null,
+    // When set, audioDelayMs only applies to audio and embedded subtitle tracks in this language.
+    val audioDelayLanguage: String? = null
 )
 
 @Immutable

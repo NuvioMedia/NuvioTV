@@ -16,6 +16,7 @@ import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.ui.SubtitleView
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncLibassSubtitles
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncSyncedSubtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -45,7 +46,7 @@ private val mainHandler = Handler(Looper.getMainLooper())
  * Whether [subtitle] can be hot-attached without [androidx.media3.exoplayer.ExoPlayer.setMediaSource].
  *
  * ASS/SSA are excluded when libass is requested/active: those must stay on the media-source path so
- * [io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory] / AssSubtitleView keep full
+ * [com.nuvio.tv.libass.media.parser.AssSubtitleParserFactory] / AssSubtitleSurfaceView keep full
  * styling. SRT/VTT/TTML still use the buffer-preserving sidecar.
  */
 internal fun PlayerRuntimeController.canAttachAddonSubtitleViaSidecar(subtitle: Subtitle): Boolean {
@@ -99,6 +100,7 @@ internal fun PlayerRuntimeController.stopSidecarAddonSubtitle(clearView: Boolean
     activeSidecarSubtitleKey = null
     activeSidecarGeneration = 0L
     AutoSyncSyncedSubtitle.clear() // AutoSync hook
+    AutoSyncLibassSubtitles.clear(_exoPlayer?.getAssHandlerCompat()) // AutoSync hook
     sidecarTimedCues = emptyList()
     lastSidecarCueSignature = null
     if (clearView) {
@@ -281,7 +283,7 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
 }
 
 private fun PlayerRuntimeController.showSidecarCues(view: SubtitleView, cues: List<Cue>) {
-    view.setCues(cues)
+    view.setCues(presentExoCues(cues))
     subtitleCueTracker.update(cues)
 }
 

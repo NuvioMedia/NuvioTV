@@ -81,6 +81,7 @@ internal object AutomaticSubtitleSync {
     private const val HTTP_429_RETRY_DELAY_MS = 900L
     private const val SUBTITLE_DOWNLOAD_TIMEOUT_MS = 15_000L
     private const val MAX_SUBTITLE_RESPONSE_BYTES = 4 * 1024 * 1024
+    private const val MAX_RESOLVED_CACHE_ENTRIES = 4
     private const val MAX_PARSED_SUBTITLE_CACHE_ENTRIES = 8
 
     private val parsedSubtitleCacheLock = Any()
@@ -93,6 +94,23 @@ internal object AutomaticSubtitleSync {
             override fun removeEldestEntry(
                 eldest: MutableMap.MutableEntry<ParsedSubtitleCacheKey, CachedParsedSubtitle>?,
             ): Boolean = size > MAX_PARSED_SUBTITLE_CACHE_ENTRIES
+        }
+
+    /**
+     * The last results AutoSync applied, by stream and subtitle. Checking only the selected
+     * subtitle again on the same stream (the player rebuilt after the app was in the background,
+     * or the viewer switched back to it) reuses the result instead of analysing again.
+     */
+    private val resolvedCacheLock = Any()
+    private val resolvedCache =
+        object : LinkedHashMap<Pair<String, String>, AutoSyncResolvedTimeline>(
+            MAX_RESOLVED_CACHE_ENTRIES,
+            0.75f,
+            true,
+        ) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<Pair<String, String>, AutoSyncResolvedTimeline>?,
+            ): Boolean = size > MAX_RESOLVED_CACHE_ENTRIES
         }
 
     suspend fun findTimelineRetime(
@@ -110,7 +128,10 @@ internal object AutomaticSubtitleSync {
         /** False when the player does not feed [EmbeddedSubtitleCueStore] (mpv): indexed references only. */
         allowLiveReference: Boolean = true,
     ): AutoSyncResolvedTimeline? {
-        Unit
+        if (alternativeSubtitles.isEmpty() && alternativeSubtitlesProvider == null) {
+            synchronized(resolvedCacheLock) { resolvedCache[sourceKey to selectedSubtitleUrl] }
+                ?.let { return it.copy(reused = true) }
+        }
         val aggressiveMode = AutoSyncPreferences.aggressiveMode.value
 
         val result = supervisorScope {
@@ -877,6 +898,15 @@ internal object AutomaticSubtitleSync {
 
                 val family = completed.hypothesis.family
                 val pairMatch = completed.evaluation.match
+                family.evaluatedPairs++
+                if (
+                    AutoSyncNoFitTracker.confirmsNoFit(
+                        result = pairMatch?.timeline,
+                        sampledReference = completed.hypothesis.rankedReference.track.sampled,
+                    )
+                ) {
+                    family.noFitPairs++
+                }
                 if (pairMatch != null) {
                     family.completedUsableAttempts++
                     if (isBetterMatch(pairMatch, family.best, sameTarget = true)) {
@@ -1038,6 +1068,25 @@ internal object AutomaticSubtitleSync {
                 }
             }
             if (winningFamily == null || winningMatch == null || !winningMatch.timeline.confident) {
+                // Only a selected subtitle that clearly fits none of the references it was tried
+                // against is reported as out of sync; anything less certain stays inconclusive.
+                val selectedFamily = timingFamilies.firstOrNull { family ->
+                    family.members.any { it.candidate.url == selectedSubtitleUrl }
+                }
+                val confirmedNoFit = selectedFamily != null &&
+                    AutoSyncNoFitTracker.isConfirmedNoFit(
+                        evaluatedPairs = selectedFamily.evaluatedPairs,
+                        noFitPairs = selectedFamily.noFitPairs,
+                        rankedReferences = selectedFamily.rankedReferences.size,
+                        abandoned = selectedFamily.abandoned,
+                    )
+                onAnalysisOutcome?.invoke(
+                    if (confirmedNoFit) {
+                        AutoSyncAnalysisOutcome.NO_FIT
+                    } else {
+                        AutoSyncAnalysisOutcome.INCONCLUSIVE
+                    },
+                )
                 if (!selectedResolved) {
                     selectedSubtitleDeferred.cancel()
                 }
@@ -1071,6 +1120,9 @@ internal object AutomaticSubtitleSync {
                 subtitleBody = winningMember.loaded.rawBody,
                 timeline = memberMatch.timeline,
             )
+        }
+        if (result != null) {
+            synchronized(resolvedCacheLock) { resolvedCache[sourceKey to result.subtitleUrl] = result }
         }
         return result
     }
@@ -1913,6 +1965,9 @@ internal object AutomaticSubtitleSync {
         var bestSchedulingScore: Double = Double.NEGATIVE_INFINITY,
         val noFit: AutoSyncNoFitTracker = AutoSyncNoFitTracker(),
         var abandoned: Boolean = false,
+        var evaluatedPairs: Int = 0,
+        /** Pairs that confirmed a no-fit ([AutoSyncNoFitTracker.confirmsNoFit]). */
+        var noFitPairs: Int = 0,
     )
     private data class PairHypothesis(
         val family: CandidateTimingFamilyState,
@@ -1948,6 +2003,12 @@ internal enum class AutoSyncAnalysisOutcome {
     SUBTITLE_UNAVAILABLE,
     NO_SUBTITLE_TRACKS,
     NO_USABLE_REFERENCE,
+
+    /** The selected subtitle clearly fits none of the video's references: it is out of sync with it. */
+    NO_FIT,
+
+    /** No confident match, but nothing shows that the selected subtitle does not fit. */
+    INCONCLUSIVE,
 }
 
 internal data class AutoSyncResolvedTimeline(
@@ -1955,6 +2016,8 @@ internal data class AutoSyncResolvedTimeline(
     val subtitleHeaders: Map<String, String>,
     val subtitleBody: String?,
     val timeline: AutoSyncTimelineRetimeResult,
+    /** Applied before on this stream: the viewer's own delay since then is kept, not reset. */
+    val reused: Boolean = false,
 )
 
 internal data class ReferenceTrack(

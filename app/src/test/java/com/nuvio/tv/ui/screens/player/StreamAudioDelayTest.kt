@@ -3,10 +3,13 @@ package com.nuvio.tv.ui.screens.player
 import com.nuvio.tv.data.mapper.toDomain
 import com.nuvio.tv.data.remote.dto.BehaviorHintsDto
 import com.nuvio.tv.data.remote.dto.StreamResponseDto
+import com.nuvio.tv.domain.model.toStreamAudioDelayLanguage
 import com.nuvio.tv.domain.model.toStreamAudioDelayMs
 import com.squareup.moshi.Moshi
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StreamAudioDelayTest {
@@ -158,5 +161,95 @@ class StreamAudioDelayTest {
             .map { it.behaviorHints?.toDomain()?.audioDelayMs }
 
         assertEquals(listOf(1_250, 1_251, -400, AUDIO_DELAY_MAX_MS, null, null), delays)
+    }
+    // --- Language-scoped stream delay (audioDelayLanguage) ---
+
+    @Test
+    fun `without a language the stream delay applies to every audio track`() {
+        assertTrue(StreamDelayScope.appliesToAudio(null, "en", hasSelectedAudio = true))
+        val parts = AudioDelayParts(deviceMs = 100).withStream(2_000).withStreamAudioActive(false)
+        assertEquals(2_100, parts.totalMs)
+    }
+
+    @Test
+    fun `stream delay only applies to the audio track in the stream language`() {
+        // Original English from the video, Spanish dub from the addon's audio source.
+        assertTrue(StreamDelayScope.appliesToAudio("es", "es", hasSelectedAudio = true))
+        assertTrue(StreamDelayScope.appliesToAudio("es", "spa", hasSelectedAudio = true))
+        assertFalse(StreamDelayScope.appliesToAudio("es", "en", hasSelectedAudio = true))
+        assertFalse(StreamDelayScope.appliesToAudio("es", null, hasSelectedAudio = true))
+        assertTrue(StreamDelayScope.appliesToAudio("it", "ita", hasSelectedAudio = true))
+        // Latin American Spanish is its own language.
+        assertFalse(StreamDelayScope.appliesToAudio("es", "es-419", hasSelectedAudio = true))
+        assertTrue(StreamDelayScope.appliesToAudio("es-419", "es-419", hasSelectedAudio = true))
+        // Tracks not loaded yet: keep the delay so the default dubbed track starts in sync.
+        assertTrue(StreamDelayScope.appliesToAudio("es", null, hasSelectedAudio = false))
+    }
+
+    @Test
+    fun `original audio drops the stream part but keeps the device delay and tweak`() {
+        val dubbed = AudioDelayParts(deviceMs = 100).withStream(2_000, "es").withManualTotal(2_300)
+        val original = dubbed.withStreamAudioActive(false)
+
+        assertEquals(100, original.totalMs)
+        assertEquals(100, original.persistableDeviceMs)
+        // Switching back restores the stream delay and the tweak.
+        assertEquals(2_300, original.withStreamAudioActive(true).totalMs)
+    }
+
+    @Test
+    fun `audio panel on the original track changes the device delay only`() {
+        val original = AudioDelayParts(deviceMs = 100).withStream(2_000, "es").withStreamAudioActive(false)
+        val tweaked = original.withManualTotal(250)
+
+        assertEquals(250, tweaked.totalMs)
+        assertEquals(250, tweaked.deviceMs)
+        assertEquals(250, tweaked.persistableDeviceMs)
+        assertEquals(2_250, tweaked.withStreamAudioActive(true).totalMs)
+    }
+
+    @Test
+    fun `new stream resets the language scope`() {
+        val parts = AudioDelayParts().withStream(2_000, "es").withStreamAudioActive(false).withStream(1_000)
+        assertNull(parts.streamLanguage)
+        assertTrue(parts.streamAudioActive)
+        assertEquals(1_000, parts.totalMs)
+        assertNull(AudioDelayParts().withStream(1_000, "  ").streamLanguage)
+    }
+
+    @Test
+    fun `subtitle offset is the stream source offset without the device delay`() {
+        val parts = AudioDelayParts(deviceMs = 300).withStream(2_000, "es").withManualTotal(2_450)
+        assertEquals(2_150, parts.streamSourceOffsetMs)
+        // Still valid while the original audio is playing: the subtitles keep their own timeline.
+        assertEquals(2_150, parts.withStreamAudioActive(false).streamSourceOffsetMs)
+    }
+
+    @Test
+    fun `only embedded subtitles in the stream language are shifted`() {
+        assertTrue(StreamDelayScope.appliesToSubtitle("es", "es", true, addonSubtitleActive = false))
+        assertFalse(StreamDelayScope.appliesToSubtitle("es", "en", true, addonSubtitleActive = false))
+        // Addon (external) subtitles follow the video.
+        assertFalse(StreamDelayScope.appliesToSubtitle("es", "es", true, addonSubtitleActive = true))
+        assertFalse(StreamDelayScope.appliesToSubtitle("es", null, false, addonSubtitleActive = false))
+        // Without a language nothing tells us which subtitles come from the audio source.
+        assertFalse(StreamDelayScope.appliesToSubtitle(null, "es", true, addonSubtitleActive = false))
+    }
+
+    @Test
+    fun `addon behaviorHints audioDelayLanguage parses and is normalized`() {
+        val json = """
+            {"streams":[
+              {"url":"https://a","behaviorHints":{"audioDelayMs":2000,"audioDelayLanguage":" es "}},
+              {"url":"https://b","behaviorHints":{"audioDelayMs":2000,"audioDelayLanguage":""}},
+              {"url":"https://c","behaviorHints":{"audioDelayMs":2000}}
+            ]}
+        """.trimIndent()
+
+        val languages = requireNotNull(streamResponseAdapter.fromJson(json)?.streams)
+            .map { it.behaviorHints?.toDomain()?.audioDelayLanguage }
+
+        assertEquals(listOf("es", null, null), languages)
+        assertNull("x".repeat(36).toStreamAudioDelayLanguage())
     }
 }

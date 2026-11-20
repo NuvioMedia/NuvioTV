@@ -8,6 +8,7 @@ data class AddonManagerUiState(
     val isInstalling: Boolean = false,
     val installUrl: String = "",
     val installedAddons: List<Addon> = emptyList(),
+    val movingAddonKey: String? = null,
     val error: String? = null,
     val transientMessage: String? = null,
     val transientMessageIsError: Boolean = false,
@@ -36,5 +37,8 @@ data class PendingChangeInfo(
     val proposedCollectionCount: Int = 0,
     val proposedDisabledCollectionKeys: List<String> = emptyList(),
     val proposedFollowAddonsOrder: Boolean? = null,
-    val isApplying: Boolean = false
+    val isApplying: Boolean = false,
+    val trackingAddonNames: List<String>? = null,
+    val trackingConsentUrls: List<String> = emptyList(),
+    val awaitingTrackingConsent: Boolean = false
 )

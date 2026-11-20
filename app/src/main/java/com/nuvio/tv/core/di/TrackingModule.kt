@@ -13,6 +13,7 @@ import com.nuvio.tv.data.repository.TraktTrackingProvider
 import com.nuvio.tv.data.simkl.SimklLibraryService
 import com.nuvio.tv.core.tracking.TrackingHistoryWriter
 import com.nuvio.tv.core.tracking.TrackingProgressProvider
+import com.nuvio.tv.core.tracking.TrackingRatingProvider
 import com.nuvio.tv.data.repository.TraktTrackingHistoryWriter
 import com.nuvio.tv.data.repository.TraktTrackingProgressProvider
 import com.nuvio.tv.data.simkl.SimklTrackingHistoryWriter
@@ -22,6 +23,8 @@ import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.data.mdblist.MdbListTrackingHistoryWriter
 import com.nuvio.tv.data.mdblist.MdbListTrackingProgressProvider
 import com.nuvio.tv.data.mdblist.MdbListTrackingProvider
+import com.nuvio.tv.data.mdblist.MdbListUserRatings
+import com.nuvio.tv.data.simkl.SimklRatings
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -47,6 +50,14 @@ abstract class TrackingModule {
     @Binds
     @IntoSet
     abstract fun bindMdbListHistory(writer: MdbListTrackingHistoryWriter): TrackingHistoryWriter
+
+    @Binds
+    @IntoSet
+    abstract fun bindMdbListRatings(provider: MdbListUserRatings): TrackingRatingProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindSimklRatings(provider: SimklRatings): TrackingRatingProvider
 
     @Binds
     @Singleton

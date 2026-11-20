@@ -15,8 +15,7 @@ import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.core.player.SubtitleCharsetDetector
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor.DolbyVisionSampleTransformer
-import io.github.peerless2012.ass.media.AssHandler
-import io.github.peerless2012.ass.media.type.AssRenderType
+import com.nuvio.tv.libass.media.AssHandler
 import java.io.ByteArrayOutputStream
 import java.util.regex.Pattern
 import java.util.zip.DataFormatException
@@ -84,14 +83,14 @@ internal class NuvioAssMatroskaExtractor(
     }
 
     private fun onEbmlStart(contentPosition: Long, contentSize: Long) {
-        if (assHandler.renderType != AssRenderType.CUES) {
-            val currentExtractor = extractorOutput.get(this) as ExtractorOutput
-            if (currentExtractor !is NuvioAssSubtitleExtractorOutput) {
-                extractorOutput.set(
-                    this,
-                    NuvioAssSubtitleExtractorOutput(currentExtractor, assHandler, this)
-                )
-            }
+        // Always wrap the extractor output for overlay rendering (the new libass
+        // module always uses the SurfaceView overlay pipeline).
+        val currentExtractor = extractorOutput.get(this) as ExtractorOutput
+        if (currentExtractor !is NuvioAssSubtitleExtractorOutput) {
+            extractorOutput.set(
+                this,
+                NuvioAssSubtitleExtractorOutput(currentExtractor, assHandler, this)
+            )
         }
         super.startMasterElement(ID_EBML, contentPosition, contentSize)
     }

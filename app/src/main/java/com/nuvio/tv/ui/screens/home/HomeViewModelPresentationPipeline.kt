@@ -64,6 +64,7 @@ private data class LayoutUiPrefs(
     val showFullReleaseDate: Boolean,
     val modernLandscapePostersEnabled: Boolean,
     val alwaysShowLandscapeClearlogo: Boolean = false,
+    val heroDescriptionAutoScrollEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility,
     val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
@@ -187,14 +188,16 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
     viewModelScope.launch {
         combine(
             baseLayoutUiPrefsFlow,
-            modernLayoutPrefsFlow
-        ) { basePrefs, modernPrefs ->
+            modernLayoutPrefsFlow,
+            layoutPreferenceDataStore.heroDescriptionAutoScrollEnabled
+        ) { basePrefs, modernPrefs, heroDescriptionAutoScrollEnabled ->
             basePrefs.copy(
                 modernLandscapePostersEnabled = modernPrefs.landscapePosters,
                 modernHeroFullScreenBackdropEnabled = modernPrefs.fullScreenBackdrop,
                 homeImdbRatingsVisibility = modernPrefs.homeImdbRatingsVisibility,
                 alwaysShowLandscapeClearlogo = modernPrefs.alwaysShowLandscapeClearlogo,
                 detailImdbRatingsVisibility = modernPrefs.detailImdbRatingsVisibility,
+                heroDescriptionAutoScrollEnabled = heroDescriptionAutoScrollEnabled,
             )
         }
             .distinctUntilChanged()
@@ -239,6 +242,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         showFullReleaseDate = prefs.showFullReleaseDate,
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
                         alwaysShowLandscapeClearlogo = prefs.alwaysShowLandscapeClearlogo,
+                        heroDescriptionAutoScrollEnabled = prefs.heroDescriptionAutoScrollEnabled,
                         modernHeroFullScreenBackdropEnabled = prefs.modernHeroFullScreenBackdropEnabled,
                         homeImdbRatingsVisibility = prefs.homeImdbRatingsVisibility,
                         detailImdbRatingsVisibility = prefs.detailImdbRatingsVisibility,
@@ -470,6 +474,8 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                         if (trailerPreviewUrlsState[itemId] != fallbackSource.videoUrl) {
                             trailerPreviewUrlsState[itemId] = fallbackSource.videoUrl
                         }
+                        fallbackSource.youtubeKey?.let { trailerPreviewYoutubeKeys[itemId] = it }
+                            ?: trailerPreviewYoutubeKeys.remove(itemId)
                         val fallbackAudio = fallbackSource.audioUrl
                         if (fallbackAudio.isNullOrBlank()) {
                             trailerPreviewAudioUrlsState.remove(itemId)
@@ -484,12 +490,15 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                         }
                         trailerPreviewUrlsState.remove(itemId)
                         trailerPreviewAudioUrlsState.remove(itemId)
+                        trailerPreviewYoutubeKeys.remove(itemId)
                     }
                 } else {
                     val videoUrl = trailerSource.videoUrl
                     if (trailerPreviewUrlsState[itemId] != videoUrl) {
                         trailerPreviewUrlsState[itemId] = videoUrl
                     }
+                    trailerSource.youtubeKey?.let { trailerPreviewYoutubeKeys[itemId] = it }
+                        ?: trailerPreviewYoutubeKeys.remove(itemId)
                     val audioUrl = trailerSource.audioUrl
                     if (audioUrl.isNullOrBlank()) {
                         trailerPreviewAudioUrlsState.remove(itemId)

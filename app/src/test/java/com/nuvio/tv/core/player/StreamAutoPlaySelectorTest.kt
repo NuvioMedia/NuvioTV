@@ -5,6 +5,7 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.StreamDebridCacheStatus
@@ -199,6 +200,197 @@ class StreamAutoPlaySelectorTest {
     }
 
     @Test
+    fun `plugin binge group is selected when the autoplay source only allows addons`() {
+        val plugin = stream(
+            addonName = "ExamplePlugin",
+            url = "https://example.com/e6.mkv",
+            name = "480p",
+            bingeGroup = "local-plugin-example-plugin|480"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(plugin),
+            mode = StreamAutoPlayMode.MANUAL,
+            regexPattern = "",
+            source = StreamAutoPlaySource.INSTALLED_ADDONS_ONLY,
+            installedAddonNames = setOf("ExampleAddon"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example-plugin|480",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(plugin, selected)
+    }
+
+    @Test
+    fun `plugin binge group selects the played quality instead of the first stream`() {
+        val fullHd = stream(
+            addonName = "Example",
+            url = "https://example.com/1080.m3u8",
+            name = "1080p",
+            bingeGroup = "local-plugin-example|1080p"
+        )
+        val hd = stream(
+            addonName = "Example",
+            url = "https://example.com/720.m3u8",
+            name = "720p",
+            bingeGroup = "local-plugin-example|720p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(fullHd, hd),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example|720p",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(hd, selected)
+    }
+
+    @Test
+    fun `plugin binge group keeps the source and label when the episode title and host change`() {
+        val saved = pluginBingeGroup(
+            scraperId = "src",
+            url = "https://cdn-a.example.net/ep1.m3u8",
+            name = "ExampleHost",
+            title = "Episode 1 Dual Audio",
+            quality = "720p"
+        )
+        val otherLabel = pluginBingeGroup(
+            scraperId = "src",
+            url = "https://cdn-b.example.net/ep2.m3u8",
+            name = "ExampleHost",
+            title = "Episode 2 Original",
+            quality = "720p"
+        )
+        val sameLabel = pluginBingeGroup(
+            scraperId = "src",
+            url = "https://cdn-c.example.net/ep2.m3u8",
+            name = "ExampleHost",
+            title = "Episode 2 Dual Audio",
+            quality = "720p"
+        )
+        val original = stream(
+            addonName = "Example",
+            url = "https://example.com/original.m3u8",
+            bingeGroup = otherLabel
+        )
+        val dual = stream(
+            addonName = "Example",
+            url = "https://example.com/dual.m3u8",
+            bingeGroup = sameLabel
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(original, dual),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = saved,
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(dual, selected)
+    }
+
+    @Test
+    fun `a different plugin quality falls back when that variant is missing`() {
+        val fullHd = stream(
+            addonName = "Example",
+            url = "https://example.com/1080.m3u8",
+            bingeGroup = "local-plugin-example|1080p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(fullHd),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example|720p",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(fullHd, selected)
+    }
+
+    @Test
+    fun `legacy plugin binge group still matches the same provider`() {
+        val other = stream(
+            addonName = "Other",
+            url = "https://example.com/other.m3u8",
+            bingeGroup = "local-plugin-other|1080p"
+        )
+        val provider = stream(
+            addonName = "Example",
+            url = "https://example.com/1080.m3u8",
+            bingeGroup = "local-plugin-example|1080p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(other, provider),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(provider, selected)
+    }
+
+    @Test
+    fun `addon binge group still matches a torrent while its debrid check is running`() {
+        val nextFilename = "Show.S01E02.1080p.mkv"
+        val checking = stream(
+            addonName = "ExampleAddon",
+            name = "1080p",
+            infoHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            bingeGroup = "example-addon|1080p",
+            cacheState = StreamDebridCacheState.CHECKING,
+            filename = nextFilename
+        )
+        val otherQuality = stream(
+            addonName = "ExampleAddon",
+            name = "720p",
+            infoHash = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            bingeGroup = "example-addon|720p",
+            cacheState = StreamDebridCacheState.CACHED,
+            filename = "Show.S01E02.720p.mkv"
+        )
+
+        val filenameMatches = listOf(otherQuality, checking).filter { candidate ->
+            FilenameEpisodeMatcher.matches(candidate.behaviorHints?.filename, nextFilename)
+        }
+        val selected = StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+            filenameMatches,
+            "example-addon|1080p"
+        )
+
+        assertEquals(checking, selected)
+        assertNull(
+            StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+                filenameMatches,
+                "example-addon|720p"
+            )
+        )
+    }
+
+    @Test
     fun `first stream skips checking and not cached local debrid streams`() {
         val checking = stream(
             addonName = "AddonA",
@@ -341,7 +533,8 @@ class StreamAutoPlaySelectorTest {
         infoHash: String? = null,
         cacheState: StreamDebridCacheState? = null,
         ytId: String? = null,
-        externalUrl: String? = null
+        externalUrl: String? = null,
+        filename: String? = null
     ): Stream = Stream(
         name = name,
         title = null,
@@ -355,7 +548,8 @@ class StreamAutoPlaySelectorTest {
             notWebReady = null,
             bingeGroup = bingeGroup,
             countryWhitelist = null,
-            proxyHeaders = null
+            proxyHeaders = null,
+            filename = filename
         ),
         addonName = addonName,
         addonLogo = null,

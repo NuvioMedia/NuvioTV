@@ -45,9 +45,10 @@ class SimklTrackingScrobbler @Inject constructor(
             return
         }
         syncRepository.ensureLoaded()
+        val entryIndex = syncRepository.currentEntryIndex()
         val enrichedEvent = event.copy(
             media = syncRepository.state.value.snapshot
-                .enrichMediaReference(event.media)
+                .enrichMediaReference(event.media, entryIndex)
                 .resolveAnimeEpisodeForSimkl()
         )
         Log.d(
@@ -86,7 +87,8 @@ class SimklTrackingProvider @Inject constructor(
             TrackingCapability.WATCHED_WRITE,
             TrackingCapability.PROGRESS_READ,
             TrackingCapability.PROGRESS_WRITE,
-            TrackingCapability.SCROBBLE
+            TrackingCapability.SCROBBLE,
+            TrackingCapability.RATINGS
         )
     )
     override val isAuthenticated = authRepository.state

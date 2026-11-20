@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,6 +76,8 @@ fun AvatarPickerGrid(
     selectedAvatarId: String?,
     onAvatarSelected: (AvatarCatalogItem) -> Unit,
     onAvatarFocused: ((AvatarCatalogItem?) -> Unit)? = null,
+    entryFocusRequester: FocusRequester? = null,
+    leftFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
     val categories = remember(avatars) {
@@ -124,6 +127,9 @@ fun AvatarPickerGrid(
     val avatarRequesters = remember(filteredAvatars) {
         filteredAvatars.associate { it.id to FocusRequester() }
     }
+    var lastFocusedAvatarId by remember(filteredAvatars) { mutableStateOf<String?>(null) }
+    val entryAvatarId = lastFocusedAvatarId?.takeIf { it in avatarRequesters }
+        ?: filteredAvatars.firstOrNull()?.id
     val selectedCategoryRequester = categoryRequesters.getValue(selectedCategory)
     val firstAvatarRequester = filteredAvatars.firstOrNull()?.let { avatarRequesters[it.id] }
 
@@ -142,6 +148,7 @@ fun AvatarPickerGrid(
                     isSelected = selectedCategory == category,
                     focusRequester = categoryRequesters.getValue(category),
                     downFocusRequester = if (selectedCategory == category) firstAvatarRequester else null,
+                    leftFocusRequester = if (category == categories.first()) leftFocusRequester else null,
                     onClick = { selectedCategory = category }
                 )
                 if (category != categories.last()) {
@@ -167,22 +174,31 @@ fun AvatarPickerGrid(
                 ).toInt()
             )
 
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = minCellWidth),
-                contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                itemsIndexed(filteredAvatars, key = { _, avatar -> avatar.id }) { index, avatar ->
-                    AvatarGridItem(
-                        avatar = avatar,
-                        isSelected = avatar.id == selectedAvatarId,
-                        focusRequester = avatarRequesters.getValue(avatar.id),
-                        upFocusRequester = if (index < columnCount) selectedCategoryRequester else null,
-                        onFocused = { focused -> if (focused) onAvatarFocused?.invoke(avatar) },
-                        onClick = { onAvatarSelected(avatar) }
-                    )
+            key(filteredAvatars) {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = minCellWidth),
+                    contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    itemsIndexed(filteredAvatars, key = { _, avatar -> avatar.id }) { index, avatar ->
+                        AvatarGridItem(
+                            avatar = avatar,
+                            isSelected = avatar.id == selectedAvatarId,
+                            focusRequester = avatarRequesters.getValue(avatar.id),
+                            entryFocusRequester = entryFocusRequester.takeIf { avatar.id == entryAvatarId },
+                            upFocusRequester = if (index < columnCount) selectedCategoryRequester else null,
+                            leftFocusRequester = if (index % columnCount == 0) leftFocusRequester else null,
+                            onFocused = { focused ->
+                                if (focused) {
+                                    lastFocusedAvatarId = filteredAvatars[index - index % columnCount].id
+                                    onAvatarFocused?.invoke(avatar)
+                                }
+                            },
+                            onClick = { onAvatarSelected(avatar) }
+                        )
+                    }
                 }
             }
         }
@@ -195,6 +211,7 @@ private fun CategoryTab(
     isSelected: Boolean,
     focusRequester: FocusRequester,
     downFocusRequester: FocusRequester?,
+    leftFocusRequester: FocusRequester?,
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -239,13 +256,10 @@ private fun CategoryTab(
     Box(
         modifier = Modifier
             .focusRequester(focusRequester)
-            .then(
-                if (downFocusRequester != null) {
-                    Modifier.focusProperties { down = downFocusRequester }
-                } else {
-                    Modifier
-                }
-            )
+            .focusProperties {
+                if (downFocusRequester != null) down = downFocusRequester
+                if (leftFocusRequester != null) start = leftFocusRequester
+            }
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
             .border(
@@ -283,7 +297,9 @@ private fun AvatarGridItem(
     avatar: AvatarCatalogItem,
     isSelected: Boolean,
     focusRequester: FocusRequester,
+    entryFocusRequester: FocusRequester?,
     upFocusRequester: FocusRequester?,
+    leftFocusRequester: FocusRequester?,
     onFocused: (Boolean) -> Unit,
     onClick: () -> Unit
 ) {
@@ -312,13 +328,11 @@ private fun AvatarGridItem(
                 scaleY = scale
             }
             .focusRequester(focusRequester)
-            .then(
-                if (upFocusRequester != null) {
-                    Modifier.focusProperties { up = upFocusRequester }
-                } else {
-                    Modifier
-                }
-            )
+            .then(if (entryFocusRequester != null) Modifier.focusRequester(entryFocusRequester) else Modifier)
+            .focusProperties {
+                if (upFocusRequester != null) up = upFocusRequester
+                if (leftFocusRequester != null) start = leftFocusRequester
+            }
             .onFocusChanged {
                 isFocused = it.isFocused
                 onFocused(it.isFocused)
