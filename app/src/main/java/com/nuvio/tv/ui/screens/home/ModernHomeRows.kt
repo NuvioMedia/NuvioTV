@@ -99,7 +99,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil3.Image
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import coil3.imageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
@@ -1294,9 +1296,15 @@ private fun ModernCarouselCard(
         )
     }
     val effectiveFocusedBorder = if (isFastScrolling) transparentFocusBorder else focusedBorder
+    val loadedCover = if (isCollectionFolder) {
+        remember(imageModel) { mutableStateOf<Image?>(null) }
+    } else {
+        null
+    }
     val cardFocusGlow = when (payload) {
         is ModernPayload.CollectionFolder -> rememberArtworkBackedFocusGlow(
-            imageUrl = imageUrl,
+            cover = loadedCover?.value,
+            isFocused = isFocused,
             fallbackSeed = "${item.title}:${payload.collectionTitle}",
             enabled = payload.focusGlowEnabled
         )
@@ -1415,6 +1423,9 @@ private fun ModernCarouselCard(
                             error = backgroundPainter,
                             fallback = backgroundPainter,
                             contentScale = imageContentScale,
+                            onSuccess = loadedCover?.let { cover ->
+                                { success: AsyncImagePainter.State.Success -> cover.value = success.result.image }
+                            },
                             onError = {
                                 if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
                                     customPosterLoadFailed = true
