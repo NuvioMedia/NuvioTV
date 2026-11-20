@@ -7,6 +7,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import com.nuvio.hi10video.High10MediaCodecVideoRenderer
 
 private val HARDWARE_FIRST_VIDEO_TYPES = setOf(
     MimeTypes.VIDEO_H264,
@@ -39,7 +40,7 @@ internal fun hardwareFirstVideoDecoders(format: Format, decoders: List<MediaCode
     }
 
 /** The platform video renderer with [hardwareFirstVideoDecoders] applied to its decoder list. */
-internal class HardwareFirstVideoRenderer(builder: MediaCodecVideoRenderer.Builder) : MediaCodecVideoRenderer(builder) {
+internal class HardwareFirstVideoRenderer(builder: MediaCodecVideoRenderer.Builder) : High10MediaCodecVideoRenderer(builder) {
     override fun getDecoderInfos(
         mediaCodecSelector: MediaCodecSelector,
         format: Format,
