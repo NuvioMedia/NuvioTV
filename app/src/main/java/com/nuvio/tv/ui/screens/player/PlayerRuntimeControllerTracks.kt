@@ -319,8 +319,10 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     )
     if (currentStreamHasVideoTrack) {
         maybeScheduleFirstFrameWatchdog()
+        maybeScheduleTunnelAvSyncWatchdog()
     } else {
         cancelFirstFrameWatchdog()
+        cancelTunnelAvSyncWatchdog()
     }
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
     maybeAdjustLibassPipelineForTracks(tracks)
