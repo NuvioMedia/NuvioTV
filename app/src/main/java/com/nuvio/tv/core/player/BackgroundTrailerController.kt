@@ -148,6 +148,8 @@ class BackgroundTrailerController @Inject constructor() {
 
     fun pendingTransfer(itemId: String): BackgroundTrailerTransfer? = transfer?.takeIf { it.itemId == itemId }
 
+    fun isPinned(owner: String): Boolean = pinnedOwner == owner
+
     fun cancelTransfer(itemId: String) {
         if (transfer?.itemId == itemId) cancelPinnedTransfer()
     }
