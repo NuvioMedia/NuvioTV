@@ -135,37 +135,37 @@ internal fun UsenetSourcesCard(
             if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
                 subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = { phoneEntry = phoneRow; setUpFromPhone() },
                 modifier = Modifier.focusRequester(phoneRow))
-        }
-        UsenetSettingsSection(UsenetSettingsSection.PROVIDERS, expanded, onToggleSection,
-            description = sourcesSummary(configuration.providers.size, configuration.providers.count { it.enabled },
-                R.plurals.usenet_providers_count)) {
-            configuration.providers.forEachIndexed { i, item ->
-                SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.host}:${item.port} • ${item.connections} • " +
-                    stringResource(R.string.usenet_priority_value, item.priority),
-                    value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
-                    onClick = { selectedId = item.id; picker = "provider" })
+            UsenetSettingsSection(UsenetSettingsSection.PROVIDERS, expanded, onToggleSection,
+                description = sourcesSummary(configuration.providers.size, configuration.providers.count { it.enabled },
+                    R.plurals.usenet_providers_count)) {
+                configuration.providers.forEachIndexed { i, item ->
+                    SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.host}:${item.port} • ${item.connections} • " +
+                        stringResource(R.string.usenet_priority_value, item.priority),
+                        value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
+                        onClick = { selectedId = item.id; picker = "provider" })
+                }
+                SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
+                    subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() })
             }
-            SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
-                subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() })
-        }
-        UsenetSettingsSection(UsenetSettingsSection.INDEXERS, expanded, onToggleSection,
-            description = sourcesSummary(configuration.indexers.size, configuration.indexers.count { it.enabled },
-                R.plurals.usenet_indexers_count)) {
-            configuration.indexers.forEachIndexed { i, item ->
-                SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
-                    stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
-                    .joinToString(" • "),
-                    value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
-                    onClick = { selectedId = item.id; picker = "indexer" })
+            UsenetSettingsSection(UsenetSettingsSection.INDEXERS, expanded, onToggleSection,
+                description = sourcesSummary(configuration.indexers.size, configuration.indexers.count { it.enabled },
+                    R.plurals.usenet_indexers_count)) {
+                configuration.indexers.forEachIndexed { i, item ->
+                    SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
+                        stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
+                        .joinToString(" • "),
+                        value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
+                        onClick = { selectedId = item.id; picker = "indexer" })
+                }
+                SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
+                    subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
+                SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
+                    subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
+                    onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
+                SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
+                    subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
+                    onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
             }
-            SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
-                subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
-            SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
-                subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
-                onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
-            SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
-                subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
-                onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
         }
         UsenetSettingsSection(UsenetSettingsSection.SEARCH, expanded, onToggleSection) {
             SettingsActionRow(title = stringResource(R.string.usenet_ranking_title), subtitle = stringResource(rankingDescription),
