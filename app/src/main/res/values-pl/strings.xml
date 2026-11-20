@@ -3408,6 +3408,8 @@
     <string name="advanced_player_stats_hud_subtitle">Pokaż przycisk w informacjach o strumieniu, umożliwiający podgląd na żywo użycia CPU, pamięci, bufora, bitrate i temperatury podczas odtwarzania</string>
     <string name="advanced_rgb565">Dekodowanie obrazu RGB565</string>
     <string name="advanced_rgb565_subtitle">Użyj oszczędnego 16-bitowego koloru dla kwalifikujących się nieprzezroczystych obrazów. Zmiana wymaga restartu aplikacji.</string>
+    <string name="advanced_hardware_bitmaps">Sprzętowe dekodowanie obrazów</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Trzymaj zdekodowane obrazy tylko w pamięci grafiki. Zużywa mniej RAM, ale na słabszych GPU ładowanie nowych obrazów może przycinać.</string>
 
     <!-- Audio / MPV -->
     <string name="audio_mpv_hi10p_gnext_sw_title">Awaryjne dekodowanie Hi10P G-NEXT SW (tylko MPV)</string>
