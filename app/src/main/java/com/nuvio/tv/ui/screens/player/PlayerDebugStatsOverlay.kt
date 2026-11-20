@@ -117,7 +117,8 @@ internal fun PlayerDebugStatsOverlay(
                 )
             }
             val streamUrl = viewModel.getCurrentStreamUrl()
-            stats = withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl) }
+            val type = DebugStat("type", viewModel.getStreamTypeLabel())
+            stats = listOf(type) + withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl) }
             delay(1000L)
         }
     }
