@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player.autosync
 
 import android.os.SystemClock
 import androidx.media3.common.C
+import com.nuvio.tv.ui.screens.player.BdavAutoSyncSources
 import com.nuvio.tv.ui.screens.player.SubtitleSyncCue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
@@ -457,6 +458,9 @@ internal object AutomaticSubtitleSync {
                     waitMs = when {
                         useSparseLiveReference -> SPARSE_LIVE_REFERENCE_WAIT_MS
                         indexedTimeline?.skipLiveFallbackWait == true -> 0L
+                        // A Blu-ray clip has no subtitle index: its embedded lines never make a
+                        // near-complete reference, so the audio fallback starts at once.
+                        BdavAutoSyncSources.contains(sourceKey) -> 0L
                         else -> LIVE_REFERENCE_WAIT_MS
                     },
                     allowSparseLiveReference = useSparseLiveReference,

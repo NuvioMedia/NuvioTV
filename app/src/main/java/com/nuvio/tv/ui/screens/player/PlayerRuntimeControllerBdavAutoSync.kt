@@ -13,6 +13,7 @@ import com.nuvio.tv.ui.screens.player.autosync.AutoSyncPreferences
  */
 internal fun PlayerRuntimeController.configureBdavAutoSync() {
     mediaSourceFactory.configureBdavExtractorsWrapper { delegate, url ->
+        BdavAutoSyncSources.add(url)
         AutoSyncPreferences.ensureLoaded(context)
         if (AutoSyncPreferences.isEnabled(context) && AudioSyncSettings.fallbackEnabled.value) {
             AudioSyncTaps.wrapExtractors(delegate, url)
@@ -20,4 +21,20 @@ internal fun PlayerRuntimeController.configureBdavAutoSync() {
             delegate
         }
     }
+}
+
+/** Streams played as Blu-ray clips, for AutoSync, which then skips waiting for embedded lines. */
+internal object BdavAutoSyncSources {
+    private const val MAX_SOURCES = 8
+    private val sources = LinkedHashSet<String>()
+
+    @Synchronized
+    fun add(url: String) {
+        sources.remove(url)
+        sources.add(url)
+        while (sources.size > MAX_SOURCES) sources.remove(sources.first())
+    }
+
+    @Synchronized
+    fun contains(url: String): Boolean = url in sources
 }
