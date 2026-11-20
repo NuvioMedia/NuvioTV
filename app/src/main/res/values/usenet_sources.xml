@@ -80,7 +80,7 @@
     <string name="usenet_provider_tune">Tune connections</string>
     <string name="usenet_provider_tune_description">Find the connection limit, port and connection allowance that work best on this network</string>
     <string name="usenet_provider_tune_title">Tune %1$s</string>
-    <string name="usenet_provider_tune_intro">Checks how many connections the account accepts, then measures the download speed on the provider’s ports and with more and more connections. It takes about two minutes and downloads up to about 1 GB of test data, which counts against a block account. Do not play anything meanwhile. Other devices using this account at the same time lower the limit found. Nothing is saved until you apply the result.</string>
+    <string name="usenet_provider_tune_intro">Checks how many connections the account accepts, then measures the download speed on the provider’s ports and with more and more connections. It takes about two minutes and downloads a lot of test data: often more than 1 GB, and up to about 4 GB on a fast line. It counts against a block account. Do not play anything meanwhile. Other devices using this account at the same time lower the limit found. Nothing is saved until you apply the result.</string>
     <string name="usenet_provider_tune_start">Start</string>
     <string name="usenet_provider_tune_stop">Stop</string>
     <string name="usenet_provider_tune_stopped">Stopped. Nothing was changed.</string>
