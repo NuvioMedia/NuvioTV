@@ -154,6 +154,12 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
         return
     }
 
+    // The layout preference flow is debounced, so on a cold start the saved hero
+    // sources are still unknown when the first catalogs publish, and the hero
+    // falls back to whichever catalog answered first. Read them before loading
+    // so the hero only ever renders its own sources.
+    currentHeroCatalogKeys = layoutPreferenceDataStore.heroCatalogSelections.first()
+
     activeCatalogLoadSignature = signature
     catalogsLoadInProgress = true
     // A full load leaves every catalog fresh, so the next return to Home has nothing to do.

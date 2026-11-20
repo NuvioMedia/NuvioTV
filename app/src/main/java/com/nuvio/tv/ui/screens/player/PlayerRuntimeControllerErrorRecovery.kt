@@ -331,6 +331,8 @@ internal fun PlayerRuntimeController.scheduleStableProgressReset() {
         delay(STABLE_PROGRESS_RESET_DELAY_MS)
         val player = _exoPlayer ?: return@launch
         if (player.playbackState == Player.STATE_READY && player.isPlaying) {
+            // Seconds of steady playback confirm a tunneled stream really decodes.
+            tunneledFirstFrameAssumed = false
             resetErrorRetryState()
         }
     }
