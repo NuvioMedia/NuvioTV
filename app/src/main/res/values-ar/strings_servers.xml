@@ -71,7 +71,7 @@
     <string name="plex_server_shared">مشارَك معك</string>
     <string name="plex_servers_checking">جارٍ التحقق من إمكانية الوصول إلى كل خادم…</string>
     <string name="plex_servers_finding">جارٍ البحث عن خوادمك…</string>
-    <string name="plex_servers_none">لا يوجد Plex Media Server متاح لهذا الحساب.</string>
+    <string name="plex_servers_none">لا يتوفر Plex Media Server لهذا الحساب.</string>
     <string name="plex_servers_subtitle">تم تسجيل الدخول إلى Plex باسم %1$s.</string>
     <string name="plex_servers_title">اختر خادمًا</string>
     <string name="plex_sign_in_subtitle">اربط هذا التلفاز بحساب Plex. لا تُدخل كلمة مرور Plex هنا أبدًا.</string>

@@ -1562,7 +1562,7 @@
     <string name="profile_pin_overlay_remove_verify_support">أدخل رمز PIN الحالي المكوّن من 4 أرقام لإزالة هذا القفل.</string>
     <string name="profile_pin_overlay_delete_verify_heading">أدخل رمز PIN الحالي لحذف %1$s.</string>
     <string name="profile_pin_overlay_delete_verify_support">أدخل رمز PIN الحالي المكوّن من 4 أرقام قبل حذف هذا الملف الشخصي.</string>
-    <string name="profile_pin_overlay_set_support">سيكون رمز PIN هذا مطلوبًا قبل فتح هذا الملف الشخصي.</string>
+    <string name="profile_pin_overlay_set_support">يلزم إدخال رمز PIN قبل فتح هذا الملف الشخصي.</string>
     <string name="profile_pin_overlay_confirm_support">أعد إدخال الأرقام الأربعة نفسها لإنهاء الإعداد.</string>
     <string name="profile_pin_overlay_mismatch">رموز PIN غير متطابقة. أدخل رمزًا جديدًا مرة أخرى.</string>
     <string name="profile_pin_overlay_forgot_hint">نسيت رمز PIN؟ أعد تعيينه من حسابك على موقع Nuvio.</string>
@@ -1585,7 +1585,7 @@
     <string name="addon_installing">جارٍ التثبيت</string>
     <string name="addon_install_btn">تثبيت</string>
     <string name="addon_install_success">تم تثبيت %1$s</string>
-    <string name="addon_tracking_consent_body">%1$s إضافة تتبّع. سيرسل Nuvio إليها نشاطك: ما تشغّله وتوقفه مؤقتًا وتنهيه مع موضع التشغيل، وما تضيفه إلى مكتبتك أو تزيله منها، وما تعلّمه كمُشاهَد أو غير مُشاهَد. هذه البيانات تغادر Nuvio ويتولّاها مطوّر الإضافة والخدمة التي تتصل بها.</string>
+    <string name="addon_tracking_consent_body">%1$s إضافة تتبّع. سيرسل Nuvio إليها نشاطك: ما تشغّله وتوقفه مؤقتًا وتنهيه مع موضع التشغيل، وما تضيفه إلى مكتبتك أو تزيله منها، وما تعلّمه كمُشاهَد أو غير مُشاهَد. تنتقل هذه البيانات خارج نطاق Nuvio، وتخضع لمعالجة مطوّر الإضافة والخدمة التي تتصل بها.</string>
     <string name="addon_tracking_consent_cancel">إلغاء</string>
     <string name="addon_tracking_consent_checkbox">أوافق على مشاركة نشاط مشاهدتي ومكتبتي مع هذه الإضافة</string>
     <string name="addon_tracking_consent_checked">محدَّد</string>
@@ -3065,7 +3065,7 @@
     <string name="collections_editor_tmdb_without_keywords_helper">استثنِ العناوين المطابقة لأرقام هذه الكلمات المفتاحية في TMDB.</string>
     <string name="collections_editor_tmdb_without_keywords_placeholder">9715</string>
     <string name="collections_editor_tmdb_without_watch_providers">مُعرِّفات مزودي المشاهدة المستثناة</string>
-    <string name="collections_editor_tmdb_without_watch_providers_helper">استثنِ العناوين المتوفرة عبر أرقام مزودي المشاهدة هذه في TMDB في المنطقة المحددة.</string>
+    <string name="collections_editor_tmdb_without_watch_providers_helper">استثنِ العناوين المتاحة عبر أرقام مزودي المشاهدة في TMDB ضمن المنطقة المحددة.</string>
     <string name="collections_editor_tmdb_without_watch_providers_placeholder">8|337|350</string>
     <string name="custom_server_check">فحص الخادم</string>
     <string name="custom_server_checking">جارٍ الفحص\u2026</string>
