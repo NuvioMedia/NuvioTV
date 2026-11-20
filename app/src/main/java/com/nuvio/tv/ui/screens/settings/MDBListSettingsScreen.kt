@@ -75,6 +75,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.components.tvReorderDisabledFocusBorder
 import com.nuvio.tv.ui.theme.NuvioMotion
 
 private data class RatingOrderItem(
@@ -543,7 +544,8 @@ private fun RatingOrderRow(
                         focusedBorder = Border(
                             border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = moveButtonShape
-                        )
+                        ),
+                        focusedDisabledBorder = tvReorderDisabledFocusBorder(moveButtonShape)
                     ),
                     shape = ButtonDefaults.shape(moveButtonShape),
                     scale = ButtonDefaults.scale(focusedScale = 1f, pressedScale = 1f),
