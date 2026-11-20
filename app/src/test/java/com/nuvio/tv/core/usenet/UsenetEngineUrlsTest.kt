@@ -44,6 +44,13 @@ class UsenetEngineUrlsTest {
         assertTrue(UsenetEngineUrls.isSession(UsenetEngineUrls.stream(endpoint, id, "/stream/$id/BDMV/STREAM/00065.m2ts")))
     }
 
+    @Test fun `a session's diagnostics address comes from its stream URL`() {
+        assertEquals("http://127.0.0.1:41234/sessions/$id/diagnostics",
+            UsenetEngineUrls.sessionDiagnostics("http://127.0.0.1:41234/stream/$id/Movie.mkv"))
+        assertEquals(null, UsenetEngineUrls.sessionDiagnostics("http://127.0.0.1:38211/stream/$id/Movie.mkv"))
+        assertEquals(null, UsenetEngineUrls.sessionDiagnostics("https://cdn.example.test/stream/$id/Movie.mkv"))
+    }
+
     @Test fun `ports from earlier engine starts stay recognized`() {
         UsenetEngineUrls.remember(42000)
         assertTrue(UsenetEngineUrls.isSession("http://127.0.0.1:41234/stream/$id/Movie.mkv"))

@@ -3,7 +3,7 @@ package com.nuvio.tv.core.usenet
 internal object UsenetEngineUrls {
     private const val MAX_PORTS = 8
     private val ports = LinkedHashSet<Int>()
-    private val sessionUrl = Regex("""^http://127\.0\.0\.1:(\d{1,5})/stream/[0-9a-f]{48}/""")
+    private val sessionUrl = Regex("""^http://127\.0\.0\.1:(\d{1,5})/stream/([0-9a-f]{48})/""")
     private val subtitleUrl = Regex("""^http://127\.0\.0\.1:(\d{1,5})/subtitle/[0-9a-f]{48}/""")
 
     fun remember(port: Int) = synchronized(ports) {
@@ -15,6 +15,12 @@ internal object UsenetEngineUrls {
     fun isSession(url: String): Boolean = matches(sessionUrl, url)
 
     fun isSubtitle(url: String): Boolean = matches(subtitleUrl, url)
+
+    fun sessionDiagnostics(url: String): String? {
+        if (!isSession(url)) return null
+        val match = sessionUrl.find(url) ?: return null
+        return "http://127.0.0.1:${match.groupValues[1]}/sessions/${match.groupValues[2]}/diagnostics"
+    }
 
     /**
      * The player URL for a session [path] the engine returned, "/stream/<id>/<name>". A disc clip's

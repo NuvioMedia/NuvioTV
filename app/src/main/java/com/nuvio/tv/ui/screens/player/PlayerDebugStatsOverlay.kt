@@ -34,6 +34,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.network.StreamSpeedTester
+import com.nuvio.tv.core.usenet.UsenetSidecar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -115,7 +116,8 @@ internal fun PlayerDebugStatsOverlay(
                     nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes()
                 )
             }
-            stats = withContext(Dispatchers.IO) { sampler.sample(snapshot) }
+            val streamUrl = viewModel.getCurrentStreamUrl()
+            stats = withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl) }
             delay(1000L)
         }
     }
@@ -180,8 +182,11 @@ private class DebugStatsSampler(context: Context) {
     private var faultTotal = 0.0
     private var faultSamples = 0
     private var headroomMisses = 0
+    private var usenetUrl: String? = null
+    private var lastUsenetBytes = -1L
+    private var lastUsenetAtMs = 0L
 
-    fun sample(snapshot: PlayerSnapshot?): List<DebugStat> = buildList {
+    fun sample(snapshot: PlayerSnapshot?, streamUrl: String? = null): List<DebugStat> = buildList {
         val proc = readProcTimes()
         val now = System.currentTimeMillis()
         val elapsedSeconds = if (lastProcAtMs > 0L) (now - lastProcAtMs) / 1000.0 else 0.0
@@ -198,6 +203,7 @@ private class DebugStatsSampler(context: Context) {
         add(bufferStat(snapshot))
         add(bitrateStat(snapshot))
         add(networkStat())
+        addAll(usenetStats(streamUrl))
         add(droppedStat(snapshot))
         addAll(thermalStats())
     }.filterNot { it.value == UNAVAILABLE }
@@ -329,6 +335,35 @@ private class DebugStatsSampler(context: Context) {
                 mbps,
                 networkTotal / networkSamples
             )
+        )
+    }
+
+    private fun usenetStats(streamUrl: String?): List<DebugStat> {
+        val url = streamUrl?.takeIf { UsenetSidecar.isSessionUrl(it) }
+        if (url != usenetUrl) {
+            usenetUrl = url
+            lastUsenetBytes = -1L
+        }
+        if (url == null) return emptyList()
+        val live = UsenetSidecar.peek()?.liveStats(url) ?: return emptyList()
+        val now = System.currentTimeMillis()
+        val bytes = live.bytes
+        val previousBytes = lastUsenetBytes
+        val previousAt = lastUsenetAtMs
+        lastUsenetBytes = bytes
+        lastUsenetAtMs = now
+        val speed = if (previousBytes < 0L || now <= previousAt || bytes < previousBytes) "..." else
+            String.format(Locale.US, "%.1f Mbps", (bytes - previousBytes) * 8.0 / ((now - previousAt) / 1000.0) / 1_000_000.0)
+        val ttfb = live.ttfbMs?.let { String.format(Locale.US, "   ttfb %.0f ms", it) }.orEmpty()
+        val filled = if (live.filledArticles > 0) " (${live.filledArticles} filled)" else ""
+        val severity = when {
+            live.failure != null -> DebugStatSeverity.DANGER
+            live.missing > live.filledArticles -> DebugStatSeverity.WARNING
+            else -> DebugStatSeverity.NORMAL
+        }
+        return listOfNotNull(
+            DebugStat("usenet", "$speed$ttfb   missing ${live.missing}$filled", severity),
+            DebugStat("nntp err", "${live.errors}", warn = true).takeIf { live.errors > 0 }
         )
     }
 
