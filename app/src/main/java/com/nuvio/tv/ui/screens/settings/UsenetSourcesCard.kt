@@ -183,7 +183,7 @@ internal fun UsenetSourcesCard(
             }
             if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_ranking_phone),
                 subtitle = stringResource(R.string.usenet_ranking_phone_desc),
-                onClick = { phoneEntry = rankingPhoneRow; setUpFromPhone(null) }, modifier = Modifier.focusRequester(rankingPhoneRow))
+                onClick = { phoneEntry = rankingPhoneRow; setUpFromPhone(UsenetSourcesConfigServer.OPEN_RANKING) }, modifier = Modifier.focusRequester(rankingPhoneRow))
             if (configuration.ranking.preset == StreamRankingPreset.ORIGINAL) {
                 SettingsActionRow(title = stringResource(R.string.usenet_sort_results), subtitle = null,
                     value = sortOptions.first { it.value == configuration.sort }.title, onClick = { picker = "sort" })

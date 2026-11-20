@@ -303,6 +303,7 @@ ${UsenetRankingWebPage.script(context)}
 load().then(() => {
   if (addOnOpen === '${UsenetSourcesConfigServer.ADD_PROVIDER}') openProvider(null);
   if (addOnOpen === '${UsenetSourcesConfigServer.ADD_INDEXER}') { document.querySelector('.tab[data-tab="indexers"]').click(); openIndexer(null); }
+  if (addOnOpen === '${UsenetSourcesConfigServer.OPEN_RANKING}') document.querySelector('.tab[data-tab="ranking"]').click();
 }).catch(e => setStatus(e.message, true));
 </script>
 </body>
