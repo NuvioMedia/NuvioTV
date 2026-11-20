@@ -1303,7 +1303,6 @@
     <string name="mdblist_rate_limited">La limite de requêtes de MDBList a été atteinte. La synchronisation reprendra après la réinitialisation de la limite.</string>
     <string name="mdblist_revoke_failed">Déconnecté sur cet appareil. Supprimez cette application dans les paramètres de votre compte MDBList pour révoquer son accès.</string>
     <string name="mdblist_title">Notes MDBList</string>
-    <string name="mdblist_subtitle">Configurer les notes externes affichées dans le hero de la page de détail</string>
     <string name="mdblist_enable_title">Activer les notes MDBList</string>
     <string name="mdblist_enable_subtitle">Récupérer les notes de fournisseurs externes dans l’écran de détail des métadonnées</string>
     <string name="mdblist_api_key_title">Clé API</string>
@@ -1330,7 +1329,6 @@
     <string name="mdblist_show_on_hero_title">Utiliser les notes dans le hero</string>
     <string name="mdblist_show_on_hero_subtitle">Afficher les notes MDBList dans le carrousel hero (moderne et classique/grille)</string>
     <string name="mdblist_rating_order_title">Ordre des notes</string>
-    <string name="mdblist_rating_order_subtitle">Les 3 premières notes activées et disponibles sont affichées dans le hero moderne. Utilisez les flèches pour les réorganiser.</string>
     <string name="mdblist_dialog_title">Clé API MDBList</string>
     <string name="mdblist_dialog_subtitle">Saisissez votre clé API pour récupérer les notes externes</string>
     <string name="mdblist_dialog_placeholder">Saisir la clé API MDBList</string>

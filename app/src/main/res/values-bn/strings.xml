@@ -1146,7 +1146,6 @@
     <string name="mdblist_rate_limited">MDBList-এর রিকোয়েস্ট লিমিট পৌঁছে গেছে। লিমিট রিসেট হওয়ার পর সিঙ্কিং পুনরায় শুরু হবে।</string>
     <string name="mdblist_revoke_failed">এই ডিভাইসে ডিসকানেক্ট করা হয়েছে। এর অ্যাক্সেস রিভোক করতে আপনার MDBList অ্যাকাউন্ট সেটিংসে এই অ্যাপটি রিমুভ করুন।</string>
     <string name="mdblist_title">MDBList রেটিং</string>
-    <string name="mdblist_subtitle">ডিটেইল হিরোতে দেখানো এক্সটার্নাল রেটিং কনফিগার করুন</string>
     <string name="mdblist_enable_title">MDBList রেটিং চালু করুন</string>
     <string name="mdblist_enable_subtitle">মেটাডেটা বিস্তারিত স্ক্রিনে এক্সটারনাল প্রোভাইডারদের থেকে রেটিং আনুন</string>
     <string name="mdblist_api_key_title">API কী</string>
@@ -1173,7 +1172,6 @@
     <string name="mdblist_show_on_hero_title">হিরোতে রেটিং ব্যবহার করুন</string>
     <string name="mdblist_show_on_hero_subtitle">হিরো ক্যারোসেলে MDBList রেটিং দেখান (মডার্ন এবং ক্লাসিক/গ্রিড)</string>
     <string name="mdblist_rating_order_title">রেটিংয়ের ক্রম</string>
-    <string name="mdblist_rating_order_subtitle">প্রথম ৩টি চালু থাকা এবং অ্যাভেইলেবল রেটিং মডার্ন হিরোতে দেখানো হয়। পুনরায় সাজাতে অ্যারো ব্যবহার করুন।</string>
     <string name="mdblist_dialog_title">MDBList API কি</string>
     <string name="mdblist_dialog_subtitle">এক্সটার্নাল রেটিং পেতে আপনার API কি এন্টার করুন</string>
     <string name="mdblist_dialog_placeholder">MDBList API কি এন্টার করুন</string>

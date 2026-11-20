@@ -1339,7 +1339,7 @@
     <string name="mdblist_show_on_hero_title">Use Ratings on Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Show MDBList ratings on hero carousel (modern and classic/grid)</string>
     <string name="mdblist_rating_order_title">Rating Order</string>
-    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use arrows to reorder.</string>
+    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use the reorder button to change their order.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
@@ -1855,6 +1855,9 @@
     <string name="catalog_order_disabled_on_home">Disabled on Home</string>
     <string name="catalog_order_enable">Enable</string>
     <string name="catalog_order_disable">Disable</string>
+    <string name="catalog_order_pinned">Pinned</string>
+    <string name="catalog_order_pinned_to_top">Pinned to top</string>
+    <string name="catalog_order_pin_to_move_toast">Remove pin to top from collection to move</string>
 
 
     <string name="stream_retry">Retry</string>
@@ -2651,6 +2654,7 @@
     <string name="cd_loading_logo">Loading logo</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
+    <string name="cd_reorder">Reorder</string>
     <string name="cd_edit">Edit</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_qr_code">QR Code</string>
@@ -2722,10 +2726,21 @@
     <string name="collections_valid_summary">%1$d collection(s), %2$d folder(s)</string>
     <string name="collections_confirm_import">Confirm Import</string>
     <string name="collections_folder_count">%1$d folder(s)</string>
+    <string name="collections_pinned">Pinned</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Row Title</string>
     <string name="collections_editor_save">Save</string>
+    <string name="collections_editor_unsaved_title">Save changes?</string>
+    <string name="collections_editor_unsaved_subtitle">You have unsaved changes to this collection.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Unsaved changes</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Enter a title and add at least one folder to save this collection.</string>
+    <string name="collections_editor_unsaved_missing_title">Enter a collection title to save your changes.</string>
+    <string name="collections_editor_unsaved_missing_folder">Add at least one folder to save this collection.</string>
+    <string name="collections_editor_folder_unsaved_title">Save folder changes?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">You have unsaved changes to this folder.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Unsaved folder changes</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Add at least one source to save this folder.</string>
     <string name="collections_editor_backdrop">Backdrop Image</string>
     <string name="collections_editor_pin_above">Pin Above Catalogs</string>
     <string name="collections_editor_pin_above_desc">Show this collection above all regular home catalogs. Multiple pinned collections follow collection creation order.</string>

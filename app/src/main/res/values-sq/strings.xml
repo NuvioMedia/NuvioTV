@@ -981,7 +981,6 @@
     <string name="layout_reset_default">Rikthe në parazgjedhje</string>
     <string name="layout_custom">I personalizuar</string>
     <string name="mdblist_title">Vlerësimet MDBList</string>
-    <string name="mdblist_subtitle">Konfiguro vlerësimet e jashtme të shfaqura në hero-n e detajeve</string>
     <string name="mdblist_enable_title">Aktivizo vlerësimet MDBList</string>
     <string name="mdblist_enable_subtitle">Merr vlerësime nga ofrues të jashtëm në ekranin e detajeve të metadata-ve</string>
     <string name="mdblist_api_key_title">Çelësi API</string>

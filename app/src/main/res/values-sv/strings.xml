@@ -465,7 +465,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList-betyg</string>
-    <string name="mdblist_subtitle">Konfigurera externa betyg som visas i detaljhjälten</string>
     <string name="mdblist_enable_title">Aktivera MDBList-betyg</string>
     <string name="mdblist_enable_subtitle">Hämta betyg från externa leverantörer på metadataskärmen</string>
     <string name="mdblist_api_key_title">API-nyckel</string>

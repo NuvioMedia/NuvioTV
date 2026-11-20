@@ -1339,7 +1339,7 @@
     <string name="mdblist_show_on_hero_title">Hero Alanında Puanları Göster</string>
     <string name="mdblist_show_on_hero_subtitle">Hero karuselinde MDBList puanlarını göster (modern ve klasik/ızgara)</string>
     <string name="mdblist_rating_order_title">Puan Sıralaması</string>
-    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için okları kullanın.</string>
+    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için yeniden sırala düğmesini kullanın.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
@@ -1848,6 +1848,9 @@
     <string name="catalog_order_disabled_on_home">Ana Sayfada Devre Dışı</string>
     <string name="catalog_order_enable">Etkinleştir</string>
     <string name="catalog_order_disable">Devre Dışı</string>
+    <string name="catalog_order_pinned">Sabitlendi</string>
+    <string name="catalog_order_pinned_to_top">Üste sabitlendi</string>
+    <string name="catalog_order_pin_to_move_toast">Taşımak için koleksiyondaki üste sabitlemeyi kaldır</string>
 
 
     <!-- StreamScreen -->
@@ -2898,6 +2901,7 @@
     <string name="cd_loading_logo">Logo yükleniyor</string>
     <string name="cd_move_up">Yukarı taşı</string>
     <string name="cd_move_down">Aşağı taşı</string>
+    <string name="cd_reorder">Yeniden sırala</string>
     <string name="cd_edit">Düzenle</string>
     <string name="cd_delete">Sil</string>
     <string name="cd_qr_code">QR kod</string>
@@ -2969,6 +2973,7 @@
     <string name="collections_valid_summary">%1$d koleksiyon, %2$d klasör</string>
     <string name="collections_confirm_import">İçe Aktarmayı Onayla</string>
     <string name="collections_folder_count">%1$d klasör</string>
+    <string name="collections_pinned">Sabitlendi</string>
 
     <!-- Collection Editor -->
     <string name="collections_delete_confirm_title">Koleksiyon silinsin mi?</string>
@@ -2978,6 +2983,16 @@
     <string name="collections_editor_delete_folder_subtitle">\"%1$s\" ve içindekiler kalıcı olarak silinecek.</string>
     <string name="collections_editor_row_title">Satır Başlığı</string>
     <string name="collections_editor_save">Kaydet</string>
+    <string name="collections_editor_unsaved_title">Değişiklikler kaydedilsin mi?</string>
+    <string name="collections_editor_unsaved_subtitle">Bu koleksiyonda kaydedilmemiş değişiklikler var.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Kaydedilmemiş değişiklikler</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Bu koleksiyonu kaydetmek için bir başlık girin ve en az bir klasör ekleyin.</string>
+    <string name="collections_editor_unsaved_missing_title">Değişiklikleri kaydetmek için bir koleksiyon başlığı girin.</string>
+    <string name="collections_editor_unsaved_missing_folder">Bu koleksiyonu kaydetmek için en az bir klasör ekleyin.</string>
+    <string name="collections_editor_folder_unsaved_title">Klasör değişiklikleri kaydedilsin mi?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Bu klasörde kaydedilmemiş değişiklikler var.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Kaydedilmemiş klasör değişiklikleri</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Bu klasörü kaydetmek için en az bir kaynak ekleyin.</string>
     <string name="collections_editor_backdrop">Arka Plan Görseli</string>
     <string name="collections_editor_pin_above">Katalogların Üstüne Sabitle</string>
     <string name="collections_editor_pin_above_desc">Bu koleksiyonu tüm normal ana sayfa kataloglarının üstünde göster. Birden fazla sabitlenmiş koleksiyon oluşturulma sırasını takip eder.</string>

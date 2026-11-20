@@ -871,7 +871,6 @@
 
 
     <string name="mdblist_title">MDBList-bedømmelser</string>
-    <string name="mdblist_subtitle">Konfigurér eksterne bedømmelser vist i detalje-hero</string>
     <string name="mdblist_enable_title">Aktivér MDBList-bedømmelser</string>
     <string name="mdblist_enable_subtitle">Hent bedømmelser fra eksterne udbydere i metadata-detaljesiden</string>
     <string name="mdblist_api_key_title">API-nøgle</string>

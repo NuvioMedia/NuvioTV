@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -8,6 +9,7 @@ import androidx.compose.ui.semantics.semantics
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,8 +24,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,8 +34,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +47,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -72,6 +74,9 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.components.tvReorderDisabledFocusBorder
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
@@ -80,33 +85,6 @@ import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun NuvioButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        colors = ButtonDefaults.colors(
-            containerColor = NuvioTheme.colors.BackgroundCard,
-            contentColor = NuvioTheme.colors.TextPrimary,
-            focusedContainerColor = NuvioTheme.colors.FocusBackground,
-            focusedContentColor = NuvioTheme.colors.Primary
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                shape = RoundedCornerShape(NuvioTheme.radii.md)
-            )
-        ),
-        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-        content = { content() }
-    )
-}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -120,18 +98,78 @@ fun CollectionManagementScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var lastFocusedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val collectionsScrollState = rememberScrollState()
+    val collectionRowHeightCache = remember { mutableMapOf<String, Float>() }
+    var lastFocusedTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingFocusTarget by remember { mutableStateOf<String?>(null) }
+    var hasAppliedInitialFocus by remember { mutableStateOf(false) }
+    val importButtonFocusRequester = remember { FocusRequester() }
+    val newButtonFocusRequester = remember { FocusRequester() }
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val itemDeleteFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     var collectionToDelete by remember { mutableStateOf<Collection?>(null) }
     val deleteDialogFocusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(uiState.collections) {
+        val validIds = uiState.collections.mapTo(mutableSetOf()) { it.id }
+        itemFocusRequesters.keys.retainAll(validIds)
+        itemDeleteFocusRequesters.keys.retainAll(validIds)
+    }
+
     LaunchedEffect(collectionToDelete) {
         if (collectionToDelete != null) {
-            repeat(3) { withFrameNanos { } }
-            try {
-                deleteDialogFocusRequester.requestFocus()
-            } catch (_: Exception) {}
+            requestFocusWhenReady(deleteDialogFocusRequester)
+        }
+    }
+
+    val activeFocusTarget = pendingFocusTarget ?: if (!hasAppliedInitialFocus) {
+        lastFocusedTarget ?: "new"
+    } else {
+        null
+    }
+    val ensureComposedCollectionId = when {
+        activeFocusTarget == null -> null
+        activeFocusTarget.startsWith("edit:") -> activeFocusTarget.removePrefix("edit:")
+        activeFocusTarget.startsWith("delete:") -> activeFocusTarget.removePrefix("delete:")
+        else -> null
+    }
+
+    LaunchedEffect(uiState.isLoading, uiState.showImportDialog, collectionToDelete, pendingFocusTarget, uiState.collections.size) {
+        if (uiState.isLoading || uiState.showImportDialog || collectionToDelete != null) return@LaunchedEffect
+        val target = pendingFocusTarget ?: if (!hasAppliedInitialFocus) {
+            lastFocusedTarget ?: "new"
+        } else {
+            return@LaunchedEffect
+        }
+        val requester = when {
+            target == "import" -> importButtonFocusRequester
+            target == "new" -> newButtonFocusRequester
+            target.startsWith("edit:") -> {
+                val id = target.removePrefix("edit:")
+                if (uiState.collections.any { it.id == id }) {
+                    itemFocusRequesters.getOrPut(id) { FocusRequester() }
+                } else {
+                    newButtonFocusRequester
+                }
+            }
+            target.startsWith("delete:") -> {
+                val id = target.removePrefix("delete:")
+                if (uiState.collections.any { it.id == id }) {
+                    itemDeleteFocusRequesters.getOrPut(id) { FocusRequester() }
+                } else {
+                    newButtonFocusRequester
+                }
+            }
+            else -> newButtonFocusRequester
+        }
+        val focused = requestFocusWhenReady(requester)
+        if (!focused && requester !== newButtonFocusRequester) {
+            requestFocusWhenReady(newButtonFocusRequester)
+        }
+        hasAppliedInitialFocus = true
+        if (pendingFocusTarget == target) {
+            pendingFocusTarget = null
         }
     }
 
@@ -151,6 +189,7 @@ fun CollectionManagementScreen(
     }
 
     if (uiState.showImportDialog) {
+        BackHandler { viewModel.hideImportDialog() }
         ImportContent(
             importText = uiState.importText,
             importError = uiState.importError,
@@ -176,12 +215,7 @@ fun CollectionManagementScreen(
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-    ) {
+    val collectionsHeader: @Composable () -> Unit = {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -192,41 +226,42 @@ fun CollectionManagementScreen(
                 style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
                 color = NuvioTheme.colors.TextPrimary,
             )
-            val newButtonFocusRequester = remember { FocusRequester() }
-            LaunchedEffect(Unit) {
-                repeat(3) { withFrameNanos { } }
-                val targetRequester = lastFocusedId?.let { itemFocusRequesters[it] } ?: newButtonFocusRequester
-                try { targetRequester.requestFocus() } catch (_: Exception) {}
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+            val headerActionsEnabled = uiState.movingCollectionKey == null
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.focusEntryTarget(newButtonFocusRequester)
+            ) {
                 if (uiState.collections.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    NuvioButton(onClick = {
-                        scope.launch {
-                            try {
-                                val json = viewModel.getExportJson()
-                                withContext(Dispatchers.IO) {
-                                    val resolver = context.contentResolver
-                                    // Delete existing file first
-                                    val existingUri = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                                    resolver.delete(
-                                        existingUri,
-                                        "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?",
-                                        arrayOf("nuvio-collections.json")
-                                    )
-                                    // Write new file
-                                    val values = android.content.ContentValues().apply {
-                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "nuvio-collections.json")
-                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                    NuvioButton(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    val json = viewModel.getExportJson()
+                                    withContext(Dispatchers.IO) {
+                                        val resolver = context.contentResolver
+                                        // Delete existing file first
+                                        val existingUri = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                                        resolver.delete(
+                                            existingUri,
+                                            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?",
+                                            arrayOf("nuvio-collections.json")
+                                        )
+                                        // Write new file
+                                        val values = android.content.ContentValues().apply {
+                                            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "nuvio-collections.json")
+                                            put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                                        }
+                                        val uri = resolver.insert(existingUri, values)
+                                        uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) } }
                                     }
-                                    val uri = resolver.insert(existingUri, values)
-                                    uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) } }
+                                    exportMessage = "saved"
+                                } catch (_: Exception) {
+                                    exportMessage = "failed"
                                 }
-                                exportMessage = "saved"
-                            } catch (_: Exception) {
-                                exportMessage = "failed"
                             }
-                        }
-                    }) {
+                        },
+                        enabled = headerActionsEnabled
+                    ) {
                         Text(exportMessage?.let {
                             when (it) {
                                 "saved" -> stringResource(R.string.collections_saved_downloads)
@@ -236,66 +271,124 @@ fun CollectionManagementScreen(
                         } ?: stringResource(R.string.collections_export_file))
                     }
                 }
-                NuvioButton(onClick = { viewModel.showImportDialog() }) {
+                NuvioButton(
+                    onClick = {
+                        lastFocusedTarget = "import"
+                        pendingFocusTarget = "import"
+                        viewModel.showImportDialog()
+                    },
+                    modifier = Modifier.focusRequester(importButtonFocusRequester),
+                    enabled = headerActionsEnabled
+                ) {
                     Text(stringResource(R.string.collections_import))
+                }
+                val firstCollectionEditRequester = uiState.collections.firstOrNull()?.id?.let { firstId ->
+                    itemFocusRequesters.getOrPut(firstId) { FocusRequester() }
                 }
                 NuvioButton(
                     onClick = {
-                        lastFocusedId = null
+                        lastFocusedTarget = "new"
                         onNavigateToEditor(null)
                     },
-                    modifier = Modifier.focusRequester(newButtonFocusRequester)
+                    modifier = Modifier
+                        .focusRequester(newButtonFocusRequester)
+                        .focusProperties {
+                            if (firstCollectionEditRequester != null) {
+                                down = firstCollectionEditRequester
+                            }
+                        },
+                    enabled = headerActionsEnabled
                 ) {
                     Text(stringResource(R.string.collections_new))
                 }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
-
+    Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.collections.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
             ) {
-                Text(
-                    text = stringResource(R.string.collections_empty),
-                    color = NuvioTheme.colors.TextSecondary,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-            ) {
-                itemsIndexed(
-                    items = uiState.collections,
-                    key = { _, item -> item.id }
-                ) { index, collection ->
-                    val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
-                    CollectionListItem(
-                        collection = collection,
-                        isFirst = index == 0,
-                        isLast = index == uiState.collections.size - 1,
-                        editFocusRequester = editFocusRequester,
-                        onEdit = {
-                            lastFocusedId = collection.id
-                            onNavigateToEditor(collection.id)
-                        },
-                        onDelete = { collectionToDelete = collection },
-                        onMoveUp = { viewModel.moveUp(index) },
-                        onMoveDown = { viewModel.moveDown(index) }
+                collectionsHeader()
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.collections_empty),
+                        color = NuvioTheme.colors.TextSecondary,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
+        } else {
+            val collectionsMovingIndex = uiState.collections.indexOfFirst { it.id == uiState.movingCollectionKey }
+            TvReorderList(
+                items = uiState.collections,
+                key = { it.id },
+                canMove = { uiState.collections.size > 1 && uiState.movingCollectionKey == null },
+                movingKey = uiState.movingCollectionKey,
+                onStartMove = viewModel::enterCollectionMoveMode,
+                onMoveBy = viewModel::moveCollectionDuringDrag,
+                onConfirmMove = { viewModel.confirmCollectionMove() },
+                onCancelMove = viewModel::cancelCollectionMove,
+                modifier = Modifier.fillMaxSize(),
+                scrollState = collectionsScrollState,
+                ensureComposedKey = ensureComposedCollectionId,
+                rowHeightCache = collectionRowHeightCache,
+                contentPadding = PaddingValues(
+                    top = NuvioTheme.spacing.xxxl,
+                    start = NuvioTheme.spacing.xxxl,
+                    end = NuvioTheme.spacing.xxxl,
+                    bottom = NuvioTheme.spacing.xxxl
+                ),
+                header = {
+                    Column {
+                        collectionsHeader()
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+                    }
+                },
+            ) { collection, isMoving, onStartMove, onConfirmMove ->
+                val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
+                val deleteFocusRequester = itemDeleteFocusRequesters.getOrPut(collection.id) { FocusRequester() }
+                CollectionListItem(
+                    collection = collection,
+                    isMoving = isMoving,
+                    canMove = uiState.collections.size > 1,
+                    actionsEnabled = uiState.movingCollectionKey == null || isMoving,
+                    editFocusRequester = editFocusRequester,
+                    deleteFocusRequester = deleteFocusRequester,
+                    onEdit = {
+                        lastFocusedTarget = "edit:${collection.id}"
+                        onNavigateToEditor(collection.id)
+                    },
+                    onDelete = { collectionToDelete = collection },
+                    onStartMove = onStartMove,
+                    onConfirmMove = onConfirmMove
+                )
+            }
+            SettingsVerticalScrollIndicators(
+                state = collectionsScrollState,
+                suppressBackward = collectionsMovingIndex == 0,
+                suppressForward = collectionsMovingIndex >= 0 &&
+                    collectionsMovingIndex == uiState.collections.lastIndex,
+                forceBackward = collectionsMovingIndex > 0,
+                forceForward = collectionsMovingIndex in 0 until uiState.collections.lastIndex
+            )
         }
-    }
 
     collectionToDelete?.let { collection ->
         NuvioDialog(
-            onDismiss = { collectionToDelete = null },
+            onDismiss = {
+                collectionToDelete = null
+                pendingFocusTarget = "delete:${collection.id}"
+            },
             title = stringResource(R.string.collections_delete_confirm_title),
             subtitle = stringResource(R.string.collections_delete_confirm_subtitle, collection.title),
             suppressFirstKeyUp = false
@@ -304,17 +397,33 @@ fun CollectionManagementScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
             ) {
-                NuvioButton(
-                    onClick = { collectionToDelete = null },
-                    modifier = Modifier.focusRequester(deleteDialogFocusRequester)
+                Button(
+                    onClick = {
+                        collectionToDelete = null
+                        pendingFocusTarget = "delete:${collection.id}"
+                    },
+                    modifier = Modifier
+                        .focusRequester(deleteDialogFocusRequester)
+                        .semantics { role = Role.Button }
                 ) {
                     Text(stringResource(R.string.collections_cancel))
                 }
-                NuvioButton(
+                Button(
                     onClick = {
+                        val currentIndex = uiState.collections.indexOfFirst { it.id == collection.id }
+                        val nextTargetId = uiState.collections
+                            .filterNot { it.id == collection.id }
+                            .let { remaining ->
+                                if (remaining.isEmpty()) null
+                                else remaining[currentIndex.coerceIn(0, remaining.lastIndex)].id
+                            }
                         viewModel.deleteCollection(collection.id)
                         collectionToDelete = null
-                    }
+                        val nextTarget = nextTargetId?.let { "edit:$it" } ?: "new"
+                        lastFocusedTarget = nextTarget
+                        pendingFocusTarget = nextTarget
+                    },
+                    modifier = Modifier.semantics { role = Role.Button }
                 ) {
                     Text(stringResource(R.string.collections_delete_confirm))
                 }
@@ -326,7 +435,7 @@ fun CollectionManagementScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ImportContent(
+internal fun ImportContent(
     importText: String,
     importError: String?,
     onTextChange: (String) -> Unit,
@@ -344,105 +453,112 @@ private fun ImportContent(
     onPickFile: () -> Unit,
     onConfirmImport: () -> Unit
 ) {
-    val fileTabFocusRequester = remember { FocusRequester() }
+    val modeFocusRequesters = remember {
+        ImportMode.entries.associateWith { FocusRequester() }
+    }
+    val fileTabFocusRequester = modeFocusRequesters.getValue(ImportMode.FILE)
     LaunchedEffect(Unit) {
-        repeat(3) { withFrameNanos { } }
-        fileTabFocusRequester.requestFocus()
+        requestFocusWhenReady(modeFocusRequesters[importMode] ?: fileTabFocusRequester)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = NuvioTheme.spacing.xxxl,
+            start = NuvioTheme.spacing.xxxl,
+            end = NuvioTheme.spacing.xxxl,
+            bottom = NuvioTheme.spacing.xxxl
+        ),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.none)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.collections_import_header),
-                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
-                color = NuvioTheme.colors.TextPrimary,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_cancel)) }
+        item(key = "import_header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.collections_import_header),
+                    style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                    color = NuvioTheme.colors.TextPrimary,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+                    NuvioButton(
+                        onClick = onBack,
+                        modifier = Modifier.blockHorizontalFocus()
+                    ) { Text(stringResource(R.string.collections_cancel)) }
+                }
             }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
         }
 
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+        item {
+            Text(
+                text = stringResource(R.string.collections_import_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextSecondary
+            )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.none)
-        ) {
-            item {
-                Text(
-                    text = stringResource(R.string.collections_import_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioTheme.colors.TextSecondary
-                )
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-
-                // Mode tabs
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                    ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
-                        val label = when (mode) {
-                            ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
-                            ImportMode.FILE -> stringResource(R.string.collections_mode_file)
-                            ImportMode.URL -> stringResource(R.string.collections_mode_url)
-                        }
-                        val tabModifier = if (mode == ImportMode.FILE) {
-                            Modifier.focusRequester(fileTabFocusRequester)
+            // Mode tabs
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.focusEntryTarget(modeFocusRequesters[importMode] ?: fileTabFocusRequester)
+            ) {
+                ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
+                    val label = when (mode) {
+                        ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
+                        ImportMode.FILE -> stringResource(R.string.collections_mode_file)
+                        ImportMode.URL -> stringResource(R.string.collections_mode_url)
+                    }
+                    val tabModifier = Modifier.focusRequester(modeFocusRequesters.getValue(mode))
+                    val isSelected = mode == importMode
+                    Button(
+                        onClick = { onModeChange(mode) },
+                        modifier = tabModifier.semantics {
+                            role = Role.Tab
+                            this.selected = isSelected
+                        },
+                        colors = if (isSelected) {
+                            ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.Primary,
+                                contentColor = NuvioTheme.colors.Background,
+                                focusedContainerColor = NuvioTheme.colors.Primary,
+                                focusedContentColor = NuvioTheme.colors.Background
+                            )
                         } else {
-                            Modifier
-                        }
-                        if (mode == importMode) {
-                            Button(
-                                onClick = { onModeChange(mode) },
-                                modifier = tabModifier.semantics {
-                                    role = Role.Tab
-                                    this.selected = true
-                                },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.Primary,
-                                    contentColor = NuvioTheme.colors.Background,
-                                    focusedContainerColor = NuvioTheme.colors.Primary,
-                                    focusedContentColor = NuvioTheme.colors.Background
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Text(label)
-                            }
-                        } else {
-                            NuvioButton(
-                                onClick = { onModeChange(mode) },
-                                modifier = tabModifier.semantics {
-                                    role = Role.Tab
-                                    this.selected = false
-                                }
-                            ) {
-                                Text(label)
-                            }
-                        }
+                            ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextPrimary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            )
+                        },
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Text(label)
                     }
                 }
-
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+        }
 
             item {
                 when (importMode) {
                     ImportMode.PASTE -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                            modifier = Modifier.trapHorizontalFocus()
+                        ) {
                             NuvioButton(onClick = onPaste) { Text(stringResource(R.string.collections_paste_clipboard)) }
                             if (importText.isNotBlank()) {
                                 NuvioButton(onClick = onValidate) { Text(stringResource(R.string.collections_validate)) }
@@ -495,7 +611,10 @@ private fun ImportContent(
                             color = NuvioTheme.colors.TextTertiary
                         )
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                        NuvioButton(onClick = onPickFile) { Text(stringResource(R.string.collections_load_file)) }
+                        NuvioButton(
+                            onClick = onPickFile,
+                            modifier = Modifier.blockHorizontalFocus()
+                        ) { Text(stringResource(R.string.collections_load_file)) }
 
                         if (importText.isNotBlank()) {
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -508,46 +627,21 @@ private fun ImportContent(
                     }
 
                     ImportMode.URL -> {
-                        Surface(
-                            shape = RoundedCornerShape(NuvioTheme.radii.md),
-                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundElevated),
-                            border = Border(
-                                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
-                                shape = RoundedCornerShape(NuvioTheme.radii.md)
-                            ),
+                        NuvioTextField(
+                            value = importUrl,
+                            onValueChange = onUrlChange,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(NuvioTheme.spacing.huge)
-                        ) {
-                            Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.md), contentAlignment = Alignment.CenterStart) {
-                                BasicTextField(
-                                    value = importUrl,
-                                    onValueChange = onUrlChange,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                        color = NuvioTheme.colors.TextPrimary,
-                                            textDirection = TextDirection.Content
-                                    ),
-                                    cursorBrush = SolidColor(NuvioTheme.colors.Primary),
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    decorationBox = { innerTextField ->
-                                        if (importUrl.isEmpty()) {
-                                            Text(
-                                                text = stringResource(R.string.collections_import_url_placeholder),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = NuvioTheme.colors.TextTertiary
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                )
-                            }
-                        }
+                                .blockHorizontalFocus(),
+                            placeholder = stringResource(R.string.collections_import_url_placeholder)
+                        )
 
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-                        NuvioButton(onClick = onFetchUrl) {
+                        NuvioButton(
+                            onClick = onFetchUrl,
+                            modifier = Modifier.blockHorizontalFocus()
+                        ) {
                             Text(if (isLoadingImport) stringResource(R.string.collections_fetching) else stringResource(R.string.collections_fetch_url))
                         }
 
@@ -585,7 +679,10 @@ private fun ImportContent(
                                 color = NuvioTheme.colors.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-                            NuvioButton(onClick = onConfirmImport) {
+                            NuvioButton(
+                                onClick = onConfirmImport,
+                                modifier = Modifier.blockHorizontalFocus()
+                            ) {
                                 Text(stringResource(R.string.collections_confirm_import))
                             }
                         }
@@ -603,7 +700,6 @@ private fun ImportContent(
                     )
                 }
             }
-        }
     }
 }
 
@@ -611,17 +707,37 @@ private fun ImportContent(
 @Composable
 private fun CollectionListItem(
     collection: Collection,
-    isFirst: Boolean,
-    isLast: Boolean,
+    isMoving: Boolean,
+    canMove: Boolean,
+    actionsEnabled: Boolean,
     editFocusRequester: FocusRequester? = null,
+    deleteFocusRequester: FocusRequester? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    onStartMove: () -> Unit,
+    onConfirmMove: () -> Unit
 ) {
+    val cardColor by animateColorAsState(
+        targetValue = if (isMoving) {
+            NuvioTheme.colors.FocusBackground
+        } else {
+            NuvioTheme.colors.BackgroundCard
+        },
+        animationSpec = com.nuvio.tv.ui.theme.NuvioMotion.focusTween(),
+        label = "collectionCardColor",
+    )
+    val cardBorder = if (isMoving) {
+        Border(
+            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+            shape = RoundedCornerShape(NuvioTheme.radii.md)
+        )
+    } else {
+        Border.None
+    }
     Surface(
         shape = RoundedCornerShape(NuvioTheme.radii.md),
-        colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
+        colors = SurfaceDefaults.colors(containerColor = cardColor),
+        border = cardBorder,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -639,56 +755,51 @@ private fun CollectionListItem(
                     ),
                     color = NuvioTheme.colors.TextPrimary,
                 )
+                val summary = buildString {
+                    append(stringResource(R.string.collections_folder_count, collection.folders.size))
+                    if (collection.pinToTop) {
+                        append(" · ")
+                        append(stringResource(R.string.collections_pinned))
+                    }
+                }
                 Text(
-                    text = stringResource(R.string.collections_folder_count, collection.folders.size),
+                    text = summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextTertiary
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                modifier = Modifier.trapHorizontalFocus()
+            ) {
                 Button(
-                    onClick = onMoveUp,
-                    enabled = !isFirst,
+                    onClick = if (isMoving) onConfirmMove else onStartMove,
+                    enabled = isMoving || (canMove && actionsEnabled),
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
+                        containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                        contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
                             border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
+                        ),
+                        focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
-                    Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up))
-                }
-
-                Button(
-                    onClick = onMoveDown,
-                    enabled = !isLast,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
-                    ),
-                    border = ButtonDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                ) {
-                    Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down))
+                    Icon(
+                        imageVector = Icons.Default.Reorder,
+                        contentDescription = stringResource(R.string.cd_reorder)
+                    )
                 }
 
                 Button(
                     onClick = onEdit,
+                    enabled = actionsEnabled && !isMoving,
                     modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
@@ -700,7 +811,8 @@ private fun CollectionListItem(
                         focusedBorder = Border(
                             border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
+                        ),
+                        focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
@@ -709,6 +821,8 @@ private fun CollectionListItem(
 
                 Button(
                     onClick = onDelete,
+                    enabled = actionsEnabled && !isMoving,
+                    modifier = if (deleteFocusRequester != null) Modifier.focusRequester(deleteFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextSecondary,
@@ -719,7 +833,8 @@ private fun CollectionListItem(
                         focusedBorder = Border(
                             border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
+                        ),
+                        focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
