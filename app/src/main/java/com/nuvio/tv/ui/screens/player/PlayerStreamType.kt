@@ -1,7 +1,10 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.core.usenet.UsenetSidecar
+
 internal enum class PlayerStreamType(val label: String) {
     P2P("P2P"),
+    USENET("Usenet"),
     SERVER("Server"),
     CLOUD("Cloud"),
     LOCAL("Local"),
@@ -20,4 +23,5 @@ internal fun streamTypeLabel(type: PlayerStreamType, addonName: String?): String
     if (type == PlayerStreamType.DIRECT && !addonName.isNullOrBlank()) "${type.label} · $addonName" else type.label
 
 internal fun PlayerRuntimeController.currentStreamType(): PlayerStreamType =
-    streamTypeOf(isTorrentStream, _uiState.value.isServerStream, contentType, currentStreamUrl)
+    if (UsenetSidecar.isSessionUrl(currentStreamUrl)) PlayerStreamType.USENET
+    else streamTypeOf(isTorrentStream, _uiState.value.isServerStream, contentType, currentStreamUrl)
