@@ -225,6 +225,12 @@ internal fun MDBListSettingsBody(
                                     if (uiState.movingRatingKey == null) {
                                         onEvent(MDBListSettingsEvent.ToggleShowOnHero(!uiState.showOnHero))
                                     }
+                                },
+                                modifier = Modifier.focusProperties {
+                                    val firstMoveRequester = ratingItems.firstOrNull()
+                                        ?.takeIf { it.enabled }
+                                        ?.let { moveButtonFocusRequesters[it.provider] }
+                                    if (firstMoveRequester != null) down = firstMoveRequester
                                 }
                             )
 
