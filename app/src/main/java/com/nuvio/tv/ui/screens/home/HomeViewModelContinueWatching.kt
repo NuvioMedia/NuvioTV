@@ -1765,6 +1765,20 @@ private suspend fun HomeViewModel.enrichVisibleContinueWatchingItems(
     true
 }
 
+private val upcomingReleaseComparator = compareBy<ContinueWatchingItem, LocalDate?>(nullsLast()) { item ->
+    parseEpisodeReleaseDate((item as? ContinueWatchingItem.NextUp)?.info?.released)
+}.thenBy(nullsLast()) { item ->
+    parseTimedEpisodeReleaseInstant((item as? ContinueWatchingItem.NextUp)?.info?.released)
+}
+
+private fun parseTimedEpisodeReleaseInstant(raw: String?): Instant? {
+    val value = raw?.trim() ?: return null
+    if (runCatching { DateTimeFormatter.ISO_DATE_TIME.parse(value) }.isFailure) {
+        return runCatching { Instant.parse(value) }.getOrNull()
+    }
+    return parseEpisodeReleaseInstant(value)
+}
+
 internal fun sortContinueWatchingItems(
     items: List<ContinueWatchingItem>,
     mode: ContinueWatchingSortMode
@@ -1792,26 +1806,7 @@ internal fun sortContinueWatchingItems(
                 }
             }
 
-            val sortedUnreleased = unreleased.sortedWith { a, b ->
-                val dateA = parseEpisodeReleaseDate(
-                    when (a) {
-                        is ContinueWatchingItem.InProgress -> null
-                        is ContinueWatchingItem.NextUp -> a.info.released
-                    }
-                )
-                val dateB = parseEpisodeReleaseDate(
-                    when (b) {
-                        is ContinueWatchingItem.InProgress -> null
-                        is ContinueWatchingItem.NextUp -> b.info.released
-                    }
-                )
-                when {
-                    dateA == null && dateB == null -> 0
-                    dateA == null -> 1 // unknown dates go to the end
-                    dateB == null -> -1
-                    else -> dateA.compareTo(dateB) // ascending: soonest first
-                }
-            }
+            val sortedUnreleased = unreleased.sortedWith(upcomingReleaseComparator)
 
             sortedReleased + sortedUnreleased
         }
@@ -1864,21 +1859,7 @@ internal fun splitUpcomingItems(
     val (upcoming, main) = items.partition { item ->
         item is ContinueWatchingItem.NextUp && !item.info.hasAired
     }
-    // Sort upcoming by release date ascending (soonest first)
-    val sortedUpcoming = upcoming.sortedWith { a, b ->
-        val dateA = parseEpisodeReleaseDate(
-            (a as? ContinueWatchingItem.NextUp)?.info?.released
-        )
-        val dateB = parseEpisodeReleaseDate(
-            (b as? ContinueWatchingItem.NextUp)?.info?.released
-        )
-        when {
-            dateA == null && dateB == null -> 0
-            dateA == null -> 1
-            dateB == null -> -1
-            else -> dateA.compareTo(dateB)
-        }
-    }
+    val sortedUpcoming = upcoming.sortedWith(upcomingReleaseComparator)
     return main to sortedUpcoming
 }
 
