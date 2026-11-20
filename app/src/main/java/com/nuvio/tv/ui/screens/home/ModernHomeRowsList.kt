@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.compose.ui.ExperimentalComposeUiApi
 import coil3.imageLoader
-import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -168,7 +167,7 @@ internal fun ModernHomeRowsList(
         verticalRowListState,
         density,
         useLandscapePosters,
-        effectiveExpandEnabled,
+        alwaysShowLandscapeClearlogo,
         portraitCatalogCardWidth,
         portraitCatalogCardHeight,
         landscapeCatalogCardWidth,
@@ -194,14 +193,15 @@ internal fun ModernHomeRowsList(
                                 portraitCardWidth = portraitCatalogCardWidth,
                                 portraitCardHeight = portraitCatalogCardHeight,
                                 landscapeCardWidth = landscapeCatalogCardWidth,
-                                landscapeCardHeight = landscapeCatalogCardHeight,
-                                expandEnabled = effectiveExpandEnabled
+                                landscapeCardHeight = landscapeCatalogCardHeight
                             )
                             val wPx = with(density) { metrics.width.roundToPx() }
                             val hPx = with(density) { metrics.height.roundToPx() }
                             if (wPx <= 0 || hPx <= 0) continue
-                            val cacheKey = "${url}_${wPx}x${hPx}"
-                            if (verticalPrefetchImageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) continue
+                            val landscapeCustomPoster = useLandscapePosters && !alwaysShowLandscapeClearlogo &&
+                                !item.metaPreview?.landscapePoster.isNullOrBlank()
+                            val cacheKey = cardImageMemoryCacheKey(url, wPx, hPx, item.cardImageFallbackUrl(landscapeCustomPoster))
+                            if (verticalPrefetchImageLoader.memoryCache?.get(cacheKey) != null) continue
                             verticalPrefetchImageLoader.enqueue(
                                 ImageRequest.Builder(context)
                                     .data(url)
