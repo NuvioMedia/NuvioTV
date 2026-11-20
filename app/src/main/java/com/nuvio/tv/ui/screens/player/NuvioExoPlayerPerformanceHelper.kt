@@ -64,8 +64,6 @@ object NuvioExoPlayerPerformanceHelper {
     // Parallel chunk fetching keeps more sockets alive than the old cap of 8, which was evicting
     // live chunk connections mid playback and forcing cold reopens.
     const val NUVIO_SHARED_POOL_MAX_IDLE = 32
-    private const val BACK_BUFFER_TARGET_SHARE_NUM = 1L
-    private const val BACK_BUFFER_TARGET_SHARE_DEN = 2L
 
     // ─── Customization Variables ──────────────────────────────────────────────
     @Volatile
@@ -268,13 +266,6 @@ object NuvioExoPlayerPerformanceHelper {
         }
     }
 
-    // Both buffers hold bitrate times duration, so half of minBufferMs gives the back buffer a third of the target whatever the stream.
-    private fun effectiveBackBufferMs(): Int {
-        if (backBufferMs <= 0) return 0
-        val ceiling = (minBufferMs.toLong() * BACK_BUFFER_TARGET_SHARE_NUM / BACK_BUFFER_TARGET_SHARE_DEN).toInt()
-        return backBufferMs.coerceAtMost(ceiling)
-    }
-
     /**
      * Builds a [DefaultLoadControl] tuned for Nuvio performance when enabled,
      * or a standard ExoPlayer [DefaultLoadControl] when disabled.
@@ -297,9 +288,10 @@ object NuvioExoPlayerPerformanceHelper {
             }
             val allocator = DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 0, enabled)
             liveAllocator = allocator
+            val resolvedBackBufferMs = backBufferMs.coerceAtLeast(0)
             android.util.Log.i(
                 "ExoPerformance",
-                "buildLoadControl: targetBufferSizeMb=$targetBufferSizeMb, chunkOverheadMb=$chunkOverheadMb, effectiveTargetBufferMb=$effectiveTargetBufferMb, targetBytes=$targetBufferBytes, backBufferMs=${effectiveBackBufferMs()} (set=$backBufferMs)"
+                "buildLoadControl: targetBufferSizeMb=$targetBufferSizeMb, chunkOverheadMb=$chunkOverheadMb, effectiveTargetBufferMb=$effectiveTargetBufferMb, targetBytes=$targetBufferBytes, backBufferMs=$resolvedBackBufferMs"
             )
             DefaultLoadControl.Builder()
                 .setAllocator(allocator)
@@ -313,9 +305,7 @@ object NuvioExoPlayerPerformanceHelper {
                 // The byte target has to gate everything the allocator holds, or the back buffer
                 // is charged on top of it and the configured size is not a limit at all.
                 .setPrioritizeTimeOverSizeThresholds(false)
-                // Forward buffer protects playback and the back buffer only protects a seek back,
-                // so the back buffer is the side that gives way when both cannot fit the target.
-                .setBackBuffer(effectiveBackBufferMs(), true)
+                .setBackBuffer(resolvedBackBufferMs, true)
                 .build()
         } else {
             DefaultLoadControl.Builder()

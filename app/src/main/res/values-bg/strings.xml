@@ -1226,7 +1226,6 @@
     <string name="mdblist_rate_limited">Лимитът на заявките за MDBList е достигнат. Синхронизирането ще се възобнови след нулиране на лимита.</string>
     <string name="mdblist_revoke_failed">Връзката на това устройство е прекъсната. Премахнете това приложение от настройките на вашия MDBList акаунт, за да отмените достъпа му.</string>
     <string name="mdblist_title">Рейтинги на MDBList</string>
-    <string name="mdblist_subtitle">Конфигуриране на външни оценки, показани в детайлния герой</string>
     <string name="mdblist_enable_title">Активиране на оценките от MDBList</string>
     <string name="mdblist_enable_subtitle">Извличане на оценки от външни доставчици в екрана с подробности за метаданните</string>
     <string name="mdblist_api_key_title">API ключ</string>
@@ -1253,7 +1252,6 @@
     <string name="mdblist_show_on_hero_title">Използване на оценки за герой</string>
     <string name="mdblist_show_on_hero_subtitle">Показване на оценките от MDBList в карусела на героите (модерни и класически/мрежови)</string>
     <string name="mdblist_rating_order_title">Ред на оценяване</string>
-    <string name="mdblist_rating_order_subtitle">Първите 3 активирани и налични оценки са показани за съвременния герой. Използвайте стрелките, за да ги пренаредите.</string>
     <string name="mdblist_dialog_title">Ключ за API на MDBList</string>
     <string name="mdblist_dialog_subtitle">Въведете вашия API ключ, за да получите външни оценки</string>
     <string name="mdblist_dialog_placeholder">Въведете API ключ на MDBList</string>

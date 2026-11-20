@@ -1096,7 +1096,6 @@
 
 
     <string name="mdblist_title">MDBList ocene</string>
-    <string name="mdblist_subtitle">Konfigurišite eksterne ocene prikazane u glavnoj sekciji detalja</string>
     <string name="mdblist_enable_title">Omogući MDBList ocene</string>
     <string name="mdblist_enable_subtitle">Preuzmi ocene od eksternih provajdera na ekranu detalja metapodataka</string>
     <string name="mdblist_api_key_title">API Ključ</string>

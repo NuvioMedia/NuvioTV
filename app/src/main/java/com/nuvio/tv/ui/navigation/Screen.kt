@@ -177,8 +177,15 @@ sealed class Screen(val route: String) {
     data object Collections : Screen("collections")
 
     data object CollectionEditor : Screen("collection_editor?collectionId={collectionId}") {
+        private fun encode(value: String): String =
+            URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+
         fun createRoute(collectionId: String? = null): String {
-            return "collection_editor?collectionId=${collectionId ?: ""}"
+            return if (collectionId.isNullOrEmpty()) {
+                "collection_editor?collectionId="
+            } else {
+                "collection_editor?collectionId=${encode(collectionId)}"
+            }
         }
     }
 

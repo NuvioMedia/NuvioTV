@@ -856,6 +856,61 @@ class TmdbMetadataServiceTest {
     }
 
     @Test
+    fun `fetchPersonDetail skips talk show guest appearances but keeps hosted talk shows`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getPersonDetails(600, any(), "en") } returns Response.success(
+            TmdbPersonResponse(id = 600, name = "Jane Doe", knownForDepartment = "Acting")
+        )
+        coEvery { api.getPersonCombinedCredits(600, any(), "en") } returns Response.success(
+            TmdbPersonCreditsResponse(
+                cast = listOf(
+                    TmdbPersonCreditCast(
+                        id = 1,
+                        name = "Late Night Guest Spot",
+                        mediaType = "tv",
+                        posterPath = "/guest.jpg",
+                        character = "Self - Guest",
+                        genreIds = listOf(10767, 35)
+                    ),
+                    TmdbPersonCreditCast(
+                        id = 2,
+                        name = "Morning Chat",
+                        mediaType = "tv",
+                        posterPath = "/self.jpg",
+                        character = "Self",
+                        genreIds = listOf(10767)
+                    ),
+                    TmdbPersonCreditCast(
+                        id = 3,
+                        name = "Jane Doe Tonight",
+                        mediaType = "tv",
+                        posterPath = "/host.jpg",
+                        character = "Self - Host",
+                        genreIds = listOf(10767)
+                    ),
+                    TmdbPersonCreditCast(
+                        id = 4,
+                        name = "Crime Drama",
+                        mediaType = "tv",
+                        posterPath = "/drama.jpg",
+                        character = "Detective Ghost",
+                        genreIds = listOf(18, 80)
+                    )
+                )
+            )
+        )
+
+        val service = TmdbMetadataService(api)
+        val detail = service.fetchPersonDetail(personId = 600, language = "en")
+
+        assertNotNull(detail)
+        assertEquals(
+            setOf("Jane Doe Tonight", "Crime Drama"),
+            detail?.tvCredits?.map { it.name }?.toSet()
+        )
+    }
+
+    @Test
     fun `fetchMovieCollection falls back CJK titles to English`() = runTest {
         val api = mockk<TmdbApi>()
         coEvery { api.getCollectionDetails(10, any(), "tr-TR") } returns Response.success(

@@ -1102,7 +1102,6 @@
   <string name="mdblist_rate_limited">Το όριο αιτημάτων του MDBList έχει συμπληρωθεί. Ο συγχρονισμός θα συνεχιστεί μόλις επαναφερθεί το όριο.</string>
   <string name="mdblist_revoke_failed">Η αποσύνδεση έγινε σε αυτή τη συσκευή. Αφαιρέστε αυτή την εφαρμογή από τις ρυθμίσεις του λογαριασμού σας MDBList για να ανακληθεί η πρόσβαση.</string>
   <string name="mdblist_title">Βαθμολογίες MDBList</string>
-  <string name="mdblist_subtitle">Διαμόρφωση εξωτερικών βαθμολογιών που εμφανίζονται στην ηρωική ενότητα λεπτομερειών</string>
   <string name="mdblist_enable_title">Ενεργοποίηση βαθμολογιών MDBList</string>
   <string name="mdblist_enable_subtitle">Λήψη βαθμολογιών από εξωτερικούς παρόχους στην οθόνη λεπτομερειών μεταδεδομένων</string>
   <string name="mdblist_api_key_title">Κλειδί API</string>
@@ -1129,7 +1128,6 @@
   <string name="mdblist_show_on_hero_title">Χρήση βαθμολογιών στην ηρωική ενότητα</string>
   <string name="mdblist_show_on_hero_subtitle">Εμφάνιση βαθμολογιών MDBList στο καρουζέλ της ηρωικής ενότητας (μοντέρνα και κλασική προβολή/πλέγμα)</string>
   <string name="mdblist_rating_order_title">Σειρά βαθμολογιών</string>
-  <string name="mdblist_rating_order_subtitle">Οι πρώτες 3 ενεργοποιημένες και διαθέσιμες βαθμολογίες εμφανίζονται στη μοντέρνα ηρωική ενότητα. Χρησιμοποιήστε τα βέλη για αναδιάταξη.</string>
   <string name="mdblist_dialog_title">Κλειδί API MDBList</string>
   <string name="mdblist_dialog_subtitle">Εισάγετε το κλειδί API σας για λήψη εξωτερικών βαθμολογιών</string>
   <string name="mdblist_dialog_placeholder">Εισάγετε κλειδί API MDBList</string>
@@ -3330,7 +3328,6 @@
   <string name="autosync_tolerance_value">%1$d ms</string>
   <string name="autosync_thorough_title">Εξονυχιστική αναζήτηση αυτόματου συγχρονισμού</string>
   <string name="autosync_thorough_description">Συνεχίστε τη σύγκριση άλλων υποτίτλων και ενσωματωμένων κομματιών για ακριβέστερη αντιστοίχιση πριν από τον συγχρονισμό. Όταν είναι ανενεργό, χρησιμοποιείται νωρίτερα η πρώτη ισχυρή αντιστοίχιση. Εφαρμόζονται μόνο αντιστοιχίσεις υψηλής βεβαιότητας.</string>
-  <string name="autosync_toast_no_fit">Ο συγχρονισμός απέτυχε: αυτοί οι υπότιτλοι δεν ταιριάζουν με αυτή την έκδοση του βίντεο.</string>
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
   <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>

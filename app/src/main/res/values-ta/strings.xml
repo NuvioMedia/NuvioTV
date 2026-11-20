@@ -820,7 +820,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">எம்டிபிலிஸ்ட் மதிப்பீடுகள்</string>
-    <string name="mdblist_subtitle">விவர முக்கியப்பகுதியில் காட்டப்படும் வெளிப்புற மதிப்பீடுகளை அமை</string>
     <string name="mdblist_enable_title">எம்டிபிலிஸ்ட் மதிப்பீடுகளை இயக்கு</string>
     <string name="mdblist_enable_subtitle">மேட்டாடேட்டா விவரத்திரையில் வெளிப்புற வழங்குநர்களிலிருந்து மதிப்பீடுகளை பெறு</string>
     <string name="mdblist_api_key_title">ஏபிஐ விசை</string>

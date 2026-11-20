@@ -11,6 +11,8 @@ import com.nuvio.tv.data.mediaserver.ServerRepository
 import com.nuvio.tv.data.mediaserver.emby.EmbyProvider
 import com.nuvio.tv.data.mediaserver.jellyfin.JellyfinProvider
 import com.nuvio.tv.data.mediaserver.mediabrowser.ServerClientIdentity
+import com.nuvio.tv.data.mediaserver.plex.PlexProvider
+import com.nuvio.tv.data.mediaserver.silo.SiloProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -45,10 +47,21 @@ object MediaServerModule {
             version = BuildConfig.VERSION_NAME,
             deviceId = identity::currentClientId
         )
+        lateinit var repository: ServerRepository
+        val profileClientIdentity = ServerClientIdentity(
+            device = clientIdentity.device,
+            version = clientIdentity.version,
+            deviceId = { repository.profileDeviceId(identity.currentClientId()) }
+        )
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val repository = ServerRepository(
+        repository = ServerRepository(
             persistence = persistence,
-            providers = listOf(JellyfinProvider(http, clientIdentity), EmbyProvider(http, clientIdentity)),
+            providers = listOf(
+                JellyfinProvider(http, profileClientIdentity),
+                EmbyProvider(http, profileClientIdentity),
+                PlexProvider(http, clientIdentity),
+                SiloProvider(http, clientIdentity)
+            ),
             scope = scope
         )
         scope.launch { profileDataStore.activeProfileId.collect(repository::selectProfile) }

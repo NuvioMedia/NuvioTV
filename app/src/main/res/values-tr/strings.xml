@@ -421,6 +421,8 @@
     <string name="about_update_auto_install_notice_title">Otomatik güncellemeden sonra bildir</string>
     <string name="about_update_auto_install_notice_subtitle">Uygulama kendini güncelledikten sonra bir sonraki açılışta bildirim göster</string>
     <string name="about_update_channel_title">Güncelleme kanalı</string>
+    <string name="about_update_optimize_install_title">Kurulum sırasında güncellemeleri optimize et</string>
+    <string name="about_update_optimize_install_subtitle">Güncelleme sonrası ilk açılış daha hızlı olur, ancak uygulama yükleme sırasında yaklaşık bir dakika kapanır. Android\'in yükleyici ekranını kullanmak için bunu kapatın</string>
     <string name="about_update_channel_subtitle">Almak istediğiniz uygulama güncellemesi türünü seçin</string>
     <string name="about_check_updates">Güncellemeleri kontrol et</string>
     <string name="about_check_updates_subtitle">En son sürümü indir</string>
@@ -785,6 +787,16 @@
     <string name="playback_auto_switch_internal_player_on_error">Başlangıç hatasında motoru otomatik değiştir</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Yayın başlarken hata olursa ExoPlayer ile libmpv arasında otomatik geçiş yap.</string>
     <string name="playback_release_decoder_on_background">Dekoderi arka planda serbest bırak</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Bunu kullanmak için sonraki eşleşen kaynağa geçme seçeneğini kapatın.</string>
+    <string name="autoplay_fallback_next_source">Başarısızlıkta sonraki eşleşen kaynağa geç</string>
+    <string name="autoplay_fallback_next_source_sub">Otomatik seçilen kaynak başarısız olursa veya zamanında başlamazsa, sıradaki eşleşen kaynakları sessizce dene.</string>
+    <string name="autoplay_fallback_max_sources">Başarısızlıkta denenecek kaynak sayısı</string>
+    <string name="autoplay_fallback_max_sources_sub">Hata göstermeden önce kaç eşleşen kaynağın daha deneneceği.</string>
+    <string name="autoplay_fallback_startup_timeout">Kaynağın başlaması için süre</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Sonrakini denemeden önce bir kaynağın başlaması için ne kadar bekleneceği.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$ds</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Bunu kullanmak için başlangıç hatasında motoru otomatik değiştir seçeneğini kapatın.</string>
+    <string name="player_error_source_startup_timeout">Kaynak %1$d saniye içinde başlamadı.</string>
     <string name="playback_release_decoder_on_background_sub">Nuvio arka plana geçtiğinde video dekoderini serbest bırakır. Uygulamaya geri döndükten sonra oynatma dekoder hatası veriyorsa açın. Oynatıcı geri dönüldüğünde ve ekran koruyucudan sonra yeniden yüklenir</string>
     <string name="playback_external_forward_subtitles">Altyazıları harici oynatıcıya aktar</string>
     <string name="playback_external_forward_subtitles_sub">Altyazıları tercih ettiğiniz dilde eklentilerden çekip harici oynatıcıya gönderir.</string>
@@ -823,6 +835,8 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Fragman</string>
+    <string name="playback_chapter_title_title">Bölüm Başlığını Göster</string>
+    <string name="playback_chapter_title_sub">İlerleme çubuğunun üstünde geçerli bölümün adını göster.</string>
     <string name="audio_autoplay_trailers">Fragmanları Otomatik Oynat</string>
     <string name="audio_autoplay_trailers_sub">Bir süre hareketsiz kalındığında detay ekranında fragmanları otomatik oynat</string>
     <string name="audio_trailer_delay">Fragman Gecikmesi</string>
@@ -936,12 +950,35 @@
     <string name="sub_outline_sub">Daha iyi görünürlük için altyazı metninin etrafına dış çizgi ekle</string>
     <string name="sub_outline_color">Dış Çizgi Rengi</string>
     <string name="sub_hdr_style">HDR / Dolby Vision için ayrı stil</string>
+    <string name="sub_outline_width">Dış Çizgi Kalınlığı</string>
     <string name="sub_hdr_style_sub">HDR ve Dolby Vision videolarda altyazı için ayrı bir metin rengi ve daha kısık bir parlaklık kullan</string>
     <string name="sub_hdr_text_color">HDR Metin Rengi</string>
     <string name="sub_hdr_brightness">HDR Parlaklığı</string>
     <string name="sub_hdr_dim_player_controls">HDR\'de oynatıcı kontrollerini kıs</string>
     <string name="sub_hdr_dim_player_controls_sub">HDR ve Dolby Vision videolarda gösterilen oynatıcı kontrollerine ve menülerine de HDR parlaklığını uygula</string>
     <string name="sub_advanced_section">Gelişmiş Altyazı Oluşturma</string>
+    <string name="sub_appearance">Altyazı Görünümü</string>
+    <string name="sub_appearance_desc">Yazı tipi, renkler, arka plan ve gölge</string>
+    <string name="sub_appearance_hint">Metin altyazılarına uygulanır. Stilli ASS ve resim altyazıları özgün görünümlerini korur.</string>
+    <string name="sub_preview">Önizleme</string>
+    <string name="sub_preview_text">Her hikâye küçük bir merakla başlar.</string>
+    <string name="sub_font">Yazı Tipi</string>
+    <string name="sub_font_default">Varsayılan</string>
+    <string name="sub_font_serif">Serif</string>
+    <string name="sub_font_mono">Sabit Genişlik</string>
+    <string name="sub_font_import">Telefondan İçe Aktar</string>
+    <string name="sub_font_import_desc">10 MB\'a kadar .ttf veya .otf yazı tipi ekle. İçe aktarılan yazı tipleri bu TV\'de kalır.</string>
+    <string name="sub_font_import_qr">Telefonunuzla tarayarak .ttf veya .otf yazı tipi ekleyin</string>
+    <string name="sub_font_missing">Bu cihazda yazı tipi kullanılamıyor. Varsayılan yazı tipi kullanılıyor.</string>
+    <string name="sub_font_remove">%1$s yazı tipini kaldır</string>
+    <string name="sub_background">Arka Plan</string>
+    <string name="sub_bg_opacity">Arka Plan Opaklığı</string>
+    <string name="sub_bg_roundness">Köşe Yuvarlaklığı</string>
+    <string name="sub_shadow">Gölge</string>
+    <string name="sub_shadow_desc">Metni parlak sahnelerden ayır</string>
+    <string name="sub_shadow_opacity">Gölge Opaklığı</string>
+    <string name="sub_shadow_size">Gölge Boyutu</string>
+    <string name="sub_reset_appearance">Görünümü Sıfırla</string>
     <string name="sub_libass">ASS/SSA altyazıları için libass kullan</string>
     <string name="sub_libass_sub">Gelişmiş ASS/SSA işleme (stiller, konumlandırma, animasyonlar)</string>
     <string name="sub_libass_mode">Libass Görüntüleme Modu</string>
@@ -1094,6 +1131,8 @@
     <string name="layout_use_episode_thumbnails_cw">İzlemeye Devam Et\'de bölüm küçük resimleri kullan</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Varsayılan görsel olarak bölüm küçük resimlerini kullan. Kapatılınca arka plan görseli kullanılır.</string>
     <string name="layout_blur_unwatched">İzlenmemiş Bölümleri Bulanıklaştır</string>
+    <string name="layout_season_posters">Sezon Posterleri</string>
+    <string name="layout_season_posters_sub">Varsa sezonları metin sekmeleri yerine poster olarak göster.</string>
     <string name="layout_blur_unwatched_sub">Spoiler önlemek için bölüm resimlerini izlenene kadar bulanık tutar.</string>
     <string name="layout_episode_options_overlay">Bölüm Seçenekleri Katmanı</string>
     <string name="layout_episode_options_overlay_sub">Bir bölümü basılı tutunca gösterilecek görünümü seçin.</string>
@@ -1121,6 +1160,14 @@
     <string name="layout_cw_sort_split_upcoming">Yaklaşanları Ayrı Satırda Göster</string>
     <string name="layout_cw_sort_split_upcoming_desc">Henüz yayınlanmamış bölümleri ayrı bir Yaklaşan satırına taşı</string>
     <string name="upcoming_section_title">Yaklaşanlar</string>
+    <string name="layout_cw_click_action">Seçildiğinde</string>
+    <string name="layout_cw_click_action_sub">İzlemeye Devam Et öğesi seçildiğinde neyin açılacağı</string>
+    <string name="layout_cw_click_stream">Yayını Aç</string>
+    <string name="layout_cw_click_stream_desc">Bir kaynak seçin veya oynatmaya devam edin</string>
+    <string name="layout_cw_click_details">Ayrıntıları Aç</string>
+    <string name="layout_cw_click_details_desc">İçeriğin ayrıntılar sayfasını aç</string>
+    <string name="layout_cw_click_details_upcoming">Yalnızca Yaklaşan Bölümler İçin Ayrıntılar</string>
+    <string name="layout_cw_click_details_upcoming_desc">Henüz yayınlanmamış bölümler için ayrıntıları aç, diğerleri için yayını aç</string>
     <string name="layout_trailer_button">Fragman Düğmesini Göster</string>
     <string name="layout_trailer_button_sub">Ayrıntı sayfasında fragman düğmesi göster (sadece fragman mevcutsa).</string>
     <string name="layout_trailer_play_in_background">Arka Planda Oynat</string>
@@ -1217,6 +1264,8 @@
     <string name="layout_always_show_landscape_clearlogo">Yatay Posterlerde Her Zaman Logolu Arka Plan</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Eklentiden gelen yatay posteri yoksayar ve bunun yerine logo katmanlı arka plan kullanır.</string>
     <string name="web_custom_poster_title">Özel Poster Kaynağı</string>
+    <string name="layout_hero_description_auto_scroll">Açıklamaları Otomatik Kaydır</string>
+    <string name="layout_hero_description_auto_scroll_sub">Ana ekrandaki uzun açıklamaları kesmek yerine yavaşça kaydır.</string>
     <string name="web_custom_poster_subtitle">Aşağıya bir poster URL şablonu yapıştırın ve Kaydet\'e basın.</string>
     <string name="web_custom_poster_label">URL Şablonu</string>
     <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
@@ -1233,6 +1282,13 @@
     <string name="web_custom_poster_loading">Yükleniyor…</string>
     <string name="web_custom_poster_placeholders_info">Yer tutucular: {id} tüm içerik kimliklerini iletir. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} tek bir kimlik türünü hedefler — kullanılamıyorsa orijinal poster korunur. {imdb_id|tmdb_id|kitsu_id} desteklenen kimlik türlerini belirtir — eşleşen kullanılır, aksi halde orijinal poster korunur. Bir yer tutucuyu isteğe bağlı yapmak için ? ekleyin (atlanmak yerine boş bırakılır): {imdb_id?}. Diğer yer tutucular: {id_type}, {typed_id}, {type}, {shape}.</string>
     <string name="mdblist_name">MDBList</string>
+    <string name="web_subtitle_font_title">Altyazı Yazı Tipleri</string>
+    <string name="web_subtitle_font_subtitle">TV\'nizde altyazılar için kullanmak üzere bir .ttf veya .otf dosyası seçin.</string>
+    <string name="web_subtitle_font_choose">Yazı Tipi Dosyası Seç</string>
+    <string name="web_subtitle_font_uploading">Yükleniyor…</string>
+    <string name="web_subtitle_font_added">TV\'nize eklendi</string>
+    <string name="web_subtitle_font_error">Bu yazı tipi içe aktarılamadı. 10 MB altında geçerli bir .ttf veya .otf dosyası seçin.</string>
+    <string name="web_subtitle_font_connection_error">Bağlantı hatası</string>
     <string name="mdblist_tracking_description">İzleme geçmişini ve oynatma ilerlemesini cihazlar arasında eşitler</string>
     <string name="mdblist_connected_as">%1$s olarak bağlı</string>
     <string name="mdblist_account_fallback">MDBList kullanıcısı</string>
@@ -1283,7 +1339,7 @@
     <string name="mdblist_show_on_hero_title">Hero Alanında Puanları Göster</string>
     <string name="mdblist_show_on_hero_subtitle">Hero karuselinde MDBList puanlarını göster (modern ve klasik/ızgara)</string>
     <string name="mdblist_rating_order_title">Puan Sıralaması</string>
-    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için okları kullanın.</string>
+    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için yeniden sırala düğmesini kullanın.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
@@ -1500,6 +1556,8 @@
     <string name="tmdb_episodes_title">Bölümler</string>
     <string name="tmdb_episodes_subtitle">Bölüm başlıkları, özetler, küçük resimler ve uzunluk</string>
     <string name="tmdb_trailers_title">Fragmanlar</string>
+    <string name="tmdb_season_posters_title">Sezon Posterleri</string>
+    <string name="tmdb_season_posters_subtitle">Ayrıntılar sayfasındaki sezon sekmeleri için TMDB sezon posterleri</string>
     <string name="tmdb_trailers_subtitle">Detaylar bölümü için TMDB videolarından fragman adayları</string>
     <string name="tmdb_more_like_this_title">Benzer İçerikler</string>
     <string name="tmdb_more_like_this_subtitle">Detaylarda TMDB önerileri</string>
@@ -1739,6 +1797,13 @@
     <string name="addon_install_btn">Kur</string>
     <string name="addon_install_success">%1$s kuruldu</string>
     <string name="addon_error_invalid_url">Geçerli bir eklenti URL\'si girin</string>
+    <string name="addon_tracking_consent_title">İzleme verisi toplayan eklenti</string>
+    <string name="addon_tracking_consent_body">%1$s bir izleme verisi toplayan eklentidir. Nuvio, oynattıklarınızı, duraklattıklarınızı ve konumuyla birlikte durdurduklarınızı, kitaplığınıza eklediğiniz veya kaldırdığınız içerikleri ve izlediniz veya izlemediniz olarak işaretlediklerinizi bu eklentiye gönderir. Bu veriler Nuvio\'dan çıkar ve eklenti geliştiricisi ile bağlandığı hizmet tarafından işlenir.</string>
+    <string name="addon_tracking_consent_checkbox">İzleme etkinliğimi ve kitaplığımı bu eklentiyle paylaşmayı kabul ediyorum</string>
+    <string name="addon_tracking_consent_checked">İşaretli</string>
+    <string name="addon_tracking_consent_unchecked">İşaretsiz</string>
+    <string name="addon_tracking_consent_cancel">İptal</string>
+    <string name="addon_tracking_consent_install">Yükle</string>
     <string name="addon_error_invalid_scheme">Eklenti URL\'si http veya https ile başlamalıdır</string>
     <string name="addon_installed_section">Kurulu</string>
     <string name="addon_empty">Kurulu eklenti bulunamadı. Başlamak için bir tane ekleyin.</string>
@@ -1783,6 +1848,9 @@
     <string name="catalog_order_disabled_on_home">Ana Sayfada Devre Dışı</string>
     <string name="catalog_order_enable">Etkinleştir</string>
     <string name="catalog_order_disable">Devre Dışı</string>
+    <string name="catalog_order_pinned">Sabitlendi</string>
+    <string name="catalog_order_pinned_to_top">Üste sabitlendi</string>
+    <string name="catalog_order_pin_to_move_toast">Taşımak için koleksiyondaki üste sabitlemeyi kaldır</string>
 
 
     <!-- StreamScreen -->
@@ -2171,6 +2239,10 @@
     <string name="library_syncing_library">Kütüphane senkronize ediliyor\u2026</string>
     <string name="library_type_all">Tümü</string>
     <string name="library_empty_trakt_not_auth_title">Trakt bağlı değil</string>
+    <string name="library_empty_title">Görüntülenecek öğe yok</string>
+    <string name="library_empty_local_hint">Filtrelerinizi değiştirin veya buradakileri görmek için favorilerinizi kaydetmeye başlayın</string>
+    <string name="library_empty_trakt_hint">Filtrelerinizi değiştirin veya ayrıntılarda + kullanarak öğeleri izlenecekler listesine veya listelere ekleyin</string>
+    <string name="library_empty_simkl_hint">Filtrelerinizi değiştirin veya ayrıntılarda + kullanarak öğeleri bir Simkl durumuna ekleyin</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt kütüphanenizi görüntülemek için Ayarlar\'dan Trakt hesabınızı bağlayın</string>
     <string name="library_empty_simkl_not_auth_title">Simkl bağlı değil</string>
     <string name="library_empty_simkl_not_auth_subtitle">Simkl kütüphaneni görmek için Ayarlar\'dan Simkl hesabını bağla</string>
@@ -2458,6 +2530,8 @@
     <string name="update_waiting_for_stable">Sonraki kararlı sürüm yayınlandığında alacaksınız</string>
     <string name="update_download_complete">İndirme tamamlandı. Kurulum için hazır.</string>
     <string name="update_installed_automatically">Cihaz boştayken otomatik güncellendi</string>
+    <string name="update_ready_closes">İndirme tamamlandı. Güncelleme yüklenirken uygulama kapanır; bu yaklaşık bir dakika sürebilir. Sonrasında tekrar açın.</string>
+    <string name="update_ready_closes_and_reopens">İndirme tamamlandı. Güncelleme yüklenirken uygulama kapanır ve kendiliğinden yeniden açılır; bu yaklaşık bir dakika sürebilir.</string>
     <string name="update_up_to_date">Sistem güncel. En son değişiklikler:</string>
     <string name="update_close">Kapat</string>
     <string name="update_open_settings">Ayarları Aç</string>
@@ -2732,6 +2806,10 @@
     <string name="plugin_repo_added_with_providers">%1$s, %2$d sağlayıcı ile eklendi</string>
     <string name="plugin_repo_removed">Uzantı deposu kaldırıldı</string>
     <string name="plugin_repo_refreshed">Uzantı deposu yenilendi</string>
+    <string name="plugin_repo_delete_confirm_title">Depo silinsin mi?</string>
+    <string name="plugin_repo_delete_confirm_message">Silmek istediğinizden emin misiniz?</string>
+    <string name="plugin_repo_delete_no">Hayır</string>
+    <string name="plugin_repo_delete_yes">Evet</string>
 
     <!-- Trakt errors -->
     <string name="trakt_error_code_expired">Cihaz kodunun süresi doldu. Yeniden başlayın.</string>
@@ -2823,6 +2901,7 @@
     <string name="cd_loading_logo">Logo yükleniyor</string>
     <string name="cd_move_up">Yukarı taşı</string>
     <string name="cd_move_down">Aşağı taşı</string>
+    <string name="cd_reorder">Yeniden sırala</string>
     <string name="cd_edit">Düzenle</string>
     <string name="cd_delete">Sil</string>
     <string name="cd_qr_code">QR kod</string>
@@ -2894,6 +2973,7 @@
     <string name="collections_valid_summary">%1$d koleksiyon, %2$d klasör</string>
     <string name="collections_confirm_import">İçe Aktarmayı Onayla</string>
     <string name="collections_folder_count">%1$d klasör</string>
+    <string name="collections_pinned">Sabitlendi</string>
 
     <!-- Collection Editor -->
     <string name="collections_delete_confirm_title">Koleksiyon silinsin mi?</string>
@@ -2903,6 +2983,16 @@
     <string name="collections_editor_delete_folder_subtitle">\"%1$s\" ve içindekiler kalıcı olarak silinecek.</string>
     <string name="collections_editor_row_title">Satır Başlığı</string>
     <string name="collections_editor_save">Kaydet</string>
+    <string name="collections_editor_unsaved_title">Değişiklikler kaydedilsin mi?</string>
+    <string name="collections_editor_unsaved_subtitle">Bu koleksiyonda kaydedilmemiş değişiklikler var.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Kaydedilmemiş değişiklikler</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Bu koleksiyonu kaydetmek için bir başlık girin ve en az bir klasör ekleyin.</string>
+    <string name="collections_editor_unsaved_missing_title">Değişiklikleri kaydetmek için bir koleksiyon başlığı girin.</string>
+    <string name="collections_editor_unsaved_missing_folder">Bu koleksiyonu kaydetmek için en az bir klasör ekleyin.</string>
+    <string name="collections_editor_folder_unsaved_title">Klasör değişiklikleri kaydedilsin mi?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Bu klasörde kaydedilmemiş değişiklikler var.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Kaydedilmemiş klasör değişiklikleri</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Bu klasörü kaydetmek için en az bir kaynak ekleyin.</string>
     <string name="collections_editor_backdrop">Arka Plan Görseli</string>
     <string name="collections_editor_pin_above">Katalogların Üstüne Sabitle</string>
     <string name="collections_editor_pin_above_desc">Bu koleksiyonu tüm normal ana sayfa kataloglarının üstünde göster. Birden fazla sabitlenmiş koleksiyon oluşturulma sırasını takip eder.</string>
@@ -3437,7 +3527,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Kapsamlı Otomatik Eşitleme Araması</string>
     <string name="autosync_thorough_description">Eşitlemeden önce daha yakın bir eşleşme için diğer altyazıları ve gömülü parçaları karşılaştırmaya devam eder. Kapalıyken ilk güçlü eşleşme daha hızlı kullanılır. Yalnızca güvenilir eşleşmeler uygulanır.</string>
-    <string name="autosync_toast_no_fit">Eşitleme başarısız: Bu altyazı videonun bu sürümüyle uyuşmuyor.</string>
     <string name="autosync_label_synced">Otomatik eşitlendi</string>
     <string name="stream_resume_from_time">%1$s konumundan devam et</string>
     <string name="stream_resume_from_percent">%1$d%% konumundan devam et</string>

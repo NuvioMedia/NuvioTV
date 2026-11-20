@@ -719,7 +719,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Рейтинги MDBList</string>
-    <string name="mdblist_subtitle">Настройка внешних рейтингов, отображаемых в главном блоке деталей</string>
     <string name="mdblist_enable_title">Включить рейтинги MDBList</string>
     <string name="mdblist_enable_subtitle">Получать рейтинги от внешних провайдеров на странице метаданных</string>
     <string name="mdblist_api_key_title">API Ключ</string>

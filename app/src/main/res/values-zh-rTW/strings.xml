@@ -1148,7 +1148,6 @@
     <string name="mdblist_rate_limited">已達 MDBList 的請求限制。同步將在限制重設後恢復。</string>
     <string name="mdblist_revoke_failed">已在此裝置上中斷連線。請在您的 MDBList 帳戶設定中移除此應用程式以撤銷其存取權限。</string>
     <string name="mdblist_title">MDBList 評分</string>
-    <string name="mdblist_subtitle">配置詳情焦點區塊中顯示的外部評分</string>
     <string name="mdblist_enable_title">啟用 MDBList 評分</string>
     <string name="mdblist_enable_subtitle">在中繼資料詳情畫面中從外部提供者獲取評分</string>
     <string name="mdblist_api_key_title">API 金鑰</string>

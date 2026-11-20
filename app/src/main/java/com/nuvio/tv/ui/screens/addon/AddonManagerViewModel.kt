@@ -34,7 +34,6 @@ import com.nuvio.tv.core.server.TraktSourceSearchResultInfo
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
-import com.nuvio.tv.core.usenet.BuiltInUsenetOrder
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.core.util.readAppLogoBytes
@@ -54,7 +53,9 @@ import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -112,6 +113,10 @@ class AddonManagerViewModel @Inject constructor(
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
     private var followAddonsOrderEnabled: Boolean = false
     private var currentCollections: List<Collection> = emptyList()
+    private var addonDraftOrder: List<String>? = null
+    private var addonMoveBaseline: List<String>? = null
+    private var pendingAddonOrder: List<String>? = null
+    private var addonPersistGeneration: Int = 0
 
     init {
         observeInstalledAddons()
@@ -224,6 +229,7 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     fun removeAddon(baseUrl: String) {
+        pendingAddonOrder = null
         viewModelScope.launch {
             addonRepository.removeAddon(baseUrl)
         }
@@ -235,61 +241,142 @@ class AddonManagerViewModel @Inject constructor(
         }
     }
 
-    fun moveAddonUp(baseUrl: String) {
-        if (_uiState.value.builtInUsenet != null) moveWithBuiltInUsenet(baseUrl, -1) else reorderAddon(baseUrl, -1)
-    }
-
-    fun moveAddonDown(baseUrl: String) {
-        if (_uiState.value.builtInUsenet != null) moveWithBuiltInUsenet(baseUrl, 1) else reorderAddon(baseUrl, 1)
-    }
-
-    fun moveBuiltInUsenetUp() = moveWithBuiltInUsenet(null, -1)
-
-    fun moveBuiltInUsenetDown() = moveWithBuiltInUsenet(null, 1)
-
     /** The screen shows the first-use notice before switching on, so switching on accepts it. */
-    fun setBuiltInUsenetEnabled(enabled: Boolean) =
+    fun setBuiltInUsenetEnabled(enabled: Boolean) {
         updateBuiltInUsenet { it.copy(enabled = enabled, firstUseAccepted = it.firstUseAccepted || enabled) }
+    }
 
-    /** Moves an addon, or built-in Usenet when [baseUrl] is null, in the list that shows both. */
-    private fun moveWithBuiltInUsenet(baseUrl: String?, direction: Int) {
+    private fun updateBuiltInUsenet(
+        profileId: Int = profileManager.activeProfileId.value,
+        change: (UsenetSourceConfiguration) -> UsenetSourceConfiguration
+    ): Boolean {
+        if (isReadOnly) return false
+        return runCatching {
+            val current = usenetSourceSettings.read(profileId)
+            val updated = change(current)
+            if (updated != current) usenetSourceSettings.update(updated, profileId)
+            if (profileManager.activeProfileId.value == profileId) {
+                _uiState.update { it.copy(builtInUsenet = updated.toBuiltInUsenetRow()) }
+            }
+        }.isSuccess
+    }
+
+    fun enterAddonMoveMode(key: String) {
         val state = _uiState.value
-        val usenetIndex = state.builtInUsenetIndex ?: return
-        val urls = state.installedAddons.map { it.baseUrl }
-        val move = BuiltInUsenetOrder.move(urls, usenetIndex, baseUrl, direction) ?: return
-        if (move.addonUrls != urls) {
-            viewModelScope.launch { addonRepository.setAddonOrder(move.addonUrls) }
-        } else {
-            updateBuiltInUsenet { it.copy(addonsAbove = move.addonsAbove) }
-        }
+        val current = state.addonOrderKeys
+        if (state.movingAddonKey != null || current.size <= 1 || key !in current) return
+        pendingAddonOrder = null
+        addonMoveBaseline = current
+        addonDraftOrder = current
+        _uiState.update { it.copy(movingAddonKey = key) }
     }
 
-    /** Synchronous so that quick successive moves never build on a stale configuration. */
-    private fun updateBuiltInUsenet(change: (UsenetSourceConfiguration) -> UsenetSourceConfiguration) {
-        if (isReadOnly) return
-        runCatching {
-            val updated = change(usenetSourceSettings.read())
-            usenetSourceSettings.update(updated)
-            _uiState.update { it.copy(builtInUsenet = BuiltInUsenetRow(updated.enabled, updated.addonsAbove, updated.firstUseAccepted)) }
+    fun moveAddonDuringDrag(key: String, direction: Int): Int? {
+        val draft = addonDraftOrder ?: return null
+        if (key != _uiState.value.movingAddonKey) return null
+        val fromIndex = draft.indexOf(key)
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
         }
+        addonDraftOrder = reordered
+        _uiState.update { state ->
+            state.copy(
+                installedAddons = orderAddonsByKeys(state.installedAddons, reordered),
+                draftUsenetIndex = reordered.indexOf(BUILT_IN_USENET_KEY).takeIf { it >= 0 }
+            )
+        }
+        return toIndex
     }
 
-    private fun reorderAddon(baseUrl: String, direction: Int) {
-        val current = _uiState.value.installedAddons
-        val index = current.indexOfFirst { it.baseUrl == baseUrl }
-        if (index == -1) return
-
-        val newIndex = index + direction
-        if (newIndex !in current.indices) return
-
-        val reordered = current.toMutableList().apply {
-            val item = removeAt(index)
-            add(newIndex, item)
+    fun confirmAddonMove() {
+        val draft = addonDraftOrder ?: return
+        val baseline = addonMoveBaseline ?: return
+        val draftUsenetIndex = draft.indexOf(BUILT_IN_USENET_KEY)
+        val addonsAbove = draft.take(draftUsenetIndex.coerceAtLeast(0))
+        val baselineAbove = baseline.take(baseline.indexOf(BUILT_IN_USENET_KEY).coerceAtLeast(0))
+        val usenetMoved = draftUsenetIndex >= 0 && addonsAbove.toSet() != baselineAbove.toSet()
+        val originalAddonsAbove = _uiState.value.builtInUsenet?.addonsAbove
+        val usenetProfileId = if (usenetMoved) profileManager.activeProfileId.value else null
+        if (usenetProfileId != null && !updateBuiltInUsenet(usenetProfileId) { it.copy(addonsAbove = addonsAbove) }) {
+            cancelAddonMove()
+            return
         }
+        clearAddonMove()
 
+        val addonUrls = draft.filterNot { it == BUILT_IN_USENET_KEY }
+        if (addonUrls == baseline.filterNot { it == BUILT_IN_USENET_KEY }) return
+
+        val generation = ++addonPersistGeneration
+        pendingAddonOrder = addonUrls
         viewModelScope.launch {
-            addonRepository.setAddonOrder(reordered.map { it.baseUrl })
+            var wrote = false
+            try {
+                withContext(NonCancellable) {
+                    addonRepository.setAddonOrder(addonUrls)
+                    wrote = true
+                }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                wrote = false
+            }
+            if (!wrote && generation == addonPersistGeneration) {
+                if (pendingAddonOrder == addonUrls) {
+                    pendingAddonOrder = null
+                }
+                if (_uiState.value.movingAddonKey == null) {
+                    if (usenetProfileId != null) {
+                        updateBuiltInUsenet(usenetProfileId) {
+                            if (it.addonsAbove == addonsAbove) it.copy(addonsAbove = originalAddonsAbove) else it
+                        }
+                    }
+                    _uiState.update { it.copy(installedAddons = orderAddonsByKeys(it.installedAddons, baseline)) }
+                }
+            }
         }
+        viewModelScope.launch {
+            delay(2_500L)
+            if (generation == addonPersistGeneration && pendingAddonOrder == addonUrls) {
+                pendingAddonOrder = null
+            }
+        }
+    }
+
+    fun cancelAddonMove() {
+        val baseline = addonMoveBaseline ?: return
+        pendingAddonOrder = null
+        clearAddonMove(baseline)
+    }
+
+    private fun clearAddonMove(restoreOrder: List<String>? = null) {
+        addonDraftOrder = null
+        addonMoveBaseline = null
+        _uiState.update { state ->
+            state.copy(
+                movingAddonKey = null,
+                draftUsenetIndex = null,
+                installedAddons = restoreOrder?.let { orderAddonsByKeys(state.installedAddons, it) } ?: state.installedAddons
+            )
+        }
+    }
+
+    private fun orderAddonsByKeys(
+        addons: List<Addon>,
+        orderKeys: List<String>
+    ): List<Addon> {
+        val byUrl = addons.associateBy { it.baseUrl }
+        val seen = LinkedHashSet<String>()
+        val ordered = ArrayList<Addon>(addons.size)
+        for (url in orderKeys) {
+            val addon = byUrl[url] ?: continue
+            if (seen.add(url)) ordered.add(addon)
+        }
+        for (addon in addons) {
+            if (seen.add(addon.baseUrl)) ordered.add(addon)
+        }
+        return ordered
     }
 
     fun startQrMode(webConfigMode: AddonWebConfigMode = this.webConfigMode) {
@@ -888,9 +975,28 @@ class AddonManagerViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, error = error.message) }
                 }
                 .collect { addons ->
+                    val draftAddonUrls = addonDraftOrder?.filterNot { it == BUILT_IN_USENET_KEY }
+                    if (draftAddonUrls != null && draftAddonUrls.toSet() != addons.mapTo(mutableSetOf()) { it.baseUrl }) {
+                        cancelAddonMove()
+                    }
+                    val draft = addonDraftOrder
+                    val pending = pendingAddonOrder
+                    val ordered = when {
+                        draft != null -> orderAddonsByKeys(addons, draft)
+                        pending != null -> {
+                            val emittedKeys = addons.map { it.baseUrl }
+                            if (emittedKeys == pending || emittedKeys.toSet() != pending.toSet()) {
+                                pendingAddonOrder = null
+                                addons
+                            } else {
+                                orderAddonsByKeys(addons, pending)
+                            }
+                        }
+                        else -> addons
+                    }
                     _uiState.update { state ->
                         state.copy(
-                            installedAddons = addons,
+                            installedAddons = ordered,
                             isLoading = false,
                             error = null
                         )
@@ -902,11 +1008,15 @@ class AddonManagerViewModel @Inject constructor(
     private fun observeBuiltInUsenet() {
         viewModelScope.launch {
             usenetSourceSettings.snapshots.flowOn(Dispatchers.IO).collectLatest { (_, result) ->
-                val row = result.getOrNull()?.takeIf { it.configured }?.let { BuiltInUsenetRow(it.enabled, it.addonsAbove, it.firstUseAccepted) }
+                val row = result.getOrNull()?.toBuiltInUsenetRow()
+                if ((row == null) != (_uiState.value.builtInUsenet == null)) cancelAddonMove()
                 _uiState.update { it.copy(builtInUsenet = row) }
             }
         }
     }
+
+    private fun UsenetSourceConfiguration.toBuiltInUsenetRow(): BuiltInUsenetRow? =
+        if (configured) BuiltInUsenetRow(enabled, addonsAbove, firstUseAccepted) else null
 
     override fun onCleared() {
         super.onCleared()
