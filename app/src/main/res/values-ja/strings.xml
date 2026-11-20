@@ -3419,7 +3419,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">徹底的な自動同期検索</string>
     <string name="autosync_thorough_description">同期する前に、他の字幕と埋め込みトラックを比較し続けてより近い一致を探します。オフの場合は最初の強い一致がより早く使用されます。確実な一致のみが適用されます。</string>
-    <string name="autosync_toast_no_fit">同期失敗: これらの字幕はこのバージョンのビデオと一致しません。</string>
     <string name="autosync_label_synced">自動同期済み</string>
     <string name="stream_resume_from_time">%1$s から再開</string>
     <string name="stream_resume_from_percent">%1$d%% から再開</string>

@@ -3486,7 +3486,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Pesquisa de sincronização automática minuciosa</string>
     <string name="autosync_thorough_description">Continuar a comparar outras legendas e faixas incorporadas para obter uma correspondência mais precisa antes de sincronizar. Quando desativado, a primeira correspondência forte é aplicada mais cedo. Apenas são aplicadas correspondências com confiança.</string>
-    <string name="autosync_toast_no_fit">A sincronização falhou: estas legendas não correspondem a esta versão do vídeo.</string>
     <string name="autosync_label_synced">Sincronizado automaticamente</string>
     <string name="stream_resume_from_time">Retomar a partir de %1$s</string>
     <string name="stream_resume_from_percent">Retomar a partir de %1$d%%</string>

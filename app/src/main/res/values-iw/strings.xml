@@ -3475,7 +3475,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
     <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ורצועות מוטמעות נוספות לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, נעשה שימוש בהתאמה החזקה הראשונה שנמצאה, מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
-    <string name="autosync_toast_no_fit">הסנכרון נכשל: הכתוביות האלה אינן תואמות לגרסה הזו של הסרטון.</string>
     <string name="autosync_label_synced">מסונכרן אוטומטית</string>
     <string name="stream_resume_from_time">המשך מ-%1$s</string>
     <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>

@@ -3396,7 +3396,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Grondig zoeken bij automatische synchronisatie</string>
     <string name="autosync_thorough_description">Blijf andere ondertitels en ingesloten sporen vergelijken voor een betere match voordat er wordt gesynchroniseerd. Als dit uitstaat, wordt de eerste sterke match eerder gebruikt. Alleen betrouwbare matches worden toegepast.</string>
-    <string name="autosync_toast_no_fit">Synchroniseren mislukt: deze ondertitels passen niet bij deze versie van de video.</string>
     <string name="autosync_label_synced">Automatisch gesynchroniseerd</string>
     <string name="stream_resume_from_time">Hervatten vanaf %1$s</string>
     <string name="stream_resume_from_percent">Hervatten vanaf %1$d%%</string>

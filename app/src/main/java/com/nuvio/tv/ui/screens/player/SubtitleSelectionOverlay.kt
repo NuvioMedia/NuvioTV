@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -81,6 +82,7 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncStatusIndicator
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncedChip
 
 private const val SubtitleOffLanguageKey = "__off__"
@@ -252,7 +254,7 @@ internal fun SubtitleSelectionOverlay(
     val optionItemRequesters = rememberFocusRequesterMap(subtitleOptions.map { it.id })
     val styleRequesters = rememberStyleFocusRequesters()
     val optionRailVisible = selectedLanguageKey != SubtitleOffLanguageKey
-    val styleRailVisible = optionRailVisible && (revealStyleRail || selectedOptionId != null)
+    val styleRailVisible = optionRailVisible && (revealStyleRail || subtitleOptions.any { it.isSelected })
     val languageTargetKey: String? = remember(languageItems, lastFocusedLanguageKey, selectedLanguageKey) {
         lastFocusedLanguageKey?.takeIf { key -> languageItems.any { it.key == key } }
             ?: selectedLanguageKey.takeIf { key -> languageItems.any { it.key == key } }
@@ -516,7 +518,6 @@ internal fun SubtitleSelectionOverlay(
                             val nextSelectedId = selectedOptionId?.takeIf { id ->
                                 nextOptions.any { it.id == id }
                             }
-                            selectedOptionId = nextSelectedId
                             val nextTargetId = nextSelectedId
                                 ?: optionFocusMemory[languageKey]?.takeIf { id ->
                                     nextOptions.any { it.id == id }
@@ -615,6 +616,13 @@ internal fun SubtitleSelectionOverlay(
                 }
             }
         }
+
+        AutoSyncStatusIndicator(
+            subtitleUrl = selectedAddonSubtitle?.url,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(y = 40.dp)
+        )
     }
 }
 
@@ -1307,7 +1315,11 @@ private fun SubtitleOptionCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SourceChip(label = item.sourceLabel, selected = item.isSelected)
+                    SourceChip(
+                        label = item.sourceLabel,
+                        selected = item.isSelected,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     item.addonSubtitle?.let { AutoSyncedChip(it.url, item.isSelected) } // AutoSync hook
                 }
                 Text(
@@ -1360,9 +1372,9 @@ private fun CountBadge(
 }
 
 @Composable
-private fun SourceChip(label: String, selected: Boolean = false) {
+private fun SourceChip(label: String, selected: Boolean = false, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .background(
                 if (selected) {
                     NuvioTheme.colors.OnSecondary.copy(alpha = 0.14f)
@@ -1391,7 +1403,9 @@ private fun SourceChip(label: String, selected: Boolean = false) {
                 NuvioTheme.colors.OnSecondary.copy(alpha = 0.9f)
             } else {
                 Color.White.copy(alpha = 0.78f)
-            }
+            },
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }
 }

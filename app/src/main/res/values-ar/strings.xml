@@ -3384,7 +3384,6 @@
     <string name="autosync_tolerance_value">%1$d مللي ثانية</string>
     <string name="autosync_thorough_title">بحث شامل للمزامنة التلقائية</string>
     <string name="autosync_thorough_description">يستمر في مقارنة الترجمات الأخرى والمسارات المضمّنة للعثور على تطابق أقرب قبل المزامنة. وعند إيقافه، يُستخدم أول تطابق قوي فورًا. ولا تُطبَّق إلا المطابقات المؤكدة.</string>
-    <string name="autosync_toast_no_fit">فشلت المزامنة: هذه الترجمة لا تطابق هذه النسخة من الفيديو.</string>
     <string name="autosync_label_synced">تمت المزامنة تلقائيًا</string>
     <string name="stream_resume_from_time">استئناف من %1$s</string>
     <string name="stream_resume_from_percent">استئناف من %1$d%%</string>
