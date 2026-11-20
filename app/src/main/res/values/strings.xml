@@ -867,6 +867,8 @@
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Transcodes multichannel formats (TrueHD, DTS, AAC, etc.) to Dolby Digital 5.1 in real-time for Optical/SPDIF connections.</string>
+    <string name="audio_force_passthrough">Force Passthrough (Advanced)</string>
+    <string name="audio_force_passthrough_sub">Assumes the HDMI receiver supports AC-3, E-AC-3, DTS, DTS-HD and TrueHD, bypassing the capabilities the system reports. Enable it only if the receiver shows PCM for every format: unsupported formats may play silently. Requires Device or Prefer device decoders.</string>
     <!-- DV7 Handling Mode -->
     <string name="dv7_handling_title">Dolby Vision Handling</string>
     <string name="dv7_handling_dialog_subtitle">Choose how DV streams are processed at playback time.</string>
