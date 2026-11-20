@@ -243,7 +243,15 @@ fun ContentCard(
         } else {
             baseCardWidth
         }
-        val requestWidthPx = remember(maxRequestCardWidth, density) {
+        val imageRequestCardWidth = if (effectiveExpandEnabled && isBackdropExpanded) {
+            maxRequestCardWidth
+        } else {
+            baseCardWidth
+        }
+        val requestWidthPx = remember(imageRequestCardWidth, density) {
+            with(density) { imageRequestCardWidth.roundToPx() }.coerceAtLeast(1)
+        }
+        val logoRequestWidthPx = remember(maxRequestCardWidth, density) {
             with(density) { maxRequestCardWidth.roundToPx() }.coerceAtLeast(1)
         }
         val requestHeightPx = remember(baseCardHeight, density) {
@@ -287,13 +295,13 @@ fun ContentCard(
         val logoRequestHeightPx = remember(density) {
             with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
         }
-        val logoModel = remember(item.logo, requestWidthPx, logoRequestHeightPx) {
+        val logoModel = remember(item.logo, logoRequestWidthPx, logoRequestHeightPx) {
             item.logo?.let { logoUrl ->
                 ImageRequest.Builder(context)
                     .data(logoUrl)
                     .crossfade(false)
-                    .memoryCacheKey("${logoUrl}_${requestWidthPx}x${logoRequestHeightPx}")
-                    .size(width = requestWidthPx, height = logoRequestHeightPx)
+                    .memoryCacheKey("${logoUrl}_${logoRequestWidthPx}x${logoRequestHeightPx}")
+                    .size(width = logoRequestWidthPx, height = logoRequestHeightPx)
                     .build()
             }
         }

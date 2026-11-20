@@ -5,6 +5,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import coil3.memory.MemoryCache
+import com.nuvio.tv.core.image.CustomPosterFallbackInterceptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionFolder
@@ -280,6 +282,28 @@ internal fun ModernCarouselItem.catalogCardRequestMetrics(
         base.height * (16f / 9f)
     }
     return base.copy(width = maxOf(base.width, expandedWidth))
+}
+
+internal fun ModernCarouselItem.cardImageFallbackUrl(landscapeCustomPoster: Boolean): String? =
+    if (landscapeCustomPoster) {
+        metaPreview?.background ?: heroPreview.backdrop ?: metaPreview?.rawPosterUrl
+    } else {
+        metaPreview?.rawPosterUrl
+    }
+
+internal fun cardImageMemoryCacheKey(
+    url: String,
+    widthPx: Int,
+    heightPx: Int,
+    fallbackUrl: String?,
+    revalidationKey: Int = 0
+): MemoryCache.Key {
+    val key = "${url}_${widthPx}x${heightPx}_v$revalidationKey"
+    return if (!fallbackUrl.isNullOrBlank() && fallbackUrl != url) {
+        MemoryCache.Key(key, mapOf(CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl))
+    } else {
+        MemoryCache.Key(key)
+    }
 }
 
 
