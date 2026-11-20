@@ -263,6 +263,7 @@ private fun FolderCard(
     val shape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val cardDepthStyle = LocalCardDepthStyle.current
     val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
+    val coverRequest = rememberCollectionFolderCover(activeImageUrl)
     val loadedCover = remember(activeImageUrl) { mutableStateOf<Image?>(null) }
     val cardGlow = rememberArtworkBackedCardGlow(
         cover = loadedCover.value,
@@ -305,9 +306,9 @@ private fun FolderCard(
                     style = cardDepthStyle
                 )
         ) {
-            if (!activeImageUrl.isNullOrBlank()) {
+            if (coverRequest != null) {
                 AsyncImage(
-                    model = activeImageUrl,
+                    model = coverRequest,
                     contentDescription = if (folder.hideTitle) folder.title else null,
                     modifier = Modifier
                         .fillMaxSize()

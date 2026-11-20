@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import com.nuvio.tv.core.image.CollectionCoverFetcherFactory
 import com.nuvio.tv.core.image.CustomPosterFallbackInterceptor
 import com.nuvio.tv.core.image.HardwareBitmapSettingInterceptor
 import coil3.disk.DiskCache
@@ -148,14 +149,16 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 }
                 add(SvgDecoder.Factory())
                 add(
-                    imageNetworkFetcherFactory(
-                        callFactory = { imageOkHttpClient },
-                        cacheStrategy = {
-                            StaleWhileRevalidateCacheStrategy(
-                                revalidationClient = { imageOkHttpClient },
-                                imageLoaderProvider = imageLoaderRef,
-                            )
-                        },
+                    CollectionCoverFetcherFactory(
+                        imageNetworkFetcherFactory(
+                            callFactory = { imageOkHttpClient },
+                            cacheStrategy = {
+                                StaleWhileRevalidateCacheStrategy(
+                                    revalidationClient = { imageOkHttpClient },
+                                    imageLoaderProvider = imageLoaderRef,
+                                )
+                            },
+                        )
                     )
                 )
             }

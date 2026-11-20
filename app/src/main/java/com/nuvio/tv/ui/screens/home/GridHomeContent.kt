@@ -96,6 +96,7 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
+import com.nuvio.tv.ui.components.rememberCollectionFolderCover
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -1040,6 +1041,7 @@ private fun GridCollectionFolderCard(
     val cardDepthStyle = LocalCardDepthStyle.current
     var isFocused by remember { mutableStateOf(false) }
     val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
+    val coverRequest = rememberCollectionFolderCover(activeImageUrl)
     val loadedCover = remember(activeImageUrl) { mutableStateOf<Image?>(null) }
     val cardGlow = rememberArtworkBackedCardGlow(
         cover = loadedCover.value,
@@ -1086,9 +1088,9 @@ private fun GridCollectionFolderCard(
                     style = cardDepthStyle
                 )
         ) {
-            if (!activeImageUrl.isNullOrBlank()) {
+            if (coverRequest != null) {
                 AsyncImage(
-                    model = activeImageUrl,
+                    model = coverRequest,
                     contentDescription = folder.title,
                     modifier = Modifier.fillMaxSize().clip(cardShape),
                     contentScale = ContentScale.FillBounds,

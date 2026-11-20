@@ -108,6 +108,7 @@ import coil3.request.ImageRequest
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.request.transformations
+import com.nuvio.tv.core.image.collectionCover
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -742,6 +743,7 @@ internal fun ModernRowSection(
                         .size(width = widthPx, height = heightPx)
                         .apply {
                             if (blur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
+                            if (payload is ModernPayload.CollectionFolder) collectionCover()
                         }
                         .build()
                 )
@@ -1220,7 +1222,7 @@ private fun ModernCarouselCard(
 
     val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
     var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
-    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
+    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey, isCollectionFolder) {
         imageUrl?.let {
             val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
             val fallbackUrl = item.cardImageFallbackUrl(isLandscapeCustomPoster)
@@ -1229,6 +1231,7 @@ private fun ModernCarouselCard(
                 .crossfade(true)
                 .memoryCacheKey(cardImageMemoryCacheKey(it, requestWidthPx, requestHeightPx, fallbackUrl, revalidationKey))
                 .size(width = requestWidthPx, height = requestHeightPx)
+            if (isCollectionFolder) builder.collectionCover()
             if (revalidationKey > 0) {
                 builder.placeholderMemoryCacheKey(
                     cardImageMemoryCacheKey(it, requestWidthPx, requestHeightPx, fallbackUrl, revalidationKey - 1)
