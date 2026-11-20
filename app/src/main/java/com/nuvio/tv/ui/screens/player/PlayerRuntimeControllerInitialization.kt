@@ -1020,6 +1020,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         stripDvRpu = stripDvRpuEnabled,
                         stripHdr10PlusSei = stripHdr10PlusSei
                     ).let { autoSyncExtractorsFactory(it, url, headers) } // AutoSync hook
+            configureBdavAutoSync() // AutoSync hook for Blu-ray clips
 
             setLoadingStatus(
                 phase = "building_player",
