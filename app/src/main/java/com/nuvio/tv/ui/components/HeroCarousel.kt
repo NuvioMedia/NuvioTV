@@ -298,6 +298,11 @@ private fun HeroCarouselSlide(
     val trailingMetadata = remember(runtimeText, releaseYear) {
         listOfNotNull(runtimeText, releaseYear)
     }
+    val ageRatingBadge = remember(item.ageRating) { heroAgeRatingBadgeText(item.ageRating) }
+    val statusBadge = rememberHeroStatusBadgeText(
+        status = item.status,
+        isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+    )
     val ratingText = remember(item.imdbRating, showImdbRatings) {
         item.imdbRating
             ?.takeIf { showImdbRatings }
@@ -407,6 +412,20 @@ private fun HeroCarouselSlide(
                             }
                         }
                     }
+                }
+            }
+
+            if (ageRatingBadge != null || statusBadge != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                ) {
+                    HeroAgeRatingStatusBadges(
+                        ageRatingBadge = ageRatingBadge,
+                        statusBadge = statusBadge,
+                        textStyle = MaterialTheme.typography.labelMedium,
+                        contentColor = NuvioTheme.colors.TextPrimary
+                    )
                 }
             }
 
