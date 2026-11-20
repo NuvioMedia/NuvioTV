@@ -50,6 +50,17 @@ import kotlin.coroutines.resumeWithException
 /** Requests to an indexer are paused until [until] because it reported a limit. */
 class IndexerCooldownException(val until: Long) : IllegalStateException("Indexer limit reached")
 
+/** The indexer answered with an HTTP error status and no Newznab error that says more. */
+class IndexerHttpException(val code: Int) : IllegalStateException("Indexer HTTP $code")
+
+/**
+ * True when the indexer refused the search itself (Newznab 200-203, or an HTTP 4xx), which asking
+ * again would not change. Not a timeout, an unreachable indexer, a server error or a cooldown, which
+ * may pass; nor an authentication failure, 408 or 429.
+ */
+internal fun isSearchRejection(e: Exception): Boolean = e is NewznabUnsupportedSearchException ||
+    (e is IndexerHttpException && e.code in 400..499 && e.code !in setOf(401, 403, 408, 429))
+
 @Singleton
 class NewznabClient internal constructor(
     storage: NewznabStateStorage,
@@ -143,9 +154,9 @@ class NewznabClient internal constructor(
         val releases = try {
             pages(indexer, url, request, caps, results, wholeSeason = true)
         } catch (e: CancellationException) { throw e }
-        catch (e: IndexerCooldownException) { throw e }
         // Some indexers reject season-only searches; remember it so each episode does not retry.
-        catch (_: Exception) { emptyList() }
+        // Any other failure may pass, so it is not remembered: the next episode asks again.
+        catch (e: Exception) { if (isSearchRejection(e)) emptyList() else throw e }
         synchronized(seasons) { seasons[key] = now() to releases }
         return releases
     }
@@ -220,7 +231,7 @@ class NewznabClient internal constructor(
             if (response.code !in 200..299) {
                 NewznabProtocol.throwIfKnownError(response.body)
                 if (response.code == 401 || response.code == 403) throw NewznabAuthException()
-                error("Indexer HTTP ${response.code}")
+                throw IndexerHttpException(response.code)
             }
             parse(response.body).also {
                 val apiHitsLeft = left(response.headers, API_LEFT_HEADERS)

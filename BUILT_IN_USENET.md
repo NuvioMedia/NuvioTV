@@ -278,7 +278,10 @@ messages keep only their host.
   2 hours, in memory only: it finds the season packs, which episode searches
   do not return. Only explicitly numbered releases (`S01E02`, `1x02`, season
   packs) are taken from it, since an obfuscated name could be any episode. An
-  indexer that rejects season-only searches is not asked again for 2 hours.
+  indexer that rejects season-only searches (Newznab 200-203, or an HTTP 4xx
+  other than 401, 403, 408 and 429) is not asked again for 2 hours. Any other
+  failure, such as a timeout, an unreachable indexer or a server error, only
+  leaves the packs out of that search; the next episode asks again.
 - **Capabilities** (`t=caps`) are stored on the device for 7 days and survive
   restarts. An edited URL or API key fetches them again. When a refresh fails,
   the expired copy is used. **Test indexer** always makes a live request.
