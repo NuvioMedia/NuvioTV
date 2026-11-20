@@ -38,6 +38,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.core.server.UsenetSourcesConfigServer
 import com.nuvio.tv.core.streams.StreamRankingPreset
 import com.nuvio.tv.core.streams.StreamRankingPresets
 import com.nuvio.tv.core.usenet.*
@@ -58,7 +59,7 @@ internal fun UsenetSourcesCard(
     initialFocusRequester: FocusRequester,
     tuneProvider: ((UsenetProvider) -> Unit)? = null,
     indexerStatuses: Map<String, IndexerStatus> = emptyMap(),
-    setUpFromPhone: (() -> Unit)? = null,
+    setUpFromPhone: ((String?) -> Unit)? = null,
     phoneSetupOpen: Boolean = false,
     expanded: Set<UsenetSettingsSection> = UsenetSettingsSection.entries.toSet(),
     onToggleSection: (UsenetSettingsSection) -> Unit = {},
@@ -68,6 +69,8 @@ internal fun UsenetSourcesCard(
     LaunchedEffect(Unit) { if (takeEntryFocus()) runCatching { initialFocusRequester.requestFocus() } }
     val phoneRow = remember { FocusRequester() }
     val rankingPhoneRow = remember { FocusRequester() }
+    val addProviderRow = remember { FocusRequester() }
+    val addIndexerRow = remember { FocusRequester() }
     var phoneEntry by remember { mutableStateOf(phoneRow) }
     var phoneSetupShown by remember { mutableStateOf(false) }
     // The QR overlay took focus; give it back to the row that opened it, not the side menu.
@@ -133,39 +136,41 @@ internal fun UsenetSourcesCard(
                 SettingsNote(stringResource(R.string.usenet_sources_needed), tone = SettingsNoteTone.Warning)
             }
             if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
-                subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = { phoneEntry = phoneRow; setUpFromPhone() },
+                subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = { phoneEntry = phoneRow; setUpFromPhone(null) },
                 modifier = Modifier.focusRequester(phoneRow))
-        }
-        UsenetSettingsSection(UsenetSettingsSection.PROVIDERS, expanded, onToggleSection,
-            description = sourcesSummary(configuration.providers.size, configuration.providers.count { it.enabled },
-                R.plurals.usenet_providers_count)) {
-            configuration.providers.forEachIndexed { i, item ->
-                SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.host}:${item.port} • ${item.connections} • " +
-                    stringResource(R.string.usenet_priority_value, item.priority),
-                    value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
-                    onClick = { selectedId = item.id; picker = "provider" })
+            UsenetSettingsSection(UsenetSettingsSection.PROVIDERS, expanded, onToggleSection,
+                description = sourcesSummary(configuration.providers.size, configuration.providers.count { it.enabled },
+                    R.plurals.usenet_providers_count)) {
+                configuration.providers.forEachIndexed { i, item ->
+                    SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.host}:${item.port} • ${item.connections} • " +
+                        stringResource(R.string.usenet_priority_value, item.priority),
+                        value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
+                        onClick = { selectedId = item.id; picker = "provider" })
+                }
+                SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
+                    subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() },
+                    modifier = Modifier.focusRequester(addProviderRow))
             }
-            SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
-                subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() })
-        }
-        UsenetSettingsSection(UsenetSettingsSection.INDEXERS, expanded, onToggleSection,
-            description = sourcesSummary(configuration.indexers.size, configuration.indexers.count { it.enabled },
-                R.plurals.usenet_indexers_count)) {
-            configuration.indexers.forEachIndexed { i, item ->
-                SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
-                    stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
-                    .joinToString(" • "),
-                    value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
-                    onClick = { selectedId = item.id; picker = "indexer" })
+            UsenetSettingsSection(UsenetSettingsSection.INDEXERS, expanded, onToggleSection,
+                description = sourcesSummary(configuration.indexers.size, configuration.indexers.count { it.enabled },
+                    R.plurals.usenet_indexers_count)) {
+                configuration.indexers.forEachIndexed { i, item ->
+                    SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
+                        stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
+                        .joinToString(" • "),
+                        value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
+                        onClick = { selectedId = item.id; picker = "indexer" })
+                }
+                SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
+                    subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) },
+                    modifier = Modifier.focusRequester(addIndexerRow))
+                SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
+                    subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
+                    onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
+                SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
+                    subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
+                    onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
             }
-            SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
-                subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
-            SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
-                subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
-                onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
-            SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
-                subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
-                onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
         }
         UsenetSettingsSection(UsenetSettingsSection.SEARCH, expanded, onToggleSection) {
             SettingsActionRow(title = stringResource(R.string.usenet_ranking_title), subtitle = stringResource(rankingDescription),
@@ -178,7 +183,7 @@ internal fun UsenetSourcesCard(
             }
             if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_ranking_phone),
                 subtitle = stringResource(R.string.usenet_ranking_phone_desc),
-                onClick = { phoneEntry = rankingPhoneRow; setUpFromPhone() }, modifier = Modifier.focusRequester(rankingPhoneRow))
+                onClick = { phoneEntry = rankingPhoneRow; setUpFromPhone(UsenetSourcesConfigServer.OPEN_RANKING) }, modifier = Modifier.focusRequester(rankingPhoneRow))
             if (configuration.ranking.preset == StreamRankingPreset.ORIGINAL) {
                 SettingsActionRow(title = stringResource(R.string.usenet_sort_results), subtitle = null,
                     value = sortOptions.first { it.value == configuration.sort }.title, onClick = { picker = "sort" })
@@ -351,12 +356,18 @@ internal fun UsenetSourcesCard(
         update(configuration.copy(enabled = true, firstUseAccepted = true)); notice = false
     }, onDismiss = { notice = false })
     provider?.let { item -> ProviderEditor(item, isNew = configuration.providers.none { it.id == item.id },
-        testProvider, onDismiss = { provider = null }, onSave = {
+        testProvider, onDismiss = { provider = null },
+        onSetUpFromPhone = setUpFromPhone?.let { start -> {
+            provider = null; phoneEntry = addProviderRow; start(UsenetSourcesConfigServer.ADD_PROVIDER)
+        } }, onSave = {
         update(configuration.copy(providers = configuration.providers.replaceOrAdd(it) { p -> p.id }))
         provider = null
     }) }
     indexer?.let { item -> IndexerEditor(item, isNew = configuration.indexers.none { it.id == item.id },
-        testIndexer, onDismiss = { indexer = null }, onSave = {
+        testIndexer, onDismiss = { indexer = null },
+        onSetUpFromPhone = setUpFromPhone?.let { start -> {
+            indexer = null; phoneEntry = addIndexerRow; start(UsenetSourcesConfigServer.ADD_INDEXER)
+        } }, onSave = {
         update(configuration.copy(indexers = configuration.indexers.replaceOrAdd(it) { p -> p.id })); indexer = null
     }) }
 }
@@ -408,7 +419,7 @@ private fun priorityLabel(priority: Int) = when (priority) {
 
 @Composable
 private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, test: suspend (UsenetProvider) -> ProviderTestResult?,
-    onDismiss: () -> Unit, onSave: (UsenetProvider) -> Unit) {
+    onDismiss: () -> Unit, onSetUpFromPhone: (() -> Unit)?, onSave: (UsenetProvider) -> Unit) {
     var name by remember { mutableStateOf(item.name) }
     var host by remember { mutableStateOf(item.host) }
     var port by remember { mutableStateOf(item.port.toString()) }
@@ -425,6 +436,7 @@ private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, test: suspend (
         connections = connections.toIntOrNull() ?: 0, tls = tls, username = username, password = password)
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_provider else R.string.usenet_edit_provider), onDismiss = onDismiss) {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (isNew && onSetUpFromPhone != null) PhoneSetupRow(onSetUpFromPhone)
             SourceField(stringResource(R.string.usenet_source_name), name, { name = it })
             SourceField(stringResource(R.string.usenet_provider_host), host, { host = it })
             SourceField(stringResource(R.string.usenet_provider_port), port, { port = it }, numeric = true)
@@ -464,7 +476,7 @@ private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, test: suspend (
 
 @Composable
 private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (UsenetIndexer) -> Boolean,
-    onDismiss: () -> Unit, onSave: (UsenetIndexer) -> Unit) {
+    onDismiss: () -> Unit, onSetUpFromPhone: (() -> Unit)?, onSave: (UsenetIndexer) -> Unit) {
     var name by remember { mutableStateOf(item.name) }
     var url by remember { mutableStateOf(item.apiUrl) }
     var path by remember { mutableStateOf(item.apiPath) }
@@ -493,6 +505,7 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_indexer else R.string.usenet_edit_indexer), subtitle = stringResource(R.string.usenet_indexer_hint), onDismiss = onDismiss) {
         // Scrolls, so the buttons below stay on screen.
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (isNew && onSetUpFromPhone != null) PhoneSetupRow(onSetUpFromPhone)
             SourceField(stringResource(R.string.usenet_source_name), name, { name = it })
             SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it })
             SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it })
@@ -521,6 +534,10 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
         }
     }
 }
+
+@Composable
+private fun PhoneSetupRow(onClick: () -> Unit) = SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
+    subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = onClick)
 
 @Composable
 internal fun SourceField(label: String, value: String, changed: (String) -> Unit,

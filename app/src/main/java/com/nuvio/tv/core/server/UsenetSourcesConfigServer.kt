@@ -193,6 +193,10 @@ class UsenetSourcesConfigServer(
 
     companion object {
         const val TOKEN_HEADER = "x-setup-token"
+        const val ADD_PARAM = "a"
+        const val ADD_PROVIDER = "provider"
+        const val ADD_INDEXER = "indexer"
+        const val OPEN_RANKING = "ranking"
         private const val JSON = "application/json; charset=utf-8"
         private const val MAX_BODY = 16 * 1024
         private const val MAX_RANKING_BODY = 64 * 1024

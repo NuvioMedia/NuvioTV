@@ -227,7 +227,7 @@ class UsenetSourcesViewModel @Inject constructor(
         closeTune()
     }
 
-    fun startPhoneSetup() {
+    fun startPhoneSetup(add: String? = null) {
         val current = state.value
         if (!current.loaded) return
         val ip = DeviceIpAddress.get(context) ?: return toast(R.string.error_network_required)
@@ -241,7 +241,8 @@ class UsenetSourcesViewModel @Inject constructor(
             logo = { logo }
         ) ?: return toast(R.string.error_server_ports_unavailable)
         phoneServer = server
-        val url = "http://$ip:${server.listeningPort}/?t=${server.token}"
+        val url = "http://$ip:${server.listeningPort}/?t=${server.token}" +
+            (add?.let { "&${UsenetSourcesConfigServer.ADD_PARAM}=$it" } ?: "")
         phone.value = UsenetPhoneSetupUiState(url, QrCodeGenerator.generate(url, 512))
     }
 
