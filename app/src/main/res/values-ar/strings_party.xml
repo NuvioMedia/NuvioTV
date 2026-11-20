@@ -29,7 +29,7 @@
     <string name="party_switch_title">تبديل المشاهدة الجماعية؟</string>
     <string name="party_switch_message">سيبدأ الجميع بمشاهدة %1$s معك.</string>
     <string name="party_switch_confirm">تبديل</string>
-    <string name="party_watch_with_party">شاهد مع المشاهدة الجماعية</string>
+    <string name="party_watch_with_party">شاهد مع المجموعة</string>
     <string name="party_waiting_for">بانتظار %1$s</string>
     <string name="party_waiting">بانتظار الجميع</string>
     <string name="party_reconnecting">إعادة الاتصال…</string>
@@ -57,7 +57,7 @@
     <string name="party_paused_for_you">متوقف مؤقتًا لديك</string>
     <string name="party_behind">متأخر بـ %1$s</string>
     <string name="party_behind_title">أنت متأخر بـ %1$s عن المشاهدة الجماعية</string>
-    <string name="party_catch_up">اللحاق بالمشاهدة الجماعية</string>
+    <string name="party_catch_up">اللحاق بالمجموعة</string>
     <string name="party_caught_up">عدت متزامنًا مع المشاهدة الجماعية</string>
     <string name="party_action_paused">أوقف %1$s التشغيل مؤقتًا</string>
     <string name="party_action_resumed">استأنف %1$s التشغيل</string>
@@ -72,7 +72,7 @@
     <string name="party_share_unavailable">لا يمكن مشاركة هذا البث.</string>
     <string name="party_shared_by">شاركه %1$s</string>
     <string name="party_invite_scan">امسح بهاتفك للانضمام</string>
-    <string name="party_invite_share">أو شارك الرمز. يمكن للأصدقاء إدخاله في مشاهدة جماعية على أي تطبيق Nuvio.</string>
+    <string name="party_invite_share">أو شارك الرمز. يمكن للأصدقاء إدخاله في المشاهدة الجماعية على أي تطبيق Nuvio.</string>
     <string name="party_invite_qr">رمز QR لدعوة المشاهدة الجماعية</string>
     <string name="party_phone_chat_note">افتح مشاهدة جماعية على هاتفك بهذا الملف الشخصي للدردشة.</string>
 </resources>

@@ -92,7 +92,7 @@
     <string name="silo_address_subtitle">أدخل عنوان Silo الذي تفتحه في المتصفح.</string>
     <string name="silo_code_denied">تم رفض تسجيل الدخول هذا.</string>
     <string name="silo_code_instructions">امسح الرمز، أو افتح هذا العنوان على جهاز سجّلت الدخول فيه وأدخل الرمز.</string>
-    <string name="silo_code_subtitle">اعتمد هذا التلفاز في %1$s من هاتفك أو حاسوبك.</string>
+    <string name="silo_code_subtitle">اعتمد هذا التلفاز عبر %1$s من هاتفك أو حاسوبك.</string>
     <string name="silo_code_unavailable">هذا الخادم لا يوفّر تسجيل الدخول برمز.</string>
     <string name="silo_code_waiting">بانتظار الموافقة…</string>
     <string name="silo_error_not_silo">لم يردّ أي خادم Silo على هذا العنوان.</string>
@@ -103,6 +103,6 @@
     <string name="silo_password_subtitle">سجّل الدخول بحساب %1$s.</string>
     <string name="silo_profile_kids">أطفال</string>
     <string name="silo_profiles_title">من يشاهد؟</string>
-    <string name="silo_use_code">استخدام رمز</string>
+    <string name="silo_use_code">استخدم رمزًا</string>
     <string name="silo_use_password">استخدام كلمة المرور</string>
 </resources>
