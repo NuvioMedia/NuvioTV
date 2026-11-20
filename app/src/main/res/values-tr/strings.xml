@@ -2803,6 +2803,10 @@
     <string name="plugin_repo_added_with_providers">%1$s, %2$d sağlayıcı ile eklendi</string>
     <string name="plugin_repo_removed">Uzantı deposu kaldırıldı</string>
     <string name="plugin_repo_refreshed">Uzantı deposu yenilendi</string>
+    <string name="plugin_repo_delete_confirm_title">Depo silinsin mi?</string>
+    <string name="plugin_repo_delete_confirm_message">Silmek istediğinizden emin misiniz?</string>
+    <string name="plugin_repo_delete_no">Hayır</string>
+    <string name="plugin_repo_delete_yes">Evet</string>
 
     <!-- Trakt errors -->
     <string name="trakt_error_code_expired">Cihaz kodunun süresi doldu. Yeniden başlayın.</string>

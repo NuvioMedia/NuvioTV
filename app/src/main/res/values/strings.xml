@@ -2575,6 +2575,10 @@
     <string name="plugin_repo_added_with_providers">Added %1$s with %2$d providers</string>
     <string name="plugin_repo_removed">Repository removed</string>
     <string name="plugin_repo_refreshed">Repository refreshed</string>
+    <string name="plugin_repo_delete_confirm_title">Delete repository?</string>
+    <string name="plugin_repo_delete_confirm_message">Are you sure you want to delete it?</string>
+    <string name="plugin_repo_delete_no">No</string>
+    <string name="plugin_repo_delete_yes">Yes</string>
 
     <!-- Trakt errors -->
 
