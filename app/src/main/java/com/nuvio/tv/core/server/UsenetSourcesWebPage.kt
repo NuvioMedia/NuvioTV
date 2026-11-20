@@ -162,6 +162,7 @@ ${UsenetRankingWebPage.panel(context)}
 <script>
 // Keep the token out of the address bar, history and any shared screenshot; the tab still survives a reload.
 let token = new URLSearchParams(location.search).get('t');
+const addOnOpen = new URLSearchParams(location.search).get('${UsenetSourcesConfigServer.ADD_PARAM}');
 try {
   if (token) sessionStorage.setItem('t', token); else token = sessionStorage.getItem('t');
   history.replaceState(null, '', '/');
@@ -299,7 +300,10 @@ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
   setStatus('');
 });
 ${UsenetRankingWebPage.script(context)}
-load().catch(e => setStatus(e.message, true));
+load().then(() => {
+  if (addOnOpen === '${UsenetSourcesConfigServer.ADD_PROVIDER}') openProvider(null);
+  if (addOnOpen === '${UsenetSourcesConfigServer.ADD_INDEXER}') { document.querySelector('.tab[data-tab="indexers"]').click(); openIndexer(null); }
+}).catch(e => setStatus(e.message, true));
 </script>
 </body>
 </html>
