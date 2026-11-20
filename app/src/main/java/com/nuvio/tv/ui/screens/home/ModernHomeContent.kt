@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -83,6 +85,8 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.LocalContentFocusRequester
+import com.nuvio.tv.LocalSidebarBackdropBleed
+import com.nuvio.tv.LocalAppliedRootContentInset
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.StableRef
@@ -1072,9 +1076,25 @@ fun ModernHomeContent(
                 }.coerceAtLeast(1)
             }
 
-            val heroMediaModifier = remember(heroBackdropHeight, screenHeight, fullScreenBackdrop) {
+            // The legacy sidebar shifts root content toward the end edge. A full-screen backdrop
+            // undoes that shift and spans the whole screen, so it continues under the sidebar,
+            // which then drops its solid background (see the fade below the rows).
+            val rootContentInset = LocalAppliedRootContentInset.current
+            val sidebarBackdropBleed = LocalSidebarBackdropBleed.current
+            val bleedUnderSidebar = fullScreenBackdrop && sidebarBackdropBleed != null && rootContentInset > 0.dp
+            if (bleedUnderSidebar) {
+                DisposableEffect(sidebarBackdropBleed) {
+                    sidebarBackdropBleed.intValue++
+                    onDispose { sidebarBackdropBleed.intValue-- }
+                }
+            }
+            val heroMediaModifier = remember(heroBackdropHeight, screenHeight, rootContentInset, fullScreenBackdrop) {
                 if (fullScreenBackdrop) {
-                    Modifier.align(Alignment.TopStart).fillMaxWidth().height(screenHeight)
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .bleedUnderStartInset(rootContentInset)
+                        .height(screenHeight)
                 } else {
                     Modifier.align(Alignment.TopEnd).offset(x = NuvioTheme.spacing.huge).fillMaxWidth(MODERN_HERO_MEDIA_WIDTH_FRACTION).height(heroBackdropHeight)
                 }
@@ -1266,6 +1286,20 @@ fun ModernHomeContent(
                     .align(Alignment.BottomStart)
                     .onFocusChanged { contentHasFocus.value = it.hasFocus }
             )
+
+            // Stands in for the legacy sidebar's solid background while the backdrop runs under
+            // it. Drawn here rather than in the sidebar because the sidebar clips to its own
+            // width, and the fade has to run on past it to where the first card starts.
+            if (bleedUnderSidebar) {
+                LegacySidebarBackdropFade(
+                    color = NuvioTheme.colors.Background,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxHeight()
+                        .width(rowHorizontalPadding)
+                        .bleedUnderStartInset(rootContentInset)
+                )
+            }
     }
 
     val selectedOptionsItem = optionsItem.value
