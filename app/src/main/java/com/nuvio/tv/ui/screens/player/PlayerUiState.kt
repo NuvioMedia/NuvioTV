@@ -416,6 +416,7 @@ sealed class PlayerEvent {
     data class OnSetSubtitleShadowEnabled(val enabled: Boolean) : PlayerEvent()
     data class OnSetSubtitleShadowOpacity(val opacity: Int) : PlayerEvent()
     data class OnSetSubtitleShadowSize(val size: Int) : PlayerEvent()
+    data class OnSetSubtitleCustomizeAss(val enabled: Boolean) : PlayerEvent()
     data object OnResetSubtitleDefaults : PlayerEvent()
     data object OnToggleAspectRatio : PlayerEvent()
     data object OnSwitchInternalPlayerEngine : PlayerEvent()

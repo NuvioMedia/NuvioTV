@@ -2107,6 +2107,9 @@ fun PlayerRuntimeController.onEvent(
         is PlayerEvent.OnSetSubtitleShadowSize -> {
             scope.launch { playerSettingsDataStore.setSubtitleShadowSize(event.size) }
         }
+        is PlayerEvent.OnSetSubtitleCustomizeAss -> {
+            scope.launch { playerSettingsDataStore.setSubtitleCustomizeAss(event.enabled) }
+        }
         PlayerEvent.OnResetSubtitleDefaults -> {
             val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
             scope.launch { playerSettingsDataStore.resetSubtitleAppearance(resetHdrText = editingHdr) }
