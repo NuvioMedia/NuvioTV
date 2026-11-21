@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
 
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -81,6 +82,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -181,6 +183,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 
 private const val PLAYER_CONTROLS_FADE_DURATION_MS = 200
+
+// Back presses are ignored for this long after the last dismissible UI element (controls, panel, dialog or overlay) goes hidden (manual or auto-hide).
+private const val PLAYER_BACK_EXIT_GUARD_MS = 200L
 
 private fun PlayerUiState.returnFocusSeasonEpisode(completed: Boolean): Pair<Int?, Int?> {
     val next = nextEpisode?.takeIf {
@@ -351,6 +356,36 @@ fun PlayerScreen(
         }
     }
 
+    // True while ANY element that Back can dismiss is on screen (controls, panels, dialogs, overlays, prompts).
+    val anyDismissibleUiVisible =
+        uiState.showControls ||
+            uiState.showAudioOverlay ||
+            uiState.showSubtitleOverlay ||
+            uiState.showStreamInfoOverlay ||
+            uiState.showPauseOverlay ||
+            uiState.showMoreDialog ||
+            uiState.showSpeedDialog ||
+            uiState.showSubtitleTimingDialog ||
+            uiState.showSubtitleDelayOverlay ||
+            uiState.showSubtitleStylePanel ||
+            uiState.showPartyPanel ||
+            uiState.showSourcesPanel ||
+            uiState.showChaptersPanel ||
+            uiState.showEpisodesPanel ||
+            (uiState.postPlayMode is PostPlayMode.AutoPlay &&
+                postPlayRecommendationState.recommendation == null) ||
+            uiState.postPlayMode is PostPlayMode.StillWatching ||
+            skipButtonActuallyVisible
+    var uiHiddenAtMs by remember { mutableLongStateOf(0L) }
+    var uiWasVisible by remember { mutableStateOf(anyDismissibleUiVisible) }
+    LaunchedEffect(anyDismissibleUiVisible) {
+        // Starts the guard when the LAST visible element disappears (manual Back or auto-hide).
+        if (uiWasVisible && !anyDismissibleUiVisible) {
+            uiHiddenAtMs = SystemClock.elapsedRealtime()
+        }
+        uiWasVisible = anyDismissibleUiVisible
+    }
+
     val handleBackPress = handleBackPress@{
         if (externalHandoffInProgress) return@handleBackPress
         if (postPlayRecommendationState.canReturnToPlayer && !uiState.playbackEnded) {
@@ -416,7 +451,11 @@ fun PlayerScreen(
         } else if (uiState.showControls) {
             viewModel.hideControls()
         } else {
-            exitPlayer()
+            val hiddenRecently = uiHiddenAtMs != 0L &&
+                SystemClock.elapsedRealtime() - uiHiddenAtMs < PLAYER_BACK_EXIT_GUARD_MS
+            if (!hiddenRecently) {
+                exitPlayer()
+            }
         }
     }
 
@@ -1152,10 +1191,11 @@ fun PlayerScreen(
                 LaunchedEffect(subtitleWidthKey, prescannedSubtitleTexts) {
                     val metrics = measuredSubtitleTextMetrics ?: return@LaunchedEffect
                     val texts = prescannedSubtitleTexts
+                    if (texts.isEmpty()) return@LaunchedEffect
                     val widest = withContext(Dispatchers.Default) {
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                        texts.maxOfOrNull { measureSubtitleBlockPx(paint, it, metrics) }
-                    } ?: return@LaunchedEffect
+                        texts.maxOf { measureSubtitleBlockPx(paint, it, metrics) }
+                    }
                     widestSubtitleBlockPx = maxOf(widestSubtitleBlockPx ?: 0f, widest)
                 }
                 LaunchedEffect(subtitleWidthKey, subtitleCueState) {
