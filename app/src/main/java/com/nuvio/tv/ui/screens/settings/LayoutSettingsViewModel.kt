@@ -87,6 +87,7 @@ data class LayoutSettingsUiState(
     val trailerSubtitlesEnabled: Boolean = false,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
+    val homeWatchlistRowEnabled: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val nextUpFromFurthestEpisode: Boolean = true,
     val showUnairedNextUp: Boolean = true,
@@ -156,6 +157,7 @@ sealed class LayoutSettingsEvent {
     data class SetTrailerSubtitlesEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetHomeWatchlistRowEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetNextUpFromFurthestEpisode(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowUnairedNextUp(val enabled: Boolean) : LayoutSettingsEvent()
@@ -405,6 +407,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.homeWatchlistRowEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(homeWatchlistRowEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.showFullReleaseDate.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(showFullReleaseDate = enabled) }
             }
@@ -525,6 +532,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetTrailerSubtitlesEnabled -> setTrailerSubtitlesEnabled(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
+            is LayoutSettingsEvent.SetHomeWatchlistRowEnabled -> setHomeWatchlistRowEnabled(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
             is LayoutSettingsEvent.SetNextUpFromFurthestEpisode -> setNextUpFromFurthestEpisode(event.enabled)
             is LayoutSettingsEvent.SetShowUnairedNextUp -> setShowUnairedNextUp(event.enabled)
@@ -916,6 +924,13 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.setHideUnreleasedContent(enabled)
             homeCatalogSettingsSyncService.triggerPush()
+        }
+    }
+
+    private fun setHomeWatchlistRowEnabled(enabled: Boolean) {
+        if (_uiState.value.homeWatchlistRowEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setHomeWatchlistRowEnabled(enabled)
         }
     }
 

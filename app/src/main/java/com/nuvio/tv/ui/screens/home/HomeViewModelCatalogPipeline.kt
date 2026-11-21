@@ -587,6 +587,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val heroSectionEnabled = _uiState.value.heroSectionEnabled
     val hideUnreleased = _uiState.value.hideUnreleasedContent
     val titlesSnapshot = customCatalogTitles
+    val watchlistRow = homeWatchlistRow()
 
     val (displayRows, baseHeroItems, baseGridItems, fullRowsFiltered) = withContext(Dispatchers.Default) {
         val rawRows = orderedKeys.mapNotNull { key ->
@@ -732,6 +733,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                 placeholderDescriptors.associateBy { it.catalogKey }
             }
             val addedCollectionIds = mutableSetOf<String>()
+            watchlistRow?.let { add(HomeRow.Catalog(it)) }
             collectionsCache.forEach { collection ->
                 val key = "collection_${collection.id}"
             if (collection.pinToTop && key !in disabledHomeCatalogKeys && addedCollectionIds.add(collection.id)) {
@@ -940,7 +942,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         heroItemOrder = emptyList()
     }
 
-    schedulePosterStatusReconcilePipeline(displayRows)
+    schedulePosterStatusReconcilePipeline(displayRows + listOfNotNull(watchlistRow))
 }
 
 private fun stableHeroSortKey(
