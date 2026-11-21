@@ -181,6 +181,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 
 private const val PLAYER_CONTROLS_FADE_DURATION_MS = 200
+// Debounce clearing FLAG_KEEP_SCREEN_ON so seeks, track switches, and brief pauses never trigger
+// a synchronous WindowManager relayoutWindow(params=true) Binder stall on the main thread.
+private const val KEEP_SCREEN_ON_RELEASE_DELAY_MS = 15_000L
 
 private fun PlayerUiState.returnFocusSeasonEpisode(completed: Boolean): Pair<Int?, Int?> {
     val next = nextEpisode?.takeIf {
@@ -2242,8 +2245,13 @@ private fun MpvPlayerSurface(
 
     LaunchedEffect(mpvView, isPlaying, isBuffering) {
         val shouldKeepScreenOn = isPlaying || isBuffering
-        if (mpvView.keepScreenOn != shouldKeepScreenOn) {
-            mpvView.keepScreenOn = shouldKeepScreenOn
+        if (shouldKeepScreenOn) {
+            if (!mpvView.keepScreenOn) {
+                mpvView.keepScreenOn = true
+            }
+        } else if (mpvView.keepScreenOn) {
+            delay(KEEP_SCREEN_ON_RELEASE_DELAY_MS)
+            mpvView.keepScreenOn = false
         }
     }
 
@@ -2298,7 +2306,7 @@ private fun ExoPlayerSurface(
             isFocusable = false
             isFocusableInTouchMode = false
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-            keepScreenOn = false
+            keepScreenOn = true
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
             enableComposeSurfaceSyncWorkaroundIfAvailable()
@@ -2410,8 +2418,13 @@ private fun ExoPlayerSurface(
 
     LaunchedEffect(playerView, isPlaying, isBuffering) {
         val shouldKeepScreenOn = isPlaying || isBuffering
-        if (playerView.keepScreenOn != shouldKeepScreenOn) {
-            playerView.keepScreenOn = shouldKeepScreenOn
+        if (shouldKeepScreenOn) {
+            if (!playerView.keepScreenOn) {
+                playerView.keepScreenOn = true
+            }
+        } else if (playerView.keepScreenOn) {
+            delay(KEEP_SCREEN_ON_RELEASE_DELAY_MS)
+            playerView.keepScreenOn = false
         }
     }
 

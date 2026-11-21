@@ -29,6 +29,13 @@ import com.nuvio.tv.ui.screens.settings.MemoryBudget
 @androidx.media3.common.util.UnstableApi
 object NuvioExoPlayerPerformanceHelper {
 
+    init {
+        // Always keep decoupled A/V sync active (dedicated AudioSink thread, async video
+        // output release, throttled SampleQueue discard, fair renderer time slice), even
+        // when the native off-heap allocator / zero-copy performance mode is off.
+        NuvioEngineConfig.set(NuvioEngineConfig.stockWithDecoupledAvSync())
+    }
+
     /** Whether Nuvio performance enhancements are active. Set from [PlayerSettingsDataStore]. */
     @Volatile
     var enabled: Boolean = false
@@ -443,7 +450,7 @@ object NuvioExoPlayerPerformanceHelper {
         if (performanceModeEnabled) {
             NuvioEngineConfig.set(NuvioEngineConfig.nuvioMode())
         } else {
-            NuvioEngineConfig.set(NuvioEngineConfig.stockMode())
+            NuvioEngineConfig.set(NuvioEngineConfig.stockWithDecoupledAvSync())
         }
     }
 }

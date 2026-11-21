@@ -977,7 +977,7 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
     val progress = currentWatchProgress(parentContentId, parentContentType, position, duration, System.currentTimeMillis())
         .copy(progressPercent = fallbackPercent)
 
-    scope.launch(kotlinx.coroutines.NonCancellable) {
+    scope.launch(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
         try {
             val effectiveContentId = watchProgressRepository.normalizeParentContentId(
                 parentContentId = progress.contentId,
@@ -1023,13 +1023,15 @@ private fun PlayerRuntimeController.saveCloudLibraryProgress(
     if (!completed && position < 1_000L) return
     val playbackContext = cloudPlaybackContext ?: return
     val file = playbackContext.fileForVideoId(currentVideoId) ?: return
-    cloudPlaybackProgressStore.save(
-        item = playbackContext.item,
-        file = file,
-        positionMs = position,
-        durationMs = duration,
-        completed = completed
-    )
+    scope.launch(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
+        cloudPlaybackProgressStore.save(
+            item = playbackContext.item,
+            file = file,
+            positionMs = position,
+            durationMs = duration,
+            completed = completed
+        )
+    }
 }
 
 internal fun PlayerRuntimeController.currentPlaybackProgressPercent(): Float {
