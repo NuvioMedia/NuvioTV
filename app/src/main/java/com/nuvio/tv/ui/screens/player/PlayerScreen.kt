@@ -229,6 +229,7 @@ fun PlayerScreen(
         }
     }
     val postPlayRecommendationState by viewModel.postPlayRecommendationUiState.collectAsState()
+    val postPlayTraktRatingState by viewModel.postPlayTraktRatingUiState.collectAsState()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsState(initial = false)
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
@@ -337,6 +338,19 @@ fun PlayerScreen(
         }
     }
 
+    var traktRatingPromptShown by remember { mutableStateOf(false) }
+    LaunchedEffect(postPlayTraktRatingState.isVisible) {
+        if (postPlayTraktRatingState.isVisible) {
+            traktRatingPromptShown = true
+        } else if (traktRatingPromptShown) {
+            // The prompt owned focus; hand it back unless post-play takes over and focuses itself.
+            traktRatingPromptShown = false
+            if (!postPlayRecommendationState.isVisible) {
+                runCatching { containerFocusRequester.requestFocus() }
+            }
+        }
+    }
+
     LaunchedEffect(uiState.playbackIssueReportStatus, uiState.playbackIssueReportId) {
         if (uiState.playbackIssueReportStatus == PlaybackIssueReportStatus.Sent &&
             !uiState.playbackIssueReportId.isNullOrBlank()
@@ -353,7 +367,9 @@ fun PlayerScreen(
 
     val handleBackPress = handleBackPress@{
         if (externalHandoffInProgress) return@handleBackPress
-        if (postPlayRecommendationState.canReturnToPlayer && !uiState.playbackEnded) {
+        if (postPlayTraktRatingState.isVisible) {
+            viewModel.skipPostPlayTraktRating()
+        } else if (postPlayRecommendationState.canReturnToPlayer && !uiState.playbackEnded) {
             returnToPlayerFromPostPlay()
             viewModel.hideControls()
         } else if (postPlayRecommendationState.isVisible || postPlayRecommendationState.isLoadingRecommendation) {
@@ -429,13 +445,15 @@ fun PlayerScreen(
         uiState.error,
         uiState.pendingExitReason,
         shouldConfirmNextEpisodeOnEnd,
-        postPlayRecommendationState.blocksNaturalCompletion
+        postPlayRecommendationState.blocksNaturalCompletion,
+        postPlayTraktRatingState.isVisible
     ) {
         val explicitReason = uiState.pendingExitReason
         val shouldDispatchNatural = uiState.playbackEnded &&
             uiState.error == null &&
             uiState.postPlayMode?.blocksNaturalCompletion() != true &&
             !postPlayRecommendationState.blocksNaturalCompletion &&
+            !postPlayTraktRatingState.isVisible &&
             !shouldConfirmNextEpisodeOnEnd &&
             explicitReason == null
         when {
@@ -842,6 +860,7 @@ fun PlayerScreen(
                         shouldConfirmNextEpisodeOnEnd ||
                         uiState.postPlayMode is PostPlayMode.StillWatching ||
                         postPlayRecommendationState.isVisible ||
+                        postPlayTraktRatingState.isVisible ||
                         uiState.error != null
                 if (panelOrDialogOpen) return@onKeyEvent false
 
@@ -1343,6 +1362,22 @@ fun PlayerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(1f)
+            )
+        }
+
+        if (!exitDispatched) {
+            PostPlayTraktRatingScreen(
+                state = postPlayTraktRatingState,
+                title = uiState.contentName ?: uiState.title,
+                logo = uiState.logo,
+                backdrop = uiState.backdrop,
+                releaseYear = uiState.releaseYear,
+                onStep = viewModel::stepPostPlayTraktRating,
+                onSubmit = viewModel::submitPostPlayTraktRating,
+                onSkip = viewModel::skipPostPlayTraktRating,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(3f)
             )
         }
 

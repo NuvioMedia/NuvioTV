@@ -38,6 +38,7 @@ import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
+import com.nuvio.tv.data.repository.TraktRatingService
 import com.nuvio.tv.data.repository.TraktRelatedService
 import com.nuvio.tv.data.trailer.TrailerService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -85,6 +86,7 @@ class PlayerViewModel @Inject constructor(
     private val trailerService: TrailerService,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val traktRelatedService: TraktRelatedService,
+    private val traktRatingService: TraktRatingService,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val simklRelatedService: com.nuvio.tv.data.simkl.SimklRelatedService,
@@ -183,6 +185,15 @@ class PlayerViewModel @Inject constructor(
 
     fun currentPartyStream() = controller.currentPartyStream()
 
+    private val postPlayTraktRatingController = PostPlayTraktRatingController(
+        playbackController = controller,
+        traktRatingService = traktRatingService,
+        playerSettingsDataStore = playerSettingsDataStore,
+        traktAuthDataStore = traktAuthDataStore,
+        traktSettingsDataStore = traktSettingsDataStore,
+        scope = viewModelScope
+    )
+
     private val postPlayRecommendationController = PostPlayRecommendationController(
         playbackController = controller,
         playerSettingsDataStore = playerSettingsDataStore,
@@ -203,6 +214,7 @@ class PlayerViewModel @Inject constructor(
         trailerService = trailerService,
         trailerSettingsDataStore = trailerSettingsDataStore,
         trailerPlayerPool = trailerPlayerPool,
+        ratingPromptVisible = postPlayTraktRatingController.isPromptVisible,
         scope = viewModelScope
     )
 
@@ -214,6 +226,9 @@ class PlayerViewModel @Inject constructor(
 
     val postPlayRecommendationUiState: StateFlow<PostPlayRecommendationUiState>
         get() = postPlayRecommendationController.uiState
+
+    val postPlayTraktRatingUiState: StateFlow<PostPlayTraktRatingUiState>
+        get() = postPlayTraktRatingController.uiState
 
     val effectiveAutoplayEnabled = playerSettingsDataStore.playerSettings
         .map(StreamAutoPlayPolicy::isEffectivelyEnabled)
@@ -257,6 +272,18 @@ class PlayerViewModel @Inject constructor(
 
     fun returnToPlayerFromPostPlay() {
         postPlayRecommendationController.returnToPlayer()
+    }
+
+    fun stepPostPlayTraktRating(delta: Int) {
+        postPlayTraktRatingController.onStep(delta)
+    }
+
+    fun submitPostPlayTraktRating() {
+        postPlayTraktRatingController.onSubmit()
+    }
+
+    fun skipPostPlayTraktRating() {
+        postPlayTraktRatingController.onSkip()
     }
 
     fun scheduleHideControls() {
@@ -313,6 +340,7 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         postPlayRecommendationController.stop()
+        postPlayTraktRatingController.stop()
         controller.onCleared()
         // Allow the trailer player to be re-created when returning to home screen.
         trailerPlayerPool.reclaim()
