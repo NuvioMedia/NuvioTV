@@ -1312,6 +1312,20 @@ private fun LibrarySelectorsRow(
                         ?.let(onSelectWatchedFilter)
                 }
             )
+
+            val hideWatched = selectedWatchedFilter == LibraryWatchedFilter.UNWATCHED
+            Button(
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { selected = hideWatched },
+                onClick = {
+                    onSelectWatchedFilter(
+                        if (hideWatched) LibraryWatchedFilter.ALL else LibraryWatchedFilter.UNWATCHED
+                    )
+                },
+            ) {
+                Text(stringResource(R.string.library_filter_hide_watched))
+            }
         }
     }
 }
