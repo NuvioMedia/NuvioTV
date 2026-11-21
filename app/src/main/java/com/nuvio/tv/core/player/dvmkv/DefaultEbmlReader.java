@@ -60,6 +60,8 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
   private @ElementState int elementState;
   private int elementId;
   private long elementContentSize;
+  private int elementIdLength;
+  private int elementContentSizeLength;
 
   public DefaultEbmlReader() {
     scratch = new byte[8];
@@ -93,6 +95,8 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
         long result = varintReader.readUnsignedVarint(input, true, false, MAX_ID_BYTES);
         if (result == C.RESULT_MAX_LENGTH_EXCEEDED) {
           result = maybeResyncToNextLevel1Element(input);
+        } else {
+          elementIdLength = varintReader.getLastLength();
         }
         if (result == C.RESULT_END_OF_INPUT) {
           return false;
@@ -104,6 +108,7 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
 
       if (elementState == ELEMENT_STATE_READ_CONTENT_SIZE) {
         elementContentSize = varintReader.readUnsignedVarint(input, false, true, MAX_LENGTH_BYTES);
+        elementContentSizeLength = varintReader.getLastLength();
         elementState = ELEMENT_STATE_READ_CONTENT;
       }
 
@@ -111,6 +116,12 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
       switch (type) {
         case EbmlProcessor.ELEMENT_TYPE_MASTER:
           long elementContentPosition = input.getPosition();
+          long elementPosition = elementContentPosition - elementIdLength - elementContentSizeLength;
+          if (processor.readWholeMasterElement(
+              elementId, elementPosition, elementContentPosition, elementContentSize, input)) {
+            elementState = ELEMENT_STATE_READ_ID;
+            return true;
+          }
           long elementEndPosition = elementContentPosition + elementContentSize;
           masterElementsStack.push(new MasterElement(elementId, elementEndPosition));
           processor.startMasterElement(elementId, elementContentPosition, elementContentSize);
@@ -180,6 +191,7 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
         int potentialId = (int) VarintReader.assembleVarint(scratch, varintLength, false);
         if (processor.isLevel1Element(potentialId)) {
           input.skipFully(varintLength);
+          elementIdLength = varintLength;
           return potentialId;
         }
       }
