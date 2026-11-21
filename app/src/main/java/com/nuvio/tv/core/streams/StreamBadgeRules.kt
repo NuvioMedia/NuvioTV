@@ -198,6 +198,7 @@ internal object StreamBadgeRulesParser {
 }
 
 internal object StreamBadgeMatcher {
+    private const val MAX_BINGE_GROUP_LENGTH = 1024
     private val WHITESPACE_PATTERN = Regex("\\s+")
 
     fun compile(rules: StreamBadgeRules): List<CompiledStreamBadgeFilter> {
@@ -409,6 +410,7 @@ internal object StreamBadgeMatcher {
             raw?.filename,
             resolve?.filename,
             stream.behaviorHints?.filename,
+            stream.behaviorHints?.bingeGroup?.takeIf { it.length <= MAX_BINGE_GROUP_LENGTH },
             stream.debridCacheStatus?.cachedName,
             raw?.torrentName,
             resolve?.torrentName,
