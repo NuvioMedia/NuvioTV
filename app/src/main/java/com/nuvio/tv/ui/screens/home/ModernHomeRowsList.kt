@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.LocalAppliedRootContentInset
 import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.ui.theme.NuvioTheme
 
@@ -285,6 +286,10 @@ internal fun ModernHomeRowsList(
                 .recompositionHighlighter()
                 .height(rowsViewportHeight)
                 .padding(bottom = catalogBottomPadding)
+                // Reach under the legacy sidebar before clipping, so cards scrolling past the
+                // start edge continue under the sidebar instead of being cut off where the
+                // content starts. Rows add the same inset to their start padding.
+                .bleedUnderStartInset(LocalAppliedRootContentInset.current)
                 .clipToBounds()
                 .focusRequester(contentFocusRequester)
                 .focusRestorer { focusRestorerRequester() }
