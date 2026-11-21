@@ -143,6 +143,24 @@ class DebridFileSelectionTest(private val provider: String) {
         assertSelected(null, listOf(file(1, "Show.zip")), resolve())
     }
 
+    @Test
+    fun `anime episode-only pack fallback selects requested episode when SxxExx is absent`() {
+        val salieriFiles = listOf(
+            file(1, "[Salieri] Vivy - Fluorite Eye's Song/[Salieri] Vivy - Fluorite Eye's Song - 01 - 1080p (HDR) [Dual-Audio].mkv"),
+            file(8, "[Salieri] Vivy - Fluorite Eye's Song/[Salieri] Vivy - Fluorite Eye's Song - 08 - 1080p (HDR) [Dual-Audio].mkv"),
+            file(13, "[Salieri] Vivy - Fluorite Eye's Song/[Salieri] Vivy - Fluorite Eye's Song - 13 - 1080p (HDR) [Dual-Audio].mkv"),
+        )
+        assertSelected(1, salieriFiles, resolve(season = 1, episode = 1))
+        assertSelected(8, salieriFiles, resolve(season = 1, episode = 8))
+
+        val epPrefixFiles = listOf(
+            file(10, "Anime.EP01.1080p.mkv"),
+            file(11, "Anime.EP11.1080p.mkv"),
+        )
+        assertSelected(10, epPrefixFiles, resolve(season = 1, episode = 1))
+        assertSelected(null, epPrefixFiles, resolve(season = 2, episode = 1))
+    }
+
     private fun assertSelected(
         expected: Int?,
         files: List<TorboxTorrentFileDto>,

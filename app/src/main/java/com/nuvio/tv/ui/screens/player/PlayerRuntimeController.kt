@@ -483,6 +483,8 @@ class PlayerRuntimeController(
     internal var subtitleTimingRefreshJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var debridResolveJob: Job? = null
+    internal var episodeMismatchCheckJob: Job? = null
+    internal var mitigatedFromStreamUrl: String? = null
     internal var stillWatchingPromptJob: Job? = null
     internal var startupLoadingReportJob: Job? = null
     internal var sourceStreamsJob: Job? = null
@@ -875,6 +877,7 @@ class PlayerRuntimeController(
         stopTorrentStream()
         torrentService.shutdown()
         startupLoadingReportJob?.cancel()
+        episodeMismatchCheckJob?.cancel()
         vodTelemetryJob?.cancel()
         mediaSourceFactory.shutdown()
         sourceChipErrorDismissJob?.cancel()

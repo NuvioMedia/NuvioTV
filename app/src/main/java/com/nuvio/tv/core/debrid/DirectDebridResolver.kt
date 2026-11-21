@@ -1,6 +1,9 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.player.EpisodeMismatchDetector
+import com.nuvio.tv.core.player.FilenameEpisodeMatcher
 import com.nuvio.tv.data.local.DebridSettingsDataStore
+import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamClientResolve
@@ -261,6 +264,174 @@ class DirectDebridResolver @Inject constructor(
     ): DebridServiceCredential? =
         settings.activeResolverCredential
             ?.takeIf { credential -> credential.provider.supports(DebridProviderCapability.LocalTorrentResolve) }
+
+    suspend fun hasSavedDebridKey(): Boolean {
+        val settings = dataStore.settings.first()
+        return savedMitigationProviderIds(settings, preferredHint = null).isNotEmpty()
+    }
+
+    suspend fun mitigateMismatchedEpisodeStream(
+        infoHash: String?,
+        filenameHint: String?,
+        streamUrl: String?,
+        bingeGroup: String?,
+        sources: List<String>? = null,
+        title: String? = null,
+        addonName: String = "Debrid",
+        season: Int,
+        episode: Int
+    ): DirectDebridMitigationResult {
+        val cleanHash = (infoHash ?: extractEmbeddedInfoHashFrom(streamUrl, bingeGroup))
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: return DirectDebridMitigationResult.NotApplicable
+
+        val settings = dataStore.settings.first()
+        val providerIds = savedMitigationProviderIds(settings, inferProviderHint(streamUrl, bingeGroup))
+        if (providerIds.isEmpty()) return DirectDebridMitigationResult.MissingApiKey
+
+        // Only keep filenameHint if it explicitly names the requested episode without mismatch.
+        val validatedFilename = filenameHint?.takeIf { hint ->
+            FilenameEpisodeMatcher.extractSeasonEpisode(hint)?.second == episode &&
+                EpisodeMismatchDetector.detectMismatch(season, episode, streamUrl, listOf(hint)) == null
+        }
+
+        val baseStream = Stream(
+            name = title,
+            title = title,
+            description = null,
+            url = null,
+            ytId = null,
+            infoHash = cleanHash,
+            fileIdx = null,
+            externalUrl = null,
+            behaviorHints = validatedFilename?.let { fn ->
+                StreamBehaviorHints(
+                    notWebReady = null,
+                    bingeGroup = bingeGroup,
+                    countryWhitelist = null,
+                    proxyHeaders = null,
+                    filename = fn
+                )
+            },
+            addonName = addonName,
+            addonLogo = null,
+            sources = sources
+        )
+        val magnet = DebridMagnetBuilder.fromStream(baseStream)
+
+        for (providerId in providerIds) {
+            val resolveStream = baseStream.copy(
+                clientResolve = StreamClientResolve(
+                    type = "debrid",
+                    infoHash = cleanHash,
+                    fileIdx = null,
+                    magnetUri = magnet,
+                    sources = sources,
+                    torrentName = null,
+                    filename = validatedFilename,
+                    mediaType = "series",
+                    mediaId = null,
+                    mediaOnlyId = null,
+                    title = title,
+                    season = season,
+                    episode = episode,
+                    service = providerId,
+                    serviceIndex = null,
+                    serviceExtension = null,
+                    isCached = true,
+                    stream = null
+                )
+            )
+
+            val resolved = when (providerId) {
+                DebridProviders.TORBOX_ID -> torboxResolver.resolve(resolveStream, season, episode)
+                DebridProviders.REAL_DEBRID_ID -> realDebridResolver.resolve(resolveStream, season, episode)
+                DebridProviders.PREMIUMIZE_ID -> premiumizeResolver.resolve(resolveStream, season, episode)
+                else -> DirectDebridResolveResult.Error
+            }
+
+            if (resolved is DirectDebridResolveResult.Success) {
+                val urlLeaf = resolved.url
+                    .substringBefore('#')
+                    .substringBefore('?')
+                    .substringAfterLast('/')
+                    .takeIf { '.' in it }
+                val postCheck = EpisodeMismatchDetector.detectMismatch(
+                    expectedSeason = season,
+                    expectedEpisode = episode,
+                    streamUrl = resolved.url,
+                    candidateLabels = listOf(resolved.filename, urlLeaf)
+                )
+                if (postCheck == null) {
+                    return DirectDebridMitigationResult.Mitigated(
+                        result = resolved,
+                        providerName = DebridProviders.displayName(providerId)
+                    )
+                }
+            }
+        }
+
+        return DirectDebridMitigationResult.Unresolved
+    }
+
+    private fun savedMitigationProviderIds(
+        settings: DebridSettings,
+        preferredHint: String?
+    ): List<String> {
+        val candidates = listOfNotNull(
+            preferredHint?.let { DebridProviders.byId(it)?.id },
+            DebridProviders.byId(settings.preferredResolverProviderId)?.id,
+            DebridProviders.TORBOX_ID,
+            DebridProviders.REAL_DEBRID_ID,
+            DebridProviders.PREMIUMIZE_ID
+        ).distinct()
+        return candidates.filter { id -> settings.apiKeyFor(id).trim().isNotBlank() }
+    }
+
+    private fun inferProviderHint(streamUrl: String?, bingeGroup: String?): String? {
+        val bg = bingeGroup?.lowercase().orEmpty()
+        when {
+            "torbox" in bg -> return DebridProviders.TORBOX_ID
+            "realdebrid" in bg || "real-debrid" in bg -> return DebridProviders.REAL_DEBRID_ID
+            "premiumize" in bg -> return DebridProviders.PREMIUMIZE_ID
+        }
+        val path = streamUrl?.substringBefore('?')?.lowercase().orEmpty()
+        if ("/resolve/" in path) {
+            for (segment in path.substringAfter("/resolve/").split('/').take(2)) {
+                when (segment) {
+                    "0", "torbox", "tb" -> return DebridProviders.TORBOX_ID
+                    "1", "realdebrid", "rd" -> return DebridProviders.REAL_DEBRID_ID
+                    "2", "premiumize", "pm" -> return DebridProviders.PREMIUMIZE_ID
+                }
+            }
+        }
+        return null
+    }
+}
+
+private val EMBEDDED_BTIH_HEX_REGEX = Regex("""(?<![0-9a-fA-F])([0-9a-fA-F]{40})(?![0-9a-fA-F])""")
+
+internal fun extractEmbeddedInfoHashFrom(url: String?, bingeGroup: String?): String? {
+    val path = url?.substringBefore('?')?.substringBefore('#')
+    if (!path.isNullOrBlank()) {
+        EMBEDDED_BTIH_HEX_REGEX.find(path)?.groupValues?.getOrNull(1)?.let { return it.lowercase() }
+    }
+    if (!bingeGroup.isNullOrBlank()) {
+        EMBEDDED_BTIH_HEX_REGEX.find(bingeGroup)?.groupValues?.getOrNull(1)?.let { return it.lowercase() }
+    }
+    return null
+}
+
+sealed class DirectDebridMitigationResult {
+    data class Mitigated(
+        val result: DirectDebridResolveResult.Success,
+        val providerName: String
+    ) : DirectDebridMitigationResult()
+    data object NotApplicable : DirectDebridMitigationResult()
+    data object MissingApiKey : DirectDebridMitigationResult()
+    data object Unresolved : DirectDebridMitigationResult()
 }
 
 private const val DIRECT_DEBRID_RESOLVE_CACHE_TTL_MS = 15L * 60L * 1000L
