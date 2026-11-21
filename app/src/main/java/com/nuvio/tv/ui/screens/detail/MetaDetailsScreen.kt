@@ -430,8 +430,9 @@ fun MetaDetailsScreen(
         genres: String?,
         year: String?,
         runtime: Int?,
-        contentLanguage: String?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+        contentLanguage: String?,
+        logoLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
     onPlayManuallyClick: (
         videoId: String,
         contentType: String,
@@ -446,8 +447,9 @@ fun MetaDetailsScreen(
         genres: String?,
         year: String?,
         runtime: Int?,
-        contentLanguage: String?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+        contentLanguage: String?,
+        logoLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
     onPlayStartFromBeginningClick: (
         videoId: String,
         contentType: String,
@@ -462,8 +464,9 @@ fun MetaDetailsScreen(
         genres: String?,
         year: String?,
         runtime: Int?,
-        contentLanguage: String?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
+        contentLanguage: String?,
+        logoLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
 ) {
     val playbackAvailability = LocalPlaybackAvailability.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -783,7 +786,8 @@ fun MetaDetailsScreen(
                         null,
                         null,
                         video.runtime,
-                        meta.resolveContentLanguage()
+                        meta.resolveContentLanguage(),
+                        meta.logoLanguage
                     )
                 }
                 val playEpisodeManually: (Video) -> Unit = playEpisodeManually@{ video ->
@@ -805,7 +809,8 @@ fun MetaDetailsScreen(
                         null,
                         null,
                         video.runtime,
-                        meta.resolveContentLanguage()
+                        meta.resolveContentLanguage(),
+                        meta.logoLanguage
                     )
                 }
                 val playTitle: (String) -> Unit = playTitle@{ videoId ->
@@ -827,7 +832,8 @@ fun MetaDetailsScreen(
                         genresString,
                         yearString,
                         null,
-                        meta.resolveContentLanguage()
+                        meta.resolveContentLanguage(),
+                        meta.logoLanguage
                     )
                 }
                 val playTitleManually: (String) -> Unit = playTitleManually@{ videoId ->
@@ -849,7 +855,8 @@ fun MetaDetailsScreen(
                         genresString,
                         yearString,
                         null,
-                        meta.resolveContentLanguage()
+                        meta.resolveContentLanguage(),
+                        meta.logoLanguage
                     )
                 }
                 val isSeries = remember(meta.type, meta.videos) {
@@ -988,7 +995,8 @@ fun MetaDetailsScreen(
                             null,
                             null,
                             video.runtime,
-                            meta.resolveContentLanguage()
+                            meta.resolveContentLanguage(),
+                            meta.logoLanguage
                         )
                     },
                     onPlayStartFromBeginningClick = onPlayStartFromBeginningClick@{ videoId ->
@@ -1010,7 +1018,8 @@ fun MetaDetailsScreen(
                             genresString,
                             yearString,
                             null,
-                            meta.resolveContentLanguage()
+                            meta.resolveContentLanguage(),
+                            meta.logoLanguage
                         )
                     },
                     showManualPlayOption = effectiveAutoplayEnabled,

@@ -78,6 +78,8 @@ data class PlayerUiState(
     val currentStreamDescription: String? = null, // Description of the currently playing stream
     val backdrop: String? = null,
     val logo: String? = null,
+    /** ISO 639-1 language code of the specific [logo] image, when known (TMDB-sourced logos only). */
+    val logoLanguage: String? = null,
     val description: String? = null,
     val castMembers: List<MetaCastMember> = emptyList(),
     val showControls: Boolean = true,

@@ -51,12 +51,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.isContentRtl
+import com.nuvio.tv.ui.util.isRtlLanguageCode
 
 @Composable
 fun LoadingOverlay(
     visible: Boolean,
     backdropUrl: String?,
     logoUrl: String?,
+    /** ISO 639-1 language code of the specific [logoUrl] image, when known (e.g. TMDB's `iso_639_1`). */
+    logoLanguage: String? = null,
     title: String? = null,
     message: String? = null,
     progress: Float? = null,
@@ -144,6 +148,9 @@ fun LoadingOverlay(
                 ) {
                     if (showLogo) {
                         val isLogoFillActive = progress != null
+                        val isLogoRtl = remember(logoLanguage, title) {
+                            isRtlLanguageCode(logoLanguage) ?: title?.isContentRtl() ?: false
+                        }
                         val targetFill = (progress ?: 0f).coerceIn(0f, 1f)
                         val animatedFill by animateFloatAsState(
                             targetValue = targetFill,
@@ -179,9 +186,11 @@ fun LoadingOverlay(
                                     },
                                 contentScale = ContentScale.Fit
                             )
-                            // Foreground layer: full-alpha logo clipped from left
-                            // to right by progress, giving the illusion that the
-                            // base logo is filling up as buffering proceeds.
+                            // Foreground layer: full-alpha logo clipped by progress,
+                            // giving the illusion that the base logo is filling up
+                            // as buffering proceeds. Fill direction follows the
+                            // logo's own detected reading direction: LTR logos fill
+                            // left-to-right, RTL logos fill right-to-left.
                             if (isLogoFillActive) {
                                 AsyncImage(
                                     model = logoRequest,
@@ -191,8 +200,14 @@ fun LoadingOverlay(
                                         .drawWithContent {
                                             val clipWidth = size.width * animatedFill
                                             if (clipWidth > 0f) {
-                                                clipRect(right = clipWidth) {
-                                                    this@drawWithContent.drawContent()
+                                                if (isLogoRtl) {
+                                                    clipRect(left = size.width - clipWidth) {
+                                                        this@drawWithContent.drawContent()
+                                                    }
+                                                } else {
+                                                    clipRect(right = clipWidth) {
+                                                        this@drawWithContent.drawContent()
+                                                    }
                                                 }
                                             }
                                         },
