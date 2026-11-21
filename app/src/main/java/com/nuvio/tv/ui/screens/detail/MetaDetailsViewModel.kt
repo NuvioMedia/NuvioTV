@@ -81,6 +81,13 @@ import javax.inject.Inject
 private const val TAG = "MetaDetailsViewModel"
 
 /**
+ * How long the details page waits for TMDB enrichment before showing the addon's meta. On a normal
+ * connection enrichment takes well under a second; a slow or blocked TMDB would otherwise hold the
+ * page for as long as the HTTP timeouts allow.
+ */
+internal const val TMDB_ENRICHMENT_WAIT_MS = 3_000L
+
+/**
  * Whether pressing Back on the full-screen trailer should hand playback back to the
  * detail page as a background trailer instead of stopping it.
  */
@@ -149,6 +156,8 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var idleTimerJob: Job? = null
     private var trailerFetchJob: Job? = null
+    /** Bumped by each meta applied with enrichment, so late enrichment of older meta is dropped. */
+    private var enrichmentGeneration = 0
     private var moreLikeThisJob: Job? = null
     private var collectionJob: Job? = null
 
@@ -1047,7 +1056,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private suspend fun applyMetaWithEnrichment(meta: Meta) {
         if (!isServerItem) loadMoreLikeThisAsync(meta)
-        val enriched = if (isServerItem) meta else enrichMeta(meta)
+        val enriched = if (isServerItem) meta else enrichWithinWait(meta)
 
         syncEffectiveContentId(enriched)
         val cachedNextToWatch = metaDetailsSessionState.getNextToWatch(
@@ -1587,6 +1596,34 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * TMDB enrichment, waited for at most [TMDB_ENRICHMENT_WAIT_MS]. Past the wait the page shows the
+     * addon's meta, and the enrichment is applied when it arrives, unless newer meta came in meanwhile.
+     */
+    private suspend fun enrichWithinWait(meta: Meta): Meta {
+        val generation = ++enrichmentGeneration
+        return awaitOrLater(
+            scope = viewModelScope,
+            waitMs = TMDB_ENRICHMENT_WAIT_MS,
+            fallback = meta,
+            work = { enrichMeta(meta) },
+            onLate = { enriched -> if (generation == enrichmentGeneration) applyLateEnrichment(enriched) },
+            onLateError = { Log.w(TAG, "TMDB enrichment failed after the details page was shown", it) }
+        )
+    }
+
+    /** TMDB enrichment that arrived after the page was shown with the addon's meta. */
+    private fun applyLateEnrichment(enriched: Meta) {
+        val meta = withHandoffTrailer(enriched)
+        _uiState.update { state ->
+            if (state.meta == null) state
+            else state.copy(meta = meta, episodesForSeason = getEpisodesForSeason(meta, state.selectedSeason))
+        }
+        // The trailer lookup ran on the addon's meta; TMDB may have added trailers to fall back on.
+        val state = _uiState.value
+        if (state.trailerUrl == null && !state.isTrailerLoading) fetchTrailerUrl()
     }
 
     private suspend fun enrichMeta(meta: Meta): Meta {
