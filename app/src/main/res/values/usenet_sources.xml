@@ -67,6 +67,8 @@
     <string name="usenet_hide_duplicates">Hide repeated releases</string>
     <string name="usenet_show_release_names">Show release names</string>
     <string name="usenet_show_release_names_description">Show the release name of each result above its details. Hidden, its release group ends the details.</string>
+    <string name="usenet_stream_formatter">Use Debrid formatting</string>
+    <string name="usenet_stream_formatter_description">Show each result with the templates from Connected Services → Formatting, like Debrid sources, instead of its usual details.</string>
     <string name="usenet_hide_duplicates_description">Show a release found by several indexers once, from the indexer with the highest priority.</string>
     <string name="usenet_provider_test">Test provider</string>
     <string name="usenet_provider_test_running">Connecting to the provider…</string>

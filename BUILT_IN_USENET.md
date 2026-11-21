@@ -216,8 +216,25 @@ Filters cover minimum resolution, maximum size, maximum age, CAM/screener
 releases, full Blu-ray/DVD discs (off by default: a Blu-ray disc plays from its feature clip; remuxes always show) and result count. Passworded NZBs are always excluded. Unknown sizes
 or dates are excluded when their corresponding maximum filter is enabled.
 Duplicate download URLs are removed while alternative indexer URLs remain
-available for playback fallback. Each result shows its release name above its
-size, age and indexer; **Show release names** (on by default) can hide it.
+available for playback fallback. Each result's name describes the video as its
+release name gives it: resolution, streaming service, quality, Dolby Vision and
+HDR, codec and, with a ranking profile, its quality tier
+(`4K Remux • DV HDR10+ • HEVC • T1`). Below it come the release name and the
+details: the main audio track, the languages named (two at most, then how many
+more), the size, the bitrate (the size over the runtime of the meta the details
+page holds; nothing is fetched for it), age and indexer. Tags are read from the
+year, episode or resolution on, so words of the title are not taken for tags.
+With size badges on, a single video's size is left to its badge. **Show release
+names** (on by default) can hide the release name; the release group, without
+what reposts add after it, then ends the details.
+**Use Debrid formatting** (off by default) shows results with the name and
+description templates of **Connected Services → Formatting** instead, the ones
+Debrid sources use; the web editor there works without a Debrid account. The
+template fields are read from the release name (title, year, episode,
+resolution, quality, HDR/Dolby Vision, audio, channels, languages, edition,
+release group), plus its size, age (`{stream.age}`), bitrate
+(`{stream.bitrate}`), quality tier (`{stream.tier}`) and indexer. A template
+that renders nothing keeps the usual text.
 A season pack is labelled `SEASON PACK` and its size reads "(whole season)" (or
 "(whole pack)" for several seasons): the episode that plays is one file of it.
 For a single-season pack the season's episode count on TMDB, asked once per

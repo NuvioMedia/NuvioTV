@@ -27,23 +27,33 @@ class DebridStreamFormatter @Inject constructor(
         if (!stream.isManagedDebridForFormatting()) return stream
         val matchedBadges = StreamBadgeMatcher.matchedBadges(stream, compiledBadgeFilters)
         val values = buildValues(stream, matchedBadges, facts ?: DirectDebridStreamFilter.facts(stream, settings))
-        val formattedName = engine.render(settings.streamNameTemplate, values)
-            .lineSequence()
-            .joinToString(" ") { it.trim() }
-            .replace(Regex("\\s+"), " ")
-            .trim()
-        val formattedDescription = engine.render(settings.streamDescriptionTemplate, values)
-            .lineSequence()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .joinToString("\n")
-            .trim()
+        val (formattedName, formattedDescription) = render(settings, values)
 
         return stream.copy(
             name = formattedName.ifBlank { stream.name ?: DebridProviders.instantName(stream.clientResolve?.service) },
             description = formattedDescription.ifBlank { stream.description ?: stream.title },
             badges = matchedBadges
         )
+    }
+
+    /**
+     * The name and description that [settings]' templates draw from [values], keyed like the fields
+     * of [buildValues]; either is blank when its template renders nothing. Sources with their own
+     * fields, such as built-in Usenet results, show them with the same templates.
+     */
+    fun render(settings: DebridSettings, values: Map<String, Any?>): Pair<String, String> {
+        val name = engine.render(settings.streamNameTemplate, values)
+            .lineSequence()
+            .joinToString(" ") { it.trim() }
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        val description = engine.render(settings.streamDescriptionTemplate, values)
+            .lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+            .trim()
+        return name to description
     }
 
     private fun buildValues(
@@ -183,7 +193,7 @@ class DebridStreamFormatter @Inject constructor(
     private fun <T> List<T>.labelsExcludingUnknown(label: (T) -> String): List<String> =
         map(label).filterNot { it.equals("Unknown", ignoreCase = true) }
 
-    private fun languageEmoji(language: String): String {
+    internal fun languageEmoji(language: String): String {
         return when (language.lowercase()) {
             "en", "eng", "english" -> "🇬🇧"
             "hi", "hin", "hindi" -> "🇮🇳"

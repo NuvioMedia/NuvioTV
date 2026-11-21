@@ -434,7 +434,7 @@ class StreamRepositoryPluginIsolationTest {
                     every { read(any()) } answers { sources.value }
                 },
                 builtInUsenetService = mockk<BuiltInUsenetService> {
-                    every { search(any(), any(), any(), any(), any()) } returns usenetResults
+                    every { search(any(), any(), any(), any(), any(), any(), any()) } returns usenetResults
                 },
                 serverStreams = mockk {
                     every { isNativeRequest(any()) } returns false

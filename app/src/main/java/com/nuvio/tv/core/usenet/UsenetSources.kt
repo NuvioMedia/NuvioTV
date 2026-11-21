@@ -128,6 +128,8 @@ data class UsenetSourceConfiguration(
     val hideDuplicates: Boolean = false,
     /** On: each result shows its release name above its size, age and indexer. */
     val showReleaseNames: Boolean = true,
+    /** On: the stream formatter's templates, which debrid results use, name and describe each result instead. */
+    val useStreamFormatter: Boolean = false,
     /** On: releases that played recently are listed first, whatever the sort; fallback reaches them first too. */
     val availableFirst: Boolean = false,
     /** On: results show as each indexer answers. Off: the list shows once all answered, or after a short wait. */

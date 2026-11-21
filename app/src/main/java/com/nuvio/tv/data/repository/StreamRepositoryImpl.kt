@@ -290,7 +290,8 @@ class StreamRepositoryImpl @Inject constructor(
                 launch {
                     try {
                         if (!usenetSources.ready) return@launch
-                        builtInUsenetService.search(usenetSources, type, videoId, season, episode, contentId).collect { result ->
+                        builtInUsenetService.search(usenetSources, type, videoId, season, episode, contentId,
+                            debridSettings).collect { result ->
                             result.group?.let { resultChannel.send(it) }
                             result.failure?.let {
                                 attemptedFailures += StreamAttemptFailure(BuiltInUsenetService.GROUP_NAME,

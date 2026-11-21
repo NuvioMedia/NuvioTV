@@ -3,6 +3,7 @@ package com.nuvio.tv.core.usenet
 import android.content.Context
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.debrid.DebridStreamFormatter
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.plugin.absoluteAnimeEpisodeNumber
 import com.nuvio.tv.core.streams.StreamRankingProfile
@@ -12,6 +13,7 @@ import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.repository.SimklIdResolver
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
+import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.StreamBehaviorHints
@@ -358,16 +360,23 @@ class BuiltInUsenetService @Inject constructor(
     /** Maps an anime catalog's ids when their meta does not; null in unit tests without it. */
     private val simkl: SimklIdResolver? = null,
     /** Whether results show the size badge; null in unit tests, which keep the size in the details. */
-    private val badgeSettings: StreamBadgeSettingsDataStore? = null
+    private val badgeSettings: StreamBadgeSettingsDataStore? = null,
+    /** Names and describes results with the debrid templates when [UsenetSourceConfiguration.useStreamFormatter] is on. */
+    private val formatter: DebridStreamFormatter? = null
 ) {
     /** A translated message; [english], the same wording, where there is no context. */
     private fun text(id: Int, english: String, vararg args: Any): String =
         context?.getString(id, *args) ?: english.format(Locale.ROOT, *args)
 
-    /** [contentId] is the title's own id, its meta's, when known. */
+    /**
+     * [contentId] is the title's own id, its meta's, when known. [debridSettings] holds the stream
+     * formatter's templates; without it results keep their usual text.
+     */
     fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
-        season: Int?, episode: Int?, contentId: String? = null): Flow<BuiltInUsenetResult> = flow {
+        season: Int?, episode: Int?, contentId: String? = null,
+        debridSettings: DebridSettings? = null): Flow<BuiltInUsenetResult> = flow {
         if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
+        val templates = debridSettings?.takeIf { config.useStreamFormatter }
         val series = type.lowercase() != "movie"
         val kind = if (series) ContentKind.SHOW else ContentKind.MOVIE
         val (idSeason, idEpisode) = episodeNumbers(videoId)
@@ -483,7 +492,7 @@ class BuiltInUsenetService @Inject constructor(
                             val outcome = outcomes.getValue(it.nzbUrl)
                             it.toStream(config, series, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
                                 seasonEpisodes = seasonCounts(), sibling = outcome.sibling, searched = searched,
-                                runtimeMinutes = { runtime }, profile = profile, sizeBadge = sizeBadges)
+                                runtimeMinutes = { runtime }, profile = profile, sizeBadge = sizeBadges, templates = templates)
                         })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
@@ -635,7 +644,7 @@ class BuiltInUsenetService @Inject constructor(
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, series: Boolean, failed: Boolean = false,
         played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null,
         searched: Pair<Int, Int>? = null, runtimeMinutes: () -> Int? = { null }, profile: StreamRankingProfile? = null,
-        sizeBadge: Boolean = false): Stream {
+        sizeBadge: Boolean = false, templates: DebridSettings? = null): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
         // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
         // size badge shows an episode's share and the details keep the whole size.
@@ -676,8 +685,14 @@ class BuiltInUsenetService @Inject constructor(
         val details = listOfNotNull(labels.audio, UsenetReleaseLabels.languages(labels.languages), sizeLabel, bitrate, age,
             indexerName.takeIf { it.isNotBlank() }, labels.group.takeIf { !config.showReleaseNames })
             .joinToString(" • ")
-        return Stream(name = name, title = title,
-            description = listOfNotNull(title.takeIf { config.showReleaseNames }, details.ifEmpty { null }).joinToString("\n"),
+        // With the stream formatter on, its templates name and describe the result; either keeps the
+        // usual text when its template renders nothing.
+        val formatted = if (templates == null) null else formatter?.let {
+            it.render(templates, UsenetResultValues.of(this, episodeShare, failed, it::languageEmoji, bitrate = bitrate, tier = tier))
+        }
+        return Stream(name = formatted?.first?.ifBlank { null } ?: name, title = title,
+            description = formatted?.second?.ifBlank { null }
+                ?: listOfNotNull(title.takeIf { config.showReleaseNames }, details.ifEmpty { null }).joinToString("\n"),
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it, and the upload's binge group.
             behaviorHints = usenetHints(bingeGroup(title, series), (episodeShare ?: size).takeIf { it > 0 }),
