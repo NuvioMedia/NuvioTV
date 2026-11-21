@@ -311,6 +311,8 @@
     <string name="movie_status_rumored">Najavljen (glasine)</string>
     <string name="movie_status_in_production">U produkciji</string>
     <string name="movie_status_post_production">Postprodukcija</string>
+    <string name="movie_status_in_theaters">U kinima</string>
+    <string name="movie_release_digital_date">Digitalno izdanje %1$s</string>
     <string name="detail_lists_fallback">Popisi</string>
     <string name="detail_lists_subtitle">Odaberi koji popisi trebaju sadržavati ovaj naslov.</string>
     <string name="action_save">Spremi</string>
