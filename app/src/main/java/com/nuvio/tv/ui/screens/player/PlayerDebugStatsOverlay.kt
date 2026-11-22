@@ -13,9 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -30,12 +28,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.network.StreamSpeedTester
 import com.nuvio.tv.core.player.streamFallbackMessages
@@ -93,6 +96,9 @@ internal fun PlayerDebugStatsOverlay(
 ) {
     val context = LocalContext.current
     val sampler = remember { DebugStatsSampler(context) }
+    val labelMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = LocalTextStyle.current.merge(LabelStyle)
     var stats by remember { mutableStateOf(emptyList<DebugStat>()) }
     var probedFileSize by remember { mutableStateOf<Long?>(null) }
 
@@ -154,13 +160,13 @@ internal fun PlayerDebugStatsOverlay(
         while (index < stats.size) {
             if (stats[index].inSection) {
                 val section = stats.drop(index).takeWhile { it.inSection }
-                Column(
-                    modifier = Modifier.width(IntrinsicSize.Max),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    SectionDivider()
+                val labelWidth = with(density) {
+                    section.maxOf { labelMeasurer.measure(it.label, labelStyle).size.width }.toDp()
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    SectionDivider(labelWidth)
                     section.forEach { DebugStatRow(it) }
-                    SectionDivider()
+                    SectionDivider(labelWidth)
                 }
                 index += section.size
             } else {
@@ -171,12 +177,14 @@ internal fun PlayerDebugStatsOverlay(
     }
 }
 
+private val LabelStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+
 @Composable
-private fun SectionDivider() {
+private fun SectionDivider(width: Dp) {
     Box(
         modifier = Modifier
             .padding(vertical = 2.dp)
-            .fillMaxWidth()
+            .width(width)
             .height(1.dp)
             .background(Color(0x33FFFFFF))
     )
@@ -188,9 +196,7 @@ private fun DebugStatRow(stat: DebugStat) {
         Text(
             text = stat.label,
             modifier = Modifier.width(64.dp),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
+            style = LocalTextStyle.current.merge(LabelStyle),
             color = Color(0xFF8A8A8A)
         )
         val (color, fontWeight) = when (stat.severity) {
@@ -436,11 +442,12 @@ private class DebugStatsSampler(context: Context) {
     }
 
     private fun providerStat(live: UsenetLiveStats, asked: List<UsenetProviderLive>): DebugStat? {
+        val showCompletion = asked.size > 1 && asked.any { it.missing > 0 }
         val names = asked.mapNotNull { provider ->
             live.server(provider)?.let { server ->
                 val requested = provider.articles + provider.missing
-                val completion = if (asked.size <= 1 || requested <= 0L || provider.missing == 0L) ""
-                    else " (${provider.articles * 100 / requested}%)"
+                val completion = if (!showCompletion || requested <= 0L) ""
+                    else " (${if (provider.missing == 0L) 100 else provider.articles * 100 / requested}%)"
                 providerName(server) + completion
             }
         }.ifEmpty { live.servers.map(::providerName).distinct() }
