@@ -143,20 +143,35 @@ fun FolderDetailScreen(
     val trailerPreviewUrls by viewModel.trailerPreviewUrls.collectAsStateWithLifecycle()
     val trailerPreviewAudioUrls by viewModel.trailerPreviewAudioUrls.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
+    val onNavigateToDetailWithTrailer = remember(onNavigateToDetail, viewModel) {
+        { itemId: String, itemType: String, addonBaseUrl: String ->
+            viewModel.beginTrailerHandoff(itemId)
+            onNavigateToDetail(itemId, itemType, addonBaseUrl)
+        }
+    }
 
     if (uiState.viewMode == FolderViewMode.FOLLOW_LAYOUT) {
         FollowLayoutContent(
             uiState = uiState,
             focusState = followLayoutFocusState,
+            tabFocusState = tabFocusStates[uiState.selectedTabIndex] ?: FolderDetailGridFocusState(),
             enrichingItemId = enrichingItemId,
             enrichedPreviews = enrichedPreviews,
             failedEnrichmentIds = failedEnrichmentIds,
-            onNavigateToDetail = onNavigateToDetail,
+            onNavigateToDetail = onNavigateToDetailWithTrailer,
             onLoadMoreCatalog = viewModel::loadMoreForCatalog,
             onSelectTab = viewModel::selectTab,
             onLoadMoreForSelectedTab = { viewModel.loadMoreItems(viewModel.uiState.value.selectedTabIndex) },
             onSaveFocusState = { vi, vo, rk, ikm, m, ma, ri, ii ->
                 viewModel.saveFollowLayoutFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
+            },
+            onSaveTabFocusState = { verticalIndex, verticalOffset, focusedItemKey ->
+                viewModel.saveTabFocusState(
+                    tabIndex = uiState.selectedTabIndex,
+                    verticalScrollIndex = verticalIndex,
+                    verticalScrollOffset = verticalOffset,
+                    focusedItemKey = focusedItemKey
+                )
             },
             onItemFocus = viewModel::onItemFocused,
             onPreloadAdjacentItem = viewModel::preloadAdjacentItem,
@@ -418,15 +433,32 @@ private fun TabbedGridContent(
                 initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
                 initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
             )
+            var lastHandledScrollTrigger by remember { mutableIntStateOf(gridScrollToTopTrigger) }
+            var lastHandledTabIndex by remember { mutableIntStateOf(uiState.selectedTabIndex) }
 
-            // Scroll grid to top when OK is pressed on a tab or tab changes
+            // Scroll grid to top only when OK is pressed on a tab or tab changes (not on initial restore)
             LaunchedEffect(gridScrollToTopTrigger, uiState.selectedTabIndex) {
-                if (gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0) {
-                    gridState.scrollToItem(0, 0)
+                val triggerChanged = gridScrollToTopTrigger != lastHandledScrollTrigger
+                val tabChanged = uiState.selectedTabIndex != lastHandledTabIndex
+                lastHandledScrollTrigger = gridScrollToTopTrigger
+                lastHandledTabIndex = uiState.selectedTabIndex
+                if (!triggerChanged && !tabChanged) return@LaunchedEffect
+                if (triggerChanged) {
+                    if (gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0) {
+                        gridState.scrollToItem(0, 0)
+                    }
+                } else if (tabChanged) {
+                    val targetIndex = tabFocusState.verticalScrollIndex
+                    val targetOffset = tabFocusState.verticalScrollOffset
+                    if (gridState.firstVisibleItemIndex != targetIndex ||
+                        gridState.firstVisibleItemScrollOffset != targetOffset
+                    ) {
+                        gridState.scrollToItem(targetIndex, targetOffset)
+                    }
                 }
             }
 
-            DisposableEffect(Unit) {
+            DisposableEffect(uiState.selectedTabIndex) {
                 onDispose {
                     onSaveFocusState(
                         gridState.firstVisibleItemIndex,
@@ -452,10 +484,13 @@ private fun TabbedGridContent(
             LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
                 val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
                 if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
-                val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
-                repeat(2) { withFrameNanos { } }
-                if (runCatching { requester.requestFocus() }.isSuccess) {
-                    lastFocusedItemKey = targetKey
+                repeat(8) {
+                    val requester = itemFocusRequesters[targetKey]
+                    if (requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)) {
+                        lastFocusedItemKey = targetKey
+                        return@LaunchedEffect
+                    }
+                    withFrameNanos { }
                 }
             }
 
@@ -891,6 +926,7 @@ private fun RowsContent(
 private fun FollowLayoutContent(
     uiState: FolderDetailUiState,
     focusState: HomeScreenFocusState,
+    tabFocusState: FolderDetailGridFocusState = FolderDetailGridFocusState(),
     enrichingItemId: State<String?>,
     enrichedPreviews: State<Map<String, MetaPreview>>,
     failedEnrichmentIds: State<Set<String>>,
@@ -899,6 +935,7 @@ private fun FollowLayoutContent(
     onSelectTab: (Int) -> Unit = {},
     onLoadMoreForSelectedTab: () -> Unit = {},
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
+    onSaveTabFocusState: (Int, Int, String?) -> Unit = { _, _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
@@ -990,12 +1027,12 @@ private fun FollowLayoutContent(
                 TabbedGridContent(
                     uiState = uiState,
                     folder = uiState.folder ?: return,
-                    tabFocusState = FolderDetailGridFocusState(),
+                    tabFocusState = tabFocusState,
                     onSelectTab = onSelectTab,
                     onNavigateToDetail = onNavigateToDetail,
                     isItemWatched = isItemWatched,
                     onLoadMore = onLoadMoreForSelectedTab,
-                    onSaveFocusState = { _, _, _ -> },
+                    onSaveFocusState = onSaveTabFocusState,
                     onItemLongPress = onCatalogItemLongPress
                 )
             }

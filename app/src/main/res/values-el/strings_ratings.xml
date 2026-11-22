@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rating_rate">Βαθμολόγηση</string>
+    <string name="rating_your_rating">Η βαθμολογία σας</string>
+    <string name="rating_rate_episode">Βαθμολόγηση επεισοδίου</string>
+    <string name="rating_rated">Βαθμολογήθηκε %1$s/10</string>
+    <string name="rating_value">%1$s στα 10</string>
+    <string name="rating_syncs_to">Συγχρονίζεται με %1$s</string>
+    <string name="rating_saved">Η βαθμολογία αποθηκεύτηκε</string>
+    <string name="rating_removed">Η βαθμολογία αφαιρέθηκε</string>
+    <string name="rating_failed">Δεν ήταν δυνατή η ενημέρωση της βαθμολογίας σας στο %1$s</string>
+    <string name="rating_remove">Αφαίρεση</string>
+    <string name="tracking_ratings_title">Βαθμολογίες</string>
+    <string name="tracking_ratings_subtitle">Από πού αποθηκεύονται και εμφανίζονται οι βαθμολογίες σας</string>
+    <string name="tracking_ratings_dialog_subtitle">Βαθμολογήστε τίτλους από τη σελίδα λεπτομερειών τους. Οι βαθμολογίες σας αποθηκεύονται και εμφανίζονται από την υπηρεσία που επιλέγετε.</string>
+    <string name="tracking_ratings_off_description">Απόκρυψη του κουμπιού βαθμολόγησης.</string>
+    <string name="tracking_ratings_simkl_description">Βαθμολογήστε ταινίες και σειρές. Η βαθμολόγηση τίτλου που δεν βρίσκεται στις λίστες Simkl σας τον προσθέτει σε αυτές.</string>
+    <string name="tracking_ratings_mdblist_description">Βαθμολογήστε ταινίες, σειρές και επεισόδια.</string>
+</resources>

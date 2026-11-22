@@ -705,9 +705,8 @@
   <!-- PlaybackAudioSettings -->
   <string name="playback_true_black_letterbox">Πραγματικά μαύρες μπάρες</string>
   <string name="playback_true_black_letterbox_sub">Αφήστε τις μπάρες γύρω από την εικόνα άβαφες ώστε το HDR να παραμένει πραγματικά μαύρο. Κρατήστε το ανενεργό αν εμφανίζεται φωτεινή γραμμή στις μπάρες.</string>
-  <string name="playback_chapters_label">Κεφάλαια</string>
-  <string name="playback_exo_chapters_title">Εμφάνιση κεφαλαίων (ExoPlayer)</string>
-  <string name="playback_exo_chapters_sub">Ανάγνωση των κεφαλαίων των αρχείων MKV για σήμανσή τους στη γραμμή προόδου και μετάβαση μεταξύ τους. Πραγματοποιεί μερικά μικρά επιπλέον αιτήματα μόλις ξεκινήσει η αναπαραγωγή. Το mpv εμφανίζει πάντα κεφάλαια.</string>
+  <string name="playback_exo_chapters_title">Εμφάνιση κεφαλαίων</string>
+  <string name="playback_exo_chapters_sub">Ανάγνωση των κεφαλαίων των αρχείων MKV για σήμανσή τους στη γραμμή προόδου και μετάβαση μεταξύ τους.</string>
   <string name="audio_trailer_section">Τρέιλερ</string>
   <string name="audio_autoplay_trailers">Αυτόματη αναπαραγωγή τρέιλερ</string>
   <string name="audio_autoplay_trailers_sub">Αυτόματη αναπαραγωγή τρέιλερ στην οθόνη λεπτομερειών μετά από περίοδο αδράνειας</string>
@@ -1103,7 +1102,6 @@
   <string name="mdblist_rate_limited">Το όριο αιτημάτων του MDBList έχει συμπληρωθεί. Ο συγχρονισμός θα συνεχιστεί μόλις επαναφερθεί το όριο.</string>
   <string name="mdblist_revoke_failed">Η αποσύνδεση έγινε σε αυτή τη συσκευή. Αφαιρέστε αυτή την εφαρμογή από τις ρυθμίσεις του λογαριασμού σας MDBList για να ανακληθεί η πρόσβαση.</string>
   <string name="mdblist_title">Βαθμολογίες MDBList</string>
-  <string name="mdblist_subtitle">Διαμόρφωση εξωτερικών βαθμολογιών που εμφανίζονται στην ηρωική ενότητα λεπτομερειών</string>
   <string name="mdblist_enable_title">Ενεργοποίηση βαθμολογιών MDBList</string>
   <string name="mdblist_enable_subtitle">Λήψη βαθμολογιών από εξωτερικούς παρόχους στην οθόνη λεπτομερειών μεταδεδομένων</string>
   <string name="mdblist_api_key_title">Κλειδί API</string>
@@ -1130,7 +1128,6 @@
   <string name="mdblist_show_on_hero_title">Χρήση βαθμολογιών στην ηρωική ενότητα</string>
   <string name="mdblist_show_on_hero_subtitle">Εμφάνιση βαθμολογιών MDBList στο καρουζέλ της ηρωικής ενότητας (μοντέρνα και κλασική προβολή/πλέγμα)</string>
   <string name="mdblist_rating_order_title">Σειρά βαθμολογιών</string>
-  <string name="mdblist_rating_order_subtitle">Οι πρώτες 3 ενεργοποιημένες και διαθέσιμες βαθμολογίες εμφανίζονται στη μοντέρνα ηρωική ενότητα. Χρησιμοποιήστε τα βέλη για αναδιάταξη.</string>
   <string name="mdblist_dialog_title">Κλειδί API MDBList</string>
   <string name="mdblist_dialog_subtitle">Εισάγετε το κλειδί API σας για λήψη εξωτερικών βαθμολογιών</string>
   <string name="mdblist_dialog_placeholder">Εισάγετε κλειδί API MDBList</string>
@@ -1424,8 +1421,6 @@
   <string name="action_remove_anyway">Αφαίρεση ούτως ή άλλως</string>
   <string name="cd_simkl_qr">QR ενεργοποίησης Simkl</string>
   <string name="cd_simkl_logo">Λογότυπο Simkl</string>
-  <string name="library_empty_simkl_title">Δεν υπάρχουν %1$s σε αυτή την κατάσταση</string>
-  <string name="library_empty_simkl_subtitle">Χρησιμοποιήστε το + στις λεπτομέρειες για προσθήκη στοιχείων σε κατάσταση Simkl</string>
   <string name="library_empty_simkl_not_auth_title">Το Simkl δεν είναι συνδεδεμένο</string>
   <string name="library_empty_simkl_not_auth_subtitle">Συνδέστε τον λογαριασμό Simkl στις Ρυθμίσεις για να δείτε τη βιβλιοθήκη Simkl</string>
   <!-- DebugSettingsScreen -->
@@ -1981,11 +1976,6 @@
   <string name="library_status_dropped">Εγκαταλείφθηκαν</string>
   <string name="library_syncing_library">Συγχρονισμός βιβλιοθήκης…</string>
   <string name="library_type_all">Όλα</string>
-  <string name="library_type_items">στοιχεία</string>
-  <string name="library_empty_local_title">Δεν υπάρχουν ακόμα %1$s</string>
-  <string name="library_empty_trakt_title">Δεν υπάρχουν %1$s σε αυτή τη λίστα</string>
-  <string name="library_empty_local_subtitle">Αποθηκεύστε τα αγαπημένα σας για να τα δείτε εδώ</string>
-  <string name="library_empty_trakt_subtitle">Χρησιμοποιήστε το + στις λεπτομέρειες για προσθήκη στη watchlist ή σε λίστες</string>
   <string name="library_empty_trakt_not_auth_title">Το Trakt δεν είναι συνδεδεμένο</string>
   <string name="library_empty_trakt_not_auth_subtitle">Συνδέστε τον λογαριασμό Trakt στις Ρυθμίσεις για να δείτε τη βιβλιοθήκη Trakt</string>
   <string name="cloud_library_connect_action">Σύνδεση λογαριασμού</string>
@@ -3098,7 +3088,7 @@
   <string name="advanced_player_stats_hud">Οθόνη στατιστικών αναπαραγωγής</string>
   <string name="advanced_player_stats_hud_subtitle">Εμφάνιση κουμπιού στις πληροφορίες ροής για εναλλαγή ζωντανών ενδείξεων CPU, μνήμης, buffer, ρυθμού μετάδοσης και θερμοκρασίας κατά την αναπαραγωγή</string>
   <string name="settings_stream_badge_position_top">Πάνω</string>
-  <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8MB)...</string>
+  <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8 συνδέσεις)...</string>
   <string name="diag_value_not_ready">Μη έτοιμο</string>
   <string name="web_stream_badge_error_import_limit">Μπορείτε να εισαγάγετε έως %1$d URL σημάτων.</string>
   <string name="dv7_libdovi_mode_4_sub">Μετατροπή σε στατικό προφίλ 8.4.</string>
@@ -3109,12 +3099,12 @@
   <string name="player_report_issue_sent_button">Η αναφορά στάλθηκε</string>
   <string name="dv7_libdovi_mode_4_title">Λειτουργία 4 — 8.4 (στατικό)</string>
   <string name="diag_label_conversions">Μετατροπές</string>
-  <string name="stream_test_label_parallel16">Παράλληλη σύνδεση (τμήματα 16 MB)</string>
+  <string name="stream_test_label_parallel16">Παράλληλη σύνδεση (16 συνδέσεις)</string>
   <string name="licenses_attributions_premiumize_title">Premiumize</string>
   <string name="supporters_contributors_loading_donation_progress">Φόρτωση προόδου χρηματοδότησης...</string>
-  <string name="stream_test_btn_measuring_parallel16">Μέτρηση παράλληλης (16MB)...</string>
+  <string name="stream_test_btn_measuring_parallel16">Μέτρηση παράλληλης (16 συνδέσεις)...</string>
   <string name="dv7_libdovi_mode_1_sub">Μετατρέπει το RPU ώστε να είναι συμβατό με MEL (Minimum Enhancement Layer).</string>
-  <string name="stream_test_btn_measuring_parallel4">Μέτρηση παράλληλης (4MB)...</string>
+  <string name="stream_test_btn_measuring_parallel4">Μέτρηση παράλληλης (4 συνδέσεις)...</string>
   <string name="diag_label_source_profile">Προφίλ πηγής</string>
   <string name="web_debrid_per_quality">Ανά ποιότητα</string>
   <string name="advanced_playback_issue_reports">Αναφορές προβλημάτων αναπαραγωγής</string>
@@ -3127,7 +3117,7 @@
   <string name="stream_test_error_connection">Η σύνδεση απέτυχε. Ο σύνδεσμος της τελευταίας αναπαραγωγής μπορεί να έχει λήξει ή να μην είναι προσβάσιμος. Αναπαράγετε ξανά το βίντεο και δοκιμάστε πάλι.</string>
   <string name="unit_size_kb">%1$s KB</string>
   <string name="settings_stream_badge_position_title">Θέση σημάτων</string>
-  <string name="stream_test_label_parallel4">Παράλληλη σύνδεση (τμήματα 4 MB)</string>
+  <string name="stream_test_label_parallel4">Παράλληλη σύνδεση (4 συνδέσεις)</string>
   <string name="web_stream_badge_import_error">Η εισαγωγή σημάτων απέτυχε.</string>
   <string name="diag_label_signal_rewrites">Επανεγγραφές σήματος</string>
   <string name="unit_size_mb">%1$s MB</string>
@@ -3176,7 +3166,7 @@
   <string name="diag_section_source_hardware">Πηγή &amp; Υλικό</string>
   <string name="stream_test_label_baseline">Τυπική μονή σύνδεση (βάση αναφοράς)</string>
   <string name="supporters_contributors_donation_progress_title">Διακομιστής &amp; συντήρηση αυτού του μήνα</string>
-  <string name="stream_test_label_parallel1">Παράλληλη σύνδεση (τμήματα 1 MB)</string>
+  <string name="stream_test_label_parallel1">Παράλληλη σύνδεση (1 σύνδεση)</string>
   <string name="unit_size_b">%1$d B</string>
   <string name="diag_label_bridge_reason">Αιτία γέφυρας</string>
   <string name="licenses_attributions_torbox_title">TorBox</string>
@@ -3193,7 +3183,7 @@
   <string name="player_report_issue">Αναφορά προβλήματος</string>
   <string name="unit_size_gb">%1$s GB</string>
   <string name="supporters_contributors_donation_progress_remaining">Μετά το 100%, η επιπλέον υποστήριξη διατίθεται στην ανάπτυξη.</string>
-  <string name="stream_test_btn_measuring_parallel1">Μέτρηση παράλληλης (1MB)...</string>
+  <string name="stream_test_btn_measuring_parallel1">Μέτρηση παράλληλης (1 σύνδεση)...</string>
   <string name="stream_test_btn_running">Εκτελείται...</string>
   <string name="diag_value_none">Καμία</string>
   <string name="diag_label_display">Οθόνη</string>
@@ -3230,7 +3220,7 @@
   <string name="playback_buffer_target_danger_warning">Κίνδυνος: Πάνω από το όριο προειδοποίησης (%1$d MB). Υψηλός κίνδυνος κολλήματος.</string>
   <string name="diag_section_decision_settings">Απόφαση &amp; Ρυθμίσεις</string>
   <string name="diag_value_off">Ανενεργό</string>
-  <string name="stream_test_label_parallel8">Παράλληλη σύνδεση (τμήματα 8 MB)</string>
+  <string name="stream_test_label_parallel8">Παράλληλη σύνδεση (8 συνδέσεις)</string>
   <string name="diag_value_ready">Έτοιμο</string>
   <string name="web_debrid_error_templates_required">Απαιτούνται και τα δύο πρότυπα</string>
   <string name="dv7_mode_strip_dv">Πάντα αφαίρεση DV</string>
@@ -3338,7 +3328,6 @@
   <string name="autosync_tolerance_value">%1$d ms</string>
   <string name="autosync_thorough_title">Εξονυχιστική αναζήτηση αυτόματου συγχρονισμού</string>
   <string name="autosync_thorough_description">Συνεχίστε τη σύγκριση άλλων υποτίτλων και ενσωματωμένων κομματιών για ακριβέστερη αντιστοίχιση πριν από τον συγχρονισμό. Όταν είναι ανενεργό, χρησιμοποιείται νωρίτερα η πρώτη ισχυρή αντιστοίχιση. Εφαρμόζονται μόνο αντιστοιχίσεις υψηλής βεβαιότητας.</string>
-  <string name="autosync_toast_no_fit">Ο συγχρονισμός απέτυχε: αυτοί οι υπότιτλοι δεν ταιριάζουν με αυτή την έκδοση του βίντεο.</string>
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
   <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>

@@ -496,6 +496,18 @@ fun AdvancedSettingsContent(
                         )
                     }
                 )
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_hardware_bitmaps),
+                    subtitle = stringResource(R.string.advanced_hardware_bitmaps_subtitle),
+                    checked = uiState.hardwareBitmapsEnabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetHardwareBitmapsEnabled(
+                                !uiState.hardwareBitmapsEnabled
+                            )
+                        )
+                    }
+                )
             }
         }
 

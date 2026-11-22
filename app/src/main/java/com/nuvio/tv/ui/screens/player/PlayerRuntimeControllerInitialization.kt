@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncTaps
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.RectF
@@ -171,6 +172,7 @@ internal fun PlayerRuntimeController.initializePlayer(
         return
     }
     mpvMediaLoadPrepared = false
+    styledSubtitles.clear()
     val afrPreflightToken = afrPreflightGate.token()
 
     scope.launch {
@@ -541,14 +543,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                         .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                 }
                 val budgetBytes = budgetMbEffective.toLong() * 1024L * 1024L
-                // Build with the user's back buffer so seek-back works immediately, except on a heap
-                // bound device, where the load control would hold it for the whole session.
+                // Build with the user's back buffer so seek-back works immediately. First frame
+                // lowers it to 0 only for confirmed DV7 on low-RAM; everything else keeps it.
                 configuredBackBufferMs = bufferSettings.backBufferDurationMs
-                val backBufferMsAtBuild = if (libdoviConversionActive && MemoryBudget.isLowRamTier) {
-                    0
-                } else {
-                    configuredBackBufferMs
-                }
+                val backBufferMsAtBuild = configuredBackBufferMs
                 Log.i(
                     PlayerRuntimeController.TAG,
                     "BUFFER_GATE: engine=exo-custom master=on " +
@@ -954,7 +952,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     applyCenterMixLevel(_uiState.value.centerMixLevelDb)
                     updateAudioControlAvailability()
                 },
-                onCuesShown = subtitleCueTracker::update
+                onCuesShown = subtitleCueTracker::update,
+                presentCues = { cues -> presentExoCues(cues) }
             ).setExtensionRendererMode(effectiveDecoderPriority)
                 .setEnableDecoderFallback(true)
                 .setMediaCodecSelector(codecSelector)
@@ -1301,6 +1300,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 readyTransition.nextState.shouldEnforceAutoplayOnFirstReady
                             val firstFrameAlreadyRendered = hasRenderedFirstFrame
                             if (readyTransition.nextState.hasRenderedFirstFrame && isTunneledPlayback) {
+                                tunneledFirstFrameAssumed = !hasRenderedFirstFrame
                                 hasRenderedFirstFrame = true
                             }
                             when (val action = readyTransition.action) {
@@ -1456,6 +1456,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onRenderedFirstFrame() {
                         val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
                         hasRenderedFirstFrame = true
+                        tunneledFirstFrameAssumed = false
                         mediaSourceFactory.unlockStartupPrefetch()
                         if (isFirstFrame && _uiState.value.postPlayDismissedForCurrentEpisode) {
                             _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
@@ -1647,6 +1648,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                             savedPosition = currentPosition,
                             paused = userPausedManually
                         )) {
+                            return
+                        }
+
+                        // A link that has likely expired is fetched again before anything else is tried on it.
+                        if (tryRefreshExpiredLinkAfterError(detailedError)) {
+                            return
+                        }
+                        if (tryFallbackToNextSourceAfterError(detailedError)) {
                             return
                         }
 
@@ -2106,6 +2115,7 @@ internal fun PlayerRuntimeController.buildStartupSubtitleConfigurations(startupS
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
+    scheduleSourceStartupTimeout()
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(
         phase = "preparing",
@@ -2113,6 +2123,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
         progress = null
     )
     hasRenderedFirstFrame = false
+    tunneledFirstFrameAssumed = false
     endDetectionArmed = false
     mpvEofSeenClear = false
     exoEndOverrunHandled = false
@@ -2152,6 +2163,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     _uiState.update { state ->
         state.copy(
             showLoadingOverlay = state.loadingOverlayEnabled,
+            isEpisodeAutoPlaySearching = false,
             showControls = false,
             loadingMessage = preparingMessage,
             loadingIssueReportVisible = false,
@@ -2193,7 +2205,8 @@ private class SubtitleOffsetRenderersFactory(
     private val mapDv7ToHevc: Boolean = false,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
     private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit,
-    private val onCuesShown: (List<Cue>) -> Unit = {}
+    private val onCuesShown: (List<Cue>) -> Unit = {},
+    private val presentCues: (List<Cue>) -> List<Cue> = { it }
 ) : DefaultRenderersFactory(context) {
 
     override fun buildVideoRenderers(
@@ -2255,7 +2268,8 @@ private class SubtitleOffsetRenderersFactory(
                     .setAudioCapabilities(AudioOutputRouteDetector.bluetoothPcmOnlyCapabilities())
             }
             forceOpticalPassthrough -> {
-                DefaultAudioSink.Builder(context)
+                @Suppress("DEPRECATION")
+                DefaultAudioSink.Builder()
                     .setAudioCapabilities(buildStableAudioCapabilities(context, true))
             }
             else -> DefaultAudioSink.Builder(context)
@@ -2264,8 +2278,10 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor, nightModeAudioProcessor))
         val baseAudioSink = builder.build()
+        // Audio sync hook: tap the base sink so the returned sink stays a PlaybackSpeedAwareAudioSink
+        // and buildAudioRenderers keeps installing PlaybackSpeedAwareAudioRenderer.
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
-            sink = baseAudioSink,
+            sink = AudioSyncTaps.wrapAudioSink(baseAudioSink),
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm
         )
@@ -2322,7 +2338,10 @@ private class SubtitleOffsetRenderersFactory(
         out: ArrayList<Renderer>
     ) {
         val normalizingOutput = CueNormalizingTextOutput(
-            delegate = SdhFilteringTextOutput(CueTrackingTextOutput(output, onCuesShown), shouldStripSdhProvider),
+            delegate = SdhFilteringTextOutput(
+                CueTrackingTextOutput(StyledCueTextOutput(output, presentCues), onCuesShown),
+                shouldStripSdhProvider
+            ),
             shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
             isBuiltInSubtitleProvider = isBuiltInSubtitleProvider,
             isSidecarAddonSubtitleActiveProvider = isSidecarAddonSubtitleActiveProvider,
@@ -2781,7 +2800,7 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
         val keepZeroForDv7 = conversionSucceeded > 0L && MemoryBudget.isLowRamTier
         val resolvedBackBufferMs = if (keepZeroForDv7) 0 else configuredBackBufferMs
         if (resolvedBackBufferMs != effectiveBackBufferDurationMs) {
-            lc.setBackBufferDurationOverrideMs(resolvedBackBufferMs)
+            lc.setBackBufferDurationOverrideMs(resolvedBackBufferMs, player)
             effectiveBackBufferDurationMs = resolvedBackBufferMs
         }
         // Shrinking the byte budget starves the forward buffer, so it stays tied to the budget
@@ -2791,7 +2810,8 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
             val effectiveConversionMb = (MemoryBudget.conversionBudgetMb - currentParallelChunkOverheadMb)
                 .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
             lc.setBudgetBytesOverride(
-                effectiveConversionMb.toLong() * 1024L * 1024L
+                effectiveConversionMb.toLong() * 1024L * 1024L,
+                player
             )
         }
         Log.i(

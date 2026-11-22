@@ -22,6 +22,7 @@ import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
+import com.nuvio.tv.domain.model.ContinueWatchingClickAction
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_COVERAGE
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_STRENGTH
@@ -89,6 +90,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val focusedPosterBackdropExpandDelaySecondsKey = intPreferencesKey("focused_poster_backdrop_expand_delay_seconds")
     private val focusedPosterBackdropTrailerEnabledKey = booleanPreferencesKey("focused_poster_backdrop_trailer_enabled")
     private val focusedPosterBackdropTrailerMutedKey = booleanPreferencesKey("focused_poster_backdrop_trailer_muted")
+    private val focusedPosterTrailerContinueInDetailsKey = booleanPreferencesKey("focused_poster_trailer_continue_in_details")
     private val focusedPosterBackdropTrailerPlaybackTargetKey =
         stringPreferencesKey("focused_poster_backdrop_trailer_playback_target")
     private val posterCardWidthDpKey = intPreferencesKey("poster_card_width_dp")
@@ -104,6 +106,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val cardDepthCastEnabledKey = booleanPreferencesKey("card_depth_cast_enabled")
     private val cardDepthTrailersEnabledKey = booleanPreferencesKey("card_depth_trailers_enabled")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
+    private val detailSeasonPostersEnabledKey = booleanPreferencesKey("detail_season_posters_enabled")
     private val randomEpisodeEnabledKey = booleanPreferencesKey("random_episode_enabled")
     private val startupSplashEnabledKey = booleanPreferencesKey("startup_splash_enabled")
     private val alwaysShowLandscapeClearlogoKey = booleanPreferencesKey("always_show_landscape_clearlogo")
@@ -118,6 +121,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val blurContinueWatchingNextUpKey = booleanPreferencesKey("blur_continue_watching_next_up")
     private val continueWatchingSortModeKey = stringPreferencesKey("continue_watching_sort_mode")
+    private val continueWatchingClickActionKey = stringPreferencesKey("continue_watching_click_action")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
     private val modernHeroFullScreenBackdropKey = booleanPreferencesKey("modern_hero_full_screen_backdrop")
@@ -300,6 +304,10 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[focusedPosterBackdropTrailerMutedKey] ?: true
     }
 
+    val focusedPosterTrailerContinueInDetails: Flow<Boolean> = profileFlow { prefs ->
+        prefs[focusedPosterTrailerContinueInDetailsKey] ?: false
+    }
+
     val focusedPosterBackdropTrailerPlaybackTarget: Flow<FocusedPosterTrailerPlaybackTarget> =
         profileFlow { prefs ->
             val stored = prefs[focusedPosterBackdropTrailerPlaybackTargetKey]
@@ -339,6 +347,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val blurUnwatchedEpisodes: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurUnwatchedEpisodesKey] ?: false
+    }
+
+    val detailSeasonPostersEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[detailSeasonPostersEnabledKey] ?: false
     }
 
     val randomEpisodeEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -399,6 +411,12 @@ class LayoutPreferenceDataStore @Inject constructor(
         val stored = prefs[continueWatchingSortModeKey] ?: ContinueWatchingSortMode.DEFAULT.name
         runCatching { ContinueWatchingSortMode.valueOf(stored) }
             .getOrDefault(ContinueWatchingSortMode.DEFAULT)
+    }
+
+    val continueWatchingClickAction: Flow<ContinueWatchingClickAction> = profileFlow { prefs ->
+        val stored = prefs[continueWatchingClickActionKey] ?: ContinueWatchingClickAction.STREAM.name
+        runCatching { ContinueWatchingClickAction.valueOf(stored) }
+            .getOrDefault(ContinueWatchingClickAction.STREAM)
     }
 
     val detailPageTrailerButtonEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -662,6 +680,12 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
+    suspend fun setFocusedPosterTrailerContinueInDetails(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[focusedPosterTrailerContinueInDetailsKey] = enabled
+        }
+    }
+
     suspend fun setFocusedPosterBackdropTrailerPlaybackTarget(
         target: FocusedPosterTrailerPlaybackTarget
     ) {
@@ -742,6 +766,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurUnwatchedEpisodesKey] = enabled
+        }
+    }
+
+    suspend fun setDetailSeasonPostersEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[detailSeasonPostersEnabledKey] = enabled
         }
     }
 
@@ -826,6 +856,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setContinueWatchingSortMode(mode: ContinueWatchingSortMode) {
         store().edit { prefs ->
             prefs[continueWatchingSortModeKey] = mode.name
+        }
+    }
+
+    suspend fun setContinueWatchingClickAction(action: ContinueWatchingClickAction) {
+        store().edit { prefs ->
+            prefs[continueWatchingClickActionKey] = action.name
         }
     }
 

@@ -30,7 +30,8 @@ enum class TrackingCapability {
     PROGRESS_WRITE,
     SCROBBLE,
     COMMENTS,
-    RECOMMENDATIONS
+    RECOMMENDATIONS,
+    RATINGS
 }
 
 data class TrackingProviderDescriptor(

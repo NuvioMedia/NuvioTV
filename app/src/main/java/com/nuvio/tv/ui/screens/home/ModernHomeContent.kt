@@ -10,8 +10,6 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -42,6 +40,8 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import com.nuvio.tv.core.player.LocalBackgroundTrailerController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
@@ -169,7 +169,7 @@ fun ModernHomeContent(
     val shouldActivateFocusedPosterFlow =
         effectiveExpandEnabled ||
             (effectiveAutoplayEnabled &&
-                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+                trailerPlaybackTarget != FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD)
     val presentation = modernPresentation
     val carouselRows = presentation.rows
 
@@ -266,6 +266,7 @@ fun ModernHomeContent(
     val expandedCatalogFocusKey = remember { mutableStateOf<String?>(null) }
     val focusedHeroMediaNonce = remember { mutableIntStateOf(0) }
     var endedCollectionHeroVideoPlaybackKey by remember { mutableStateOf<String?>(null) }
+    var endedHeroTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     val expansionInteractionNonce = remember { mutableIntStateOf(0) }
 
     // Improved Back navigation: when focused item is not the first in a row,
@@ -273,12 +274,12 @@ fun ModernHomeContent(
     // Disabled when the sidebar owns focus (expanded) so Back can exit the app.
     val backScrollScope = rememberCoroutineScope()
     val contentHasFocus = remember { mutableStateOf(false) }
-    val fullscreenTrailerPlaying = remember { mutableStateOf(false) }
-    val fullscreenTrailerDismiss = remember { mutableStateOf<(() -> Unit)?>(null) }
+    val fullscreenHeroTrailerPlaying = remember { mutableStateOf(false) }
+    val stopHeroTrailer = remember { mutableStateOf<(() -> Unit)?>(null) }
     val shouldInterceptBack = remember {
         derivedStateOf {
             if (!contentHasFocus.value) return@derivedStateOf false
-            if (fullscreenTrailerPlaying.value) return@derivedStateOf true
+            if (fullscreenHeroTrailerPlaying.value) return@derivedStateOf true
             val rowKey = activeRowKey.value ?: return@derivedStateOf false
             val itemIndex = focusedItemByRow[rowKey] ?: 0
             itemIndex > 0
@@ -286,8 +287,8 @@ fun ModernHomeContent(
     }
     IsolatedReadScope {
         BackHandler(enabled = shouldInterceptBack.value) {
-            if (fullscreenTrailerPlaying.value) {
-                fullscreenTrailerDismiss.value?.invoke()
+            if (fullscreenHeroTrailerPlaying.value) {
+                stopHeroTrailer.value?.invoke()
                 return@BackHandler
             }
             val rowKey = activeRowKey.value ?: return@BackHandler
@@ -340,6 +341,7 @@ fun ModernHomeContent(
         ) {
             // Always clear first so sidebar open / selection change collapses immediately.
             expandedCatalogFocusKey.value = null
+            endedHeroTrailerFocusKey = null
             if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
             if (isSidebarExpanded.value) return@LaunchedEffect
             if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
@@ -407,6 +409,12 @@ fun ModernHomeContent(
                     if (rowKey == activeRowKey.value) {
                         focusHolder.activeItemIndex = relocatedIndex
                         activeItemIndex.intValue = relocatedIndex
+                    }
+                    // Focus restored on return can still be waiting for its card, as when playback
+                    // returns to Home before Continue Watching moves the watched card to the front.
+                    if (pendingRowFocusKey.value == rowKey && pendingRowFocusIndex.value == storedIndex) {
+                        pendingRowFocusIndex.value = relocatedIndex
+                        pendingRowFocusNonce.intValue++
                     }
                 }
             }
@@ -705,7 +713,15 @@ fun ModernHomeContent(
     val screenWidth = localConfiguration.screenWidthDp.dp
     val screenHeight = localConfiguration.screenHeightDp.dp
 
-    Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
+    val backgroundTrailerController = LocalBackgroundTrailerController.current
+    val rootBackgroundColor = NuvioTheme.colors.Background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .drawBehind {
+                if (backgroundTrailerController?.isRenderingFor(HOME_HERO_TRAILER_OWNER) != true) drawRect(rootBackgroundColor)
+            }
+    ) {
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
             val rowHorizontalPadding = 52.dp
 
@@ -804,6 +820,7 @@ fun ModernHomeContent(
             val heroTrailerUrlsState = remember(trailerPreviewUrls, trailerPreviewAudioUrls) {
                 derivedStateOf {
                     val expandedFocusedSelection = expandedFocusedSelectionState.value
+                        ?.takeIf { it.focusKey != endedHeroTrailerFocusKey }
                     val itemId = (expandedFocusedSelection?.payload as? ModernPayload.Catalog)?.itemId
                     val url = itemId?.let { trailerPreviewUrls[it] }
                     val audioUrl = itemId?.let { trailerPreviewAudioUrls[it] }
@@ -843,7 +860,7 @@ fun ModernHomeContent(
                         effectiveAutoplayEnabled &&
                         !isSidebarExpanded.value &&
                         !isRapidHorizontalNav.value &&
-                        trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
+                        trailerPlaybackTarget != FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
                         !heroTrailerUrlsState.value.first.isNullOrBlank()
                 }
             }
@@ -883,29 +900,6 @@ fun ModernHomeContent(
                 heroTrailerFirstFrameRendered = false
             }
 
-            // Collection hero videos should trigger the same fullscreen layout
-            // and content fade as catalog trailers — otherwise the video plays
-            // "behind" the collection cards instead of expanding into the hero area (#2683).
-            val isTrailerPlayingFullscreenState = remember(
-                fullScreenBackdrop,
-                shouldPlayCatalogHeroTrailerState,
-                shouldPlayCollectionHeroVideoState
-            ) {
-                derivedStateOf {
-                    fullScreenBackdrop &&
-                        (shouldPlayCatalogHeroTrailerState.value || shouldPlayCollectionHeroVideoState.value) &&
-                        heroTrailerFirstFrameRendered
-                }
-            }
-            // Keep the top-level flag in sync so the row-scroll BackHandler
-            // stays disabled while a fullscreen trailer is visible.
-            fullscreenTrailerPlaying.value = isTrailerPlayingFullscreenState.value
-            fullscreenTrailerDismiss.value = remember(focusedCatalogSelection, expandedCatalogFocusKey) {
-                {
-                    focusedCatalogSelection.value = null
-                    expandedCatalogFocusKey.value = null
-                }
-            }
             val liveHeroSceneState = remember(
                 resolvedHeroState,
                 shouldPlayHeroTrailerState,
@@ -1086,21 +1080,38 @@ fun ModernHomeContent(
                 }
             }
 
-            val fullScreenBackdropUpdated by rememberUpdatedState(fullScreenBackdrop)
-            val shouldPlayCatalogHeroTrailerUpdated by rememberUpdatedState(shouldPlayCatalogHeroTrailerState.value)
-            val shouldPlayCollectionHeroVideoUpdated by rememberUpdatedState(shouldPlayCollectionHeroVideoState.value)
-            val heroTrailerFirstFrameRenderedUpdated by rememberUpdatedState(heroTrailerFirstFrameRendered)
-
             val onTrailerEndedLambda = remember {
                 {
                     if (shouldPlayCollectionHeroVideoState.value && collectionHeroVideoPlaybackKey != null) {
                         endedCollectionHeroVideoPlaybackKey = collectionHeroVideoPlaybackKey
                     } else {
-                        expandedCatalogFocusKey.value = null
+                        endedHeroTrailerFocusKey = expandedCatalogFocusKey.value
                     }
                 }
             }
             val onFirstFrameRenderedLambda = remember { { heroTrailerFirstFrameRendered = true } }
+            val isHeroTrailerPlayingFullscreenState = remember(
+                fullScreenBackdrop,
+                shouldPlayCatalogHeroTrailerState,
+                shouldPlayCollectionHeroVideoState
+            ) {
+                derivedStateOf {
+                    fullScreenBackdrop &&
+                        (shouldPlayCatalogHeroTrailerState.value || shouldPlayCollectionHeroVideoState.value) &&
+                        heroTrailerFirstFrameRendered
+                }
+            }
+            fullscreenHeroTrailerPlaying.value = isHeroTrailerPlayingFullscreenState.value
+            stopHeroTrailer.value = remember {
+                {
+                    val collectionKey = collectionHeroVideoPlaybackKeyState.value
+                    if (shouldPlayCollectionHeroVideoState.value && collectionKey != null) {
+                        endedCollectionHeroVideoPlaybackKey = collectionKey
+                    } else {
+                        endedHeroTrailerFocusKey = expandedCatalogFocusKey.value
+                    }
+                }
+            }
 
             ModernHeroSection(
                 heroSceneState = heroSceneStateLambda,
@@ -1111,17 +1122,6 @@ fun ModernHomeContent(
                 onTrailerEnded = onTrailerEndedLambda,
                 onFirstFrameRendered = onFirstFrameRenderedLambda
             )
-
-            // Fade content rows when ANY hero media (catalog trailer or collection
-            // hero video) is playing in fullscreen — not just catalog trailers.
-            val trailerContentAlphaState = animateFloatAsState(
-                targetValue = if (fullScreenBackdropUpdated && (shouldPlayCatalogHeroTrailerUpdated || shouldPlayCollectionHeroVideoUpdated) && heroTrailerFirstFrameRenderedUpdated) 0f else 1f,
-                animationSpec = tween(durationMillis = 480),
-                label = "trailerContentFade"
-            )
-
-            val shouldPlayTrailerLambda = remember { { shouldPlayCatalogHeroTrailerUpdated || shouldPlayCollectionHeroVideoUpdated } }
-            val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
 
             val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight) {
                 Modifier
@@ -1144,13 +1144,6 @@ fun ModernHomeContent(
                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                 mdbListShowOnHero = uiState.mdbListShowOnHero,
                 mdbListRatingOrder = uiState.mdbListRatingOrder,
-                trailerPlaying = {
-                    if (isRapidHorizontalNav.value) false
-                    else {
-                        val state = heroSceneStateLambda()
-                        state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
-                    }
-                },
                 descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                 modifier = heroMetadataModifier
             )
@@ -1187,7 +1180,6 @@ fun ModernHomeContent(
                     onRowItemFocusedPassedDown.value.invoke(rowKey, index, isCw)
                 }
             }
-            val stableTrailerContentAlphaLambda = remember { { trailerContentAlphaState.value } }
             val stableExpandedTrailerPreviewUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.first } }
             val stableExpandedTrailerPreviewAudioUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.second } }
             val stableEnrichedPreviews = remember(enrichedPreviews) { derivedStateOf { enrichedPreviews.value.asStable() } }
@@ -1214,7 +1206,6 @@ fun ModernHomeContent(
                 contentFocusRequester = contentFocusRequester,
                 rowsViewportHeight = rowsViewportHeight,
                 catalogBottomPadding = NuvioTheme.spacing.none,
-                trailerContentAlpha = stableTrailerContentAlphaLambda,
                 verticalRowBringIntoViewSpec = verticalRowBringIntoViewSpec,
                 onRowItemFocusedInternal = onRowItemFocusedInternalLambda,
                 onNavigateToDetail = onNavigateToDetail,

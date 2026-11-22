@@ -11,6 +11,7 @@ fun ServerFailure.messageRes(): Int = when (this) {
     ServerFailure.INCOMPLETE -> R.string.servers_failure_incomplete
     ServerFailure.FORBIDDEN -> R.string.servers_error_forbidden
     ServerFailure.UNSUPPORTED -> R.string.servers_failure_unsupported
+    ServerFailure.REMOTE_PLAYBACK_BLOCKED -> R.string.servers_failure_remote_playback
     ServerFailure.FAILED -> R.string.servers_error_failed
 }
 

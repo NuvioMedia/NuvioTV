@@ -31,13 +31,25 @@ import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+data class CollectionEditorDraftSnapshot(
+    val title: String = "",
+    val backdropImageUrl: String = "",
+    val pinToTop: Boolean = false,
+    val focusGlowEnabled: Boolean = true,
+    val viewMode: FolderViewMode = FolderViewMode.TABBED_GRID,
+    val showAllTab: Boolean = true,
+    val folders: List<CollectionFolder> = emptyList()
+)
 
 data class CollectionEditorUiState(
     val isNew: Boolean = true,
@@ -84,8 +96,44 @@ data class CollectionEditorUiState(
     val traktPopularResults: List<TraktPublicListSearchResult> = emptyList(),
     val traktSearchError: String? = null,
     val genrePickerSourceIndex: Int? = null,
-    val showEmojiPicker: Boolean = false
-)
+    val showEmojiPicker: Boolean = false,
+    val movingFolderKey: String? = null,
+    val movingSourceKey: String? = null,
+    val isSaving: Boolean = false,
+    val initialCollectionSnapshot: CollectionEditorDraftSnapshot? = null,
+    val initialEditingFolder: CollectionFolder? = null
+) {
+    val hasUnsavedCollectionChanges: Boolean
+        get() {
+            val baseline = initialCollectionSnapshot ?: return false
+            return currentCollectionSnapshot() != baseline
+        }
+
+    val hasUnsavedFolderChanges: Boolean
+        get() {
+            if (!showFolderEditor) return false
+            val current = editingFolder ?: return false
+            val baseline = initialEditingFolder ?: return false
+            return current.normalizedForDirtyCheck() != baseline.normalizedForDirtyCheck()
+        }
+
+    val canSaveCollection: Boolean
+        get() = title.isNotBlank() && folders.isNotEmpty() && movingFolderKey == null && !isSaving
+
+    val canSaveFolder: Boolean
+        get() = (editingFolder?.sources?.isNotEmpty() == true) && movingSourceKey == null
+
+    internal fun currentCollectionSnapshot(): CollectionEditorDraftSnapshot =
+        CollectionEditorDraftSnapshot(
+            title = title,
+            backdropImageUrl = backdropImageUrl.ifBlank { "" },
+            pinToTop = pinToTop,
+            focusGlowEnabled = focusGlowEnabled,
+            viewMode = viewMode,
+            showAllTab = showAllTab,
+            folders = folders.map { it.normalizedForDirtyCheck() }
+        )
+}
 
 data class AvailableCatalog(
     val addonId: String,
@@ -172,6 +220,15 @@ class CollectionEditorViewModel @Inject constructor(
                 val collections = collectionsDataStore.collections.first()
                 val existing = collections.find { it.id == collectionIdArg }
                 if (existing != null) {
+                    val initialSnapshot = CollectionEditorDraftSnapshot(
+                        title = existing.title,
+                        backdropImageUrl = existing.backdropImageUrl.orEmpty().ifBlank { "" },
+                        pinToTop = existing.pinToTop,
+                        focusGlowEnabled = existing.focusGlowEnabled,
+                        viewMode = existing.viewMode,
+                        showAllTab = existing.showAllTab,
+                        folders = existing.folders.map { it.normalizedForDirtyCheck() }
+                    )
                     _uiState.update {
                         it.copy(
                             isNew = false,
@@ -186,7 +243,8 @@ class CollectionEditorViewModel @Inject constructor(
                             availableCatalogs = availableCatalogs,
                             installedAddonIds = addons.map { addon -> addon.id }.toSet(),
                             addonCatalogInfoByKey = addonCatalogInfoByKey,
-                            isLoading = false
+                            isLoading = false,
+                            initialCollectionSnapshot = initialSnapshot
                         )
                     }
                     return@launch
@@ -200,7 +258,8 @@ class CollectionEditorViewModel @Inject constructor(
                     availableCatalogs = availableCatalogs,
                     installedAddonIds = addons.map { addon -> addon.id }.toSet(),
                     addonCatalogInfoByKey = addonCatalogInfoByKey,
-                    isLoading = false
+                    isLoading = false,
+                    initialCollectionSnapshot = CollectionEditorDraftSnapshot()
                 )
             }
         }
@@ -223,6 +282,7 @@ class CollectionEditorViewModel @Inject constructor(
     }
 
     fun addFolder() {
+        clearFolderMoveState()
         val newFolder = CollectionFolder(
             id = collectionsDataStore.generateId(),
             title = "",
@@ -230,39 +290,155 @@ class CollectionEditorViewModel @Inject constructor(
             sources = emptyList()
         )
         _uiState.update {
-            it.copy(editingFolder = newFolder, showFolderEditor = true)
+            it.copy(
+                editingFolder = newFolder,
+                initialEditingFolder = newFolder,
+                showFolderEditor = true,
+                movingFolderKey = null
+            )
         }
     }
 
     fun editFolder(folderId: String) {
         val folder = _uiState.value.folders.find { it.id == folderId } ?: return
-        _uiState.update { it.copy(editingFolder = folder, showFolderEditor = true) }
+        clearFolderMoveState()
+        _uiState.update {
+            it.copy(
+                editingFolder = folder,
+                initialEditingFolder = folder,
+                showFolderEditor = true,
+                movingFolderKey = null
+            )
+        }
     }
 
     fun removeFolder(folderId: String) {
+        clearFolderMoveState()
         _uiState.update { state ->
-            state.copy(folders = state.folders.filter { it.id != folderId })
+            state.copy(
+                folders = state.folders.filter { it.id != folderId },
+                movingFolderKey = null
+            )
         }
     }
 
-    fun moveFolderUp(index: Int) {
-        if (index <= 0) return
-        _uiState.update { state ->
-            val folders = state.folders.toMutableList()
-            val item = folders.removeAt(index)
-            folders.add(index - 1, item)
-            state.copy(folders = folders)
+    private var folderMoveBaseline: List<CollectionFolder>? = null
+    private var folderDraftOrder: List<String>? = null
+    private var sourceMoveBaseline: List<CollectionSource>? = null
+    private var sourceDraftPairs: List<Pair<String, CollectionSource>>? = null
+
+    private fun clearFolderMoveState() {
+        folderDraftOrder = null
+        folderMoveBaseline = null
+    }
+
+    private fun clearSourceMoveState() {
+        sourceDraftPairs = null
+        sourceMoveBaseline = null
+    }
+
+    fun enterSourceMoveMode(sourceKey: String) {
+        val folder = _uiState.value.editingFolder ?: return
+        if (folder.sources.size <= 1) return
+        val keys = collectionSourceKeys(folder.sources)
+        if (keys.none { it == sourceKey }) return
+        sourceMoveBaseline = folder.sources
+        sourceDraftPairs = keys.zip(folder.sources)
+        _uiState.update { it.copy(movingSourceKey = sourceKey) }
+    }
+
+    fun moveSourceDuringDrag(sourceKey: String, direction: Int): Int? {
+        val draft = sourceDraftPairs ?: return null
+        val fromIndex = draft.indexOfFirst { it.first == sourceKey }
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+        sourceDraftPairs = reordered
+        applySourceDraftOrder()
+        return toIndex
+    }
+
+    fun confirmSourceMove() {
+        sourceDraftPairs = null
+        sourceMoveBaseline = null
+        _uiState.update { it.copy(movingSourceKey = null) }
+    }
+
+    fun cancelSourceMove() {
+        val baseline = sourceMoveBaseline
+        sourceDraftPairs = null
+        sourceMoveBaseline = null
+        _uiState.update {
+            it.copy(
+                movingSourceKey = null,
+                editingFolder = it.editingFolder?.copy(sources = baseline ?: it.editingFolder.sources)
+            )
         }
     }
 
-    fun moveFolderDown(index: Int) {
-        val folders = _uiState.value.folders
-        if (index >= folders.size - 1) return
+    private fun applySourceDraftOrder() {
+        val draft = sourceDraftPairs ?: return
         _uiState.update { state ->
-            val mutableFolders = state.folders.toMutableList()
-            val item = mutableFolders.removeAt(index)
-            mutableFolders.add(index + 1, item)
-            state.copy(folders = mutableFolders)
+            val folder = state.editingFolder ?: return@update state
+            state.copy(editingFolder = folder.copy(sources = draft.map { it.second }))
+        }
+    }
+
+    fun enterFolderMoveMode(folderId: String) {
+        val current = _uiState.value.folders
+        if (current.size <= 1 || current.none { it.id == folderId }) return
+        folderMoveBaseline = current
+        folderDraftOrder = current.map { it.id }
+        _uiState.update { it.copy(movingFolderKey = folderId) }
+    }
+
+    fun moveFolderDuringDrag(folderId: String, direction: Int): Int? {
+        val draft = folderDraftOrder ?: return null
+        val fromIndex = draft.indexOf(folderId)
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+        folderDraftOrder = reordered
+        applyFolderDraftOrder()
+        return toIndex
+    }
+
+    fun confirmFolderMove() {
+        folderDraftOrder = null
+        folderMoveBaseline = null
+        _uiState.update { it.copy(movingFolderKey = null) }
+    }
+
+    fun cancelFolderMove() {
+        val baseline = folderMoveBaseline
+        folderDraftOrder = null
+        folderMoveBaseline = null
+        _uiState.update {
+            it.copy(
+                movingFolderKey = null,
+                folders = baseline ?: it.folders
+            )
+        }
+    }
+
+    private fun applyFolderDraftOrder() {
+        val draft = folderDraftOrder ?: return
+        _uiState.update { state ->
+            val byId = state.folders.associateBy { it.id }
+            val seen = LinkedHashSet<String>()
+            val ordered = ArrayList<CollectionFolder>(state.folders.size)
+            for (id in draft) {
+                val folder = byId[id] ?: continue
+                if (seen.add(id)) ordered.add(folder)
+            }
+            for (folder in state.folders) {
+                if (seen.add(folder.id)) ordered.add(folder)
+            }
+            state.copy(folders = ordered)
         }
     }
 
@@ -396,28 +572,6 @@ class CollectionEditorViewModel @Inject constructor(
                 genrePickerSourceIndex = state.genrePickerSourceIndex?.takeIf { it != index }
                     ?.let { if (it > index) it - 1 else it }
             )
-        }
-    }
-
-    fun moveCatalogSourceUp(index: Int) {
-        if (index <= 0) return
-        _uiState.update { state ->
-            val folder = state.editingFolder ?: return@update state
-            val sources = folder.sources.toMutableList()
-            val item = sources.removeAt(index)
-            sources.add(index - 1, item)
-            state.copy(editingFolder = folder.copy(sources = sources))
-        }
-    }
-
-    fun moveCatalogSourceDown(index: Int) {
-        _uiState.update { state ->
-            val folder = state.editingFolder ?: return@update state
-            if (index >= folder.sources.size - 1) return@update state
-            val sources = folder.sources.toMutableList()
-            val item = sources.removeAt(index)
-            sources.add(index + 1, item)
-            state.copy(editingFolder = folder.copy(sources = sources))
         }
     }
 
@@ -1085,6 +1239,7 @@ class CollectionEditorViewModel @Inject constructor(
     fun saveFolderEdit() {
         val rawFolder = _uiState.value.editingFolder ?: return
         if (rawFolder.sources.isEmpty()) return
+        clearSourceMoveState()
         val cleanedFolder = rawFolder.copy(
             title = rawFolder.title.ifBlank { string(R.string.collection_editor_untitled_folder) },
             coverImageUrl = rawFolder.coverImageUrl?.ifBlank { null },
@@ -1104,51 +1259,78 @@ class CollectionEditorViewModel @Inject constructor(
                 folders = newFolders,
                 showFolderEditor = false,
                 editingFolder = null,
+                initialEditingFolder = null,
                 showCatalogPicker = false,
                 showTmdbSourcePicker = false,
                 showTraktSourcePicker = false,
                 genrePickerSourceIndex = null,
-                showEmojiPicker = false
+                showEmojiPicker = false,
+                movingSourceKey = null
             )
         }
     }
 
     fun cancelFolderEdit() {
+        clearSourceMoveState()
         _uiState.update {
             it.copy(
                 showFolderEditor = false,
                 editingFolder = null,
+                initialEditingFolder = null,
                 showCatalogPicker = false,
                 showTmdbSourcePicker = false,
                 showTraktSourcePicker = false,
                 genrePickerSourceIndex = null,
-                showEmojiPicker = false
+                showEmojiPicker = false,
+                movingSourceKey = null
             )
         }
     }
 
     fun save(onComplete: () -> Unit) {
         val state = _uiState.value
-        if (state.folders.isEmpty()) return
+        if (state.isSaving || state.title.isBlank() || state.folders.isEmpty()) return
+        clearFolderMoveState()
+        _uiState.update { it.copy(movingFolderKey = null, isSaving = true) }
         viewModelScope.launch {
-            val collection = Collection(
-                id = state.collectionId,
-                title = state.title.ifBlank { string(R.string.collection_editor_untitled_collection) },
-                backdropImageUrl = state.backdropImageUrl.ifBlank { null },
-                pinToTop = state.pinToTop,
-                focusGlowEnabled = state.focusGlowEnabled,
-                viewMode = state.viewMode,
-                showAllTab = state.showAllTab,
-                folders = state.folders
-            ).withResolvedCatalogTypes(addonRepository.getInstalledAddons().first())
+            var saved = false
+            try {
+                withContext(NonCancellable) {
+                    val collection = Collection(
+                        id = state.collectionId,
+                        title = state.title.ifBlank { string(R.string.collection_editor_untitled_collection) },
+                        backdropImageUrl = state.backdropImageUrl.ifBlank { null },
+                        pinToTop = state.pinToTop,
+                        focusGlowEnabled = state.focusGlowEnabled,
+                        viewMode = state.viewMode,
+                        showAllTab = state.showAllTab,
+                        folders = state.folders
+                    ).withResolvedCatalogTypes(addonRepository.getInstalledAddons().first())
 
-            if (state.isNew) {
-                collectionsDataStore.addCollection(collection)
-            } else {
-                collectionsDataStore.updateCollection(collection)
+                    if (state.isNew) {
+                        collectionsDataStore.addCollection(collection)
+                    } else {
+                        collectionsDataStore.updateCollection(collection)
+                    }
+                    collectionSyncService.triggerPush()
+                    saved = true
+                }
+            } finally {
+                _uiState.update { current ->
+                    if (saved) {
+                        current.copy(
+                            isNew = false,
+                            isSaving = false,
+                            initialCollectionSnapshot = current.currentCollectionSnapshot()
+                        )
+                    } else {
+                        current.copy(isSaving = false)
+                    }
+                }
             }
-            collectionSyncService.triggerPush()
-            onComplete()
+            if (saved) {
+                onComplete()
+            }
         }
     }
 
@@ -1162,6 +1344,15 @@ class CollectionEditorViewModel @Inject constructor(
     }
 
 }
+
+private fun CollectionFolder.normalizedForDirtyCheck(): CollectionFolder = copy(
+    coverImageUrl = coverImageUrl?.ifBlank { null },
+    focusGifUrl = focusGifUrl?.ifBlank { null },
+    coverEmoji = coverEmoji?.ifBlank { null },
+    heroBackdropUrl = heroBackdropUrl?.ifBlank { null },
+    heroVideoUrl = heroVideoUrl?.ifBlank { null },
+    titleLogoUrl = titleLogoUrl?.ifBlank { null }
+)
 
 private fun String.isTraktListIdentifierInput(): Boolean {
     val normalized = trim()

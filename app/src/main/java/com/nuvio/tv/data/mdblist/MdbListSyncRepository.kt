@@ -29,6 +29,7 @@ class MdbListSyncRepository(
     private val coroutineScope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ratingsEnabled: () -> Boolean = { false },
     private val remote: (MdbListAuthScope) -> MdbListSyncRemote = { MdbListHttpSyncRemote(api, it) }
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -83,7 +84,7 @@ class MdbListSyncRepository(
                     if (auth.state.value.user?.id == null) api.refreshUser(scope)
                     val snapshot = loadCurrent() ?: return@withLock
                     mutableState.value = mutableState.value.copy(isLoading = true, error = null, attemptedAtEpochMs = attemptedAt)
-                    val result = MdbListSyncEngine(remote(scope), now).synchronize(snapshot)
+                    val result = MdbListSyncEngine(remote(scope), now).synchronize(snapshot, ratingsEnabled())
                     commit(scope, result)
                     mutableState.value = mutableState.value.copy(attemptedAtEpochMs = attemptedAt)
                 } catch (error: CancellationException) {
@@ -159,6 +160,7 @@ class MdbListSyncRepository(
         val onlyPlaybackChanged = previous != null &&
             previous.watched === snapshot.watched &&
             previous.dropped === snapshot.dropped &&
+            previous.ratings === snapshot.ratings &&
             previous.library === snapshot.library &&
             previous.invalidatedBuckets === snapshot.invalidatedBuckets &&
             previous.watermark == snapshot.watermark &&

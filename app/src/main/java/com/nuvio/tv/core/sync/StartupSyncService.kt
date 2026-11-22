@@ -178,6 +178,15 @@ class StartupSyncService @Inject constructor(
         )
     }
 
+    /** In-app navigation never resumes the activity, so it asks for the same throttled pull. */
+    fun requestNavigationSync() {
+        scheduleActivityPull(
+            reason = "navigation",
+            delayMs = FOREGROUND_ACTIVITY_PULL_DELAY_MS,
+            minIntervalMs = FOREGROUND_ACTIVITY_PULL_MIN_INTERVAL_MS
+        )
+    }
+
     private val _manualAddonRefreshes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** Emits after a manual addon refresh, so screens holding catalogs can re-request them. */
@@ -467,25 +476,27 @@ class StartupSyncService @Inject constructor(
             }
 
             Log.d(TAG, "Pulling remote data for profile $profileId")
-            pullBroadRemoteData(profileId, includeProfileSettings)
-
-            val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync(profileId)
-            Log.d(
-                TAG,
-                "Watch progress sync: shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
-            )
-            if (shouldUseSupabaseWatchProgressSync) {
-                pullWatchedItemsSnapshot(profileId)
-                syncWatchProgressSnapshot(
-                    profileId = profileId,
-                    pushUnsynced = true,
-                    failureMessage = "Failed to sync watch progress, continuing"
+            pullBroadRemoteData(profileId, includeProfileSettings) {
+                val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync(profileId)
+                Log.d(
+                    TAG,
+                    "Watch progress sync: shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
                 )
-            } else {
-                libraryRepository.hasCompletedInitialPull = true
-                watchProgressRepository.hasCompletedInitialPull = true
-                watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
-                Log.d(TAG, "Skipping Supabase watched items and watch progress for profile $profileId because a tracking provider is active")
+                if (shouldUseSupabaseWatchProgressSync) {
+                    // Watched items and progress live in separate stores, so they pull side by side.
+                    coroutineScope {
+                        launch { pullWatchedItemsSnapshot(profileId) }
+                        syncWatchProgressSnapshot(
+                            profileId = profileId,
+                            pushUnsynced = true,
+                            failureMessage = "Failed to sync watch progress, continuing"
+                        )
+                    }
+                } else {
+                    watchProgressRepository.hasCompletedInitialPull = true
+                    watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+                    Log.d(TAG, "Skipping Supabase watched items and watch progress for profile $profileId because a tracking provider is active")
+                }
             }
             startupSyncPreferences.markFullPull(
                 profileId = profileId,
@@ -509,23 +520,26 @@ class StartupSyncService @Inject constructor(
     ): Result<Unit> {
         try {
             Log.d(TAG, "Running warm remote sync for profile $profileId")
-            pullBroadRemoteData(profileId, includeProfileSettings)
-            val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync(profileId)
-            Log.d(
-                TAG,
-                "Warm watch progress sync: shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
-            )
-            if (shouldUseSupabaseWatchProgressSync) {
-                pullWatchedItemsDelta(profileId)
-                syncWatchProgressDelta(
-                    profileId = profileId,
-                    pushUnsynced = true,
-                    failureMessage = "Failed to sync warm watch progress, continuing"
+            pullBroadRemoteData(profileId, includeProfileSettings) {
+                val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync(profileId)
+                Log.d(
+                    TAG,
+                    "Warm watch progress sync: shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
                 )
-            } else {
-                watchProgressRepository.hasCompletedInitialPull = true
-                watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
-                Log.d(TAG, "Skipping warm Supabase watch progress sync for profile $profileId because a tracking provider is active")
+                if (shouldUseSupabaseWatchProgressSync) {
+                    coroutineScope {
+                        launch { pullWatchedItemsDelta(profileId) }
+                        syncWatchProgressDelta(
+                            profileId = profileId,
+                            pushUnsynced = true,
+                            failureMessage = "Failed to sync warm watch progress, continuing"
+                        )
+                    }
+                } else {
+                    watchProgressRepository.hasCompletedInitialPull = true
+                    watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+                    Log.d(TAG, "Skipping warm Supabase watch progress sync for profile $profileId because a tracking provider is active")
+                }
             }
             startupSyncPreferences.markFullPull(
                 profileId = profileId,
@@ -543,7 +557,8 @@ class StartupSyncService @Inject constructor(
 
     private suspend fun pullBroadRemoteData(
         profileId: Int,
-        includeProfileSettings: Boolean
+        includeProfileSettings: Boolean,
+        pullWatchState: suspend () -> Unit
     ) {
         profileSyncService.pullFromRemote().getOrElse { throw it }
         Log.d(TAG, "Pulled profiles from remote")
@@ -606,6 +621,14 @@ class StartupSyncService @Inject constructor(
                 }
             }
 
+            // Watch state needs the provider credentials pulled above and the addon list,
+            // which Continue Watching resolves meta through. It does not wait for the
+            // library or catalog pulls.
+            val watchStateJob = async {
+                addonJob.await()
+                pullWatchState()
+            }
+
             val collectionJob = async {
                 try {
                     collectionSyncService.pullFromRemote()
@@ -638,6 +661,7 @@ class StartupSyncService @Inject constructor(
             collectionJob.await()
             homeCatalogJob.await()
             libraryJob.await()
+            watchStateJob.await()
         }
     }
 

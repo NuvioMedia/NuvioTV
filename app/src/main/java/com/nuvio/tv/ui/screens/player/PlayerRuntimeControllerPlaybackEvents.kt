@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.repository.AddonPlayerAction
+import com.nuvio.tv.data.repository.AddonPlayerEventTarget
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.Player
@@ -15,7 +17,6 @@ import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticIdentity
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.NightMode
-import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackSettingsInput
@@ -917,6 +918,7 @@ internal fun PlayerRuntimeController.handleNaturalPlaybackEnded() {
         return
     }
 
+    emitAddonPlayerEvent(AddonPlayerAction.STOP)
     emitCompletionScrobbleStop(progressPercent = 99.5f)
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = true)
@@ -1069,7 +1071,38 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TrackingMediaReference
     }
 }
 
+internal fun PlayerRuntimeController.emitAddonPlayerEvent(
+    action: AddonPlayerAction,
+    resend: Boolean = false
+) {
+    if (isShortPlaceholderStream()) return
+    val positionMs = currentPlaybackPositionMs() ?: 0L
+    val durationMs = currentPlaybackDurationMs().takeIf { it > 0 } ?: lastKnownDuration
+    val active = activeAddonPlayerEventTarget
+    if (action == AddonPlayerAction.STOP) {
+        if (active == null) return
+        activeAddonPlayerEventTarget = null
+        lastAddonPlayerAction = null
+        addonEventDispatcher.player(active, AddonPlayerAction.STOP, positionMs, durationMs)
+        return
+    }
+    val type = contentType ?: return
+    val videoId = currentVideoId?.takeIf { it.isNotBlank() } ?: contentId ?: return
+    val target = AddonPlayerEventTarget(type = type, videoId = videoId)
+    if (active != null && active != target) {
+        addonEventDispatcher.player(active, AddonPlayerAction.STOP, positionMs, durationMs)
+        activeAddonPlayerEventTarget = null
+        lastAddonPlayerAction = null
+    }
+    if (action == AddonPlayerAction.PAUSE && activeAddonPlayerEventTarget == null) return
+    if (!resend && action == lastAddonPlayerAction && activeAddonPlayerEventTarget == target) return
+    activeAddonPlayerEventTarget = target
+    lastAddonPlayerAction = action
+    addonEventDispatcher.player(target, action, positionMs, durationMs)
+}
+
 internal fun PlayerRuntimeController.emitScrobbleStart() {
+    emitAddonPlayerEvent(AddonPlayerAction.START)
     logScrobbleDiagnostic("start_evaluated")
     if (isShortPlaceholderStream()) {
         logScrobbleDiagnostic("start_skipped", "reason=short_placeholder")
@@ -1202,6 +1235,7 @@ internal fun PlayerRuntimeController.emitCompletionScrobbleStop(progressPercent:
 }
 
 internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
+    emitAddonPlayerEvent(AddonPlayerAction.STOP)
     val progressPercent = currentPlaybackProgressPercent()
     if (!shouldSendStopScrobble(hasRequestedScrobbleStartForCurrentItem, progressPercent)) {
         logScrobbleDiagnostic(
@@ -1218,6 +1252,7 @@ internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
 }
 
 internal fun PlayerRuntimeController.emitPauseScrobbleForCurrentProgress() {
+    emitAddonPlayerEvent(AddonPlayerAction.PAUSE)
     emitScrobblePause(progressPercent = currentPlaybackProgressPercent())
 }
 
@@ -1264,6 +1299,7 @@ internal fun PlayerRuntimeController.scheduleProgressSyncAfterSeek() {
     seekProgressSyncJob = scope.launch {
         delay(seekProgressSyncDebounceMs)
         saveWatchProgress()
+        lastAddonPlayerAction?.let { action -> emitAddonPlayerEvent(action, resend = true) }
 
         val progressPercent = currentPlaybackProgressPercent()
         emitSeekScrobbleRestart(progressPercent = progressPercent)
@@ -1439,6 +1475,8 @@ fun PlayerRuntimeController.onEvent(
                     stopProgressUpdates()
                     stopWatchProgressSaving()
                     emitPauseScrobbleForCurrentProgress()
+                    // Same as Exo's pause: a paused player left alone can be killed by the system.
+                    saveWatchProgress()
                     schedulePauseOverlay()
                 } else {
                     userPausedManually = false
@@ -2051,24 +2089,27 @@ fun PlayerRuntimeController.onEvent(
         is PlayerEvent.OnSetSubtitleVerticalOffset -> {
             scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset) }
         }
+        is PlayerEvent.OnSetSubtitleFont -> {
+            scope.launch { playerSettingsDataStore.setSubtitleFontId(event.fontId) }
+        }
+        is PlayerEvent.OnSetSubtitleBackgroundColor -> {
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundColor(event.color) }
+        }
+        is PlayerEvent.OnSetSubtitleBackgroundRadius -> {
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundRadius(event.radius) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowEnabled -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowEnabled(event.enabled) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowOpacity -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowOpacity(event.opacity) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowSize -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowSize(event.size) }
+        }
         PlayerEvent.OnResetSubtitleDefaults -> {
             val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
-            scope.launch {
-                val defaults = SubtitleStyleSettings()
-                playerSettingsDataStore.setSubtitleSize(defaults.size)
-                if (editingHdr) {
-                    playerSettingsDataStore.setSubtitleHdrTextColor(defaults.hdrTextColor)
-                    playerSettingsDataStore.setSubtitleHdrBrightness(defaults.hdrBrightness)
-                } else {
-                    playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
-                }
-                playerSettingsDataStore.setSubtitleBold(defaults.bold)
-                playerSettingsDataStore.setSubtitleOutlineEnabled(defaults.outlineEnabled)
-                playerSettingsDataStore.setSubtitleOutlineColor(defaults.outlineColor)
-                playerSettingsDataStore.setSubtitleOutlineWidth(defaults.outlineWidth)
-                playerSettingsDataStore.setSubtitleVerticalOffset(defaults.verticalOffset)
-                playerSettingsDataStore.setSubtitleBackgroundColor(defaults.backgroundColor)
-            }
+            scope.launch { playerSettingsDataStore.resetSubtitleAppearance(resetHdrText = editingHdr) }
         }
         PlayerEvent.OnToggleAspectRatio -> {
             val state = _uiState.value

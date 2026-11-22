@@ -21,6 +21,7 @@ import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
+import com.nuvio.tv.domain.model.ContinueWatchingClickAction
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
@@ -62,6 +63,7 @@ data class LayoutSettingsUiState(
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
     val focusedPosterBackdropTrailerMuted: Boolean = true,
+    val focusedPosterTrailerContinueInDetails: Boolean = false,
     val focusedPosterBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget =
         FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
     val posterCardWidthDp: Int = 126,
@@ -69,6 +71,7 @@ data class LayoutSettingsUiState(
     val posterCardCornerRadiusDp: Int = 12,
     val cardDepthStyle: CardDepthStyle = CardDepthStyle(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val detailSeasonPostersEnabled: Boolean = false,
     val randomEpisodeEnabled: Boolean = false,
     val episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.BLUR,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
@@ -81,6 +84,7 @@ data class LayoutSettingsUiState(
     val detailPageTrailerPlayInBackground: Boolean = false,
     val detailPageTrailerPauseOnScroll: Boolean = true,
     val trailer4kEnabled: Boolean = true,
+    val trailerSubtitlesEnabled: Boolean = false,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
@@ -88,6 +92,7 @@ data class LayoutSettingsUiState(
     val showUnairedNextUp: Boolean = true,
     val continueWatchingEnabled: Boolean = true,
     val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
+    val continueWatchingClickAction: ContinueWatchingClickAction = ContinueWatchingClickAction.STREAM,
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
     val customPosterUrlPattern: String = "",
     val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
@@ -120,6 +125,7 @@ sealed class LayoutSettingsEvent {
     data class SetFocusedPosterBackdropExpandDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerMuted(val muted: Boolean) : LayoutSettingsEvent()
+    data class SetFocusedPosterTrailerContinueInDetails(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerPlaybackTarget(
         val target: FocusedPosterTrailerPlaybackTarget
     ) : LayoutSettingsEvent()
@@ -134,6 +140,7 @@ sealed class LayoutSettingsEvent {
         val enabled: Boolean
     ) : LayoutSettingsEvent()
     data class SetBlurUnwatchedEpisodes(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailSeasonPostersEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetRandomEpisodeEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetEpisodeOptionsOverlayStyle(val style: EpisodeOptionsOverlayStyle) : LayoutSettingsEvent()
     data class SetHomeImdbRatingsVisibility(val visibility: HomeImdbRatingsVisibility) : LayoutSettingsEvent()
@@ -146,6 +153,7 @@ sealed class LayoutSettingsEvent {
     data class SetDetailPageTrailerPlayInBackground(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerPauseOnScroll(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetTrailer4kEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetTrailerSubtitlesEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
@@ -153,6 +161,7 @@ sealed class LayoutSettingsEvent {
     data class SetShowUnairedNextUp(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetContinueWatchingEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetContinueWatchingSortMode(val mode: ContinueWatchingSortMode) : LayoutSettingsEvent()
+    data class SetContinueWatchingClickAction(val action: ContinueWatchingClickAction) : LayoutSettingsEvent()
     data class SetContinueWatchingCardStyle(val style: ContinueWatchingCardStyle) : LayoutSettingsEvent()
     data class SetAlwaysShowLandscapeClearlogo(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHeroDescriptionAutoScrollEnabled(val enabled: Boolean) : LayoutSettingsEvent()
@@ -297,6 +306,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.focusedPosterTrailerContinueInDetails.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(focusedPosterTrailerContinueInDetails = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.distinctUntilChanged().collectLatest { target ->
                 updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerPlaybackTarget = target) }
             }
@@ -324,6 +338,11 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.blurUnwatchedEpisodes.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(blurUnwatchedEpisodes = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.detailSeasonPostersEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(detailSeasonPostersEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -369,7 +388,8 @@ class LayoutSettingsViewModel @Inject constructor(
                         detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds,
                         detailPageTrailerPlayInBackground = settings.playInBackground,
                         detailPageTrailerPauseOnScroll = settings.pauseOnScroll,
-                        trailer4kEnabled = settings.allow4k
+                        trailer4kEnabled = settings.allow4k,
+                        trailerSubtitlesEnabled = settings.subtitlesEnabled
                     )
                 }
             }
@@ -411,6 +431,13 @@ class LayoutSettingsViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { mode ->
                     updateUiStateIfChanged { it.copy(continueWatchingSortMode = mode) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.continueWatchingClickAction
+                .distinctUntilChanged()
+                .collect { action ->
+                    updateUiStateIfChanged { it.copy(continueWatchingClickAction = action) }
                 }
         }
         viewModelScope.launch {
@@ -470,6 +497,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds -> setFocusedPosterBackdropExpandDelaySeconds(event.seconds)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled -> setFocusedPosterBackdropTrailerEnabled(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted -> setFocusedPosterBackdropTrailerMuted(event.muted)
+            is LayoutSettingsEvent.SetFocusedPosterTrailerContinueInDetails -> setFocusedPosterTrailerContinueInDetails(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerPlaybackTarget ->
                 setFocusedPosterBackdropTrailerPlaybackTarget(event.target)
             is LayoutSettingsEvent.SetPosterCardWidth -> setPosterCardWidth(event.widthDp)
@@ -481,6 +509,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetCardDepthSurfaceEnabled ->
                 setCardDepthSurfaceEnabled(event.surface, event.enabled)
             is LayoutSettingsEvent.SetBlurUnwatchedEpisodes -> setBlurUnwatchedEpisodes(event.enabled)
+            is LayoutSettingsEvent.SetDetailSeasonPostersEnabled -> setDetailSeasonPostersEnabled(event.enabled)
             is LayoutSettingsEvent.SetRandomEpisodeEnabled -> setRandomEpisodeEnabled(event.enabled)
             is LayoutSettingsEvent.SetEpisodeOptionsOverlayStyle -> setEpisodeOptionsOverlayStyle(event.style)
             is LayoutSettingsEvent.SetHomeImdbRatingsVisibility -> setHomeImdbRatingsVisibility(event.visibility)
@@ -493,6 +522,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground -> setDetailPageTrailerPlayInBackground(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll -> setDetailPageTrailerPauseOnScroll(event.enabled)
             is LayoutSettingsEvent.SetTrailer4kEnabled -> setTrailer4kEnabled(event.enabled)
+            is LayoutSettingsEvent.SetTrailerSubtitlesEnabled -> setTrailerSubtitlesEnabled(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
@@ -500,6 +530,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetShowUnairedNextUp -> setShowUnairedNextUp(event.enabled)
             is LayoutSettingsEvent.SetContinueWatchingEnabled -> setContinueWatchingEnabled(event.enabled)
             is LayoutSettingsEvent.SetContinueWatchingSortMode -> setContinueWatchingSortMode(event.mode)
+            is LayoutSettingsEvent.SetContinueWatchingClickAction -> setContinueWatchingClickAction(event.action)
             is LayoutSettingsEvent.SetContinueWatchingCardStyle -> setContinueWatchingCardStyle(event.style)
             is LayoutSettingsEvent.SetAlwaysShowLandscapeClearlogo -> setAlwaysShowLandscapeClearlogo(event.enabled)
             is LayoutSettingsEvent.SetHeroDescriptionAutoScrollEnabled -> setHeroDescriptionAutoScrollEnabled(event.enabled)
@@ -703,6 +734,13 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setFocusedPosterTrailerContinueInDetails(enabled: Boolean) {
+        if (_uiState.value.focusedPosterTrailerContinueInDetails == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setFocusedPosterTrailerContinueInDetails(enabled)
+        }
+    }
+
     private fun setFocusedPosterBackdropTrailerPlaybackTarget(target: FocusedPosterTrailerPlaybackTarget) {
         if (_uiState.value.focusedPosterBackdropTrailerPlaybackTarget == target) return
         viewModelScope.launch {
@@ -795,6 +833,13 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setTrailerSubtitlesEnabled(enabled: Boolean) {
+        if (_uiState.value.trailerSubtitlesEnabled == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setSubtitlesEnabled(enabled)
+        }
+    }
+
     private fun setTrailer4kEnabled(enabled: Boolean) {
         if (_uiState.value.trailer4kEnabled == enabled) return
         viewModelScope.launch {
@@ -806,6 +851,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.blurUnwatchedEpisodes == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setBlurUnwatchedEpisodes(enabled)
+        }
+    }
+
+    private fun setDetailSeasonPostersEnabled(enabled: Boolean) {
+        if (_uiState.value.detailSeasonPostersEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setDetailSeasonPostersEnabled(enabled)
         }
     }
 
@@ -920,6 +972,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.continueWatchingSortMode == mode) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setContinueWatchingSortMode(mode)
+        }
+    }
+
+    private fun setContinueWatchingClickAction(action: ContinueWatchingClickAction) {
+        if (_uiState.value.continueWatchingClickAction == action) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setContinueWatchingClickAction(action)
         }
     }
 

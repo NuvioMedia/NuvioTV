@@ -327,6 +327,8 @@ internal fun PlayerRuntimeController.scheduleStableProgressReset() {
         delay(STABLE_PROGRESS_RESET_DELAY_MS)
         val player = _exoPlayer ?: return@launch
         if (player.playbackState == Player.STATE_READY && player.isPlaying) {
+            // Seconds of steady playback confirm a tunneled stream really decodes.
+            tunneledFirstFrameAssumed = false
             resetErrorRetryState()
         }
     }
@@ -532,6 +534,12 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
             }
             reinitializeCurrentStream(startPaused = paused)
         } else {
+            if (tryRefreshExpiredLinkAfterError(detailedError)) {
+                return@launch
+            }
+            if (tryFallbackToNextSourceAfterError(detailedError)) {
+                return@launch
+            }
             if (maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
                 return@launch
             }

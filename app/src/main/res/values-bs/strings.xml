@@ -578,7 +578,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList Ocjene</string>
-    <string name="mdblist_subtitle">Podesi vanjske ocjene prikazane u glavnoj sekciji detalja</string>
     <string name="mdblist_enable_title">Omogući MDBList Ocjene</string>
     <string name="mdblist_enable_subtitle">Dohvati ocjene od vanjskih provajdera na ekranu detalja</string>
     <string name="mdblist_api_key_title">API Key</string>
@@ -1097,11 +1096,6 @@
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Sinhronizacija biblioteke…</string>
     <string name="library_type_all">Sve</string>
-    <string name="library_type_items">stavki</string>
-    <string name="library_empty_local_title">Još nema %1$s</string>
-    <string name="library_empty_trakt_title">Nema %1$s u ovoj listi</string>
-    <string name="library_empty_local_subtitle">Počni dodavati favorite da ih vidiš ovdje</string>
-    <string name="library_empty_trakt_subtitle">Koristi + u detaljima da dodaš stavke na watchlistu ili liste</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Učitavanje…</string>

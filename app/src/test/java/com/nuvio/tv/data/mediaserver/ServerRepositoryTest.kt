@@ -44,6 +44,20 @@ class ServerRepositoryTest {
     }
 
     @Test
+    fun deviceIdIsSeparateForEachSecondaryProfile() {
+        assertEquals("device-1", repository.profileDeviceId("device-1"))
+
+        repository.selectProfile(2)
+        assertEquals("device-1-p2", repository.profileDeviceId("device-1"))
+
+        repository.selectProfile(3)
+        assertEquals("device-1-p3", repository.profileDeviceId("device-1"))
+
+        repository.selectProfile(1)
+        assertEquals("device-1", repository.profileDeviceId("device-1"))
+    }
+
+    @Test
     fun removingAConnectionDropsItsToken() {
         repository.store(connection("c1", "k1"), "token-one")
         repository.remove("c1")

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.runtime.AppRestarter
@@ -8,7 +9,9 @@ import com.nuvio.tv.data.local.ImagePerformancePreferences
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.SentrySettingsDataStore
+import coil3.SingletonImageLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,8 @@ data class AdvancedSettingsUiState(
     val rgb565Enabled: Boolean = true,
     val sentryEnabled: Boolean = true,
     val customUserAgent: String = ""
+    val hardwareBitmapsEnabled: Boolean = false,
+    val sentryEnabled: Boolean = true
 )
 
 sealed class AdvancedSettingsEvent {
@@ -35,6 +40,7 @@ sealed class AdvancedSettingsEvent {
     data class SetPlaybackIssueReportsEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetPlayerStatsHudEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetRgb565Enabled(val enabled: Boolean) : AdvancedSettingsEvent()
+    data class SetHardwareBitmapsEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetSentryEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetCustomUserAgent(val value: String) : AdvancedSettingsEvent()
 }
@@ -46,13 +52,19 @@ class AdvancedSettingsViewModel @Inject constructor(
     private val deviceLocalPlayerPreferences: DeviceLocalPlayerPreferences,
     private val sentrySettingsDataStore: SentrySettingsDataStore,
     private val imagePerformancePreferences: ImagePerformancePreferences,
-    private val appRestarter: AppRestarter
+    private val appRestarter: AppRestarter,
+    @param:ApplicationContext private val appContext: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AdvancedSettingsUiState())
     val uiState: StateFlow<AdvancedSettingsUiState> = _uiState.asStateFlow()
 
     init {
-        _uiState.update { it.copy(rgb565Enabled = imagePerformancePreferences.rgb565Enabled) }
+        _uiState.update {
+            it.copy(
+                rgb565Enabled = imagePerformancePreferences.rgb565Enabled,
+                hardwareBitmapsEnabled = imagePerformancePreferences.hardwareBitmapsEnabled
+            )
+        }
         viewModelScope.launch {
             layoutPreferenceDataStore.fastHorizontalNavigationEnabled.collectLatest { enabled ->
                 _uiState.update { it.copy(fastHorizontalNavigationEnabled = enabled) }
@@ -121,6 +133,12 @@ class AdvancedSettingsViewModel @Inject constructor(
                 if (imagePerformancePreferences.setRgb565Enabled(event.enabled)) {
                     _uiState.update { it.copy(rgb565Enabled = event.enabled) }
                     appRestarter.restart()
+                }
+            }
+            is AdvancedSettingsEvent.SetHardwareBitmapsEnabled -> {
+                if (imagePerformancePreferences.setHardwareBitmapsEnabled(event.enabled)) {
+                    _uiState.update { it.copy(hardwareBitmapsEnabled = event.enabled) }
+                    SingletonImageLoader.get(appContext).memoryCache?.clear()
                 }
             }
             is AdvancedSettingsEvent.SetSentryEnabled -> {
