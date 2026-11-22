@@ -17,6 +17,7 @@ import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.repository.AddonEpisodeAirDate
 import com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository
 import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.data.repository.TraktCommentsService
@@ -35,6 +36,8 @@ import com.nuvio.tv.domain.model.TmdbSettings
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.isSeriesLikeType
+import com.nuvio.tv.domain.model.isWatchedAsOneItem
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -77,6 +80,16 @@ import javax.inject.Inject
 
 private const val TAG = "MetaDetailsViewModel"
 
+/**
+ * Whether pressing Back on the full-screen trailer should hand playback back to the
+ * detail page as a background trailer instead of stopping it.
+ */
+internal fun shouldContinueTrailerInBackgroundOnBack(
+    isTrailerPlaying: Boolean,
+    autoplayEnabled: Boolean,
+    playInBackground: Boolean
+): Boolean = isTrailerPlaying && autoplayEnabled && playInBackground
+
 @HiltViewModel
 class MetaDetailsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -92,6 +105,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val trailerService: TrailerService,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
+    private val trailerPlayerPool: com.nuvio.tv.core.player.TrailerPlayerPool,
+    private val backgroundTrailerController: com.nuvio.tv.core.player.BackgroundTrailerController,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktCommentsService: TraktCommentsService,
     private val traktRelatedService: TraktRelatedService,
@@ -115,11 +130,13 @@ class MetaDetailsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MetaDetailsUiState())
     private val shuffleVisit = System.nanoTime()
-    val uiState: StateFlow<MetaDetailsUiState> = combine(
-        _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
-    ) { state, profile, progress ->
-        applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, MetaDetailsUiState())
+    val uiState: StateFlow<MetaDetailsUiState> by lazy {
+        combine(
+            _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
+        ) { state, profile, progress ->
+            applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, _uiState.value)
+    }
 
     private val _posterCardCornerRadiusDp = MutableStateFlow(12)
     val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
@@ -146,6 +163,8 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerAutoplayEnabled = false
     private var trailerPlayInBackground = false
     private var trailerHasPlayed = false
+    private var trailerHandoffActive = false
+    private var handoffTrailerYoutubeKey: String? = null
     private var suppressSeasonAutoSwitch = false
 
     private var isPlayButtonFocused = false
@@ -163,6 +182,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val _optimisticUnmarks = mutableSetOf<Pair<Int, Int>>()
 
     init {
+        applyTrailerHandoff()
         posterOptions.bind(viewModelScope)
         observeMetaViewSettings()
         observeTrailerAutoplaySettings()
@@ -174,6 +194,7 @@ class MetaDetailsViewModel @Inject constructor(
         observeMovieWatched()
         observeRelatedWatchedStatus()
         observeBlurUnwatchedEpisodes()
+        observeSeasonPostersEnabled()
         observeEpisodeOptionsOverlayStyle()
         observeOverallRatingsVisibility()
         observeDetailImdbRatingsVisibility()
@@ -362,6 +383,7 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPlayButtonFocused -> handlePlayButtonFocused()
             MetaDetailsEvent.OnTrailerButtonClick -> handleTrailerButtonClick()
             MetaDetailsEvent.OnTrailerEnded -> handleTrailerEnded()
+            MetaDetailsEvent.OnTrailerBackPress -> handleTrailerBackPress()
             is MetaDetailsEvent.OnSharedTrailerSelected -> handleSharedTrailerSelected(event.trailer)
             MetaDetailsEvent.OnDismissSharedTrailer -> dismissSharedTrailerOverlay()
             MetaDetailsEvent.OnRetrySharedTrailer -> retrySharedTrailer()
@@ -377,6 +399,7 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPickerDismiss -> dismissListPicker()
             MetaDetailsEvent.OnRemovalConfirmed -> confirmPickerRemoval()
             MetaDetailsEvent.OnRemovalCancelled -> cancelPickerRemoval()
+            is MetaDetailsEvent.OnShowMessage -> showMessage(event.message, event.isError)
             MetaDetailsEvent.OnClearMessage -> clearMessage()
             MetaDetailsEvent.OnLifecyclePause -> handleLifecyclePause()
         }
@@ -606,7 +629,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun observeMovieWatched() {
-        if (itemType.lowercase() != "movie") return
+        if (isSeriesLikeType(itemType)) return
         viewModelScope.launch {
             _effectiveContentId.flatMapLatest { cid ->
                 _uiState.map { it.meta?.imdbId?.takeIf { id -> id != cid && id.isNotBlank() } }
@@ -632,6 +655,18 @@ class MetaDetailsViewModel @Inject constructor(
                 _uiState.update { state ->
                     if (state.blurUnwatchedEpisodes == enabled) state else state.copy(blurUnwatchedEpisodes = enabled)
                 }
+                }
+        }
+    }
+
+    private fun observeSeasonPostersEnabled() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.detailSeasonPostersEnabled
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    _uiState.update { state ->
+                        if (state.seasonPostersEnabled == enabled) state else state.copy(seasonPostersEnabled = enabled)
+                    }
                 }
         }
     }
@@ -1023,7 +1058,7 @@ class MetaDetailsViewModel @Inject constructor(
         )?.resolveForMeta(enriched)
 
         applyMeta(
-            meta = enriched,
+            meta = withHandoffTrailer(enriched),
             initialNextToWatch = cachedNextToWatch
         )
 
@@ -1516,7 +1551,8 @@ class MetaDetailsViewModel @Inject constructor(
 
                 val ratings = imdbEpisodeRatingsRepository.getEpisodeRatings(
                     imdbId = imdbId,
-                    tmdbId = tmdbId
+                    tmdbId = tmdbId,
+                    addonEpisodes = meta.videos.map { AddonEpisodeAirDate(it.season, it.episode, it.released) }
                 )
 
                 _uiState.update { state ->
@@ -1564,7 +1600,7 @@ class MetaDetailsViewModel @Inject constructor(
             ?: return meta
 
         val isSeries = meta.apiType in listOf("series", "tv")
-        val needsEpisodes = settings.useEpisodes && isSeries
+        val needsEpisodes = (settings.useEpisodes || settings.useSeasonPosters) && isSeries
 
         // Fetch main enrichment and episode enrichment in parallel.
         val (enrichment, episodeMap) = coroutineScope {
@@ -1678,7 +1714,8 @@ class MetaDetailsViewModel @Inject constructor(
                             useTmdbReleaseDates = false
                         ),
                         thumbnail = if (settings.useEpisodes) ep?.thumbnail ?: video.thumbnail else video.thumbnail,
-                        runtime = if (settings.useEpisodes) ep?.runtimeMinutes ?: video.runtime else video.runtime
+                        runtime = if (settings.useEpisodes) ep?.runtimeMinutes ?: video.runtime else video.runtime,
+                        seasonPoster = if (settings.useSeasonPosters) ep?.seasonPoster ?: video.seasonPoster else video.seasonPoster
                     )
                 }
             )
@@ -2188,16 +2225,8 @@ class MetaDetailsViewModel @Inject constructor(
         return meta.videos.firstOrNull { it.id == defaultVideoId && it.available != false }
     }
 
-    private fun shouldResumeProgress(progress: WatchProgress): Boolean {
-        if (progress.isCompleted()) return false
-        if (progress.progressPercentage >= 0.02f) return true
-
-        val hasStartedPlayback = progress.position > 0L ||
-            progress.progressPercent?.let { it > 0f } == true
-        return hasStartedPlayback &&
-            progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
-            progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
-    }
+    // Same rule the player uses to resume, so Resume never restarts from 0
+    private fun shouldResumeProgress(progress: WatchProgress): Boolean = progress.isInProgress()
 
     private fun toggleLibrary() {
         if (
@@ -2453,7 +2482,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun toggleMovieWatched() {
         val meta = _uiState.value.meta ?: return
-        if (meta.apiType != "movie") return
+        if (!meta.isWatchedAsOneItem()) return
         if (_uiState.value.isMovieWatchedPending) return
 
         viewModelScope.launch {
@@ -2837,8 +2866,43 @@ class MetaDetailsViewModel @Inject constructor(
 
     // --- Trailer ---
 
+    private fun applyTrailerHandoff() {
+        val transfer = backgroundTrailerController.pendingTransfer(itemId)
+        val poolHandoff = if (transfer == null) trailerPlayerPool.peekHandoff(itemId) else null
+        if (transfer == null && poolHandoff == null) return
+        if (isServerItem || !AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            backgroundTrailerController.cancelTransfer(itemId)
+            trailerPlayerPool.cancelHandoff(itemId)
+            return
+        }
+        val playInBackground = trailerPlayerPool.playInBackgroundPreference
+        trailerHandoffActive = true
+        trailerHasPlayed = true
+        handoffTrailerYoutubeKey = transfer?.youtubeKey ?: poolHandoff?.youtubeKey
+        _uiState.update { state ->
+            state.copy(
+                trailerUrl = transfer?.videoUrl ?: poolHandoff?.videoUrl,
+                trailerAudioUrl = transfer?.audioUrl ?: poolHandoff?.audioUrl,
+                isTrailerLoading = false
+            )
+        }
+        setTrailerPlaybackState(
+            isPlaying = !playInBackground,
+            showControls = false,
+            hideLogo = false,
+            isBackgroundPlaying = playInBackground
+        )
+    }
+
+    private fun withHandoffTrailer(meta: Meta): Meta {
+        val key = handoffTrailerYoutubeKey?.takeIf { it.isNotBlank() } ?: return meta
+        if (meta.trailers.any { it.ytId == key }) return meta
+        return meta.copy(trailers = listOf(MetaTrailer(type = "Trailer", ytId = key)) + meta.trailers)
+    }
+
     private fun fetchTrailerUrl() {
         if (isServerItem) return
+        if (trailerHandoffActive) return
         val meta = _uiState.value.meta ?: return
 
         trailerFetchJob?.cancel()
@@ -2990,6 +3054,28 @@ class MetaDetailsViewModel @Inject constructor(
             isPlaying = false,
             showControls = false,
             hideLogo = false
+        )
+    }
+
+    private fun handleTrailerBackPress() {
+        val continueInBackground = shouldContinueTrailerInBackgroundOnBack(
+            isTrailerPlaying = _uiState.value.isTrailerPlaying,
+            autoplayEnabled = trailerAutoplayEnabled,
+            playInBackground = trailerPlayInBackground
+        )
+        if (!continueInBackground) {
+            handleTrailerEnded()
+            return
+        }
+        // Hand the running trailer back to the detail page without restarting it.
+        trailerHasPlayed = true
+        isPlayButtonFocused = false
+        idleTimerJob?.cancel()
+        setTrailerPlaybackState(
+            isPlaying = false,
+            showControls = false,
+            hideLogo = false,
+            isBackgroundPlaying = true
         )
     }
 

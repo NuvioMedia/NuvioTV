@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -30,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +43,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -131,26 +135,43 @@ fun FolderDetailScreen(
         { item -> uiState.movieWatchedStatus[com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)] == true }
     }
 
-    val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
-    val enrichedPreviews by viewModel.enrichedPreviews.collectAsStateWithLifecycle()
-    val failedEnrichmentIds by viewModel.failedEnrichmentIds.collectAsStateWithLifecycle()
+    // Kept as State down to ModernHomeContent, like ModernHomeRoute: reading the values here would
+    // recompose the whole folder screen on every enrichment update.
+    val enrichingItemId = viewModel.enrichingItemId.collectAsStateWithLifecycle()
+    val enrichedPreviews = viewModel.enrichedPreviews.collectAsStateWithLifecycle()
+    val failedEnrichmentIds = viewModel.failedEnrichmentIds.collectAsStateWithLifecycle()
     val trailerPreviewUrls by viewModel.trailerPreviewUrls.collectAsStateWithLifecycle()
     val trailerPreviewAudioUrls by viewModel.trailerPreviewAudioUrls.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
+    val onNavigateToDetailWithTrailer = remember(onNavigateToDetail, viewModel) {
+        { itemId: String, itemType: String, addonBaseUrl: String ->
+            viewModel.beginTrailerHandoff(itemId)
+            onNavigateToDetail(itemId, itemType, addonBaseUrl)
+        }
+    }
 
     if (uiState.viewMode == FolderViewMode.FOLLOW_LAYOUT) {
         FollowLayoutContent(
             uiState = uiState,
             focusState = followLayoutFocusState,
+            tabFocusState = tabFocusStates[uiState.selectedTabIndex] ?: FolderDetailGridFocusState(),
             enrichingItemId = enrichingItemId,
             enrichedPreviews = enrichedPreviews,
             failedEnrichmentIds = failedEnrichmentIds,
-            onNavigateToDetail = onNavigateToDetail,
+            onNavigateToDetail = onNavigateToDetailWithTrailer,
             onLoadMoreCatalog = viewModel::loadMoreForCatalog,
             onSelectTab = viewModel::selectTab,
             onLoadMoreForSelectedTab = { viewModel.loadMoreItems(viewModel.uiState.value.selectedTabIndex) },
             onSaveFocusState = { vi, vo, rk, ikm, m, ma, ri, ii ->
                 viewModel.saveFollowLayoutFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
+            },
+            onSaveTabFocusState = { verticalIndex, verticalOffset, focusedItemKey ->
+                viewModel.saveTabFocusState(
+                    tabIndex = uiState.selectedTabIndex,
+                    verticalScrollIndex = verticalIndex,
+                    verticalScrollOffset = verticalOffset,
+                    focusedItemKey = focusedItemKey
+                )
             },
             onItemFocus = viewModel::onItemFocused,
             onPreloadAdjacentItem = viewModel::preloadAdjacentItem,
@@ -241,7 +262,7 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
             }
             AsyncImage(
                 model = folder.coverImageUrl,
-                contentDescription = folder.title,
+                contentDescription = null,
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
@@ -305,7 +326,7 @@ private fun TabbedGridContent(
             }
             AsyncImage(
                 model = folder.coverImageUrl,
-                contentDescription = folder.title,
+                contentDescription = null,
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
@@ -412,15 +433,32 @@ private fun TabbedGridContent(
                 initialFirstVisibleItemIndex = tabFocusState.verticalScrollIndex,
                 initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
             )
+            var lastHandledScrollTrigger by remember { mutableIntStateOf(gridScrollToTopTrigger) }
+            var lastHandledTabIndex by remember { mutableIntStateOf(uiState.selectedTabIndex) }
 
-            // Scroll grid to top when OK is pressed on a tab or tab changes
+            // Scroll grid to top only when OK is pressed on a tab or tab changes (not on initial restore)
             LaunchedEffect(gridScrollToTopTrigger, uiState.selectedTabIndex) {
-                if (gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0) {
-                    gridState.scrollToItem(0, 0)
+                val triggerChanged = gridScrollToTopTrigger != lastHandledScrollTrigger
+                val tabChanged = uiState.selectedTabIndex != lastHandledTabIndex
+                lastHandledScrollTrigger = gridScrollToTopTrigger
+                lastHandledTabIndex = uiState.selectedTabIndex
+                if (!triggerChanged && !tabChanged) return@LaunchedEffect
+                if (triggerChanged) {
+                    if (gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0) {
+                        gridState.scrollToItem(0, 0)
+                    }
+                } else if (tabChanged) {
+                    val targetIndex = tabFocusState.verticalScrollIndex
+                    val targetOffset = tabFocusState.verticalScrollOffset
+                    if (gridState.firstVisibleItemIndex != targetIndex ||
+                        gridState.firstVisibleItemScrollOffset != targetOffset
+                    ) {
+                        gridState.scrollToItem(targetIndex, targetOffset)
+                    }
                 }
             }
 
-            DisposableEffect(Unit) {
+            DisposableEffect(uiState.selectedTabIndex) {
                 onDispose {
                     onSaveFocusState(
                         gridState.firstVisibleItemIndex,
@@ -446,10 +484,13 @@ private fun TabbedGridContent(
             LaunchedEffect(items, tabFocusState.hasSavedFocus, tabFocusState.focusedItemKey) {
                 val targetKey = tabFocusState.focusedItemKey ?: return@LaunchedEffect
                 if (!tabFocusState.hasSavedFocus) return@LaunchedEffect
-                val requester = itemFocusRequesters[targetKey] ?: return@LaunchedEffect
-                repeat(2) { withFrameNanos { } }
-                if (runCatching { requester.requestFocus() }.isSuccess) {
-                    lastFocusedItemKey = targetKey
+                repeat(8) {
+                    val requester = itemFocusRequesters[targetKey]
+                    if (requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)) {
+                        lastFocusedItemKey = targetKey
+                        return@LaunchedEffect
+                    }
+                    withFrameNanos { }
                 }
             }
 
@@ -537,7 +578,8 @@ private fun TabbedGridContent(
                                 modifier = Modifier
                                     .width(posterCardStyle.width)
                                     .height(loadingCardHeight)
-                                    .focusProperties { canFocus = false },
+                              .clearAndSetSemantics {}
+                              .focusProperties { canFocus = false },
                                 shape = CardDefaults.shape(shape = cardShape),
                                 colors = CardDefaults.colors(
                                     containerColor = NuvioTheme.colors.BackgroundCard,
@@ -884,14 +926,16 @@ private fun RowsContent(
 private fun FollowLayoutContent(
     uiState: FolderDetailUiState,
     focusState: HomeScreenFocusState,
-    enrichingItemId: String? = null,
-    enrichedPreviews: Map<String, MetaPreview> = emptyMap(),
-    failedEnrichmentIds: Set<String> = emptySet(),
+    tabFocusState: FolderDetailGridFocusState = FolderDetailGridFocusState(),
+    enrichingItemId: State<String?>,
+    enrichedPreviews: State<Map<String, MetaPreview>>,
+    failedEnrichmentIds: State<Set<String>>,
     onNavigateToDetail: (String, String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSelectTab: (Int) -> Unit = {},
     onLoadMoreForSelectedTab: () -> Unit = {},
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
+    onSaveTabFocusState: (Int, Int, String?) -> Unit = { _, _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
@@ -983,12 +1027,12 @@ private fun FollowLayoutContent(
                 TabbedGridContent(
                     uiState = uiState,
                     folder = uiState.folder ?: return,
-                    tabFocusState = FolderDetailGridFocusState(),
+                    tabFocusState = tabFocusState,
                     onSelectTab = onSelectTab,
                     onNavigateToDetail = onNavigateToDetail,
                     isItemWatched = isItemWatched,
                     onLoadMore = onLoadMoreForSelectedTab,
-                    onSaveFocusState = { _, _, _ -> },
+                    onSaveFocusState = onSaveTabFocusState,
                     onItemLongPress = onCatalogItemLongPress
                 )
             }

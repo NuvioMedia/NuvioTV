@@ -294,6 +294,19 @@ class SimklProjectionsTest {
         assertNull(parseSimklUtcEpochMs("2024-01-01T00:00:00+01:00"))
     }
 
+    @Test
+    fun `timestamp parser is case insensitive and rejects malformed input`() {
+        assertEquals(951_782_400_000L, parseSimklUtcEpochMs("2000-02-29t00:00:00z"))
+        assertEquals(951_782_400_500L, parseSimklUtcEpochMs(" 2000-02-29T00:00:00.5Z "))
+        assertNull(parseSimklUtcEpochMs(null))
+        assertNull(parseSimklUtcEpochMs(""))
+        assertNull(parseSimklUtcEpochMs("2000-02-29 00:00:00Z"))
+        assertNull(parseSimklUtcEpochMs("2000-02-29T00:00:00"))
+        assertNull(parseSimklUtcEpochMs("2000-13-01T00:00:00Z"))
+        assertNull(parseSimklUtcEpochMs("2000-02-29T24:00:00Z"))
+        assertNull(parseSimklUtcEpochMs("2000-02-29T00:00:00.1234567890Z"))
+    }
+
     private fun entry(
         type: SimklMediaType,
         status: SimklListStatus,

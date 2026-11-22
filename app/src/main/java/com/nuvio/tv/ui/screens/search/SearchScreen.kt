@@ -195,6 +195,10 @@ fun SearchScreen(
     val topInputFocusRequester = remember(isVoiceSearchAvailable) {
         if (isVoiceSearchAvailable) voiceFocusRequester else searchFocusRequester
     }
+    // Whichever of voice/text field was focused last is where Up or Back from results returns to.
+    var lastInputWasVoice by remember { mutableStateOf(isVoiceSearchAvailable) }
+    val lastInputFocusRequester =
+        if (isVoiceSearchAvailable && lastInputWasVoice) voiceFocusRequester else searchFocusRequester
     val speechRecognizer = remember(context, isVoiceSearchAvailable) {
         if (isVoiceSearchAvailable) {
             runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
@@ -592,7 +596,7 @@ fun SearchScreen(
                 backToFieldLatched = true
                 coroutineScope.launch {
                     listState.scrollToItem(0)
-                    runCatching { searchFocusRequester.requestFocus() }
+                    runCatching { lastInputFocusRequester.requestFocus() }
                     // The focus request can start an input session and show the keyboard.
                     keyboardController?.hide()
                 }
@@ -633,7 +637,11 @@ fun SearchScreen(
                     canMoveToResults = canMoveToResults,
                     voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
                     searchFocusRequester = searchFocusRequester,
-                    onSearchFieldFocusChanged = { focused -> isSearchFieldFocused = focused },
+                    onSearchFieldFocusChanged = { focused ->
+                        isSearchFieldFocused = focused
+                        if (focused) lastInputWasVoice = false
+                    },
+                    onVoiceFocusChanged = { focused -> if (focused) lastInputWasVoice = true },
                     onQueryChanged = handleQueryChanged,
                     onSubmit = {
                         submitCurrentQuery(uiState.query.trim())
@@ -824,7 +832,7 @@ fun SearchScreen(
                                 rowFocusRequester = rowFocusRequester,
                                 entryFocusRequester = entryFocusRequester,
                                 // Anchor Up to the field; geometric focus varies with the card.
-                                upFocusRequester = if (index == 0) searchFocusRequester else null,
+                                upFocusRequester = if (index == 0) lastInputFocusRequester else null,
                                 listState = listState,
                                 restorerFocusedIndex = if (restoringSearchFocus.value && catalogKey == viewModel.savedFocusRowKey) {
                                     viewModel.savedFocusItemIndex
@@ -1169,6 +1177,7 @@ private fun SearchInputField(
     voiceFocusRequester: FocusRequester?,
     searchFocusRequester: FocusRequester,
     onSearchFieldFocusChanged: (Boolean) -> Unit,
+    onVoiceFocusChanged: (Boolean) -> Unit,
     onQueryChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     showVoiceSearch: Boolean,
@@ -1294,7 +1303,10 @@ private fun SearchInputField(
                                 Modifier
                             }
                         )
-                        .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                        .onFocusChanged {
+                            isVoiceButtonFocused = it.isFocused
+                            onVoiceFocusChanged(it.isFocused)
+                        }
                         .size(NuvioTheme.spacing.huge)
                         .border(
                             width = if (isVoiceButtonFocused || isVoiceListening) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,

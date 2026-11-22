@@ -6,7 +6,18 @@ import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.streams.*
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.usenet.BuiltInUsenetService
+import com.nuvio.tv.core.usenet.BuiltInUsenetResult
+import com.nuvio.tv.core.usenet.UsenetProvider
+import com.nuvio.tv.core.usenet.UsenetIndexer
+import com.nuvio.tv.core.usenet.UsenetSort
+import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
+import com.nuvio.tv.core.usenet.UsenetSourceSettings
+import com.nuvio.tv.core.usenet.NewznabProtocol
+import com.nuvio.tv.core.usenet.UsenetRelease
+import com.nuvio.tv.data.mediaserver.ServerStreamSource
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.data.remote.dto.StreamDto
@@ -16,9 +27,11 @@ import com.nuvio.tv.domain.model.AddonResource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.LocalScraperResult
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.RepositoryType
 import com.nuvio.tv.domain.model.ScraperInfo
+import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.repository.AddonRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -28,6 +41,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -124,6 +140,188 @@ class StreamRepositoryPluginIsolationTest {
         coVerify(exactly = 0) { harness.addonRepository.fetchAddon(any()) }
     }
 
+    @Test fun `built in and server sources complete without addons and replace sorted incremental results`() = runTest {
+        val source = MutableStateFlow(UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")),
+            indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api"))))
+        fun stream(title: String) = Stream(name = title, title = title, description = null,
+            url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null, behaviorHints = null,
+            addonName = BuiltInUsenetService.GROUP_NAME, addonLogo = null, nzbUrl = "https://indexer.test/$title",
+            servers = listOf("nntps://news.test:563/20"))
+        val low = stream("720p")
+        val high = stream("2160p")
+        var searches = 0
+        val results = flow {
+            searches++
+            emit(BuiltInUsenetResult(group = AddonStreams(BuiltInUsenetService.GROUP_NAME, null, listOf(low))))
+            emit(BuiltInUsenetResult(group = AddonStreams(BuiltInUsenetService.GROUP_NAME, null, listOf(high))))
+        }
+        val serverStream = low.copy(addonName = "Server", url = "https://server.test/video", nzbUrl = null)
+        val serverSource = ServerStreamSource("Server", preferred = false) {
+            kotlinx.coroutines.yield()
+            listOf(serverStream)
+        }
+        val harness = newHarness(emptyList(), source, results, emptyList(), listOf(serverSource))
+        suspend fun load() = harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null).toList()
+        val last = (load().last() as NetworkResult.Success).data
+        assertEquals(setOf(BuiltInUsenetService.GROUP_NAME, "Server"), last.map { it.addonName }.toSet())
+        assertEquals(listOf(high), last.single { it.addonName == BuiltInUsenetService.GROUP_NAME }.streams)
+        assertEquals(listOf(serverStream), last.single { it.addonName == "Server" }.streams)
+        load()
+        assertEquals(1, searches)
+        source.value = source.value.copy(sort = UsenetSort.NEWEST)
+        load()
+        assertEquals(2, searches)
+        coVerify(exactly = 0) { harness.api.getStreams(any()) }
+    }
+
+    @Test fun `failing built in search does not cancel addon results`() = runTest {
+        val source = MutableStateFlow(UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")),
+            indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api"))))
+        val harness = newHarness(emptyList(), source, flow { throw IllegalStateException("secret-api-key") })
+        val success = harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null).toList()
+            .last() as NetworkResult.Success
+        assertEquals(listOf("Fast Addon"), success.data.map { it.addonName })
+    }
+
+    @Test fun `changing native ranking preserves addon NZB and media server stream order`() = runTest {
+        val custom = StreamRankingProfile(preferredLanguages = listOf("nl"), topPerBucket = 0,
+            sort = listOf(StreamRankingSort(StreamRankingKey.LANGUAGE)), rules = listOf(
+                StreamRankingRule("Native results only", action = StreamRankingAction.REQUIRE,
+                    conditions = listOf(StreamRankingCondition(StreamRankingField.TITLE, StreamRankingOperator.CONTAINS, "Native")))))
+        val source = MutableStateFlow(UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")),
+            indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api")),
+            ranking = StreamRankingSettings(StreamRankingPreset.CUSTOM, custom)))
+        val high = UsenetRelease("Native.2160p.BluRay.REMUX.English-FraMeSToR", "https://indexer.test/high")
+        val low = UsenetRelease("Native.1080p.WEB-DL.Dutch-Other", "https://indexer.test/low")
+        fun serverStream(title: String) = Stream(name = title, title = title, description = null,
+            url = "https://server.test/$title", ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
+            behaviorHints = null, addonName = "Server", addonLogo = null)
+        val serverStreams = listOf(serverStream("720p"), serverStream("2160p"))
+        val nativeResults = flow {
+            val streams = NewznabProtocol.arrange(listOf(high, low), source.value).map { release ->
+                serverStream(release.title).copy(addonName = BuiltInUsenetService.GROUP_NAME, url = null, nzbUrl = release.nzbUrl)
+            }
+            emit(BuiltInUsenetResult(group = AddonStreams(BuiltInUsenetService.GROUP_NAME, null, streams)))
+        }
+        val harness = newHarness(emptyList(), source, nativeResults,
+            serverSources = listOf(ServerStreamSource("Server", preferred = false) { serverStreams }))
+        // Even addon-provided NZBs stay in the addon's order; only the native source is ranked.
+        coEvery { harness.api.getStreams(any()) } returns Response.success(StreamResponseDto(streams = listOf(
+            StreamDto(name = "Addon 720p", nzbUrl = "https://addon.test/low"),
+            StreamDto(name = "Addon 2160p", nzbUrl = "https://addon.test/high"))))
+        suspend fun load() = (harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null)
+            .toList().last() as NetworkResult.Success).data
+        val before = load()
+        assertEquals(listOf(low.title, high.title), before.single { it.addonName == BuiltInUsenetService.GROUP_NAME }.streams.map { it.title })
+        source.value = source.value.copy(ranking = StreamRankingSettings(StreamRankingPreset.BEST_QUALITY))
+        val after = load()
+        assertEquals(listOf(high.title, low.title), after.single { it.addonName == BuiltInUsenetService.GROUP_NAME }.streams.map { it.title })
+        for (groups in listOf(before, after)) {
+            assertEquals(serverStreams, groups.single { it.addonName == "Server" }.streams)
+            assertEquals(listOf("Addon 720p", "Addon 2160p"), groups.single { it.addonName == "Fast Addon" }.streams.map { it.name })
+        }
+        assertEquals(before.single { it.addonName == "Fast Addon" }, after.single { it.addonName == "Fast Addon" })
+    }
+
+    @Test
+    fun `plugin continuation does not query addons`() = runTest {
+        val scraper = compatibleScraper()
+        val harness = newHarness(listOf(scraper))
+        coEvery { harness.tmdbService.ensureTmdbId("tt1341338", "movie") } returns "123"
+        every {
+            harness.pluginManager.executeScrapersStreaming(
+                "123",
+                "movie",
+                null,
+                null,
+                "local-plugin-plugin",
+                true
+            )
+        } returns flowOf(
+            scraper to listOf(
+                LocalScraperResult(
+                    title = "Episode",
+                    url = "https://stream.example/ep.m3u8"
+                )
+            )
+        )
+
+        val results = harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null,
+            priorityBingeGroup = "local-plugin-plugin",
+            preferredPluginOnly = true,
+            continuePluginOnly = true
+        ).toList()
+
+        val groups = (results.last() as NetworkResult.Success).data
+        assertEquals(listOf("Plugin"), groups.map { it.addonName })
+        coVerify(exactly = 0) { harness.api.getStreams(any()) }
+    }
+
+    @Test
+    fun `a binge group priority alone reuses the finished search`() = runTest {
+        val harness = newHarness(emptyList())
+
+        harness.repository.getStreamsFromAllAddons(
+            type = "movie", videoId = "tt1341338", season = null, episode = null
+        ).toList()
+        val results = harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null,
+            priorityBingeGroup = "addon-release-group"
+        ).toList()
+
+        val groups = (results.last() as NetworkResult.Success).data
+        assertEquals(listOf("Fast Addon"), groups.map { it.addonName })
+        coVerify(exactly = 1) { harness.api.getStreams(any()) }
+    }
+
+    @Test
+    fun `a full search does not reuse a plugin continuation`() = runTest {
+        val scraper = compatibleScraper()
+        val harness = newHarness(listOf(scraper))
+        coEvery { harness.tmdbService.ensureTmdbId("tt1341338", "movie") } returns "123"
+        every {
+            harness.pluginManager.executeScrapersStreaming("123", "movie", null, null, "local-plugin-plugin", any())
+        } returns flowOf(
+            scraper to listOf(
+                LocalScraperResult(
+                    title = "Episode",
+                    url = "https://stream.example/ep.m3u8"
+                )
+            )
+        )
+
+        harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null,
+            priorityBingeGroup = "local-plugin-plugin",
+            preferredPluginOnly = true,
+            continuePluginOnly = true
+        ).toList()
+        val results = harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null,
+            priorityBingeGroup = "local-plugin-plugin"
+        ).toList()
+
+        val groups = (results.last() as NetworkResult.Success).data
+        assertEquals(setOf("Fast Addon", "Plugin"), groups.map { it.addonName }.toSet())
+        coVerify(exactly = 1) { harness.api.getStreams(any()) }
+    }
+
     @Test
     fun `repository grouping preserves each plugin provider name`() = runTest {
         assertPluginProviderNames(groupByRepository = true)
@@ -145,7 +343,9 @@ class StreamRepositoryPluginIsolationTest {
             listOf(PluginRepository(id = "repo", name = "Repository", url = "https://repo.example"))
         )
         coEvery { harness.tmdbService.ensureTmdbId("tt1341338", "movie") } returns "123"
-        every { harness.pluginManager.executeScrapersStreaming("123", "movie", null, null) } returns
+        every {
+            harness.pluginManager.executeScrapersStreaming("123", "movie", null, null, null, false)
+        } returns
             flowOf(*scrapers.map { scraper ->
                 scraper to listOf(LocalScraperResult(
                     title = "Shared title",
@@ -164,6 +364,7 @@ class StreamRepositoryPluginIsolationTest {
         )
         val streams = pluginGroups.flatMap { it.streams }
         assertEquals(scrapers.map { it.name }, streams.map { it.pluginSourceName })
+        assertEquals(scrapers.map { pluginBingeGroup(scraperId = it.id, url = "https://stream.example/" + it.id + ".m3u8", title = "Shared title") }, streams.map { it.behaviorHints?.bingeGroup })
         assertEquals(listOf("Shared title", "Shared title"), streams.map { it.title })
         assertTrue(streams.all { stream ->
             stream.addonName == if (groupByRepository) "Repository" else stream.pluginSourceName
@@ -171,7 +372,12 @@ class StreamRepositoryPluginIsolationTest {
         assertTrue(groups.single { it.addonName == "Fast Addon" }.streams.all { it.pluginSourceName == null })
     }
 
-    private fun newHarness(enabledScrapers: List<ScraperInfo>): Harness {
+    private fun newHarness(enabledScrapers: List<ScraperInfo>,
+        sources: MutableStateFlow<UsenetSourceConfiguration> = MutableStateFlow(UsenetSourceConfiguration()),
+        usenetResults: Flow<BuiltInUsenetResult> = emptyFlow(),
+        addons: List<Addon> = listOf(compatibleAddon()),
+        serverSources: List<ServerStreamSource> = emptyList()
+    ): Harness {
         val addon = compatibleAddon()
         val api = mockk<AddonApi>()
         coEvery { api.getStreams(any()) } returns Response.success(
@@ -186,7 +392,7 @@ class StreamRepositoryPluginIsolationTest {
         )
 
         val addonRepository = mockk<AddonRepository>()
-        every { addonRepository.getInstalledAddons() } returns flowOf(listOf(addon))
+        every { addonRepository.getInstalledAddons() } returns flowOf(addons)
         coEvery { addonRepository.fetchAddon(addon.baseUrl) } returns NetworkResult.Success(addon)
 
         val pluginManager = mockk<PluginManager>(relaxed = true)
@@ -224,10 +430,16 @@ class StreamRepositoryPluginIsolationTest {
                 tmdbService = tmdbService,
                 debridStreamPresentation = presentation,
                 localDebridAvailabilityService = availability,
+                usenetSourceSettings = mockk<UsenetSourceSettings> {
+                    every { read(any()) } answers { sources.value }
+                },
+                builtInUsenetService = mockk<BuiltInUsenetService> {
+                    every { search(any(), any(), any(), any(), any()) } returns usenetResults
+                },
                 serverStreams = mockk {
                     every { isNativeRequest(any()) } returns false
                     every { revision } returns 0
-                    every { sources(any(), any(), any(), any(), any()) } returns emptyList()
+                    every { sources(any(), any(), any(), any(), any()) } returns serverSources
                 }
             ),
             api = api,

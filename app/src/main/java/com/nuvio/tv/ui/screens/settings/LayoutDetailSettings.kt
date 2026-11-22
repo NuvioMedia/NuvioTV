@@ -5,6 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
@@ -34,6 +37,12 @@ internal fun LayoutDetailPageSection(
         subtitle = stringResource(R.string.layout_random_episode_sub),
         checked = uiState.randomEpisodeEnabled,
         onToggle = { onEvent(LayoutSettingsEvent.SetRandomEpisodeEnabled(!uiState.randomEpisodeEnabled)) }
+    )
+    SettingsToggleRow(
+        title = stringResource(R.string.layout_season_posters),
+        subtitle = stringResource(R.string.layout_season_posters_sub),
+        checked = uiState.detailSeasonPostersEnabled,
+        onToggle = { onEvent(LayoutSettingsEvent.SetDetailSeasonPostersEnabled(!uiState.detailSeasonPostersEnabled)) }
     )
     SettingsToggleRow(
         title = stringResource(R.string.layout_blur_unwatched),
@@ -95,6 +104,12 @@ internal fun LayoutDetailPageSection(
             checked = uiState.trailer4kEnabled,
             onToggle = { onEvent(LayoutSettingsEvent.SetTrailer4kEnabled(!uiState.trailer4kEnabled)) }
         )
+        SettingsToggleRow(
+            title = stringResource(R.string.layout_trailer_subtitles),
+            subtitle = stringResource(R.string.layout_trailer_subtitles_sub),
+            checked = uiState.trailerSubtitlesEnabled,
+            onToggle = { onEvent(LayoutSettingsEvent.SetTrailerSubtitlesEnabled(!uiState.trailerSubtitlesEnabled)) }
+        )
     }
     SettingsToggleRow(
         title = stringResource(R.string.layout_trailer_button),
@@ -151,7 +166,8 @@ internal fun LayoutStreamsSection(
     onBadgePlacementSelected: (StreamBadgePlacement) -> Unit,
     onConfigureBadges: () -> Unit,
     onShowInPlayerChange: (Boolean) -> Unit,
-    onPlayerBadgeSourceSelected: (String) -> Unit
+    onPlayerBadgeSourceSelected: (String) -> Unit,
+    configureBadgesFocusRequester: FocusRequester
 ) {
     var showPositionDialog by rememberSaveable { mutableStateOf(false) }
     var showPlayerBadgesDialog by rememberSaveable { mutableStateOf(false) }
@@ -172,7 +188,8 @@ internal fun LayoutStreamsSection(
     SettingsActionRow(
         title = stringResource(R.string.settings_stream_badge_urls_title),
         subtitle = streamBadgeRulesPreview(streamBadgeUiState),
-        onClick = onConfigureBadges
+        onClick = onConfigureBadges,
+        modifier = Modifier.focusRequester(configureBadgesFocusRequester)
     )
     SettingsToggleRow(
         title = stringResource(R.string.settings_stream_badges_in_player_title),

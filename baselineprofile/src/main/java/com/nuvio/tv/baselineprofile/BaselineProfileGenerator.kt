@@ -1,124 +1,186 @@
 package com.nuvio.tv.baselineprofile
 
+import android.util.Log
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
-import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import java.util.regex.Pattern
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val ONBOARDING_FIRST_LABEL = "Continue without account"
+private const val LOG_TAG = "NuvioBaselineProfile"
 
+/**
+ * Collects the baseline profile of the app.
+ *
+ * The collection is split in two parts:
+ * - the **startup portion** ([collectStartup]): the launch of the app and the settle of the
+ *   first screen, collected with `includeInStartupProfile = true`. It therefore only contains
+ *   the classes of the launch path, never the ones of a scrolled screen.
+ * - the **journey portion** ([collectJourneys]): the five journeys of the app, including the
+ *   detail screen step (open a title, come back), collected **without** the startup flag.
+ *   Every journey is guarded by its own try/catch, so a single degraded journey does not take
+ *   the whole collection down.
+ *
+ * The five per-journey test methods are kept as collect-profile diagnostics: they collect the
+ * profile of a single journey, which is what one needs when a single screen has to be added to
+ * the profile.
+ */
 @RunWith(AndroidJUnit4::class)
 class BaselineProfileGenerator {
 
     @get:Rule
     val rule = BaselineProfileRule()
 
+    /**
+     * Cold start plus all five journeys: the entry point of the profile collection.
+     */
     @Test
     fun generate() {
-        val targetPackage = "com.nuvio.tv"
-        rule.collect(
-            packageName = targetPackage,
-            includeInStartupProfile = true
-        ) {
-            // Force English locale so onboarding labels are predictable regardless of device language.
-            val originalLocale = device.executeShellCommand("getprop persist.sys.locale").trim()
-            device.executeShellCommand("setprop persist.sys.locale en-US")
-            device.executeShellCommand("settings put system system_locales en-US")
+        val device = uiDevice()
+        val packageName = resolveTargetPackage(device, DEFAULT_TARGET_PACKAGE)
+        device.withEnglishLocale {
+            collectStartup(device, packageName)
+            collectJourneys(device, packageName)
+        }
+    }
 
-            try {
+    /** Long horizontal poster scroll plus the vertical row walk. */
+    @Test
+    fun generateHomeScroll() {
+        collectJourney(Journey.HOME_SCROLL)
+    }
+
+    /** Rapid focus travel used as the fast-scroll path. */
+    @Test
+    fun generateFastScroll() {
+        collectJourney(Journey.FAST_SCROLL)
+    }
+
+    /** Home to detail to episodes and back. */
+    @Test
+    fun generateNavigation() {
+        collectJourney(Journey.NAVIGATION)
+    }
+
+    /** Detail to player with the overlay show/hide cycle. */
+    @Test
+    fun generatePlayer() {
+        collectJourney(Journey.PLAYER)
+    }
+
+    /** Drawer walk over the library and the settings screens. */
+    @Test
+    fun generateSettingsLibrary() {
+        collectJourney(Journey.SETTINGS_LIBRARY)
+    }
+
+    /**
+     * Collects the startup portion of the profile: the launch of the app and the settle of the
+     * first screen. Nothing is scrolled here, so the startup profile stays free of the rules
+     * that only a scrolled screen produces.
+     */
+    private fun collectStartup(device: UiDevice, packageName: String) {
+        rule.collect(
+            packageName = packageName,
+            includeInStartupProfile = true,
+            maxIterations = COLLECT_MAX_ITERATIONS,
+            stableIterations = COLLECT_STABLE_ITERATIONS
+        ) {
             pressHome()
             startActivityAndWait()
-            device.wait(Until.hasObject(By.pkg(targetPackage)), 5_000)
+            device.wait(Until.hasObject(By.pkg(packageName)), LAUNCH_TIMEOUT_MS)
             device.waitForIdle()
+            Thread.sleep(FIRST_SCREEN_SETTLE_MS)
+        }
+    }
 
-            // Step through the first-run onboarding with D-pad focus, skipping it entirely on later iterations where the app already opens on home.
-            if (device.wait(Until.hasObject(By.text(ONBOARDING_FIRST_LABEL)), 8_000) != null) {
-                device.focusAndSelect(ONBOARDING_FIRST_LABEL)
-                device.focusAndSelect("Advanced")
-                device.focusAndSelect("Continue")
-            }
-            device.waitForIdle()
-            Thread.sleep(3_000)
+    /**
+     * Collects the journey portion of the profile: the detail screen step and the five
+     * journeys, none of them with the startup flag.
+     */
+    private fun collectJourneys(device: UiDevice, packageName: String) {
+        rule.collect(
+            packageName = packageName,
+            includeInStartupProfile = false,
+            maxIterations = COLLECT_MAX_ITERATIONS,
+            stableIterations = COLLECT_STABLE_ITERATIONS
+        ) {
+            pressHome()
+            startActivityAndWait()
+            device.wait(Until.hasObject(By.pkg(packageName)), LAUNCH_TIMEOUT_MS)
 
-            // Move focus off the sidebar into the content grid.
-            device.pressDPadRight()
-            device.waitForIdle()
-
-            // Scroll across the focused row to compile the row and card rendering paths.
-            repeat(6) {
-                device.pressDPadRight()
-                device.waitForIdle()
-                Thread.sleep(120)
-            }
-
-            // Scroll down through the rows to compile the vertical list and prefetch paths.
-            repeat(6) {
-                device.pressDPadDown()
-                device.waitForIdle()
-                Thread.sleep(150)
-            }
-
-            // Move back up toward a focused title.
-            repeat(2) {
-                device.pressDPadUp()
-                device.waitForIdle()
-                Thread.sleep(120)
+            // The detail screen step: open a title and come back. It is part of the profile on
+            // purpose, the detail screen is a screen of its own.
+            try {
+                device.prepareForJourney(packageName)
+                val opened = device.openDetail()
+                if (opened) {
+                    device.goBack(steps = 2)
+                }
+                Log.i(LOG_TAG, "Detail screen step: opened=$opened")
+            } catch (t: Throwable) {
+                Log.w(LOG_TAG, "Detail screen step failed: ${t.message}")
             }
 
-            // Open a title to compile the detail screen render path.
-            device.pressDPadCenter()
-            device.waitForIdle()
-            Thread.sleep(2_500)
-
-            // Return to the home screen.
-            device.pressBack()
-            device.waitForIdle()
-            Thread.sleep(800)
-            } finally {
-                // Restore original locale.
-                if (originalLocale.isNotBlank()) {
-                    device.executeShellCommand("setprop persist.sys.locale $originalLocale")
-                    device.executeShellCommand("settings put system system_locales $originalLocale")
+            // The five journeys, each one guarded so a degraded journey does not stop the others.
+            Journey.entries.forEach { journey ->
+                try {
+                    val result = device.runJourney(journey, packageName)
+                    logJourneyOutcome(result)
+                } catch (t: Throwable) {
+                    Log.w(LOG_TAG, "Journey ${journey.key} failed: ${t.message}")
                 }
             }
         }
     }
-}
 
-// Moves D-pad focus until the control carrying the given label is focused and then selects it, since TV devices have no touch input.
-private fun UiDevice.focusAndSelect(label: String, maxSteps: Int = 24): Boolean {
-    val pattern = Pattern.compile(Pattern.quote(label), Pattern.CASE_INSENSITIVE)
-    if (wait(Until.hasObject(By.text(pattern)), 10_000) == null) return false
-    repeat(maxSteps) { step ->
-        if (isFocusedLabel(label, pattern)) {
-            pressDPadCenter()
-            waitForIdle()
-            Thread.sleep(1_500)
-            // Treat the step as done only once the label is gone, so a mis-selection keeps searching instead of moving on.
-            if (wait(Until.gone(By.text(pattern)), 5_000) == true) return true
+    /** Collects the profile of a single journey, used by the per-journey diagnostics. */
+    private fun collectJourney(journey: Journey) {
+        val device = uiDevice()
+        val packageName = resolveTargetPackage(device, DEFAULT_TARGET_PACKAGE)
+        device.withEnglishLocale {
+            rule.collect(
+                packageName = packageName,
+                includeInStartupProfile = false,
+                maxIterations = DIAGNOSTIC_MAX_ITERATIONS,
+                stableIterations = COLLECT_STABLE_ITERATIONS
+            ) {
+                pressHome()
+                startActivityAndWait()
+                device.wait(Until.hasObject(By.pkg(packageName)), LAUNCH_TIMEOUT_MS)
+                val result = device.runJourney(journey, packageName)
+                logJourneyOutcome(result)
+            }
         }
-        // Alternate directions so both vertical lists and side-by-side cards are reachable.
-        if (step % 2 == 0) pressDPadDown() else pressDPadRight()
-        waitForIdle()
-        Thread.sleep(250)
     }
-    return false
-}
 
-// Reports whether the currently focused control carries the label, treating nodes that disappear mid-query as a non-match.
-private fun UiDevice.isFocusedLabel(label: String, pattern: Pattern): Boolean {
-    return try {
-        val focused = findObject(By.focused(true)) ?: return false
-        if (focused.text?.equals(label, ignoreCase = true) == true) return true
-        // Require the focused node to be the clickable control itself so a large parent container is not mistaken for the button.
-        focused.isClickable && focused.findObject(By.text(pattern)) != null
-    } catch (e: StaleObjectException) {
-        false
+    private companion object {
+        /**
+         * Upper bound of the collection iterations.
+         *
+         * The default of the benchmark library is 15 iterations, which multiplies the runtime of
+         * every journey by 15. Two iterations already cover the classes of a journey, so the
+         * bound keeps the collection of the five journeys in a usable time.
+         */
+        const val COLLECT_MAX_ITERATIONS = 2
+
+        /**
+         * Upper bound of the collection iterations of the per-journey diagnostics.
+         *
+         * A diagnostic collects the rules of a single journey, one iteration is enough for that.
+         */
+        const val DIAGNOSTIC_MAX_ITERATIONS = 1
+
+        /** Number of consecutive identical profiles that count as a stable profile. */
+        const val COLLECT_STABLE_ITERATIONS = 2
+
+        /** Time budget for the app to show up after the launch. */
+        const val LAUNCH_TIMEOUT_MS = 10_000L
+
+        /** Time the first screen needs to settle after the launch. */
+        const val FIRST_SCREEN_SETTLE_MS = 3_000L
     }
 }

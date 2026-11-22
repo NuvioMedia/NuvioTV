@@ -102,6 +102,24 @@ class SubtitleLiftRulesTest {
         assertEquals(SubtitleLiftDecision(0f, null), nextSubtitleLift(0f, 200f, 3, cueVisible = true, applyImmediately = false, pendingDropCueVersion = 3L, dropTimedOut = true))
     }
 
+    @Test
+    fun `controls dismissal immediately releases subtitle lift during playback`() {
+        assertTrue(
+            shouldApplySubtitleLiftImmediately(
+                isPlaying = true,
+                previewConfiguredPosition = false,
+                controlsVisible = false
+            )
+        )
+        assertFalse(
+            shouldApplySubtitleLiftImmediately(
+                isPlaying = true,
+                previewConfiguredPosition = false,
+                controlsVisible = true
+            )
+        )
+    }
+
     private val metrics = SubtitleTextMetrics(
         textSizePx = 40f,
         bold = false,

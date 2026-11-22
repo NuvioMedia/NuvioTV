@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.repository.AddonEventDispatcher
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -59,6 +60,7 @@ class PlayerViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val parentalGuideRepository: ParentalGuideRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
+    private val addonEventDispatcher: AddonEventDispatcher,
     private val traktEpisodeMappingService: TraktEpisodeMappingService,
     private val skipIntroRepository: SkipIntroRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -100,6 +102,7 @@ class PlayerViewModel @Inject constructor(
     private val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
     private val serverPlayback: com.nuvio.tv.data.mediaserver.ServerPlayback,
     private val serverStreams: com.nuvio.tv.data.mediaserver.ServerStreams,
+    private val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings,
     partyRepository: com.nuvio.tv.core.party.PartyRepository,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
@@ -121,6 +124,7 @@ class PlayerViewModel @Inject constructor(
         subtitleRepository = subtitleRepository,
         parentalGuideRepository = parentalGuideRepository,
         trackingScrobbleCoordinator = trackingScrobbleCoordinator,
+        addonEventDispatcher = addonEventDispatcher,
         traktEpisodeMappingService = traktEpisodeMappingService,
         skipIntroRepository = skipIntroRepository,
         playerSettingsDataStore = playerSettingsDataStore,
@@ -149,6 +153,7 @@ class PlayerViewModel @Inject constructor(
         tvRecommendationManager = tvRecommendationManager,
         serverPlayback = serverPlayback,
         serverStreams = serverStreams,
+        usenetSourceSettings = usenetSourceSettings,
         party = partyRepository,
         profileId = savedStateHandle.get<String>("profileId")?.toIntOrNull()
             ?: profileManager.activeProfileId.value,
@@ -280,6 +285,10 @@ class PlayerViewModel @Inject constructor(
         controller.pauseForLifecycle()
     }
 
+    fun releaseForBackground() {
+        controller.releaseForBackground()
+    }
+
     fun resumeForLifecycle() {
         controller.resumeForLifecycle()
     }
@@ -293,6 +302,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playerMediaInfo(): PlayerMediaInfo = controller.playerMediaInfo()
+
+    fun playerStreamFilename(): String? = controller.currentFilename
 
     fun bindExoSubtitleView(subtitleView: androidx.media3.ui.SubtitleView?) {
         controller.bindExoSubtitleView(subtitleView)

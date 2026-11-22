@@ -63,6 +63,14 @@ import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.TrailerPlayer
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.toSize
+import com.nuvio.tv.core.player.BackgroundTrailerRequest
+import com.nuvio.tv.core.player.LocalBackgroundTrailerController
+import com.nuvio.tv.ui.components.BackgroundTrailerRequestEffect
+import com.nuvio.tv.ui.components.AutoScrollingText
 import androidx.compose.ui.res.stringResource
 
 private data class ModernHeroSecondaryMeta(
@@ -92,20 +100,16 @@ internal fun ModernHeroScene(
         heroTrailerAudioUrl = { state().trailerAudioUrl },
         heroTrailerPlaybackKey = { state().trailerPlaybackKey },
         muted = { state().trailerMuted },
+        isFullScreen = isFullScreen,
         onTrailerEnded = onTrailerEnded,
         onFirstFrameRendered = onFirstFrameRendered,
         modifier = modifier,
         requestWidthPx = requestWidthPx,
         requestHeightPx = requestHeightPx
     )
-    val isTrailerPlayingFullScreen = {
-        val s = state()
-        s.fullScreenBackdrop && s.shouldPlayTrailer && s.trailerFirstFrameRendered
-    }
     ModernHeroGradientLayer(
         bgColor = bgColor,
         isFullScreen = isFullScreen,
-        isTrailerPlayingFullScreen = isTrailerPlayingFullScreen,
         modifier = modifier
     )
 }
@@ -120,6 +124,7 @@ internal fun ModernHeroMediaLayer(
     heroTrailerAudioUrl: () -> String?,
     heroTrailerPlaybackKey: () -> String?,
     muted: () -> Boolean,
+    isFullScreen: () -> Boolean,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
     modifier: Modifier,
@@ -161,7 +166,13 @@ internal fun ModernHeroMediaLayer(
         displayedBackdrop?.let { HeroBackdropState.update(it) }
     }
 
-    Box(modifier = modifier) {
+    var heroMediaRect by remember { mutableStateOf<Rect?>(null) }
+    Box(
+        modifier = modifier.onGloballyPositioned { coordinates ->
+            val rect = Rect(coordinates.positionInWindow(), coordinates.size.toSize())
+            if (heroMediaRect != rect) heroMediaRect = rect
+        }
+    ) {
         androidx.compose.animation.Crossfade(
             targetState = imageModel,
             animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.overlay),
@@ -180,7 +191,36 @@ internal fun ModernHeroMediaLayer(
                 alignment = Alignment.TopEnd
             )
         }
-        if (shouldPlay) {
+        val backgroundTrailerController = LocalBackgroundTrailerController.current
+        if (backgroundTrailerController != null) {
+            val fullScreenVal = isFullScreen()
+            val mediaRect = heroMediaRect
+            val trailerUrlVal = if (shouldPlay && (fullScreenVal || mediaRect != null)) heroTrailerUrl() else null
+            val audioUrlVal = heroTrailerAudioUrl()
+            val mutedVal = muted()
+            val latestOnTrailerEnded by rememberUpdatedState(onTrailerEnded)
+            val latestOnFirstFrameRendered by rememberUpdatedState(onFirstFrameRendered)
+            val request = remember(trailerUrlVal, audioUrlVal, mutedVal, fullScreenVal, mediaRect) {
+                trailerUrlVal?.let { url ->
+                    BackgroundTrailerRequest(
+                        videoUrl = url,
+                        audioUrl = audioUrlVal,
+                        muted = mutedVal,
+                        autoCropLetterbox = fullScreenVal,
+                        bounds = if (fullScreenVal) null else mediaRect,
+                        overscanZoom = if (fullScreenVal) 1f else MODERN_TRAILER_OVERSCAN_ZOOM,
+                        alpha = { transitionProgressState.value },
+                        onEnded = { latestOnTrailerEnded() },
+                        onFirstFrameRendered = { latestOnFirstFrameRendered() }
+                    )
+                }
+            }
+            BackgroundTrailerRequestEffect(
+                controller = backgroundTrailerController,
+                owner = HOME_HERO_TRAILER_OWNER,
+                request = request
+            )
+        } else if (shouldPlay) {
             val trailerUrlVal = heroTrailerUrl()
             val playbackKeyVal = heroTrailerPlaybackKey()
             val audioUrlVal = heroTrailerAudioUrl()
@@ -210,7 +250,6 @@ internal fun ModernHeroMediaLayer(
 internal fun ModernHeroGradientLayer(
     bgColor: Color,
     isFullScreen: () -> Boolean,
-    isTrailerPlayingFullScreen: () -> Boolean = { false },
     modifier: Modifier
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -218,7 +257,6 @@ internal fun ModernHeroGradientLayer(
         modifier = modifier
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
-                alpha = if (isTrailerPlayingFullScreen()) 0f else 1f
             }
             .drawWithCache {
                 val fullScreen = isFullScreen()
@@ -304,6 +342,7 @@ internal fun HeroTitleBlock(
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false },
+    descriptionAutoScrollEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // The providers read hero state that is rewritten on every focus move, often with an equal
@@ -341,7 +380,8 @@ internal fun HeroTitleBlock(
             showImdbRatings = showImdbRatings,
             mdbListShowOnHero = mdbListShowOnHero,
             mdbListRatingOrder = mdbListRatingOrder,
-            trailerPlaying = trailerPlaying
+            trailerPlaying = trailerPlaying,
+            descriptionAutoScrollEnabled = descriptionAutoScrollEnabled
         )
     }
 }
@@ -353,7 +393,8 @@ private fun HeroTitleContent(
     showImdbRatings: Boolean,
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
-    trailerPlaying: () -> Boolean = { false }
+    trailerPlaying: () -> Boolean = { false },
+    descriptionAutoScrollEnabled: Boolean = false
 ) {
     val preview = previewProvider() ?: return
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
@@ -659,12 +700,13 @@ private fun HeroTitleContent(
         }
 
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
-            Text(
+            AutoScrollingText(
                 text = description,
                 style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
-                overflow = TextOverflow.Ellipsis,
+                autoScrollEnabled = descriptionAutoScrollEnabled,
+                paused = trailerPlaying,
                 modifier = Modifier.graphicsLayer { alpha = metaAlpha }
             )
         }
@@ -784,3 +826,5 @@ private fun HeroMetaDivider(
             .background(NuvioTheme.colors.TextTertiary.copy(alpha = 0.78f))
     )
 }
+
+internal const val HOME_HERO_TRAILER_OWNER = "home_hero"

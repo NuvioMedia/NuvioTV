@@ -268,7 +268,38 @@ interface TmdbApi {
         @Path("tv_id") tvId: Int,
         @Query("api_key") apiKey: String
     ): Response<TmdbAlternativeTitlesResponse>
+
+    /** A movie's title and year with every other name it goes by, in one request. */
+    @GET("movie/{movie_id}?append_to_response=alternative_titles,translations")
+    suspend fun getMovieNames(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String
+    ): Response<TmdbMovieNamesResponse>
 }
+
+@JsonClass(generateAdapter = true)
+data class TmdbMovieNamesResponse(
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
+    @Json(name = "release_date") val releaseDate: String? = null,
+    @Json(name = "alternative_titles") val alternativeTitles: TmdbAlternativeTitlesResponse? = null,
+    @Json(name = "translations") val translations: TmdbTranslationsResponse? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbTranslationsResponse(
+    @Json(name = "translations") val translations: List<TmdbTranslation>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbTranslation(
+    @Json(name = "data") val data: TmdbTranslationData? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbTranslationData(
+    @Json(name = "title") val title: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TmdbAlternativeTitlesResponse(
@@ -350,7 +381,14 @@ data class TmdbDetailsResponse(
     @Json(name = "poster_path") val posterPath: String? = null,
     @Json(name = "last_air_date") val lastAirDate: String? = null,
     @Json(name = "status") val status: String? = null,
-    @Json(name = "belongs_to_collection") val belongsToCollection: TmdbCollectionSummary? = null
+    @Json(name = "belongs_to_collection") val belongsToCollection: TmdbCollectionSummary? = null,
+    @Json(name = "seasons") val seasons: List<TmdbSeasonSummary>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbSeasonSummary(
+    @Json(name = "season_number") val seasonNumber: Int? = null,
+    @Json(name = "episode_count") val episodeCount: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -494,7 +532,8 @@ data class TmdbCountry(
 @JsonClass(generateAdapter = true)
 data class TmdbSeasonResponse(
     @Json(name = "season_number") val seasonNumber: Int? = null,
-    @Json(name = "episodes") val episodes: List<TmdbEpisode>? = null
+    @Json(name = "episodes") val episodes: List<TmdbEpisode>? = null,
+    @Json(name = "poster_path") val posterPath: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -504,7 +543,8 @@ data class TmdbEpisode(
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "still_path") val stillPath: String? = null,
     @Json(name = "air_date") val airDate: String? = null,
-    @Json(name = "runtime") val runtime: Int? = null
+    @Json(name = "runtime") val runtime: Int? = null,
+    @Json(name = "id") val id: Long? = null
 )
 
 @JsonClass(generateAdapter = true)

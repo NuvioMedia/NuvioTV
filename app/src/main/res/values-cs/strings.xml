@@ -943,7 +943,6 @@
 
 
     <string name="mdblist_title">Hodnocení MDBList</string>
-    <string name="mdblist_subtitle">Konfigurovat externí hodnocení zobrazená v hrdinovi podrobností</string>
     <string name="mdblist_enable_title">Povolit hodnocení MDBList</string>
     <string name="mdblist_enable_subtitle">Získávat hodnocení od externích poskytovatelů na obrazovce podrobností metadat</string>
     <string name="mdblist_api_key_title">API klíč</string>
@@ -1488,7 +1487,6 @@
     <string name="parental_severity_moderate">Střední</string>
     <string name="parental_severity_mild">Mírné</string>
     <string name="player_ends_at">Končí v %1$s</string>
-    <string name="player_via">přes %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Zpoždění titulků</string>
@@ -1727,11 +1725,6 @@
     <string name="library_watchlist">Watchlist</string>
     <string name="library_syncing_library">Synchronizace knihovny…</string>
     <string name="library_type_all">Vše</string>
-    <string name="library_type_items">položky</string>
-    <string name="library_empty_local_title">Zatím žádné %1$s</string>
-    <string name="library_empty_trakt_title">Žádné %1$s v tomto seznamu</string>
-    <string name="library_empty_local_subtitle">Začněte ukládat své oblíbené, abyste je zde viděli</string>
-    <string name="library_empty_trakt_subtitle">Použijte + v podrobnostech pro přidání položek do watchlistu nebo seznamů</string>
     <string name="library_empty_trakt_not_auth_title">Trakt není připojen</string>
     <string name="library_empty_trakt_not_auth_subtitle">Pro zobrazení své knihovny Trakt připojte svůj účet Trakt v Nastavení</string>
     <string name="library_list_create_dialog_title">Vytvořit seznam</string>
@@ -2817,17 +2810,17 @@
     <string name="stream_test_no_stream">Nezaznamenáno žádné přehrávání. Přehrajte video pro spuštění diagnostických testů na jeho hostiteli.</string>
     <string name="stream_test_btn_start">Spustit test</string>
     <string name="stream_test_btn_measuring_baseline">Měření základní hodnoty...</string>
-    <string name="stream_test_btn_measuring_parallel1">Měření paralelního (1 MB)...</string>
-    <string name="stream_test_btn_measuring_parallel4">Měření paralelního (4 MB)...</string>
-    <string name="stream_test_btn_measuring_parallel8">Měření paralelního (8 MB)...</string>
-    <string name="stream_test_btn_measuring_parallel16">Měření paralelního (16 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel1">Měření paralelního (1 spojení)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Měření paralelního (4 spojení)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Měření paralelního (8 spojení)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Měření paralelního (16 spojení)...</string>
     <string name="stream_test_btn_run_again">Spustit znovu</string>
     <string name="stream_test_btn_running">Probíhá...</string>
     <string name="stream_test_label_baseline">Standardní jedno spojení (základ)</string>
-    <string name="stream_test_label_parallel1">Paralelní spojení (bloky 1 MB)</string>
-    <string name="stream_test_label_parallel4">Paralelní spojení (bloky 4 MB)</string>
-    <string name="stream_test_label_parallel8">Paralelní spojení (bloky 8 MB)</string>
-    <string name="stream_test_label_parallel16">Paralelní spojení (bloky 16 MB)</string>
+    <string name="stream_test_label_parallel1">Paralelní spojení (1 spojení)</string>
+    <string name="stream_test_label_parallel4">Paralelní spojení (4 spojení)</string>
+    <string name="stream_test_label_parallel8">Paralelní spojení (8 spojení)</string>
+    <string name="stream_test_label_parallel16">Paralelní spojení (16 spojení)</string>
     <string name="stream_test_error_prefix">Chyba: %1$s</string>
     <string name="stream_test_video_bitrate">Průměrný datový tok videa: %1$s</string>
     <string name="stream_test_error_connection">Připojení selhalo. Platnost posledního přehraného odkazu na stream mohla vypršet, nebo je nedostupný. Přehrajte prosím video znovu a zkuste to opět.</string>

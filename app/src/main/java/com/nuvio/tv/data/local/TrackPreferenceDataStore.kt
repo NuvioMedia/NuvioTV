@@ -118,7 +118,7 @@ class TrackPreferenceDataStore @Inject constructor(
     }
 
     suspend fun loadPlaybackSpeed(contentId: String): Float? {
-        return store().data.first()[floatKey(PLAYBACK_SPEED, contentId)]
+        return (store().data.first().asMap()[floatKey(PLAYBACK_SPEED, contentId)] as? Number)?.toFloat()
     }
 }
 

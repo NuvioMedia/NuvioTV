@@ -213,13 +213,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val isHls = resolvedMimeType == MimeTypes.APPLICATION_M3U8
         val isDash = resolvedMimeType == MimeTypes.APPLICATION_MPD
         val httpDataSourceFactory = if (isHls || isDash) {
-            DefaultDataSource.Factory(
+            val adaptiveFactory = DefaultDataSource.Factory(
                 context,
                 PlayerPlaybackNetworking.createHttpDataSourceFactory(
                     sanitizedHeaders,
                     useLongReadTimeout = isLoopbackUrl(url),
                 ),
             )
+            if (isHls) HlsParameterSetInitDataSource.Factory(adaptiveFactory) else adaptiveFactory
         } else {
             PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
         }
@@ -239,6 +240,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         val mediaItem = mediaItemBuilder.build()
 
+        // The native engine owns Usenet concurrency/read-ahead. A second Java
+        // prefetch layer would duplicate memory and keep obsolete ranges alive.
+        val nativeUsenet = com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)
+        val directLoopback = isLoopbackUrl(url)
         Log.i(
             "PlayerMediaSource",
             "PLAYBACK_CONFIG: native=$nativeEngineEnabled " +
@@ -250,7 +255,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "safeNativeMb=${NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)} " +
                 "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb"
         )
-        val useChunkSessionSource = useParallelConnections && !isHls && !isDash
+        val useChunkSessionSource = !nativeUsenet && useParallelConnections && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
         val networkProgressiveFactory: DataSource.Factory = if (useChunkSessionSource) {
             val sessionConnections = parallelConnectionCount
@@ -277,7 +282,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
-        } else if (isLoopbackUrl(url)) {
+        } else if (directLoopback) {
             PlayerPlaybackNetworking.createHttpDataSourceFactory(sanitizedHeaders, useLongReadTimeout = true)
         } else {
             httpDataSourceFactory
@@ -469,6 +474,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     }
 
     private fun shouldUseVodCache(url: String): Boolean {
+        if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return false
         val scheme = Uri.parse(url).scheme?.lowercase()
         return scheme == "https" || scheme == "http"
     }
@@ -1135,7 +1141,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
             query.split('&').forEach { parameter ->
                 val key = parameter.substringBefore('=', missingDelimiterValue = "").trim()
-                val value = parameter.substringAfter('=', missingDelimiterValue = "").trim()
+                val rawValue = parameter.substringAfter('=', missingDelimiterValue = "").trim()
+                val value = runCatching {
+                    URLDecoder.decode(rawValue.replace("+", "%2B"), Charsets.UTF_8.name())
+                }.getOrDefault(rawValue).lowercase(Locale.US)
                 if (key.isBlank() || value.isBlank()) return@forEach
 
                 when (key) {

@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.AmbientModeDataStore
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.PluginDataStore
@@ -87,11 +88,13 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "downmix_enabled",
     "audio_output_channels",
     "maintain_original_audio_on_downmix",
+    "downmix_lfe_level",
     "downmix_normalization_enabled",
     "tunneling_enabled",
     "force_optical_passthrough",
     "audio_amplification_db",
     "center_mix_level_db",
+    "night_mode",
     "persist_audio_amplification",
     "remember_audio_delay_per_device",
     "experimental_dv5_to_dv81_enabled",
@@ -101,6 +104,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "dv7_libdovi_mode_override",
     "strip_hdr10plus_sei",
     "exo_chapters_enabled",
+    "chapter_title_enabled",
     "mpv_hardware_decode_mode",
     "frame_rate_matching",
     "frame_rate_matching_mode",
@@ -210,7 +214,8 @@ class ProfileSettingsSyncService @Inject constructor(
         "trakt_settings",
         "debrid_settings",
         "animeskip_settings",
-        "track_preference"
+        "track_preference",
+        AmbientModeDataStore.FEATURE
     )
 
     init {

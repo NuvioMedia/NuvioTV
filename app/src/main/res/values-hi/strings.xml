@@ -458,7 +458,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList रेटिंग्स</string>
-    <string name="mdblist_subtitle">डिटेल हीरो में दिखाई जाने वाली बाहरी रेटिंग्स कॉन्फ़िगर करें</string>
     <string name="mdblist_enable_title">MDBList रेटिंग्स सक्षम करें</string>
     <string name="mdblist_enable_subtitle">मेटाडेटा डिटेल स्क्रीन में बाहरी प्रोवाइडर से रेटिंग प्राप्त करें</string>
     <string name="mdblist_api_key_title">API Key</string>
@@ -685,7 +684,6 @@
     <string name="parental_severity_moderate">मध्यम</string>
     <string name="parental_severity_mild">हल्का</string>
     <string name="player_ends_at">%1$s पर समाप्त होगा</string>
-    <string name="player_via">%1$s के माध्यम से</string>
     <string name="player_subtitle_delay">सबटाइटल देरी</string>
     <string name="player_error_title">प्लेबैक त्रुटि</string>
     <string name="player_go_back">वापस जाएँ</string>
@@ -817,11 +815,6 @@
     <string name="library_delete_confirm">हटाएँ</string>
     <string name="library_source_local">लोकल</string>
     <string name="library_type_all">सभी</string>
-    <string name="library_type_items">आइटम</string>
-    <string name="library_empty_local_title">अभी कोई %1$s नहीं</string>
-    <string name="library_empty_trakt_title">इस लिस्ट में कोई %1$s नहीं</string>
-    <string name="library_empty_local_subtitle">यहाँ देखने के लिए अपने पसंदीदा सेव करना शुरू करें</string>
-    <string name="library_empty_trakt_subtitle">वॉचलिस्ट या लिस्ट में आइटम जोड़ने के लिए डिटेल्स में + उपयोग करें</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">लोड हो रहा है\u2026</string>

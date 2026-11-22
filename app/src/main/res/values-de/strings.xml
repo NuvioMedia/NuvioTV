@@ -836,7 +836,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList-Bewertungen</string>
-    <string name="mdblist_subtitle">Externe Bewertungen konfigurieren, die im Detailbereich angezeigt werden</string>
     <string name="mdblist_enable_title">MDBList-Bewertungen aktivieren</string>
     <string name="mdblist_enable_subtitle">Bewertungen von externen Anbietern im Metadaten-Detailbildschirm abrufen</string>
     <string name="mdblist_api_key_title">API-Schlüssel</string>
@@ -1207,7 +1206,6 @@
     <string name="parental_severity_moderate">mäßig</string>
     <string name="parental_severity_mild">leicht</string>
     <string name="player_ends_at">Endet um %1$s</string>
-    <string name="player_via">über %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Untertitelverzögerung</string>
@@ -1429,11 +1427,6 @@
     <string name="library_watchlist">Watchlist</string>
     <string name="library_syncing_library">Synchronisiere Bibliothek\u2026</string>
     <string name="library_type_all">Alle</string>
-    <string name="library_type_items">Elemente</string>
-    <string name="library_empty_local_title">Noch keine %1$s</string>
-    <string name="library_empty_trakt_title">Keine %1$s in dieser Liste</string>
-    <string name="library_empty_local_subtitle">Speichern Sie Ihre Favoriten, um sie hier anzuzeigen</string>
-    <string name="library_empty_trakt_subtitle">Verwenden Sie + in den Details, um Elemente zur Beobachtungsliste oder zu Listen hinzuzufügen</string>
     <string name="library_empty_trakt_not_auth_title">Trakt ist nicht verbunden</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt-Konto in den Einstellungen verbinden, um Trakt-Bibliothek zu sehen</string>
 

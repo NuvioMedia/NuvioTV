@@ -73,7 +73,6 @@ class TorrentEngineConfigTest {
     fun `global cache pressure does not become terminal error`() {
         assertNull(
             unexpectedTorrentError(
-                requestId = 0L,
                 eventTorrentId = null,
                 currentTorrentId = "torrent",
                 message = "disk cache budget is exceeded by protected torrent data",
@@ -86,14 +85,14 @@ class TorrentEngineConfigTest {
     fun `matching unsolicited torrent failure becomes terminal error`() {
         assertEquals(
             TorrentState.Error("file write failed"),
-            unexpectedTorrentError(0L, "torrent", "torrent", "file write failed", "unknown")
+            unexpectedTorrentError("torrent", "torrent", "file write failed", "unknown")
         )
     }
 
     @Test
-    fun `command and stale torrent failures are ignored`() {
-        assertNull(unexpectedTorrentError(9L, "torrent", "torrent", "failed", "unknown"))
-        assertNull(unexpectedTorrentError(0L, "old-torrent", "torrent", "failed", "unknown"))
+    fun `stale torrent failures are ignored`() {
+        assertNull(unexpectedTorrentError("old-torrent", "torrent", "failed", "unknown"))
+        assertNull(unexpectedTorrentError("torrent", null, "failed", "unknown"))
     }
 
     @Test

@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.updater.ui
 
+import android.os.Build
 import android.text.format.Formatter
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -42,6 +43,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -58,7 +60,6 @@ import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
-import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.theme.accentBrush
@@ -87,9 +88,11 @@ internal fun UpdateBanner(
         label = "updateBannerProgress"
     )
     val containerColor = NuvioTheme.colors.BackgroundElevated
-    val isWhiteTheme = NuvioTheme.currentTheme == AppTheme.WHITE
+    // A light accent (White, Graphite, Gold, ...) washes out the light title on a solid fill, and its dark
+    // on-accent text is unreadable on the banner until the fill reaches it. Tint instead, as White always did.
+    val lightAccent = NuvioTheme.colors.OnSecondary.luminance() < 0.5f
     val progressBrush = ThemeColors.getColorPalette(NuvioTheme.currentTheme).accentBrush()
-    val progressAlpha = if (isWhiteTheme) 0.18f else 1f
+    val progressAlpha = if (lightAccent) 0.18f else 1f
     val dividerColor = NuvioTheme.colors.Border
     var bannerHasFocus by remember { mutableStateOf(false) }
     val subtitle = when {
@@ -100,6 +103,13 @@ internal fun UpdateBanner(
             (state.downloadProgress * 100).toInt().coerceIn(0, 100)
         )
         state.isDownloading -> stringResource(R.string.update_preparing_download)
+        // An optimized install closes the app with no installer screen left up, which reads as a crash unless said.
+        state.downloadedApkPath != null && state.optimizeDuringInstall && state.optimizeDuringInstallSupported ->
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                stringResource(R.string.update_ready_closes_and_reopens)
+            } else {
+                stringResource(R.string.update_ready_closes)
+            }
         state.downloadedApkPath != null -> stringResource(R.string.update_download_complete)
         else -> stringResource(R.string.update_available)
     }
@@ -179,7 +189,7 @@ internal fun UpdateBanner(
                     style = MaterialTheme.typography.bodySmall,
                     color = when {
                         state.errorMessage != null -> NuvioTheme.colors.Error
-                        state.isDownloading && isWhiteTheme -> NuvioTheme.colors.TextPrimary
+                        state.isDownloading && lightAccent -> NuvioTheme.colors.TextPrimary
                         state.isDownloading -> NuvioTheme.colors.OnSecondary
                         else -> NuvioTheme.colors.TextSecondary
                     },

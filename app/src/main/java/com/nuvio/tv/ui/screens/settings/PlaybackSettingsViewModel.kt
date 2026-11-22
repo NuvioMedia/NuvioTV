@@ -6,7 +6,10 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.LibassRenderScale
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.LibassRenderMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.DownmixLfeLevel
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -49,11 +52,13 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
     private val torrentSettings: TorrentSettings,
-    private val torrentService: TorrentService
+    private val torrentService: TorrentService,
+    private val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val transparentLetterbox: Flow<Boolean> = deviceLocalPlayerPreferences.transparentLetterbox
+    val releaseDecoderOnBackground: Flow<Boolean> = deviceLocalPlayerPreferences.releaseDecoderOnBackground
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
     val torrentCacheState: StateFlow<TorrentCacheState> = torrentService.cacheState
@@ -75,6 +80,9 @@ class PlaybackSettingsViewModel @Inject constructor(
                 }
             }
             .map { it.displayName }
+            // Auto-play counts built-in Usenet among the addons, so it can be allowed like one.
+            .plus(listOfNotNull(com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME
+                .takeIf { runCatching { usenetSourceSettings.read().enabled }.getOrDefault(false) }))
             .distinct()
             .sorted()
     }
@@ -135,6 +143,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMaintainOriginalAudioOnDownmix(enabled)
     }
 
+    suspend fun setDownmixLfeLevel(level: DownmixLfeLevel) {
+        playerSettingsDataStore.setDownmixLfeLevel(level)
+    }
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setTunnelingEnabled(enabled)
     }
@@ -145,6 +157,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSkipSilence(enabled: Boolean) {
         playerSettingsDataStore.setSkipSilence(enabled)
+    }
+
+    suspend fun setNightMode(mode: NightMode) {
+        playerSettingsDataStore.setNightMode(mode)
     }
 
     suspend fun setRememberAudioDelayPerDevice(enabled: Boolean) {
@@ -177,6 +193,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setTransparentLetterbox(enabled: Boolean) {
         deviceLocalPlayerPreferences.setTransparentLetterbox(enabled)
+    }
+
+    suspend fun setReleaseDecoderOnBackground(enabled: Boolean) {
+        deviceLocalPlayerPreferences.setReleaseDecoderOnBackground(enabled)
     }
 
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
@@ -243,6 +263,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setExoChaptersEnabled(enabled)
     }
 
+    suspend fun setChapterTitleEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setChapterTitleEnabled(enabled)
+    }
+
     suspend fun setUseLibass(enabled: Boolean) {
         playerSettingsDataStore.setUseLibass(enabled)
     }
@@ -253,6 +277,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setLibassRenderScale(scale: LibassRenderScale) {
         playerSettingsDataStore.setLibassRenderScale(scale)
+    }
+
+    suspend fun setLibassRenderMode(mode: LibassRenderMode) {
+        playerSettingsDataStore.setLibassRenderMode(mode)
     }
 
     suspend fun setSubtitlePreferredLanguage(language: String) {
@@ -307,6 +335,30 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSubtitleOutlineWidth(width)
     }
 
+    suspend fun setSubtitleFontId(fontId: String) {
+        playerSettingsDataStore.setSubtitleFontId(fontId)
+    }
+
+    suspend fun setSubtitleBackgroundRadius(radius: Int) {
+        playerSettingsDataStore.setSubtitleBackgroundRadius(radius)
+    }
+
+    suspend fun setSubtitleShadowEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleShadowEnabled(enabled)
+    }
+
+    suspend fun setSubtitleShadowOpacity(opacity: Int) {
+        playerSettingsDataStore.setSubtitleShadowOpacity(opacity)
+    }
+
+    suspend fun setSubtitleShadowSize(size: Int) {
+        playerSettingsDataStore.setSubtitleShadowSize(size)
+    }
+
+    suspend fun resetSubtitleAppearance() {
+        playerSettingsDataStore.resetSubtitleAppearance()
+    }
+
     suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) {
         playerSettingsDataStore.setSubtitleHdrStyleEnabled(enabled)
     }
@@ -317,6 +369,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleHdrBrightness(brightness: Int) {
         playerSettingsDataStore.setSubtitleHdrBrightness(brightness)
+    }
+
+    suspend fun setSubtitleHdrDimPlayerControls(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleHdrDimPlayerControls(enabled)
     }
 
     suspend fun setSubtitleOrganizationMode(mode: SubtitleOrganizationMode) {
@@ -515,6 +571,18 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setStreamAutoPlayNextEpisodeFallbackEnabled(enabled: Boolean) {
         playerSettingsDataStore.setStreamAutoPlayNextEpisodeFallbackEnabled(enabled)
+    }
+
+    suspend fun setStreamAutoPlayFallbackOnFailure(enabled: Boolean) {
+        playerSettingsDataStore.setStreamAutoPlayFallbackOnFailure(enabled)
+    }
+
+    suspend fun setStreamAutoPlayFallbackMaxSources(count: Int) {
+        playerSettingsDataStore.setStreamAutoPlayFallbackMaxSources(count)
+    }
+
+    suspend fun setStreamAutoPlayFallbackStartupTimeoutSeconds(seconds: Int) {
+        playerSettingsDataStore.setStreamAutoPlayFallbackStartupTimeoutSeconds(seconds)
     }
 
     suspend fun setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled: Boolean) {

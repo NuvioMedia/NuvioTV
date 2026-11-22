@@ -1,5 +1,9 @@
 package com.nuvio.tv.ui.screens.settings
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+
 import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -83,12 +87,17 @@ internal fun ThemeColorPicker(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             colorSwatches.forEachIndexed { index, swatch ->
+                val swatchDescription = stringResource(R.string.cd_color_swatch, formatHexColor(swatch))
                 Card(
                     onClick = { onColorChanged(swatch) },
                     modifier = Modifier
                         .size(30.dp)
                         .then(if (index == 0) Modifier.focusRequester(firstSwatchFocusRequester) else Modifier)
-                        .semantics { contentDescription = formatHexColor(swatch) },
+                        .semantics {
+                            role = Role.RadioButton
+                            this.selected = color == swatch
+                            contentDescription = swatchDescription
+                        },
                     shape = CardDefaults.shape(CircleShape),
                     colors = CardDefaults.colors(
                         containerColor = Color(swatch or 0xFF000000.toInt()),

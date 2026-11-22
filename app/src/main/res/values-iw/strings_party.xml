@@ -74,4 +74,5 @@
     <string name="party_invite_scan">יש לסרוק בטלפון כדי להצטרף</string>
     <string name="party_invite_share">או לשתף את הקוד. חברים יכולים להזין אותו במסיבת צפייה בכל אפליקציית Nuvio.</string>
     <string name="party_invite_qr">קוד QR להזמנה למסיבת צפייה</string>
+    <string name="party_phone_chat_note">יש לפתוח את מסיבת הצפייה בטלפון עם פרופיל זה כדי לשוחח בצ׳אט.</string>
 </resources>

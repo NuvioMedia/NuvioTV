@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.graphics.Rect
+import android.graphics.RectF
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
@@ -8,6 +9,7 @@ import android.view.ViewGroup
 import androidx.annotation.StringRes
 import androidx.media3.ui.PlayerView
 import com.nuvio.tv.R
+import kotlin.math.roundToInt
 
 enum class AspectMode(@StringRes val labelResId: Int) {
     ORIGINAL(R.string.player_aspect_fit),
@@ -36,6 +38,63 @@ internal fun aspectModeLabel(mode: AspectMode, getString: (Int) -> String): Stri
     getString(mode.labelResId)
 
 internal data class AspectScale(val scaleX: Float, val scaleY: Float)
+
+/**
+ * The distances from the libass overlay frame to the visible video rectangle.
+ * Values are signed: a positive value is a letterbox/pillarbox bar, while a negative value
+ * means that a zoom or crop extends the video beyond the overlay frame.
+ */
+internal data class LibassOverlayMargins(
+    val top: Int,
+    val bottom: Int,
+    val left: Int,
+    val right: Int
+)
+
+internal fun libassOverlayMargins(
+    overlayWidth: Int,
+    overlayHeight: Int,
+    videoBounds: RectF
+): LibassOverlayMargins? = libassOverlayMargins(
+    overlayWidth, overlayHeight,
+    videoBounds.left, videoBounds.top, videoBounds.right, videoBounds.bottom
+)
+
+internal fun libassOverlayMargins(
+    overlayWidth: Int,
+    overlayHeight: Int,
+    left: Float,
+    top: Float,
+    right: Float,
+    bottom: Float
+): LibassOverlayMargins? {
+    if (
+        overlayWidth <= 0 || overlayHeight <= 0 ||
+        !left.isFinite() || !top.isFinite() ||
+        !right.isFinite() || !bottom.isFinite() ||
+        right <= left || bottom <= top
+    ) {
+        return null
+    }
+    return LibassOverlayMargins(
+        top = top.roundToInt(),
+        bottom = (overlayHeight - bottom).roundToInt(),
+        left = left.roundToInt(),
+        right = (overlayWidth - right).roundToInt()
+    )
+}
+
+/**
+ * Maps a direct child's laid-out and transformed bounds into its parent's coordinate space.
+ * [exo_content_frame] is a direct child of PlayerView in exo_player_view.xml.
+ */
+internal fun transformedChildBoundsInParent(child: View): RectF? {
+    if (child.width <= 0 || child.height <= 0) return null
+    return RectF(0f, 0f, child.width.toFloat(), child.height.toFloat()).also { bounds ->
+        child.matrix.mapRect(bounds)
+        bounds.offset(child.left.toFloat(), child.top.toFloat())
+    }
+}
 
 internal fun aspectModeNeedsVideoAspect(mode: AspectMode): Boolean {
     return when (mode) {

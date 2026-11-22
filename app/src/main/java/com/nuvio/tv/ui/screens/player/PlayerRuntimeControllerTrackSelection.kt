@@ -458,7 +458,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val trackTitle = buildAddonSubtitleTrackId(subtitle)
         AutoSyncSyncedSubtitle.clear() // AutoSync hook
         mpvAddonSubtitleSelectionJob = scope.launch {
-            val localPath = try {
+            val localPath = if (com.nuvio.tv.core.usenet.UsenetSidecar.isSubtitleUrl(subtitle.url)) subtitle.url else try {
                 val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang, subtitle.headers)
                 val sanitized = SubtitleMojibakeSanitizer.sanitize(decodedBody).toString()
                 val cacheDir = java.io.File(context.cacheDir, "subtitles").also { it.mkdirs() }
@@ -675,7 +675,13 @@ internal fun PlayerRuntimeController.rememberAddonSubtitleSelection(subtitle: Su
 }
 
 private fun PlayerRuntimeController.currentTrackPreferenceForPersistence(): PlayerRuntimeController.TrackPreference {
-    return rememberedTrackPreference ?: persistedTrackPreference ?: PlayerRuntimeController.TrackPreference()
+    // A restored selection is cleared from persistedTrackPreference once applied, so a later
+    // save (e.g. AutoSync resetting the delay) must fall back to the loaded snapshot instead,
+    // or it would overwrite the stored subtitle with nothing.
+    return rememberedTrackPreference
+        ?: loadedTrackPreference
+        ?: persistedTrackPreference
+        ?: PlayerRuntimeController.TrackPreference()
 }
 
 internal fun PlayerRuntimeController.persistTrackPreference() {

@@ -14,7 +14,40 @@ internal fun PlayerRuntimeController.releasePlayer(
     flushPlaybackState: Boolean,
     keepTorrentStream: Boolean = false
 ) {
+    if (flushPlaybackState) cancelStreamFallback()
     logScrobbleDiagnostic("release_player", "flushPlaybackState=$flushPlaybackState")
+
+    // Preserve current subtitle selection across any rebuild. When the user explicitly
+    // selected a track, persistedTrackPreference was nulled and the choice lives only
+    // in the UI state. Capture it so applyPersistedTrackPreference restores it.
+    if (persistedTrackPreference == null) {
+        val currentSubIdx = _uiState.value.selectedSubtitleTrackIndex
+        val currentAddon = _uiState.value.selectedAddonSubtitle
+        val currentTracks = _uiState.value.subtitleTracks
+        val currentSubTrack = currentTracks.getOrNull(currentSubIdx)
+        if (currentSubTrack != null) {
+            persistedTrackPreference = PlayerRuntimeController.TrackPreference(
+                subtitle = PlayerRuntimeController.RememberedSubtitleSelection.Internal(
+                    track = PlayerRuntimeController.RememberedTrackSelection(
+                        language = currentSubTrack.language,
+                        name = currentSubTrack.name,
+                        indexHint = currentSubIdx,
+                        isForcedHint = currentSubTrack.isForced
+                    )
+                )
+            )
+        } else if (currentAddon != null) {
+            persistedTrackPreference = PlayerRuntimeController.TrackPreference(
+                subtitle = PlayerRuntimeController.RememberedSubtitleSelection.Addon(
+                    id = currentAddon.id,
+                    url = currentAddon.url,
+                    language = currentAddon.lang,
+                    addonName = currentAddon.addonName
+                )
+            )
+        }
+    }
+
     isReleasingPlayer = true
     com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = false
     if (flushPlaybackState) {
@@ -27,12 +60,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     audioRouteChangeJob?.cancel()
     audioRouteChangeJob = null
 
-    try {
-        currentMediaSession?.release()
-        currentMediaSession = null
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
+    releaseMediaSession()
     progressJob?.cancel()
     mpvTrackRefreshJob?.cancel()
     mpvTrackRefreshJob = null
@@ -51,6 +79,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     hideSubtitleDelayOverlayJob?.cancel()
     subtitleAutoSyncLoadJob?.cancel()
     cancelAutomaticSubtitleSync() // AutoSync hook
+    com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.release(this)
     stopSidecarAddonSubtitle(clearView = true)
     subtitleTimingRefreshJob?.cancel()
     subtitleTimingRefreshJob = null
@@ -84,6 +113,7 @@ internal fun PlayerRuntimeController.releasePlayer(
         runCatching { player.release() }
     }
     _exoPlayer = null
+    activeAssVideoEffect = null
     _loadControl = null
     currentBitrateAwareLoadControl = null
     currentParallelChunkOverheadMb = 0

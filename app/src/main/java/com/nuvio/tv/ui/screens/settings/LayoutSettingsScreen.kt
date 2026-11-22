@@ -17,10 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -62,6 +65,8 @@ fun LayoutSettingsContent(
     var expandedSections by rememberSaveable(essentialMode) {
         mutableStateOf(if (essentialMode) listOf(LayoutSection.HOME_LAYOUT.name) else emptyList())
     }
+    val customPosterQrFocusRequester = remember { FocusRequester() }
+    val streamBadgeQrFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(streamBadgeUiState.serverError) {
         val error = streamBadgeUiState.serverError ?: return@LaunchedEffect
@@ -79,56 +84,63 @@ fun LayoutSettingsContent(
             )
         )
 
-        SettingsGroupCard(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            val listState = rememberLazyListState()
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-                ) {
-                    items(items = sections, key = { it.name }) { section ->
-                        val expanded = section.name in expandedSections
-                        SettingsCollapsibleSection(
-                            title = stringResource(section.title),
-                            description = stringResource(section.description),
-                            icon = section.icon,
-                            expanded = expanded,
-                            onToggle = {
-                                expandedSections = if (expanded) {
-                                    expandedSections - section.name
-                                } else {
-                                    expandedSections + section.name
-                                }
-                            },
-                            focusRequester = if (section == sections.first()) initialFocusRequester else null,
-                            modifier = Modifier.testTag(LayoutSettingsTestTags.section(section))
-                        ) {
-                            LayoutSectionContent(
-                                section = section,
-                                uiState = uiState,
-                                streamBadgeUiState = streamBadgeUiState,
-                                viewModel = viewModel
-                            )
+            SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+                    ) {
+                        items(items = sections, key = { it.name }) { section ->
+                            val expanded = section.name in expandedSections
+                            SettingsCollapsibleSection(
+                                title = stringResource(section.title),
+                                description = stringResource(section.description),
+                                icon = section.icon,
+                                expanded = expanded,
+                                onToggle = {
+                                    expandedSections = if (expanded) {
+                                        expandedSections - section.name
+                                    } else {
+                                        expandedSections + section.name
+                                    }
+                                },
+                                focusRequester = if (section == sections.first()) initialFocusRequester else null,
+                                modifier = Modifier.testTag(LayoutSettingsTestTags.section(section))
+                            ) {
+                                LayoutSectionContent(
+                                    section = section,
+                                    uiState = uiState,
+                                    streamBadgeUiState = streamBadgeUiState,
+                                    viewModel = viewModel,
+                                    customPosterQrFocusRequester = customPosterQrFocusRequester,
+                                    streamBadgeQrFocusRequester = streamBadgeQrFocusRequester
+                                )
+                            }
                         }
                     }
+                    SettingsVerticalScrollIndicators(state = listState)
                 }
-                SettingsVerticalScrollIndicators(state = listState)
             }
-        }
 
         if (streamBadgeUiState.isQrModeActive) {
             QrCodeOverlay(
                 qrBitmap = streamBadgeUiState.qrCodeBitmap,
                 serverUrl = streamBadgeUiState.serverUrl,
                 instruction = stringResource(R.string.stream_badge_qr_instruction),
-                onClose = viewModel::stopStreamBadgeQrMode,
-                qrSize = 168.dp
+                onClose = {
+                    streamBadgeQrFocusRequester.requestFocus()
+                    viewModel.stopStreamBadgeQrMode()
+                },
+                qrSize = 168.dp,
+                modifier = Modifier.clip(settingsGroupShape())
             )
         }
 
@@ -137,9 +149,14 @@ fun LayoutSettingsContent(
                 qrBitmap = customPosterQrState.qrCodeBitmap,
                 serverUrl = customPosterQrState.serverUrl,
                 instruction = stringResource(R.string.custom_poster_qr_instruction),
-                onClose = viewModel::stopCustomPosterQrMode,
-                qrSize = 168.dp
+                onClose = {
+                    customPosterQrFocusRequester.requestFocus()
+                    viewModel.stopCustomPosterQrMode()
+                },
+                qrSize = 168.dp,
+                modifier = Modifier.clip(settingsGroupShape())
             )
+        }
         }
     }
 }
@@ -149,7 +166,9 @@ private fun LayoutSectionContent(
     section: LayoutSection,
     uiState: LayoutSettingsUiState,
     streamBadgeUiState: StreamBadgeSettingsUiState,
-    viewModel: LayoutSettingsViewModel
+    viewModel: LayoutSettingsViewModel,
+    customPosterQrFocusRequester: FocusRequester,
+    streamBadgeQrFocusRequester: FocusRequester
 ) {
     val onEvent: (LayoutSettingsEvent) -> Unit = viewModel::onEvent
     when (section) {
@@ -163,7 +182,8 @@ private fun LayoutSectionContent(
         LayoutSection.CUSTOM_POSTERS -> LayoutCustomPosterSection(
             uiState = uiState,
             onEvent = onEvent,
-            onConfigureViaPhone = viewModel::startCustomPosterQrMode
+            onConfigureViaPhone = viewModel::startCustomPosterQrMode,
+            focusRequester = customPosterQrFocusRequester
         )
         LayoutSection.DETAIL_PAGE -> LayoutDetailPageSection(uiState, onEvent)
         LayoutSection.STREAMS -> LayoutStreamsSection(
@@ -173,7 +193,8 @@ private fun LayoutSectionContent(
             onBadgePlacementSelected = viewModel::setStreamBadgePlacement,
             onConfigureBadges = viewModel::startStreamBadgeQrMode,
             onShowInPlayerChange = viewModel::setShowBadgesInPlayer,
-            onPlayerBadgeSourceSelected = viewModel::setPlayerBadgeSource
+            onPlayerBadgeSourceSelected = viewModel::setPlayerBadgeSource,
+            configureBadgesFocusRequester = streamBadgeQrFocusRequester
         )
     }
 }

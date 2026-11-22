@@ -27,6 +27,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -164,7 +168,12 @@ private fun AppIconOptionCard(
     val shape = RoundedCornerShape(12.dp)
     Card(
         onClick = { if (enabled) onClick() },
-        modifier = modifier.alpha(if (enabled) 1f else 0.55f),
+        modifier = modifier
+            .alpha(if (enabled) 1f else 0.55f)
+            .semantics {
+                role = Role.RadioButton
+                this.selected = selected
+            },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -223,7 +232,7 @@ private fun AppIconOptionCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.Primary,
                         modifier = Modifier.size(18.dp)
                     )

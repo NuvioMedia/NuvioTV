@@ -110,7 +110,7 @@ fun ProfileBackgroundPicker(
             ) {
                 ProfileBackgroundImage(
                     background = background,
-                    contentDescription = background.displayName,
+                    contentDescription = null,
                     modifier = Modifier.fillMaxSize()
                 )
             }

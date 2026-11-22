@@ -65,6 +65,7 @@ data class MetaDetailsUiState(
     val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val seasonPostersEnabled: Boolean = false,
     val randomEpisodeEnabled: Boolean = false,
     val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffleSettings = com.nuvio.tv.domain.model.EpisodeShuffleSettings(),
     val shufflePoolEmpty: Boolean = false,
@@ -116,6 +117,8 @@ sealed class MetaDetailsEvent {
     data object OnPlayButtonFocused : MetaDetailsEvent()
     data object OnTrailerButtonClick : MetaDetailsEvent()
     data object OnTrailerEnded : MetaDetailsEvent()
+    /** User pressed Back while the full-screen trailer was showing. */
+    data object OnTrailerBackPress : MetaDetailsEvent()
     data class OnSharedTrailerSelected(val trailer: MetaTrailer) : MetaDetailsEvent()
     data object OnDismissSharedTrailer : MetaDetailsEvent()
     data object OnRetrySharedTrailer : MetaDetailsEvent()
@@ -131,6 +134,7 @@ sealed class MetaDetailsEvent {
     data object OnPickerDismiss : MetaDetailsEvent()
     data object OnRemovalConfirmed : MetaDetailsEvent()
     data object OnRemovalCancelled : MetaDetailsEvent()
+    data class OnShowMessage(val message: String, val isError: Boolean) : MetaDetailsEvent()
     data object OnClearMessage : MetaDetailsEvent()
     data object OnLifecyclePause : MetaDetailsEvent()
 }

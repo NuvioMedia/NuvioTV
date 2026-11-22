@@ -63,9 +63,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
@@ -261,6 +267,7 @@ fun LibraryScreen(
 
     if (uiState.isLoading) {
         val loadingFocusRequester = remember { FocusRequester() }
+        val loadingLabel = stringResource(R.string.library_syncing_library)
         LaunchedEffect(uiState.isLoading) {
             loadingFocusRequester.requestFocus()
         }
@@ -274,6 +281,7 @@ fun LibraryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .focusRequester(loadingFocusRequester)
+                    .semantics { contentDescription = loadingLabel }
                     .focusable()
             )
             Column(
@@ -454,25 +462,24 @@ fun LibraryScreen(
 
             if (uiState.visibleItems.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    val selectedTypeLabel = uiState.selectedTypeTab?.let { localizedTypeLabel(it.key) }?.lowercase() ?: stringResource(R.string.library_type_items)
                     val title = when {
                         uiState.sourceMode == LibrarySourceMode.TRAKT && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_trakt_not_auth_title)
                         uiState.sourceMode == LibrarySourceMode.SIMKL && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_simkl_not_auth_title)
-                        uiState.sourceMode == LibrarySourceMode.TRAKT || uiState.sourceMode == LibrarySourceMode.MDBLIST -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
-                        uiState.sourceMode == LibrarySourceMode.SIMKL -> stringResource(R.string.library_empty_simkl_title, selectedTypeLabel)
-                        else -> stringResource(R.string.library_empty_local_title, selectedTypeLabel)
+                        else -> stringResource(R.string.library_empty_title)
                     }
                     val subtitle = when {
                         uiState.sourceMode == LibrarySourceMode.TRAKT && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_trakt_not_auth_subtitle)
                         uiState.sourceMode == LibrarySourceMode.SIMKL && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_simkl_not_auth_subtitle)
-                        uiState.sourceMode == LibrarySourceMode.TRAKT || uiState.sourceMode == LibrarySourceMode.MDBLIST -> stringResource(R.string.library_empty_trakt_subtitle)
-                        uiState.sourceMode == LibrarySourceMode.SIMKL -> stringResource(R.string.library_empty_simkl_subtitle)
-                        else -> stringResource(R.string.library_empty_local_subtitle)
+                        uiState.sourceMode == LibrarySourceMode.TRAKT || uiState.sourceMode == LibrarySourceMode.MDBLIST -> stringResource(R.string.library_empty_trakt_hint)
+                        uiState.sourceMode == LibrarySourceMode.SIMKL -> stringResource(R.string.library_empty_simkl_hint)
+                        else -> stringResource(R.string.library_empty_local_hint)
                     }
                     EmptyScreenState(
                         title = title,
                         subtitle = subtitle,
-                        icon = Icons.Default.BookmarkBorder
+                        icon = Icons.Default.BookmarkBorder,
+                        modifier = Modifier.padding(vertical = NuvioTheme.spacing.xl),
+                        height = Dp.Unspecified
                     )
                 }
             }
@@ -741,7 +748,11 @@ private fun LibraryViewModeRow(
                 Button(
                     onClick = { onSelected(mode) },
                     modifier = Modifier
-                        .then(if (selected) Modifier.focusRequester(primaryFocusRequester) else Modifier),
+                        .then(if (selected) Modifier.focusRequester(primaryFocusRequester) else Modifier)
+                        .semantics {
+                            role = Role.Tab
+                            this.selected = selected
+                        },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextPrimary
@@ -1460,6 +1471,12 @@ private fun LibraryDropdownPicker(
                             color = itemBackgroundColor,
                             shape = RoundedCornerShape(10.dp)
                         )
+                        .semantics {
+                            // The current option is only distinguished by a background tint,
+                            // so expose the selection state explicitly.
+                            role = Role.RadioButton
+                            this.selected = isSelected
+                        }
                         .onFocusChanged { state ->
                             val hasFocus = state.isFocused || state.hasFocus
                             focusedOptionValue = when {

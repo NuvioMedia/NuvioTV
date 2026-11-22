@@ -146,6 +146,12 @@
 # AndroidX components referenced by extensions
 -keep class androidx.fragment.app.** { *; }
 -keep interface androidx.fragment.app.** { *; }
+-keep class androidx.appcompat.app.** { *; }
+-keep interface androidx.appcompat.app.** { *; }
 
 -dontwarn java.beans.ConstructorProperties
 -dontwarn java.beans.Transient
+
+# Audio Sync speech recognition uses JNI to read configuration fields by name.
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-keep interface com.k2fsa.sherpa.onnx.** { *; }

@@ -404,7 +404,9 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
                     itemIdentities += "folder:${payload.folderId}"
                 }
                 is ModernPayload.ContinueWatching -> {
-                    itemIdentities += "cw:${payload.item.hashCode()}"
+                    // The card's key, one per title: a hash of the item changes with its progress,
+                    // so a card that was just watched would not be found again when it moves.
+                    itemIdentities += "cw:${item.key}"
                 }
             }
         }

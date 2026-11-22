@@ -63,6 +63,7 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
                         "result=${if (loaded == null) "null (no saved preference)" else "audio=${loaded.audio?.language}/${loaded.audio?.name} subtitle=${loaded.subtitle?.javaClass?.simpleName}"}"
                 )
                 persistedTrackPreference = loaded
+                loadedTrackPreference = loaded
             } ?: Log.d(PlayerRuntimeController.TAG, "TRACK_PREF load: skipped (contentId is null)")
             // Subtitle delay is keyed per-videoId, so it is loaded separately
             // from the track selection above. This happens before
@@ -104,7 +105,10 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
         // seek to be silently skipped — the player would start from 0:00
         // or hang in buffering after a late seek.
         val partyPositionMs = partyResumePositionMs()
-        if (partyPositionMs != null) {
+        if (streamFallbackResumePosition != null) {
+            pendingResumeProgress = null
+            _uiState.update { it.copy(pendingSeekPosition = streamFallbackResumePosition) }
+        } else if (partyPositionMs != null) {
             pendingResumeProgress = null
             _uiState.update { it.copy(pendingSeekPosition = partyPositionMs) }
         } else if (loadSavedProgress) {
@@ -118,7 +122,7 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
             phase = "initializing_player",
             message = context.getString(com.nuvio.tv.R.string.player_loading_building)
         )
-        initializePlayer(playbackUrl, playbackHeaders)
+        initializePlayer(playbackUrl, playbackHeaders, startPaused = streamFallbackResumePosition != null && streamFallbackStartPaused)
     }
 }
 
