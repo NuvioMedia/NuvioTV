@@ -3418,6 +3418,15 @@
     <string name="autosync_thorough_title">Busca detalhada</string>
     <string name="autosync_thorough_description">Continue comparando outras legendas e faixas do vídeo para um ajuste mais preciso. Quando desativado, a primeira correspondência forte é usada mais rápido. Só ajustes confiáveis são aplicados.</string>
     <string name="autosync_label_synced">Sincronizado automaticamente</string>
+    <string name="player_disc_titles">Títulos do disco</string>
+    <string name="player_disc_title_feature">Filme · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Legendas %1$s</string>
+    <string name="player_disc_title_failed">Não foi possível reproduzir este título</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clipe</item>
+        <item quantity="other">%d clipes</item>
+    </plurals>
     <string name="stream_resume_from_time">Continuar a partir de %1$s</string>
     <string name="stream_resume_from_percent">Continuar a partir de %1$d%%</string>
 </resources>
