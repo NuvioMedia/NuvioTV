@@ -10,6 +10,10 @@ import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
+import com.nuvio.tv.core.usenet.UsenetIndexer
+import com.nuvio.tv.core.usenet.UsenetProvider
+import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
+import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -21,9 +25,11 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -54,6 +60,7 @@ class AddonManagerViewModelReorderTest {
     private fun createViewModel(
         addonsFlow: MutableStateFlow<List<Addon>>,
         addonRepository: AddonRepository = mockk(relaxed = true),
+        usenetSettings: UsenetSourceSettings = mockUsenetSettings(),
     ): Pair<AddonManagerViewModel, AddonRepository> {
         every { addonRepository.getInstalledAddons() } returns addonsFlow
         val layoutPrefs = mockk<LayoutPreferenceDataStore>(relaxed = true) {
@@ -75,14 +82,30 @@ class AddonManagerViewModelReorderTest {
             collectionSyncService = mockk<CollectionSyncService>(relaxed = true),
             homeCatalogSettingsSyncService = mockk<HomeCatalogSettingsSyncService>(relaxed = true),
             startupSyncService = mockk<StartupSyncService>(relaxed = true),
-            profileManager = mockk<ProfileManager>(relaxed = true),
+            profileManager = mockk<ProfileManager>(relaxed = true) {
+                every { activeProfile } returns null
+                every { activeProfileId } returns MutableStateFlow(1)
+            },
             tmdbCollectionSourceResolver = mockk<TmdbCollectionSourceResolver>(relaxed = true),
             traktPublicListSourceResolver = mockk<TraktPublicListSourceResolver>(relaxed = true),
+            usenetSourceSettings = usenetSettings,
             trackingAddonConsentController = mockk<TrackingAddonConsentController>(relaxed = true),
             context = mockk<Context>(relaxed = true)
         )
         return vm to addonRepository
     }
+
+    private fun mockUsenetSettings(configuration: UsenetSourceConfiguration = UsenetSourceConfiguration()) =
+        mockk<UsenetSourceSettings>(relaxed = true) {
+            every { snapshots } returns flowOf(1 to Result.success(configuration))
+            every { read(1) } returns configuration
+        }
+
+    private fun configuredUsenet() = UsenetSourceConfiguration(
+        providers = listOf(UsenetProvider(name = "Provider", host = "nntp.example")),
+        indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.example")),
+        addonsAbove = listOf("a")
+    )
 
     @Test
     fun `enterAddonMoveMode ignores single-addon list`() = runTest {
@@ -185,5 +208,51 @@ class AddonManagerViewModelReorderTest {
         assertNull(vm.uiState.value.movingAddonKey)
         assertEquals(listOf("a", "b", "c"), vm.uiState.value.installedAddons.map { it.baseUrl })
         coVerify(exactly = 0) { repo.setAddonOrder(any()) }
+    }
+
+    @Test
+    fun `moving Usenet by itself saves its position locally`() = runTest {
+        val configuration = configuredUsenet()
+        val settings = mockUsenetSettings(configuration)
+        val addonsFlow = MutableStateFlow(listOf(testAddon("a")))
+        val (vm, repo) = createViewModel(addonsFlow, usenetSettings = settings)
+        vm.uiState.first { it.addonOrderKeys == listOf("a", BUILT_IN_USENET_KEY) }
+
+        vm.enterAddonMoveMode(BUILT_IN_USENET_KEY)
+        assertEquals(0, vm.moveAddonDuringDrag(BUILT_IN_USENET_KEY, -1))
+        verify(exactly = 0) { settings.update(any(), any()) }
+        vm.confirmAddonMove()
+        runCurrent()
+
+        assertEquals(listOf(BUILT_IN_USENET_KEY, "a"), vm.uiState.value.addonOrderKeys)
+        verify(exactly = 1) { settings.update(configuration.copy(addonsAbove = emptyList()), 1) }
+        coVerify(exactly = 0) { repo.setAddonOrder(any()) }
+    }
+
+    @Test
+    fun `moving an addon across Usenet confirms both orders`() = runTest {
+        val configuration = configuredUsenet()
+        val settings = mockUsenetSettings(configuration)
+        val addonsFlow = MutableStateFlow(listOf(testAddon("a"), testAddon("b")))
+        val (vm, repo) = createViewModel(addonsFlow, usenetSettings = settings)
+        vm.uiState.first { it.addonOrderKeys == listOf("a", BUILT_IN_USENET_KEY, "b") }
+
+        vm.enterAddonMoveMode("b")
+        assertEquals(1, vm.moveAddonDuringDrag("b", -1))
+        assertEquals(0, vm.moveAddonDuringDrag("b", -1))
+        vm.cancelAddonMove()
+        assertEquals(listOf("a", BUILT_IN_USENET_KEY, "b"), vm.uiState.value.addonOrderKeys)
+        verify(exactly = 0) { settings.update(any(), any()) }
+        coVerify(exactly = 0) { repo.setAddonOrder(any()) }
+
+        vm.enterAddonMoveMode("b")
+        vm.moveAddonDuringDrag("b", -1)
+        vm.moveAddonDuringDrag("b", -1)
+        vm.confirmAddonMove()
+        runCurrent()
+
+        assertEquals(listOf("b", "a", BUILT_IN_USENET_KEY), vm.uiState.value.addonOrderKeys)
+        verify(exactly = 1) { settings.update(configuration.copy(addonsAbove = listOf("b", "a")), 1) }
+        coVerify(exactly = 1) { repo.setAddonOrder(listOf("b", "a")) }
     }
 }
