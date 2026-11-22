@@ -71,6 +71,9 @@ import javax.net.ssl.X509TrustManager
 internal class PlayerMediaSourceFactory(private val context: Context) {
     private var customExtractorsFactory: ExtractorsFactory? = null
     private var customSubtitleParserFactory: SubtitleParser.Factory? = null
+    // Blu-ray clips use their own extractors instead of customExtractorsFactory; this lets the
+    // player wrap them too, given the stream url.
+    @Volatile private var bdavExtractorsWrapper: ((ExtractorsFactory, String) -> ExtractorsFactory)? = null
     private val loadErrorHandlingPolicy = PlayerLoadErrorHandlingPolicy()
 
     @Volatile private var currentVodCacheUrl: String? = null
@@ -167,6 +170,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         customSubtitleParserFactory = subtitleParserFactory
     }
 
+    fun configureBdavExtractorsWrapper(wrapper: ((ExtractorsFactory, String) -> ExtractorsFactory)?) {
+        bdavExtractorsWrapper = wrapper
+    }
+
+    private fun wrapBdavExtractors(factory: ExtractorsFactory, url: String): ExtractorsFactory =
+        bdavExtractorsWrapper?.invoke(factory, url) ?: factory
+
     fun createMediaSource(
         context: Context,
         url: String,
@@ -199,7 +209,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                             useLongReadTimeout = isLoopbackUrl(url)
                         )
                     ),
-                    subtitleConfigurations = subtitleConfigurations
+                    subtitleConfigurations = subtitleConfigurations,
+                    url = url
                 ),
                 audioDelayUsProvider = audioDelayUsProvider
             )
@@ -335,7 +346,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val bdav = !isHls && !isDash &&
             (bluray == BlurayPlaylistResolver.RemoteLayout.BdavClip || BlurayPlaylistResolver.isLikelyBdavM2tsUrl(url))
         val mediaDataFactory = if (bdav) BdavM2tsDataSourceFactory(progressiveFactory) else progressiveFactory
-        val extractorsFactory = if (bdav) createBdavExtractorsFactory(progressiveFactory) else customExtractorsFactory ?: DefaultExtractorsFactory()
+        val extractorsFactory = if (bdav) {
+            wrapBdavExtractors(createBdavExtractorsFactory(progressiveFactory), url)
+        } else {
+            customExtractorsFactory ?: DefaultExtractorsFactory()
+        }
         // MediaItem subtitle tracks load through this factory too; route addon subtitles through the
         // subtitle download path so they don't inherit the stream's headers and client.
         val defaultSourceFactory = if (subtitleConfigurations.isNotEmpty()) {
@@ -405,9 +420,15 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         segmentUrls: List<String>,
         durationsMs: List<Long>,
         dataSourceFactory: DataSource.Factory,
-        subtitleConfigurations: List<MediaItem.SubtitleConfiguration>
+        subtitleConfigurations: List<MediaItem.SubtitleConfiguration>,
+        url: String
     ): MediaSource {
-        val clipFactory = DefaultMediaSourceFactory(BdavM2tsDataSourceFactory(dataSourceFactory), createBdavExtractorsFactory(dataSourceFactory))
+        // Each clip's timestamps start again at zero, so only a one-clip playlist matches the
+        // stream's timeline.
+        val clipExtractors = createBdavExtractorsFactory(dataSourceFactory).let { factory ->
+            if (segmentUrls.size == 1) wrapBdavExtractors(factory, url) else factory
+        }
+        val clipFactory = DefaultMediaSourceFactory(BdavM2tsDataSourceFactory(dataSourceFactory), clipExtractors)
             .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         val builder = ConcatenatingMediaSource2.Builder()
         segmentUrls.forEachIndexed { index, segmentUrl ->
