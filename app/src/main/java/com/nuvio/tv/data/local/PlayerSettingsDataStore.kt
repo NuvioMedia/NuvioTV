@@ -162,7 +162,8 @@ data class SubtitleStyleSettings(
     val shadowEnabled: Boolean = false,
     val shadowOpacity: Int = SHADOW_OPACITY_DEFAULT,
     val shadowSize: Int = SHADOW_SIZE_DEFAULT,
-    val fileColorBrightness: Float = 1f
+    val fileColorBrightness: Float = 1f,
+    val customizeAss: Boolean = false
 ) {
     /**
      * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
@@ -786,6 +787,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleShadowEnabledKey = booleanPreferencesKey("subtitle_shadow_enabled")
     private val subtitleShadowOpacityKey = intPreferencesKey("subtitle_shadow_opacity")
     private val subtitleShadowSizeKey = intPreferencesKey("subtitle_shadow_size")
+    private val subtitleCustomizeAssKey = booleanPreferencesKey("subtitle_customize_ass")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -1255,7 +1257,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         shadowOpacity = (prefs[subtitleShadowOpacityKey] ?: SubtitleStyleSettings.SHADOW_OPACITY_DEFAULT)
                             .coerceIn(0, 100),
                         shadowSize = (prefs[subtitleShadowSizeKey] ?: SubtitleStyleSettings.SHADOW_SIZE_DEFAULT)
-                            .coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
+                            .coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX),
+                        customizeAss = prefs[subtitleCustomizeAssKey] ?: false
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1888,6 +1891,9 @@ class PlayerSettingsDataStore @Inject constructor(
             it[subtitleShadowSizeKey] = size.coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
         }
     }
+    suspend fun setSubtitleCustomizeAss(enabled: Boolean) {
+        store().edit { it[subtitleCustomizeAssKey] = enabled }
+    }
     suspend fun resetSubtitleAppearance(resetHdrText: Boolean = false) {
         val defaults = SubtitleStyleSettings()
         store().edit { prefs ->
@@ -1909,6 +1915,7 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[subtitleShadowEnabledKey] = defaults.shadowEnabled
             prefs[subtitleShadowOpacityKey] = defaults.shadowOpacity
             prefs[subtitleShadowSizeKey] = defaults.shadowSize
+            prefs[subtitleCustomizeAssKey] = defaults.customizeAss
         }
     }
 

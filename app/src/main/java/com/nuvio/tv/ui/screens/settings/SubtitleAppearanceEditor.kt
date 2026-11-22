@@ -148,6 +148,14 @@ private fun SubtitleAppearanceControls(
                     onValueChange = { size -> onUpdate { setSubtitleSize(size) } }
                 )
             }
+            item(key = "customize_ass") {
+                SettingsToggleRow(
+                    title = stringResource(R.string.subtitle_style_customize_ass),
+                    subtitle = stringResource(R.string.subtitle_style_customize_ass_sub),
+                    checked = style.customizeAss,
+                    onToggle = { onUpdate { setSubtitleCustomizeAss(!style.customizeAss) } }
+                )
+            }
             item(key = "bold") {
                 SettingsToggleRow(
                     title = stringResource(R.string.sub_bold),

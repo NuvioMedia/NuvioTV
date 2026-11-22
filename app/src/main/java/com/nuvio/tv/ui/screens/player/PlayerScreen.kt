@@ -2077,13 +2077,21 @@ fun PlayerScreen(
                     false
                 }
                 val isUsingMpv = uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER
-                val isAssDisabled = isCurrentSubtitleAss && (isUsingMpv || uiState.useLibass)
+                val isAssActive = isCurrentSubtitleAss && (isUsingMpv || uiState.useLibass)
+                val supportsAssStyleCustomization = isCurrentSubtitleAss && isUsingMpv
+                val isAssStyleRestricted = isAssActive && !(supportsAssStyleCustomization && uiState.editableSubtitleStyle.customizeAss)
 
                 SubtitleStyleSidePanel(
                     subtitleStyle = uiState.editableSubtitleStyle,
                     isEditingHdrStyle = uiState.isEditingHdrSubtitleStyle,
-                    onEvent = { if (!isAssDisabled) viewModel.onEvent(it) },
-                    isStyleDisabledByLibass = isAssDisabled,
+                    onEvent = { event ->
+                        val allowed = !isAssStyleRestricted ||
+                            event is PlayerEvent.OnSetSubtitleSize ||
+                            (supportsAssStyleCustomization && event is PlayerEvent.OnSetSubtitleCustomizeAss)
+                        if (allowed) viewModel.onEvent(event)
+                    },
+                    isStyleDisabledByLibass = isAssStyleRestricted,
+                    supportsAssStyleCustomization = supportsAssStyleCustomization,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                 )
@@ -2592,6 +2600,12 @@ private fun PlayerView.applySubtitleStyleIfNeeded(
     if (!force && getTag(R.id.player_view_subtitle_style_tag) == config) {
         return
     }
+    (player as? ExoPlayer)?.getAssHandlerCompat()?.applyAssFontScaleCompat(
+        (subtitleStyle.size / 100f).coerceIn(0.5f, 3.0f)
+    )
+    findViewById<android.widget.FrameLayout>(R.id.libass_overlay_container_gl)
+        ?.findAssOverlayChild()
+        ?.invalidateSubtitles()
     val subView = subtitleView
     if (subView == null) {
         // SubtitleView not yet available (no track selected yet). Don't set the
