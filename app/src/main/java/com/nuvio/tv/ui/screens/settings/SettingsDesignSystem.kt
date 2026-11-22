@@ -59,6 +59,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -187,6 +188,34 @@ internal fun settingsRowBorder(
         )
     )
 }
+
+/**
+ * Colors for option cards that keep a selected value (settings style, home layout, continue
+ * watching style). Selection is a tinted fill and focus is the ring from [settingsOptionCardBorder],
+ * so a selected card and the card under D-pad focus never look alike. The fill stays while the
+ * card is focused so focusing the selected card only adds the ring.
+ */
+@Composable
+internal fun settingsOptionCardColors(isSelected: Boolean): CardColors {
+    val containerColor = if (isSelected) {
+        NuvioTheme.colors.Secondary.copy(alpha = 0.18f).compositeOver(NuvioTheme.colors.Background)
+    } else {
+        NuvioTheme.colors.Background
+    }
+    return CardDefaults.colors(
+        containerColor = containerColor,
+        focusedContainerColor = containerColor
+    )
+}
+
+@Composable
+internal fun settingsOptionCardBorder(shape: RoundedCornerShape): CardBorder = CardDefaults.border(
+    border = Border.None,
+    focusedBorder = Border(
+        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+        shape = shape
+    )
+)
 
 internal object SettingsTestTags {
     const val ROW_ICON = "settings_row_icon"
