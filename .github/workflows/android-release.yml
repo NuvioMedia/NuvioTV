@@ -16,6 +16,11 @@ on:
         description: Optional comma-separated commit hashes to omit from the notes
         required: false
         type: string
+      refresh_profile:
+        description: Regenerate the baseline profile on a TV emulator before the build
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -76,7 +81,7 @@ jobs:
 
           unexpected_changes="$(
             git diff --name-only "${CURRENT_BUMP}..${RELEASE_COMMIT}" \
-              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/release-metadata\.sh|scripts/generate-release-notes\.sh|scripts/generate_release_notes\.py|scripts/release_notes/.*|scripts/tests/.*)$' \
+              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/release-metadata\.sh|scripts/ci-generate-profile\.sh|scripts/generate-release-notes\.sh|scripts/generate_release_notes\.py|scripts/release_notes/.*|scripts/tests/.*)$' \
               || true
           )"
           if [[ -n "${unexpected_changes}" ]]; then
@@ -215,6 +220,67 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Grant KVM access
+        if: inputs.mode != 'dry-run' && inputs.refresh_profile
+        run: |
+          # The runner has KVM but the runner user cannot open /dev/kvm without this
+          # rule; without it android-emulator-runner silently disables hardware
+          # acceleration and a 32-bit TV guest boots at software speed.
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm-dev"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: Pick an available TV system image
+        if: inputs.mode != 'dry-run' && inputs.refresh_profile
+        run: |
+          set -euo pipefail
+          # Google does not publish a TV system image for every API level (android-34
+          # has none), so ask the remote index and take the newest one it offers.
+          android_sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export PATH="${android_sdk}/cmdline-tools/latest/bin:${PATH}"
+          listing="$(mktemp)"
+          sdkmanager --list > "${listing}" 2>"${listing}.err" || true
+          pick="$(grep -oE 'system-images;android-[0-9]+;android-tv;x86_64' "${listing}" | sort -V | tail -1 || true)"
+          abi=x86_64
+          if [[ -z "${pick}" ]]; then
+            pick="$(grep -oE 'system-images;android-[0-9]+;android-tv;x86(;|$)' "${listing}" | sort -V | tail -1 || true)"
+            abi=x86
+          fi
+          if [[ -z "${pick}" ]]; then
+            echo "No android-tv system image in the package index. Diagnostics:" >&2
+            tail -5 "${listing}.err" >&2
+            grep -oE 'system-images;android-[0-9]+;[a-z_-]+;' "${listing}" | sort -u | tail -30 >&2 || true
+            exit 1
+          fi
+          api="$(sed 's/^system-images;android-\([0-9]*\);.*/\1/' <<<"${pick}")"
+          echo "TV_API=${api}" >> "${GITHUB_ENV}"
+          echo "TV_ARCH=${abi}" >> "${GITHUB_ENV}"
+          echo "Using system image: ${pick}"
+
+      - name: Refresh baseline profile on a TV emulator
+        if: inputs.mode != 'dry-run' && inputs.refresh_profile
+        timeout-minutes: 75
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.TV_API }}
+          target: android-tv
+          arch: ${{ env.TV_ARCH }}
+          profile: tv_1080p
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096
+          script: sh scripts/ci-generate-profile.sh
+        env:
+          BASELINE_ADDON_MANIFEST_URL: ${{ secrets.BASELINE_ADDON_MANIFEST_URL }}
+
+      - name: Upload refreshed baseline profile
+        if: inputs.mode != 'dry-run' && inputs.refresh_profile && always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: nuviotv-${{ steps.release.outputs.version }}-baseline-profile
+          path: app/src/main/generated/baselineProfiles/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Test updater and build full release APKs
         if: inputs.mode != 'dry-run'
