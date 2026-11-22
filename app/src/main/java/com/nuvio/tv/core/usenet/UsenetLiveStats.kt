@@ -15,7 +15,13 @@ data class UsenetProviderLive(
     val missing: Long,
     val errors: Long,
     val ttfbMs: Double?
-)
+) {
+    val completion: Double? get() {
+        val asked = articles + missing
+        if (asked <= 0) return null
+        return Math.round(articles * 1000.0 / asked) / 10.0
+    }
+}
 
 data class UsenetLiveStats(
     val providers: List<UsenetProviderLive>,
@@ -36,8 +42,6 @@ data class UsenetLiveStats(
     }
 
     fun server(provider: UsenetProviderLive): String? = servers.getOrNull(provider.server)
-
-    val usedProviders: List<UsenetProviderLive> get() = providers.filter { it.articles > 0 }.sortedByDescending { it.bytes }
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }

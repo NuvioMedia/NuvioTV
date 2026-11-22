@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +40,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.core.network.StreamSpeedTester
 import com.nuvio.tv.core.player.streamFallbackMessages
 import com.nuvio.tv.core.usenet.UsenetLiveStats
+import com.nuvio.tv.core.usenet.UsenetProviderLive
 import com.nuvio.tv.core.usenet.UsenetSidecar
 import com.nuvio.tv.core.usenet.UsenetSourceStats
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +60,7 @@ internal data class DebugStat(
     val label: String,
     val value: String,
     val severity: DebugStatSeverity = DebugStatSeverity.NORMAL,
-    val startsGroup: Boolean = false
+    val inSection: Boolean = false
 ) {
     val warn: Boolean get() = severity != DebugStatSeverity.NORMAL
 
@@ -133,8 +135,8 @@ internal fun PlayerDebugStatsOverlay(
                 )
             }
             val streamUrl = viewModel.getCurrentStreamUrl()
-            val type = viewModel.getStreamTypeLabel()
-            stats = withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl, type) }
+            val type = DebugStat("type", viewModel.getStreamTypeLabel())
+            stats = listOf(type) + withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl) }
             delay(1000L)
         }
     }
@@ -148,39 +150,61 @@ internal fun PlayerDebugStatsOverlay(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        stats.forEachIndexed { index, stat ->
-            if (stat.startsGroup && index > 0) {
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 3.dp)
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(Color(0x33FFFFFF))
-                )
-            }
-            Row {
-                Text(
-                    text = stat.label,
-                    modifier = Modifier.width(64.dp),
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF8A8A8A)
-                )
-                val (color, fontWeight) = when (stat.severity) {
-                    DebugStatSeverity.DANGER -> Color(0xFFF44336) to FontWeight.Bold
-                    DebugStatSeverity.WARNING -> Color(0xFFFFB300) to FontWeight.Bold
-                    DebugStatSeverity.NORMAL -> Color(0xFFF0F0F0) to FontWeight.Normal
+        var index = 0
+        while (index < stats.size) {
+            if (stats[index].inSection) {
+                val section = stats.drop(index).takeWhile { it.inSection }
+                Column(
+                    modifier = Modifier.width(IntrinsicSize.Max),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    SectionDivider()
+                    section.forEach { DebugStatRow(it) }
+                    SectionDivider()
                 }
-                Text(
-                    text = stat.value,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = fontWeight,
-                    color = color
-                )
+                index += section.size
+            } else {
+                DebugStatRow(stats[index])
+                index++
             }
         }
+    }
+}
+
+@Composable
+private fun SectionDivider() {
+    Box(
+        modifier = Modifier
+            .padding(vertical = 2.dp)
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(Color(0x33FFFFFF))
+    )
+}
+
+@Composable
+private fun DebugStatRow(stat: DebugStat) {
+    Row {
+        Text(
+            text = stat.label,
+            modifier = Modifier.width(64.dp),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF8A8A8A)
+        )
+        val (color, fontWeight) = when (stat.severity) {
+            DebugStatSeverity.DANGER -> Color(0xFFF44336) to FontWeight.Bold
+            DebugStatSeverity.WARNING -> Color(0xFFFFB300) to FontWeight.Bold
+            DebugStatSeverity.NORMAL -> Color(0xFFF0F0F0) to FontWeight.Normal
+        }
+        Text(
+            text = stat.value,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            fontWeight = fontWeight,
+            color = color
+        )
     }
 }
 
@@ -212,10 +236,12 @@ private class DebugStatsSampler(context: Context) {
     private var lastMissing = -1L
     private var lastErrors = -1L
     private var lastPositionMs = -1L
+    private var lastPositionAtMs = 0L
     private var stalledSinceMs = 0L
+    private var seeking = false
     private val failureReasons by lazy { streamFallbackMessages(appContext).reasons }
 
-    fun sample(snapshot: PlayerSnapshot?, streamUrl: String? = null, streamType: String? = null): List<DebugStat> = buildList {
+    fun sample(snapshot: PlayerSnapshot?, streamUrl: String? = null): List<DebugStat> = buildList {
         val live = usenetLive(streamUrl)
         val proc = readProcTimes()
         val now = System.currentTimeMillis()
@@ -234,7 +260,6 @@ private class DebugStatsSampler(context: Context) {
         stalledStat(snapshot, live)?.let(::add)
         add(bitrateStat(snapshot))
         add(networkStat())
-        streamType?.let { add(DebugStat("type", it, startsGroup = true)) }
         if (live != null) addAll(usenetStats(live))
         live?.let {
             lastMissing = it.missing
@@ -386,7 +411,7 @@ private class DebugStatsSampler(context: Context) {
     }
 
     private fun usenetStats(live: UsenetLiveStats): List<DebugStat> {
-        val providers = live.usedProviders.ifEmpty { live.providers }.mapNotNull { live.server(it) }.ifEmpty { live.servers }
+        val asked = live.providers.filter { it.articles + it.missing > 0 }.sortedByDescending { it.bytes }
         val completion = live.completion
         val articles = when {
             completion == null -> "..."
@@ -400,27 +425,45 @@ private class DebugStatsSampler(context: Context) {
         }
         val ttfb = live.ttfbMs
         return listOfNotNull(
-            providers.takeIf { it.isNotEmpty() }?.let { servers ->
-                DebugStat("provider", servers.map(::providerName).distinct().joinToString("  •  "))
+            providerStat(live, asked),
+            DebugStat("articles", articles, articlesSeverity, inSection = true),
+            ttfb?.let {
+                DebugStat("ttfb", String.format(Locale.US, "%.0f ms", it),
+                    if (it >= SLOW_TTFB_MS) DebugStatSeverity.WARNING else DebugStatSeverity.NORMAL, inSection = true)
             },
-            DebugStat("articles", articles, articlesSeverity),
-            ttfb?.let { DebugStat("ttfb", String.format(Locale.US, "%.0f ms", it), warn = it >= SLOW_TTFB_MS) },
             errorStat(live)
         )
     }
 
+    private fun providerStat(live: UsenetLiveStats, asked: List<UsenetProviderLive>): DebugStat? {
+        val names = asked.mapNotNull { provider ->
+            live.server(provider)?.let { server ->
+                val requested = provider.articles + provider.missing
+                val completion = if (asked.size <= 1 || requested <= 0L || provider.missing == 0L) ""
+                    else " (${provider.articles * 100 / requested}%)"
+                providerName(server) + completion
+            }
+        }.ifEmpty { live.servers.map(::providerName).distinct() }
+        if (names.isEmpty()) return null
+        return DebugStat("provider", names.joinToString("  •  "), inSection = true)
+    }
+
     private fun errorStat(live: UsenetLiveStats): DebugStat? {
         if (live.errors <= 0 && live.failure == null) return null
-        val who = live.providers.filter { it.errors > 0 }.mapNotNull { provider ->
-            live.server(provider)?.let { "${providerName(it)} ${provider.errors}" }
+        val failing = live.providers.filter { it.errors > 0 }
+        val who = when {
+            live.servers.size <= 1 -> null
+            failing.size == 1 -> live.server(failing.single())?.let(::providerName)
+            else -> failing.mapNotNull { provider -> live.server(provider)?.let { "${providerName(it)} ${provider.errors}" } }
+                .joinToString(", ").ifEmpty { null }
         }
         val parts = listOfNotNull(
             live.errors.takeIf { it > 0 }?.toString(),
-            who.takeIf { it.size > 1 || (it.size == 1 && live.servers.size > 1) }?.joinToString(", "),
+            who,
             live.failure?.let { failureReasons[it] ?: it }
         )
         return DebugStat("nntp err", parts.joinToString("  ·  "),
-            if (live.failure != null) DebugStatSeverity.DANGER else DebugStatSeverity.WARNING)
+            if (live.failure != null) DebugStatSeverity.DANGER else DebugStatSeverity.WARNING, inSection = true)
     }
 
     private fun providerName(server: String): String =
@@ -429,25 +472,42 @@ private class DebugStatsSampler(context: Context) {
             ?: "?"
 
     private fun stalledStat(snapshot: PlayerSnapshot?, live: UsenetLiveStats?): DebugStat? {
-        val previousPosition = lastPositionMs
-        lastPositionMs = snapshot?.positionMs ?: -1L
-        val frozen = snapshot != null && snapshot.ready && previousPosition >= 0L && snapshot.positionMs == previousPosition
-        val stuck = snapshot != null && snapshot.playWhenReady && (snapshot.buffering || frozen)
         val now = System.currentTimeMillis()
+        val previousPosition = lastPositionMs
+        val elapsedMs = now - lastPositionAtMs
+        lastPositionMs = snapshot?.positionMs ?: -1L
+        lastPositionAtMs = now
+        if (snapshot == null) {
+            stalledSinceMs = 0L
+            seeking = false
+            return null
+        }
+        if (previousPosition >= 0L) {
+            val moved = snapshot.positionMs - previousPosition
+            if (moved < -SEEK_SLACK_MS || moved > elapsedMs + SEEK_SLACK_MS) seeking = true
+        }
+        val frozen = snapshot.ready && previousPosition >= 0L && snapshot.positionMs == previousPosition
+        val stuck = snapshot.playWhenReady && (snapshot.buffering || frozen)
         if (!stuck) {
             stalledSinceMs = 0L
+            if (snapshot.ready && snapshot.playWhenReady) seeking = false
             return null
         }
         if (stalledSinceMs == 0L) stalledSinceMs = now
+        val seconds = (now - stalledSinceMs) / 1000.0
         val reason = when {
             live?.failure != null -> failureReasons[live.failure] ?: live.failure
             live != null && lastMissing >= 0L && live.missing > lastMissing -> "missing articles"
             live != null && lastErrors >= 0L && live.errors > lastErrors -> "provider errors"
             frozen -> "picture frozen, position not moving"
+            seeking && live != null -> "loading the new position from the provider"
+            seeking -> "loading the new position"
             live != null -> "waiting on the Usenet provider"
             else -> "waiting for data"
         }
-        val seconds = (now - stalledSinceMs) / 1000.0
+        if (seeking && live?.failure == null && seconds < SEEK_STALL_SECONDS) {
+            return DebugStat("seeking", String.format(Locale.US, "%.0fs  ·  %s", seconds, reason), DebugStatSeverity.WARNING)
+        }
         return DebugStat("stalled", String.format(Locale.US, "%.0fs  ·  %s", seconds, reason), DebugStatSeverity.DANGER)
     }
 
@@ -494,6 +554,8 @@ private class DebugStatsSampler(context: Context) {
         const val MB = 1024L * 1024L
         const val MAX_HEADROOM_MISSES = 3
         const val SLOW_TTFB_MS = 300.0
+        const val SEEK_SLACK_MS = 2_000L
+        const val SEEK_STALL_SECONDS = 15.0
 
         // A row carrying this is one the device will never fill in, so it is dropped rather than
         // taking a line; the warmup placeholder is left alone so no row appears a second later.

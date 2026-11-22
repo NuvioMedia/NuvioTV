@@ -37,11 +37,14 @@ class UsenetLiveStatsTest {
         assertNull(UsenetLiveStats.parse("""{"providers":[{"server":0}]}""")!!.completion)
     }
 
-    @Test fun `providers in use map back to the session's servers, busiest first`() {
+    @Test fun `each provider has its own completion and maps back to its server`() {
         val stats = UsenetLiveStats.parse("""
-            {"providers":[{"server":0,"articles":10,"bytes":100},{"server":1,"articles":0,"bytes":0},{"server":2,"articles":40,"bytes":900}]}
+            {"providers":[{"server":0,"articles":98,"missing":2},{"server":1,"articles":0,"missing":0},{"server":2,"articles":2,"missing":0}]}
         """.trimIndent())!!.copy(servers = listOf("nntps://a:1/20", "nntps://b:1/20", "nntps://c:1/20"))
-        assertEquals(listOf("nntps://c:1/20", "nntps://a:1/20"), stats.usedProviders.mapNotNull(stats::server))
+        assertEquals(98.0, stats.providers[0].completion!!, 0.0)
+        assertNull(stats.providers[1].completion)
+        assertEquals(100.0, stats.providers[2].completion!!, 0.0)
+        assertEquals("nntps://c:1/20", stats.server(stats.providers[2]))
         assertNull(stats.copy(servers = emptyList()).server(stats.providers.first()))
     }
 
