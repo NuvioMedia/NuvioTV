@@ -233,6 +233,9 @@ class UsenetSourceStats internal constructor(
     private val accountIds = object : LinkedHashMap<String, String>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>) = size > MAX_PROVIDER_LINKS
     }
+    private val providerNames = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>) = size > MAX_PROVIDER_LINKS
+    }
 
     /** Loaded on first use, and again after an account reset cleared the storage. */
     private val records: Records
@@ -281,8 +284,12 @@ class UsenetSourceStats internal constructor(
             val url = provider.serverUrl()
             providerIds[url] = provider.id
             providerAccount(url)?.let { accountIds[it] = provider.id }
+            if (provider.name.isNotBlank()) providerNames[provider.id] = provider.name
         }
     }
+
+    @Synchronized
+    fun providerName(server: String): String? = providerId(server)?.let(providerNames::get)
 
     /** A configured provider's id: by its exact URL, else by account, such as for an addon's release. */
     private fun providerId(server: String?): String? =

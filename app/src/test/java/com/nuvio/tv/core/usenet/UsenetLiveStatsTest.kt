@@ -31,6 +31,20 @@ class UsenetLiveStatsTest {
         assertEquals(40.0, stats.ttfbMs!!, 0.0)
     }
 
+    @Test fun `completion counts the articles a provider had`() {
+        val stats = UsenetLiveStats.parse("""{"providers":[{"server":0,"articles":995,"missing":5},{"server":1,"articles":0,"missing":0}]}""")!!
+        assertEquals(99.5, stats.completion!!, 0.0)
+        assertNull(UsenetLiveStats.parse("""{"providers":[{"server":0}]}""")!!.completion)
+    }
+
+    @Test fun `providers in use map back to the session's servers, busiest first`() {
+        val stats = UsenetLiveStats.parse("""
+            {"providers":[{"server":0,"articles":10,"bytes":100},{"server":1,"articles":0,"bytes":0},{"server":2,"articles":40,"bytes":900}]}
+        """.trimIndent())!!.copy(servers = listOf("nntps://a:1/20", "nntps://b:1/20", "nntps://c:1/20"))
+        assertEquals(listOf("nntps://c:1/20", "nntps://a:1/20"), stats.usedProviders.mapNotNull(stats::server))
+        assertNull(stats.copy(servers = emptyList()).server(stats.providers.first()))
+    }
+
     @Test fun `an unreadable answer is ignored`() {
         assertNull(UsenetLiveStats.parse("not json"))
         assertNull(UsenetLiveStats.parse("[]"))

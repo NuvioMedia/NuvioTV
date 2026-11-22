@@ -60,6 +60,7 @@ class UsenetSidecar private constructor(private val context: Context) {
     @Volatile private var token: String? = null
     private var sessionId: String? = null
     @Volatile private var playbackUrl: String? = null
+    @Volatile private var liveSession: Pair<String, List<String>>? = null
     private var idleStop: Job? = null
     private val retiredSessions = mutableSetOf<String>() // guarded by mutex
     /** A live session's servers, in the order its open sent them, and what it plays. */
@@ -311,6 +312,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             coroutineContext.ensureActive()
             sessionId = newId
             playbackUrl = url
+            liveSession = url to stream.servers.orEmpty()
             UsenetStartupDiagnostics.bind(url, trace, result.optJSONObject("startup"))
             // Only an NZB the engine says it fetched counts as a download from the indexer.
             val nzbLookup = result.optJSONObject("startup")?.optJSONObject("nzbCache")?.optString("lookup")
@@ -391,7 +393,9 @@ class UsenetSidecar private constructor(private val context: Context) {
         return runCatching {
             val request = Request.Builder().url(diagnostics).header("Authorization", "Bearer $bearer").get().build()
             liveStatsHttp.newCall(request).execute().use { response ->
-                if (response.isSuccessful) response.body?.string()?.let(UsenetLiveStats::parse) else null
+                if (!response.isSuccessful) return@use null
+                val servers = liveSession?.takeIf { it.first == url }?.second.orEmpty()
+                response.body?.string()?.let(UsenetLiveStats::parse)?.copy(servers = servers)
             }
         }.getOrNull()
     }

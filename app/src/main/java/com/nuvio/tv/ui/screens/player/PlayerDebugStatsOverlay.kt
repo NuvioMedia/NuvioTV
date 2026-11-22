@@ -11,8 +11,11 @@ import android.system.OsConstants
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,11 +37,15 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.network.StreamSpeedTester
+import com.nuvio.tv.core.player.streamFallbackMessages
+import com.nuvio.tv.core.usenet.UsenetLiveStats
 import com.nuvio.tv.core.usenet.UsenetSidecar
+import com.nuvio.tv.core.usenet.UsenetSourceStats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.net.URI
 import java.util.Locale
 
 internal enum class DebugStatSeverity {
@@ -50,7 +57,8 @@ internal enum class DebugStatSeverity {
 internal data class DebugStat(
     val label: String,
     val value: String,
-    val severity: DebugStatSeverity = DebugStatSeverity.NORMAL
+    val severity: DebugStatSeverity = DebugStatSeverity.NORMAL,
+    val startsGroup: Boolean = false
 ) {
     val warn: Boolean get() = severity != DebugStatSeverity.NORMAL
 
@@ -68,7 +76,11 @@ internal data class PlayerSnapshot(
     val durationMs: Long,
     val droppedFrames: Int,
     val fileSizeBytes: Long?,
-    val nativeMemoryBytes: Long? = null
+    val nativeMemoryBytes: Long? = null,
+    val playWhenReady: Boolean = false,
+    val buffering: Boolean = false,
+    val ready: Boolean = false,
+    val positionMs: Long = 0L
 )
 
 @OptIn(UnstableApi::class)
@@ -113,12 +125,16 @@ internal fun PlayerDebugStatsOverlay(
                     durationMs = runCatching { it.duration }.getOrNull() ?: -1L,
                     droppedFrames = runCatching { it.videoDecoderCounters?.droppedBufferCount }.getOrNull() ?: 0,
                     fileSizeBytes = viewModel.getCurrentFileSizeBytes() ?: probedFileSize,
-                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes()
+                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes(),
+                    playWhenReady = it.playWhenReady,
+                    buffering = it.playbackState == Player.STATE_BUFFERING,
+                    ready = it.playbackState == Player.STATE_READY,
+                    positionMs = it.currentPosition
                 )
             }
             val streamUrl = viewModel.getCurrentStreamUrl()
-            val type = DebugStat("type", viewModel.getStreamTypeLabel())
-            stats = listOf(type) + withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl) }
+            val type = viewModel.getStreamTypeLabel()
+            stats = withContext(Dispatchers.IO) { sampler.sample(snapshot, streamUrl, type) }
             delay(1000L)
         }
     }
@@ -132,7 +148,16 @@ internal fun PlayerDebugStatsOverlay(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        stats.forEach { stat ->
+        stats.forEachIndexed { index, stat ->
+            if (stat.startsGroup && index > 0) {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 3.dp)
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color(0x33FFFFFF))
+                )
+            }
             Row {
                 Text(
                     text = stat.label,
@@ -184,10 +209,14 @@ private class DebugStatsSampler(context: Context) {
     private var faultSamples = 0
     private var headroomMisses = 0
     private var usenetUrl: String? = null
-    private var lastUsenetBytes = -1L
-    private var lastUsenetAtMs = 0L
+    private var lastMissing = -1L
+    private var lastErrors = -1L
+    private var lastPositionMs = -1L
+    private var stalledSinceMs = 0L
+    private val failureReasons by lazy { streamFallbackMessages(appContext).reasons }
 
-    fun sample(snapshot: PlayerSnapshot?, streamUrl: String? = null): List<DebugStat> = buildList {
+    fun sample(snapshot: PlayerSnapshot?, streamUrl: String? = null, streamType: String? = null): List<DebugStat> = buildList {
+        val live = usenetLive(streamUrl)
         val proc = readProcTimes()
         val now = System.currentTimeMillis()
         val elapsedSeconds = if (lastProcAtMs > 0L) (now - lastProcAtMs) / 1000.0 else 0.0
@@ -202,9 +231,15 @@ private class DebugStatsSampler(context: Context) {
 
         add(memoryStat(snapshot))
         add(bufferStat(snapshot))
+        stalledStat(snapshot, live)?.let(::add)
         add(bitrateStat(snapshot))
         add(networkStat())
-        addAll(usenetStats(streamUrl))
+        streamType?.let { add(DebugStat("type", it, startsGroup = true)) }
+        if (live != null) addAll(usenetStats(live))
+        live?.let {
+            lastMissing = it.missing
+            lastErrors = it.errors
+        }
         add(droppedStat(snapshot))
         addAll(thermalStats())
     }.filterNot { it.value == UNAVAILABLE }
@@ -339,33 +374,81 @@ private class DebugStatsSampler(context: Context) {
         )
     }
 
-    private fun usenetStats(streamUrl: String?): List<DebugStat> {
+    private fun usenetLive(streamUrl: String?): UsenetLiveStats? {
         val url = streamUrl?.takeIf { UsenetSidecar.isSessionUrl(it) }
         if (url != usenetUrl) {
             usenetUrl = url
-            lastUsenetBytes = -1L
+            lastMissing = -1L
+            lastErrors = -1L
         }
-        if (url == null) return emptyList()
-        val live = UsenetSidecar.peek()?.liveStats(url) ?: return emptyList()
-        val now = System.currentTimeMillis()
-        val bytes = live.bytes
-        val previousBytes = lastUsenetBytes
-        val previousAt = lastUsenetAtMs
-        lastUsenetBytes = bytes
-        lastUsenetAtMs = now
-        val speed = if (previousBytes < 0L || now <= previousAt || bytes < previousBytes) "..." else
-            String.format(Locale.US, "%.1f Mbps", (bytes - previousBytes) * 8.0 / ((now - previousAt) / 1000.0) / 1_000_000.0)
-        val ttfb = live.ttfbMs?.let { String.format(Locale.US, "   ttfb %.0f ms", it) }.orEmpty()
-        val filled = if (live.filledArticles > 0) " (${live.filledArticles} filled)" else ""
-        val severity = when {
+        if (url == null) return null
+        return UsenetSidecar.peek()?.liveStats(url)
+    }
+
+    private fun usenetStats(live: UsenetLiveStats): List<DebugStat> {
+        val providers = live.usedProviders.ifEmpty { live.providers }.mapNotNull { live.server(it) }.ifEmpty { live.servers }
+        val completion = live.completion
+        val articles = when {
+            completion == null -> "..."
+            live.filledArticles > 0 -> String.format(Locale.US, "%.1f%%  (%d missing, %d filled)", completion, live.missing, live.filledArticles)
+            else -> String.format(Locale.US, "%.1f%%  (%d missing)", completion, live.missing)
+        }
+        val articlesSeverity = when {
             live.failure != null -> DebugStatSeverity.DANGER
             live.missing > live.filledArticles -> DebugStatSeverity.WARNING
             else -> DebugStatSeverity.NORMAL
         }
+        val ttfb = live.ttfbMs
         return listOfNotNull(
-            DebugStat("usenet", "$speed$ttfb   missing ${live.missing}$filled", severity),
-            DebugStat("nntp err", "${live.errors}", warn = true).takeIf { live.errors > 0 }
+            providers.takeIf { it.isNotEmpty() }?.let { servers ->
+                DebugStat("provider", servers.map(::providerName).distinct().joinToString("  •  "))
+            },
+            DebugStat("articles", articles, articlesSeverity),
+            ttfb?.let { DebugStat("ttfb", String.format(Locale.US, "%.0f ms", it), warn = it >= SLOW_TTFB_MS) },
+            errorStat(live)
         )
+    }
+
+    private fun errorStat(live: UsenetLiveStats): DebugStat? {
+        if (live.errors <= 0 && live.failure == null) return null
+        val who = live.providers.filter { it.errors > 0 }.mapNotNull { provider ->
+            live.server(provider)?.let { "${providerName(it)} ${provider.errors}" }
+        }
+        val parts = listOfNotNull(
+            live.errors.takeIf { it > 0 }?.toString(),
+            who.takeIf { it.size > 1 || (it.size == 1 && live.servers.size > 1) }?.joinToString(", "),
+            live.failure?.let { failureReasons[it] ?: it }
+        )
+        return DebugStat("nntp err", parts.joinToString("  ·  "),
+            if (live.failure != null) DebugStatSeverity.DANGER else DebugStatSeverity.WARNING)
+    }
+
+    private fun providerName(server: String): String =
+        UsenetSourceStats.get(appContext).providerName(server)
+            ?: runCatching { URI(server).host }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: "?"
+
+    private fun stalledStat(snapshot: PlayerSnapshot?, live: UsenetLiveStats?): DebugStat? {
+        val previousPosition = lastPositionMs
+        lastPositionMs = snapshot?.positionMs ?: -1L
+        val frozen = snapshot != null && snapshot.ready && previousPosition >= 0L && snapshot.positionMs == previousPosition
+        val stuck = snapshot != null && snapshot.playWhenReady && (snapshot.buffering || frozen)
+        val now = System.currentTimeMillis()
+        if (!stuck) {
+            stalledSinceMs = 0L
+            return null
+        }
+        if (stalledSinceMs == 0L) stalledSinceMs = now
+        val reason = when {
+            live?.failure != null -> failureReasons[live.failure] ?: live.failure
+            live != null && lastMissing >= 0L && live.missing > lastMissing -> "missing articles"
+            live != null && lastErrors >= 0L && live.errors > lastErrors -> "provider errors"
+            frozen -> "picture frozen, position not moving"
+            live != null -> "waiting on the Usenet provider"
+            else -> "waiting for data"
+        }
+        val seconds = (now - stalledSinceMs) / 1000.0
+        return DebugStat("stalled", String.format(Locale.US, "%.0fs  ·  %s", seconds, reason), DebugStatSeverity.DANGER)
     }
 
     private fun droppedStat(snapshot: PlayerSnapshot?): DebugStat {
@@ -410,6 +493,7 @@ private class DebugStatsSampler(context: Context) {
     private companion object {
         const val MB = 1024L * 1024L
         const val MAX_HEADROOM_MISSES = 3
+        const val SLOW_TTFB_MS = 300.0
 
         // A row carrying this is one the device will never fill in, so it is dropped rather than
         // taking a line; the warmup placeholder is left alone so no row appears a second later.
