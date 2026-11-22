@@ -968,6 +968,7 @@ internal fun PlayerRuntimeController.handleVc1PlaybackFailure(errorMessage: Stri
         ?: _exoPlayer?.playerError?.toDisplayMessage(context)
         ?: return
     if (returnToFeatureAfterExtraFailure(displayMessage)) return
+    if (tryNextStream(displayMessage)) return
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
     cancelStableProgressReset()

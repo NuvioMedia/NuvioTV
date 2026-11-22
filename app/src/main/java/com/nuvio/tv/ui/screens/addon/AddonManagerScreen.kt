@@ -68,8 +68,6 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -109,6 +107,7 @@ import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.ui.components.TrackingAddonConsentDialog
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.settings.BuiltInUsenetNoticeDialog
 import com.nuvio.tv.ui.components.tvReorderDisabledFocusBorder
 import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.lifecycle.Lifecycle
@@ -241,6 +240,7 @@ fun AddonManagerScreen(
     val deleteDialogFocusRequester = remember { FocusRequester() }
     var isEditing by remember { mutableStateOf(false) }
     var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
+    var usenetNotice by remember { mutableStateOf(false) }
     var pendingDeleteFocusRestore by remember { mutableStateOf<AddonDeleteFocusRestore?>(null) }
     var restoreManageFromPhoneFocus by remember { mutableStateOf(false) }
     var hasHandledInitialFocusState by remember { mutableStateOf(false) }
@@ -363,7 +363,7 @@ fun AddonManagerScreen(
                     if (addons.any { it.baseUrl == restore.addonUrl }) {
                         removeFocusRequesterFor(restore.addonUrl)
                     } else {
-                        addons.firstOrNull()?.baseUrl?.let(::toggleFocusRequesterFor)
+                        currentState.addonOrderKeys.firstOrNull()?.let(::toggleFocusRequesterFor)
                             ?: refreshAddonsFocusRequester
                     }
                 }
@@ -377,6 +377,7 @@ fun AddonManagerScreen(
                             preferredTargetUrl = restore.targetAddonUrl,
                             deletedIndex = restore.deletedIndex
                         )?.let(::toggleFocusRequesterFor)
+                            ?: currentState.builtInUsenet?.let { toggleFocusRequesterFor(BUILT_IN_USENET_KEY) }
                             ?: refreshAddonsFocusRequester
                     }
                 }
@@ -468,12 +469,16 @@ fun AddonManagerScreen(
                 preferredTargetUrl = restore.targetAddonUrl,
                 deletedIndex = restore.deletedIndex
             )?.let(::toggleFocusRequesterFor)
+                ?: uiState.builtInUsenet?.let { toggleFocusRequesterFor(BUILT_IN_USENET_KEY) }
                 ?: refreshAddonsFocusRequester
         null -> null
     }
 
     val addonOrderScrollState = rememberScrollState()
-    val addonOrderMovingIndex = uiState.installedAddons.indexOfFirst { it.baseUrl == uiState.movingAddonKey }
+    val addonOrderKeys = uiState.addonOrderKeys
+    val addonsByUrl = remember(uiState.installedAddons) { uiState.installedAddons.associateBy { it.baseUrl } }
+    val addonOrderMovingIndex = uiState.movingAddonKey?.let(addonOrderKeys::indexOf) ?: -1
+    val canReorderAddons = !viewModel.isReadOnly && !isEssential && addonOrderKeys.size > 1
 
     Box(
         modifier = Modifier
@@ -481,14 +486,9 @@ fun AddonManagerScreen(
             .background(NuvioTheme.colors.Background)
     ) {
         TvReorderList(
-            items = uiState.installedAddons,
-            key = { it.baseUrl },
-            canMove = {
-                !viewModel.isReadOnly &&
-                    !isEssential &&
-                    uiState.installedAddons.size > 1 &&
-                    uiState.movingAddonKey == null
-            },
+            items = addonOrderKeys,
+            key = { it },
+            canMove = { canReorderAddons && uiState.movingAddonKey == null },
             movingKey = uiState.movingAddonKey,
             onStartMove = viewModel::enterAddonMoveMode,
             onMoveBy = viewModel::moveAddonDuringDrag,
@@ -693,7 +693,7 @@ fun AddonManagerScreen(
             }
 
                     val firstAddonToggleRequester = if (!viewModel.isReadOnly) {
-                        uiState.installedAddons.firstOrNull()?.baseUrl?.let(::toggleFocusRequesterFor)
+                        addonOrderKeys.firstOrNull()?.let(::toggleFocusRequesterFor)
                     } else {
                         null
                     }
@@ -731,7 +731,7 @@ fun AddonManagerScreen(
                         }
                     }
 
-                    if (uiState.installedAddons.isEmpty() && !uiState.isLoading) {
+                    if (addonOrderKeys.isEmpty() && !uiState.isLoading) {
                         Text(
                             text = stringResource(R.string.addon_empty),
                             style = MaterialTheme.typography.bodyLarge,
@@ -741,33 +741,55 @@ fun AddonManagerScreen(
                     Spacer(modifier = Modifier.height(20.dp))
                 }
             },
-        ) { addon, isMoving, onStartMove, onConfirmMove ->
-            AddonCard(
-                addon = addon,
-                isMoving = isMoving,
-                canMove = !isEssential && uiState.installedAddons.size > 1,
-                actionsEnabled = uiState.movingAddonKey == null || isMoving,
-                onStartMove = onStartMove,
-                onConfirmMove = onConfirmMove,
-                onRemove = {
-                    pendingDeleteFocusRestore = null
-                    addonUrlPendingDeletion = addon.baseUrl
-                },
-                onEnabledChange = { enabled -> viewModel.setAddonEnabled(addon.baseUrl, enabled) },
-                isReadOnly = viewModel.isReadOnly,
-                showReorder = !isEssential,
-                toggleFocusRequester = if (viewModel.isReadOnly) null else toggleFocusRequesterFor(addon.baseUrl),
-                removeFocusRequester = if (viewModel.isReadOnly) null else removeFocusRequesterFor(addon.baseUrl)
-            )
+        ) { key, isMoving, onStartMove, onConfirmMove ->
+            val actionsEnabled = uiState.movingAddonKey == null || isMoving
+            val toggleFocusRequester = if (viewModel.isReadOnly) null else toggleFocusRequesterFor(key)
+            if (key == BUILT_IN_USENET_KEY) {
+                val usenet = uiState.builtInUsenet ?: return@TvReorderList
+                BuiltInUsenetCard(
+                    enabled = usenet.enabled,
+                    isMoving = isMoving,
+                    canMove = canReorderAddons,
+                    actionsEnabled = actionsEnabled,
+                    onStartMove = onStartMove,
+                    onConfirmMove = onConfirmMove,
+                    onEnabledChange = { enabled ->
+                        if (enabled && !usenet.firstUseAccepted) usenetNotice = true
+                        else viewModel.setBuiltInUsenetEnabled(enabled)
+                    },
+                    isReadOnly = viewModel.isReadOnly,
+                    showReorder = !isEssential,
+                    toggleFocusRequester = toggleFocusRequester
+                )
+            } else {
+                val addon = addonsByUrl.getValue(key)
+                AddonCard(
+                    addon = addon,
+                    isMoving = isMoving,
+                    canMove = canReorderAddons,
+                    actionsEnabled = actionsEnabled,
+                    onStartMove = onStartMove,
+                    onConfirmMove = onConfirmMove,
+                    onRemove = {
+                        pendingDeleteFocusRestore = null
+                        addonUrlPendingDeletion = key
+                    },
+                    onEnabledChange = { enabled -> viewModel.setAddonEnabled(key, enabled) },
+                    isReadOnly = viewModel.isReadOnly,
+                    showReorder = !isEssential,
+                    toggleFocusRequester = toggleFocusRequester,
+                    removeFocusRequester = if (viewModel.isReadOnly) null else removeFocusRequesterFor(key)
+                )
+            }
         }
 
         SettingsVerticalScrollIndicators(
             state = addonOrderScrollState,
             suppressBackward = addonOrderMovingIndex == 0,
             suppressForward = addonOrderMovingIndex >= 0 &&
-                addonOrderMovingIndex == uiState.installedAddons.lastIndex,
+                addonOrderMovingIndex == addonOrderKeys.lastIndex,
             forceBackward = addonOrderMovingIndex > 0,
-            forceForward = addonOrderMovingIndex in 0 until uiState.installedAddons.lastIndex
+            forceForward = addonOrderMovingIndex in 0 until addonOrderKeys.lastIndex
         )
 
         if (uiState.isQrModeActive || uiState.pendingChange != null) {
@@ -795,6 +817,16 @@ fun AddonManagerScreen(
                     )
                 }
             }
+        }
+
+        if (usenetNotice) {
+            BuiltInUsenetNoticeDialog(
+                onTurnOn = {
+                    viewModel.setBuiltInUsenetEnabled(true)
+                    usenetNotice = false
+                },
+                onDismiss = { usenetNotice = false }
+            )
         }
 
         addonUrlPendingDeletion?.let { addonUrl ->
@@ -1176,6 +1208,7 @@ internal fun QrCodeOverlay(
     onClose: () -> Unit,
     hasPendingChange: Boolean = false,
     qrSize: Dp = 220.dp,
+    status: String? = null,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -1222,6 +1255,16 @@ internal fun QrCodeOverlay(
                     text = serverUrl,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextTertiary,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            if (status != null) {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioTheme.colors.TextPrimary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -1701,69 +1744,14 @@ private fun AddonCardContent(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        onClick = {
-                            if (actionsEnabled && !isMoving) onEnabledChange(!addon.enabled)
-                        },
-                        modifier = Modifier
-                            .focusRequester(toggleFocusRequester ?: remember { FocusRequester() })
-                            .semantics {
-                                role = Role.Switch
-                                contentDescription = toggleLabel
-                                toggleableState = if (addon.enabled) ToggleableState.On else ToggleableState.Off
-                            },
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = Color.Transparent,
-                            focusedContainerColor = NuvioTheme.colors.FocusBackground
-                        ),
-                        border = ClickableSurfaceDefaults.border(
-                            focusedBorder = Border(
-                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                shape = RoundedCornerShape(NuvioTheme.radii.md)
-                            )
-                        ),
-                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Switch(
-                                checked = addon.enabled,
-                                onCheckedChange = null,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = NuvioTheme.colors.Secondary,
-                                    checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
-                                )
-                            )
-                        }
-                    }
+                    AddonEnabledToggle(
+                        enabled = addon.enabled,
+                        label = toggleLabel,
+                        focusRequester = toggleFocusRequester,
+                        onToggle = { if (actionsEnabled && !isMoving) onEnabledChange(!addon.enabled) }
+                    )
                     if (showReorder) {
-                        Button(
-                            onClick = if (isMoving) onConfirmMove else onStartMove,
-                            enabled = isMoving || (canMove && actionsEnabled),
-                            modifier = Modifier.semantics { role = Role.Button },
-                            colors = ButtonDefaults.colors(
-                                containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
-                                contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
-                                focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
-                                focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
-                            ),
-                            border = ButtonDefaults.border(
-                                focusedBorder = Border(
-                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                ),
-                                focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
-                            ),
-                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Reorder,
-                                contentDescription = stringResource(R.string.cd_reorder)
-                            )
-                        }
+                        AddonReorderButton(isMoving, canMove && actionsEnabled, onStartMove, onConfirmMove)
                     }
                     val removeButtonModifier = if (removeFocusRequester != null) {
                         Modifier.focusRequester(removeFocusRequester)
@@ -1815,5 +1803,165 @@ private fun AddonCardContent(
             style = MaterialTheme.typography.bodySmall,
             color = NuvioTheme.colors.TextTertiary
         )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun AddonEnabledToggle(
+    enabled: Boolean,
+    label: String,
+    focusRequester: FocusRequester?,
+    onToggle: () -> Unit
+) {
+    Surface(
+        onClick = onToggle,
+        modifier = Modifier
+            .focusRequester(focusRequester ?: remember { FocusRequester() })
+            .semantics {
+                role = Role.Switch
+                contentDescription = label
+                toggleableState = if (enabled) ToggleableState.On else ToggleableState.Off
+            },
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
+            )
+        ),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Box(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Switch(
+                checked = enabled,
+                onCheckedChange = null,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = NuvioTheme.colors.Secondary,
+                    checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddonReorderButton(
+    isMoving: Boolean,
+    canMove: Boolean,
+    onStartMove: () -> Unit,
+    onConfirmMove: () -> Unit
+) {
+    Button(
+        onClick = if (isMoving) onConfirmMove else onStartMove,
+        enabled = isMoving || canMove,
+        modifier = Modifier.semantics { role = Role.Button },
+        colors = ButtonDefaults.colors(
+            containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+            contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+            focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+            focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
+        ),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
+            ),
+            focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+        ),
+        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+    ) {
+        Icon(
+            imageVector = Icons.Default.Reorder,
+            contentDescription = stringResource(R.string.cd_reorder)
+        )
+    }
+}
+
+/** Built-in Usenet among the addons: its place sets where its results are listed. It has nothing to remove. */
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+private fun BuiltInUsenetCard(
+    modifier: Modifier = Modifier,
+    enabled: Boolean,
+    isMoving: Boolean,
+    canMove: Boolean,
+    actionsEnabled: Boolean,
+    onStartMove: () -> Unit,
+    onConfirmMove: () -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    isReadOnly: Boolean,
+    showReorder: Boolean,
+    toggleFocusRequester: FocusRequester?
+) {
+    val title = stringResource(R.string.usenet_builtin_addon_title)
+    val cardColor by animateColorAsState(
+        targetValue = if (isMoving) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+        animationSpec = com.nuvio.tv.ui.theme.NuvioMotion.focusTween(),
+        label = "builtInUsenetCardColor",
+    )
+    val cardBorder = if (isMoving) BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing) else null
+    val internalToggleFocusRequester = remember { FocusRequester() }
+    val effectiveToggleFocusRequester = toggleFocusRequester ?: internalToggleFocusRequester
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize()
+            .then(if (isReadOnly) Modifier else Modifier.focusProperties { enter = { effectiveToggleFocusRequester } }),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(NuvioTheme.radii.md),
+        border = cardBorder
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = NuvioTheme.colors.TextPrimary
+                    )
+                    if (!enabled) {
+                        Text(
+                            text = stringResource(R.string.addons_badge_disabled),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NuvioTheme.colors.TextSecondary
+                        )
+                    }
+                }
+                if (!isReadOnly) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AddonEnabledToggle(
+                            enabled = enabled,
+                            label = stringResource(R.string.cd_enable_addon, title),
+                            focusRequester = effectiveToggleFocusRequester,
+                            onToggle = { if (actionsEnabled && !isMoving) onEnabledChange(!enabled) }
+                        )
+                        if (showReorder) {
+                            AddonReorderButton(isMoving, canMove && actionsEnabled, onStartMove, onConfirmMove)
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+            Text(
+                text = stringResource(R.string.usenet_builtin_addon_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextSecondary
+            )
+        }
     }
 }
