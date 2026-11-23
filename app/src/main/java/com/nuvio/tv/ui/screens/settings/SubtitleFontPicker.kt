@@ -174,7 +174,7 @@ private fun SubtitleFontOption(
                 this.selected = selected
             },
         colors = CardDefaults.colors(
-            containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+            containerColor = NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         shape = CardDefaults.shape(RoundedCornerShape(10.dp)),

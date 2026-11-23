@@ -190,10 +190,10 @@ internal fun settingsRowBorder(
 }
 
 /**
- * Colors for option cards that keep a selected value (settings style, home layout, continue
- * watching style). Selection is a tinted fill and focus is the ring from [settingsOptionCardBorder],
- * so a selected card and the card under D-pad focus never look alike. The fill stays while the
- * card is focused so focusing the selected card only adds the ring.
+ * Colors for option cards and chips that keep a selected value. Selection is a tinted fill and
+ * focus is the ring from [settingsOptionCardBorder], so a selected card and the card under D-pad
+ * focus never look alike. The fill stays while the card is focused so focusing the selected card
+ * only adds the ring.
  */
 @Composable
 internal fun settingsOptionCardColors(isSelected: Boolean): CardColors {
@@ -1023,7 +1023,7 @@ internal fun <T> SettingsSingleChoiceDialog(
                                 this.selected = isSelected
                             },
                         colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                            containerColor = NuvioTheme.colors.BackgroundCard,
                             focusedContainerColor = NuvioTheme.colors.FocusBackground
                         ),
                         shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
@@ -1142,7 +1142,7 @@ internal fun <T> SettingsMultiChoiceDialog(
                                     toggleableState = if (isSelected) ToggleableState.On else ToggleableState.Off
                                 },
                             colors = CardDefaults.colors(
-                                containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                                containerColor = NuvioTheme.colors.BackgroundCard,
                                 focusedContainerColor = NuvioTheme.colors.FocusBackground
                             ),
                             shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
@@ -1291,16 +1291,7 @@ internal fun SettingsChoiceChip(
                 ) else Border.None
             )
         } else {
-            CardDefaults.border(
-                border = if (selected) Border(
-                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
-                    shape = RoundedCornerShape(SettingsPillRadius)
-                ) else Border.None,
-                focusedBorder = Border(
-                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
-                    shape = RoundedCornerShape(SettingsPillRadius)
-                )
-            )
+            settingsOptionCardBorder(RoundedCornerShape(SettingsPillRadius))
         },
         shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)

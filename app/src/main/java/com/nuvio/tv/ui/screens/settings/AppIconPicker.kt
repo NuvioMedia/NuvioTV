@@ -33,7 +33,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
@@ -178,20 +177,7 @@ private fun AppIconOptionCard(
             containerColor = NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
-        border = CardDefaults.border(
-            border = if (selected) {
-                Border(
-                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
-                    shape = shape
-                )
-            } else {
-                Border.None
-            },
-            focusedBorder = Border(
-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                shape = shape
-            )
-        ),
+        border = settingsOptionCardBorder(shape),
         shape = CardDefaults.shape(shape),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {

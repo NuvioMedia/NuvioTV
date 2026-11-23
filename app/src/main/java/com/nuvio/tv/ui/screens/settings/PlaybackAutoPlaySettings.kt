@@ -621,7 +621,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                         this.selected = selected.isEmpty()
                     },
                 colors = CardDefaults.colors(
-                    containerColor = if (selected.isEmpty()) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                    containerColor = NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = NuvioTheme.colors.FocusBackground
                 ),
                 shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
@@ -683,7 +683,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                                     toggleableState = if (isSelected) ToggleableState.On else ToggleableState.Off
                                 },
                             colors = CardDefaults.colors(
-                                containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                                containerColor = NuvioTheme.colors.BackgroundCard,
                                 focusedContainerColor = NuvioTheme.colors.FocusBackground
                             ),
                             shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
