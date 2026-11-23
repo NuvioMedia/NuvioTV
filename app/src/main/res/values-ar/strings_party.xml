@@ -1,6 +1,6 @@
 <resources>
     <string name="party_title">مشاهدة جماعية</string>
-    <string name="party_settings_description">انضم إلى أصدقائك باستخدام رمز المشاهدة الجماعية</string>
+    <string name="party_settings_description">انضم إلى أصدقائك برمز المشاهدة الجماعية</string>
     <string name="party_start_title">شاهدوا معًا</string>
     <string name="party_start_description">ادعُ أصدقاءك. يشغّل كل شخص من مصادره الخاصة ويبقى الجميع متزامنين.</string>
     <string name="party_start_action">بدء مشاهدة جماعية</string>
@@ -51,8 +51,8 @@
     <string name="party_episode_format">S%1$d E%2$d</string>
     <string name="party_host_only_title">أنا فقط أتحكم في التشغيل</string>
     <string name="party_host_only_description">ما زال بإمكان الآخرين إيقاف التشغيل أو إرجاعه لأنفسهم.</string>
-    <string name="party_host_only_note">المضيف فقط يمكنه التحكم في التشغيل</string>
-    <string name="party_control_host_only">المضيف فقط يمكنه التحكم في التشغيل الآن</string>
+    <string name="party_host_only_note">يمكن للمضيف فقط التحكم في التشغيل</string>
+    <string name="party_control_host_only">يمكن للمضيف فقط التحكم في التشغيل الآن</string>
     <string name="party_control_everyone">يمكن للجميع التحكم في التشغيل الآن</string>
     <string name="party_paused_for_you">متوقف مؤقتًا لديك</string>
     <string name="party_behind">متأخر بـ %1$s</string>
@@ -72,7 +72,7 @@
     <string name="party_share_unavailable">لا يمكن مشاركة هذا البث.</string>
     <string name="party_shared_by">شاركه %1$s</string>
     <string name="party_invite_scan">امسح بهاتفك للانضمام</string>
-    <string name="party_invite_share">أو شارك الرمز. يمكن للأصدقاء إدخاله في «مشاهدة جماعية» على أي تطبيق Nuvio.</string>
+    <string name="party_invite_share">أو شارك الرمز. يمكن للأصدقاء إدخاله في المشاهدة الجماعية على أي تطبيق Nuvio.</string>
     <string name="party_invite_qr">رمز QR لدعوة المشاهدة الجماعية</string>
-    <string name="party_phone_chat_note">افتح «مشاهدة جماعية» على هاتفك بهذا الملف الشخصي للدردشة.</string>
+    <string name="party_phone_chat_note">افتح مشاهدة جماعية على هاتفك بهذا الملف الشخصي للدردشة.</string>
 </resources>
