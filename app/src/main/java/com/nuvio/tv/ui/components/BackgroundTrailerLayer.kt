@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -141,7 +142,10 @@ fun BackgroundTrailerLayer(
                     detectLetterbox = true,
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer { alpha = latestRequest.alpha() }
+                        .graphicsLayer {
+                            alpha = latestRequest.alpha()
+                            compositingStrategy = CompositingStrategy.ModulateAlpha
+                        }
                 )
             }
         }
