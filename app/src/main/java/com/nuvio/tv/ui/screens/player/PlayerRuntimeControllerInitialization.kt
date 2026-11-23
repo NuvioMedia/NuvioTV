@@ -1091,7 +1091,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (useLibass) {
                 _exoPlayer?.getAssHandlerCompat()?.let { handler ->
                     handler.applyAssFontScaleCompat(
-                        (_uiState.value.effectiveSubtitleStyle.size / 100f).coerceIn(0.5f, 3.0f)
+                        (_uiState.value.effectiveAssSubtitleStyle.size / 100f).coerceIn(0.5f, 3.0f)
                     )
                     // Apply video effects only when an ASS track has been detected for
                     // this stream. On first init, no tracks are known yet so effects are

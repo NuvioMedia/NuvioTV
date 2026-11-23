@@ -282,23 +282,9 @@ internal fun SubtitleSelectionOverlay(
         if (!useLibass && !isUsingMpv) return@remember false
         val selectedOption = subtitleOptions.firstOrNull { it.id == selectedOptionId }
         val isAss = when (selectedOption?.kind) {
-            SubtitleOptionKind.INTERNAL -> {
-                val track = selectedOption.internalTrackIndex?.let { sessionInternalTracks.getOrNull(it) }
-                val codec = track?.codec?.lowercase(java.util.Locale.US).orEmpty()
-                codec.contains("ass") || codec.contains("ssa") || track?.name?.contains("ASS", ignoreCase = true) == true
-            }
-            SubtitleOptionKind.ADDON -> {
-                val url = selectedOption.addonSubtitle?.url?.lowercase(java.util.Locale.US).orEmpty()
-                url.contains(".ass") || url.contains(".ssa")
-            }
-            null -> {
-                val currentInternalTrack = sessionInternalTracks.getOrNull(sessionSelectedInternalIndex)
-                val internalCodec = currentInternalTrack?.codec?.lowercase(java.util.Locale.US).orEmpty()
-                val addonUrl = sessionSelectedAddonSubtitle?.url?.lowercase(java.util.Locale.US).orEmpty()
-                internalCodec.contains("ass") || internalCodec.contains("ssa") ||
-                    currentInternalTrack?.name?.contains("ASS", ignoreCase = true) == true ||
-                    addonUrl.contains(".ass") || addonUrl.contains(".ssa")
-            }
+            SubtitleOptionKind.INTERNAL, SubtitleOptionKind.ADDON -> selectedOption.formatBadge == "ASS"
+            null -> sessionSelectedAddonSubtitle?.subtitleFormatBadge()?.let { it == "ASS" }
+                ?: (sessionInternalTracks.getOrNull(sessionSelectedInternalIndex)?.subtitleFormatBadge() == "ASS")
         }
         isAss && (isUsingMpv || useLibass)
     }
