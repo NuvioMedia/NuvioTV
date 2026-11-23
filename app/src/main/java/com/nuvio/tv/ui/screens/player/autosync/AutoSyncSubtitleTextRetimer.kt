@@ -184,7 +184,7 @@ internal object AutoSyncSubtitleTextRetimer {
                             partEnds = partEnds,
                             trim = false,
                         )
-                        if (partCount > maxOf(startIndex, endIndex)) {
+                        if (startIndex != endIndex && partCount > maxOf(startIndex, endIndex)) {
                             val sRawStart = partStarts[startIndex]
                             val sRawEnd = partEnds[startIndex]
                             val sTsStart = AutoSyncSubtitleCueParser.trimStartIndex(text, sRawStart, sRawEnd)

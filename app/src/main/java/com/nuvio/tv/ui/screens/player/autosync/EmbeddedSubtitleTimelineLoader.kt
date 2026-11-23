@@ -119,14 +119,16 @@ internal object EmbeddedSubtitleTimelineLoader {
 
     private val httpClient: OkHttpClient by lazy {
         // Share PlayerPlaybackNetworking's connection pool, dispatcher, IPv4-first DNS,
-        // TCP_NODELAY socket factory, and self-signed server fallback to avoid cold TLS/DNS setup.
-        PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
+        // TCP_NODELAY socket factory, and self-signed server fallback to avoid cold TLS/DNS setup,
+        // while still retrying over HTTP/2 if an HTTPS host rejects HTTP/1.1 with 403.
+        val http1Client = PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(4, TimeUnit.SECONDS)
             .callTimeout(5, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
+        PlayerPlaybackNetworking.withHttp2On403Fallback(http1Client)
     }
 
     private val cacheLock = Any()
@@ -350,22 +352,21 @@ internal object EmbeddedSubtitleTimelineLoader {
 
         val tracksPosition = resolvedPositions[ID_TRACKS] ?: directPositions[ID_TRACKS]
             ?: return null
-        val subtitleTracks = (
-            extractElementFromInitialProbe(
-                initialBytes = initialMetadata.initialBytes,
-                absolutePosition = tracksPosition,
-                expectedId = ID_TRACKS,
-                maxElementBytes = MAX_TRACKS_BYTES,
-            ) ?: fetchElementAt(
-                sourceUrl = sourceUrl,
-                sourceHeaders = sourceHeaders,
-                absolutePosition = tracksPosition,
-                expectedId = ID_TRACKS,
-                maxElementBytes = MAX_TRACKS_BYTES,
-                stats = stats,
-                totalLength = initialMetadata.totalLength,
-            )
-            )?.let(::parseSubtitleTracks).orEmpty()
+        val tracksBytes = extractElementFromInitialProbe(
+            initialBytes = initialMetadata.initialBytes,
+            absolutePosition = tracksPosition,
+            expectedId = ID_TRACKS,
+            maxElementBytes = MAX_TRACKS_BYTES,
+        ) ?: fetchElementAt(
+            sourceUrl = sourceUrl,
+            sourceHeaders = sourceHeaders,
+            absolutePosition = tracksPosition,
+            expectedId = ID_TRACKS,
+            maxElementBytes = MAX_TRACKS_BYTES,
+            stats = stats,
+            totalLength = initialMetadata.totalLength,
+        ) ?: return null
+        val subtitleTracks = parseSubtitleTracks(tracksBytes)
         if (subtitleTracks.isEmpty()) {
             return IndexedEmbeddedTimeline(
                 tracks = emptyList(),
@@ -1676,6 +1677,7 @@ internal object EmbeddedSubtitleTimelineLoader {
     }
 
     private fun readUnsignedInline(bytes: ByteArray, offset: Int, size: Int): Long {
+        if (size == 0) return if (offset in 0..bytes.size) 0L else -1L
         if (size !in 1..8 || offset + size > bytes.size) return -1L
         var value = 0L
         for (i in offset until offset + size) {
@@ -1787,21 +1789,27 @@ internal object EmbeddedSubtitleTimelineLoader {
         val remaining = totalSizeInt - probe.bytes.size
         if (remaining.toLong() > stats.remainingByteBudget()) return null
 
-        // Fetch only the unread tail so we never re-download the initial chunk.
-        val tail = fetchRange(
-            sourceUrl = sourceUrl,
-            sourceHeaders = sourceHeaders,
-            start = absolutePosition + probe.bytes.size.toLong(),
-            length = remaining,
-            requirePartialContent = true,
-            stats = stats,
-            requireExactLength = true,
-        )?.bytes ?: return null
-
-        return ByteArray(totalSizeInt).also { combined ->
-            probe.bytes.copyInto(combined, 0, 0, probe.bytes.size)
-            tail.copyInto(combined, probe.bytes.size, 0, tail.size)
+        // Fetch only the unread tail so we never re-download the initial chunk. Looping handles
+        // proxies/CDNs that cap individual 206 range responses; normal servers finish in 1 pass.
+        val combined = ByteArray(totalSizeInt)
+        probe.bytes.copyInto(combined, 0, 0, probe.bytes.size)
+        var filled = probe.bytes.size
+        while (filled < totalSizeInt) {
+            val chunk = fetchRange(
+                sourceUrl = sourceUrl,
+                sourceHeaders = sourceHeaders,
+                start = absolutePosition + filled.toLong(),
+                length = totalSizeInt - filled,
+                requirePartialContent = true,
+                stats = stats,
+                requireExactLength = false,
+            )?.bytes ?: return null
+            if (chunk.isEmpty()) return null
+            val copyLen = minOf(chunk.size, totalSizeInt - filled)
+            chunk.copyInto(combined, filled, 0, copyLen)
+            filled += copyLen
         }
+        return combined
     }
 
     private suspend fun fetchRange(
@@ -2048,6 +2056,7 @@ internal object EmbeddedSubtitleTimelineLoader {
 
     private fun readUnsigned(bytes: ByteArray, element: EbmlElement): Long? {
         val size = element.size ?: return null
+        if (size == 0L) return if (element.dataStart in 0..bytes.size) 0L else null
         if (size !in 1L..8L) return null
         val end = element.dataStart + size.toInt()
         if (end > bytes.size) return null
