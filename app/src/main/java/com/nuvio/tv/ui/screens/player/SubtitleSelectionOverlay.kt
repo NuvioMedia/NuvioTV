@@ -171,7 +171,8 @@ internal fun SubtitleSelectionOverlay(
             installedAddonOrder = sessionInstalledSubtitleAddonOrder,
             selectedOptionId = activeSelectedOptionId,
             builtInLabel = builtInLabel,
-            forcedLabel = forcedLabel
+            forcedLabel = forcedLabel,
+            unknownLabel = unknownLabel
         )
     }
 
@@ -1358,16 +1359,29 @@ private fun SubtitleOptionCard(
                     )
                     item.addonSubtitle?.let { AutoSyncedChip(it.url, item.isSelected) } // AutoSync hook
                 }
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = titleColor
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = titleColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    item.formatBadge?.let { badge ->
+                        SubtitleFormatBadge(label = badge, selected = item.isSelected)
+                    }
+                }
                 if (!item.meta.isNullOrBlank()) {
                     Text(
                         text = item.meta,
                         style = MaterialTheme.typography.bodySmall,
-                        color = metaColor
+                        color = metaColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -1442,6 +1456,34 @@ private fun SourceChip(label: String, selected: Boolean = false, modifier: Modif
             },
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun SubtitleFormatBadge(label: String, selected: Boolean) {
+    Box(
+        modifier = Modifier
+            .background(
+                if (selected) {
+                    NuvioTheme.colors.OnSecondary.copy(alpha = 0.14f)
+                } else {
+                    Color.White.copy(alpha = 0.08f)
+                },
+                RoundedCornerShape(999.dp)
+            )
+            .padding(horizontal = NuvioTheme.spacing.sm, vertical = 3.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) {
+                NuvioTheme.colors.OnSecondary.copy(alpha = 0.9f)
+            } else {
+                Color.White.copy(alpha = 0.78f)
+            },
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
@@ -1981,6 +2023,7 @@ private data class SubtitleOptionRailItem(
     val sourceLabel: String,
     val meta: String?,
     val isSelected: Boolean,
+    val formatBadge: String? = null,
     val internalTrackIndex: Int? = null,
     val addonSubtitle: Subtitle? = null
 )
@@ -2071,7 +2114,8 @@ private fun buildSubtitleOptionRailItems(
     installedAddonOrder: List<String>,
     selectedOptionId: String?,
     builtInLabel: String,
-    forcedLabel: String
+    forcedLabel: String,
+    unknownLabel: String
 ): List<SubtitleOptionRailItem> {
     if (selectedLanguageKey == SubtitleOffLanguageKey) return emptyList()
 
@@ -2089,6 +2133,7 @@ private fun buildSubtitleOptionRailItems(
             sourceLabel = if (subtitle.isStreamProvided) builtInLabel else subtitle.addonName,
             meta = subtitle.id.takeIf { it.isNotBlank() && it != subtitle.lang && it != subtitle.url },
             isSelected = optionId == selectedOptionId,
+            formatBadge = subtitle.subtitleFormatBadge(),
             addonSubtitle = subtitle
         )
     }
@@ -2107,13 +2152,11 @@ private fun buildSubtitleOptionRailItems(
             SubtitleOptionRailItem(
                 id = "internal:${track.index}",
                 kind = SubtitleOptionKind.INTERNAL,
-                title = track.name,
+                title = internalSubtitleTitle(track, selectedLanguageKey, unknownLabel),
                 sourceLabel = builtInLabel,
-                meta = listOfNotNull(
-                    track.codec,
-                    if (track.isForced) forcedLabel else null
-                ).joinToString(" • ").ifBlank { null },
+                meta = if (track.isForced) forcedLabel else null,
                 isSelected = "internal:${track.index}" == selectedOptionId,
+                formatBadge = track.subtitleFormatBadge(),
                 internalTrackIndex = track.index
             )
         }
@@ -2173,6 +2216,26 @@ private fun selectedSubtitleOptionId(
 
     return null
 }
+
+private fun internalSubtitleTitle(track: TrackInfo, languageKey: String, unknownLabel: String): String {
+    track.name.takeUnless { it.isBlank() || it.equals(track.language, ignoreCase = true) }?.let { return it }
+    return languageKey
+        .takeUnless { track.language.isNullOrBlank() || it == SubtitleUnknownLanguageKey || it == "und" }
+        ?.let { Subtitle.languageCodeToName(it) }
+        ?: unknownLabel
+}
+
+private fun TrackInfo.subtitleFormatBadge(): String? =
+    when (codec?.trim()?.lowercase(java.util.Locale.US)) {
+        "ass", "ssa" -> "ASS"
+        "pgs", "hdmv_pgs_subtitle", "pgssub" -> "PGS"
+        "vobsub", "dvd_subtitle", "dvdsub" -> "VobSub"
+        "dvb", "dvb_subtitle", "dvbsub" -> "DVB"
+        else -> null
+    }
+
+private fun Subtitle.subtitleFormatBadge(): String? =
+    if (PlayerSubtitleUtils.mimeTypeFromUrl(url) == androidx.media3.common.MimeTypes.TEXT_SSA) "ASS" else null
 
 private fun addonSubtitleOptionId(subtitle: Subtitle): String {
     return "addon:${subtitle.addonName}:${subtitle.id}:${subtitle.url}"
