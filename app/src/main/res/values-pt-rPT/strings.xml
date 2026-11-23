@@ -138,7 +138,7 @@
 
     <string name="continue_watching">Continuar a ver</string>
     <string name="cw_upcoming">Em breve</string>
-    <string name="cw_next_up">A seguir</string>
+    <string name="cw_next_up">Próximo</string>
     <string name="cw_next_up_short">Seguinte</string>
     <string name="cw_new_episode">Novo episódio</string>
     <string name="cw_new_episode_short">Novo</string>
@@ -303,7 +303,7 @@
     <string name="movie_status_continuing">Em exibição</string>
     <string name="movie_status_current">Atual</string>
     <string name="movie_status_cancelled">Cancelado</string>
-    <string name="movie_status_released">Estreado</string>
+    <string name="movie_status_released">Exibido</string>
     <string name="movie_status_planned">Planeado</string>
     <string name="movie_status_rumored">Rumor</string>
     <string name="movie_status_in_production">Em produção</string>
@@ -627,6 +627,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Usar a animação e o posicionamento personalizados de deslocamento global de foco do Nuvio.</string>
     <string name="advanced_rgb565">Descodificação de imagens RGB565</string>
     <string name="advanced_rgb565_subtitle">Usar cor de 16 bits com menor consumo de memória para imagens opacas elegíveis. Alterar esta opção reinicia a aplicação.</string>
+    <string name="advanced_hardware_bitmaps">Descodificação de imagens por hardware</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Manter as imagens descodificadas apenas na memória gráfica. Utiliza menos RAM, mas o carregamento de novas imagens pode apresentar engasgos em GPUs mais fracas.</string>
     <string name="advanced_memory_only_vertical_scroll">Deslocamento vertical apenas em memória</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Ignorar pedidos de imagens ao disco e à rede ao deslocar verticalmente as filas do ecrã inicial.</string>
     <string name="advanced_compose_highlighter">Realce Compose</string>
@@ -730,7 +732,7 @@
     <string name="playback_section_player_title_desc">Leitor predefinido, motor interno e alternativa em caso de erro.</string>
     <string name="playback_section_stream_selection">Seleção de fonte</string>
     <string name="playback_section_stream_selection_desc">Como uma fonte é escolhida quando primes reproduzir.</string>
-    <string name="playback_section_up_next">A seguir</string>
+    <string name="playback_section_up_next">Próximo</string>
     <string name="playback_section_up_next_desc">Reprodução automática do episódio seguinte e sugestões após a reprodução.</string>
     <string name="playback_section_skip">Ignorar segmentos</string>
     <string name="playback_section_skip_desc">Ignorar introduções, resumos e créditos.</string>
@@ -1118,6 +1120,8 @@
     <string name="layout_cw_enabled_sub">Mostrar a fila Continuar a ver no ecrã inicial.</string>
     <string name="layout_use_episode_thumbnails_cw">Usar miniaturas dos episódios em Continuar a ver</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Usar miniaturas dos episódios como imagem predefinida. Quando desativado, usa a imagem de fundo.</string>
+    <string name="layout_season_posters">Cartazes de temporadas</string>
+    <string name="layout_season_posters_sub">Mostrar temporadas como cartazes em vez de separadores de texto, quando disponíveis.</string>
     <string name="layout_blur_unwatched">Desfocar episódios não vistos</string>
     <string name="layout_blur_unwatched_sub">Desfocar as miniaturas dos episódios até serem vistos para evitar spoilers.</string>
     <string name="layout_episode_options_overlay">Sobreposição de opções do episódio</string>
@@ -1142,7 +1146,7 @@
     <string name="layout_cw_sort_default">Predefinida</string>
     <string name="layout_cw_sort_default_desc">Ordenar todos os itens pelos mais recentes</string>
     <string name="layout_cw_sort_streaming">Estilo streaming</string>
-    <string name="layout_cw_sort_streaming_desc">Itens já estreados primeiro, próximas estreias no fim</string>
+    <string name="layout_cw_sort_streaming_desc">Itens já exibidos primeiro, próximas estreias no fim</string>
     <string name="layout_cw_sort_split_upcoming">Fila separada para Em breve</string>
     <string name="layout_cw_sort_split_upcoming_desc">Mover episódios por estrear para uma fila separada Em breve</string>
     <string name="layout_cw_click_action">Ao selecionar</string>
@@ -1162,6 +1166,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Pausar o trailer ao deslocar para baixo e retomar ao voltar ao topo.</string>
     <string name="layout_trailer_4k">Trailers em 4K</string>
     <string name="layout_trailer_4k_sub">Reproduzir trailers acima de 1080p quando disponíveis. Usa muito mais memória; desativado por predefinição em dispositivos com 2 GB de RAM ou menos.</string>
+    <string name="layout_trailer_subtitles">Legendas de trailers</string>
+    <string name="layout_trailer_subtitles_sub">Mostrar legendas nos trailers no teu idioma de legendas preferido, quando disponíveis.</string>
     <string name="layout_detail_group_episodes">Episódios</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadados</string>
@@ -1182,6 +1188,8 @@
     <string name="layout_trailer_muted">Reproduzir trailer sem som</string>
     <string name="layout_trailer_muted_sub_preview">Silenciar o áudio do trailer durante a pré-visualização automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Silenciar o áudio do trailer nos cartões expandidos.</string>
+    <string name="layout_trailer_continue_in_details">Continuar trailer nos detalhes</string>
+    <string name="layout_trailer_continue_in_details_sub">Manter o trailer em reprodução ao abrir a página de detalhes.</string>
     <string name="layout_section_card_style">Cartão de cartaz</string>
     <string name="layout_section_card_style_desc">Ajustar largura do cartão e raio dos cantos.</string>
     <string name="settings_card_depth_title">Efeito de profundidade do cartão</string>
@@ -1217,6 +1225,7 @@
     <string name="layout_trailer_location_sub">Escolhe onde a pré-visualização do trailer é reproduzida no Início moderno.</string>
     <string name="layout_trailer_expanded_card">Cartão expandido</string>
     <string name="layout_trailer_hero_media">Multimédia em destaque</string>
+    <string name="layout_trailer_hero_media_no_expand">Multimédia em destaque (sem expandir)</string>
     <string name="layout_preset_compact">Compacto</string>
     <string name="layout_preset_dense">Denso</string>
     <string name="layout_preset_standard">Padrão</string>
@@ -1303,6 +1312,7 @@
     <string name="mdblist_rate_limited">O limite de pedidos do MDBList foi atingido. A sincronização será retomada após a reposição do limite.</string>
     <string name="mdblist_revoke_failed">Desligado neste dispositivo. Remove esta aplicação nas definições da tua conta MDBList para revogar o acesso.</string>
     <string name="mdblist_title">Classificações MDBList</string>
+    <string name="mdblist_subtitle">Configurar classificações externas apresentadas no destaque dos detalhes</string>
     <string name="mdblist_enable_title">Ativar classificações MDBList</string>
     <string name="mdblist_enable_subtitle">Obter classificações de fornecedores externos no ecrã de detalhes de metadados</string>
     <string name="mdblist_api_key_title">Chave da API</string>
@@ -1329,6 +1339,7 @@
     <string name="mdblist_show_on_hero_title">Usar classificações no destaque</string>
     <string name="mdblist_show_on_hero_subtitle">Mostrar classificações MDBList no carrossel de destaque (moderno e clássico/grelha)</string>
     <string name="mdblist_rating_order_title">Ordem das classificações</string>
+    <string name="mdblist_rating_order_subtitle">As primeiras 3 classificações ativadas e disponíveis são apresentadas no destaque moderno. Utiliza o botão de reordenação para alterar a respetiva ordem.</string>
     <string name="mdblist_dialog_title">Chave da API MDBList</string>
     <string name="mdblist_dialog_subtitle">Introduz a tua chave da API para obter classificações externas</string>
     <string name="mdblist_dialog_placeholder">Introduzir chave da API MDBList</string>
@@ -1545,6 +1556,8 @@
     <string name="tmdb_networks_subtitle">Canais com logótipos do TMDB</string>
     <string name="tmdb_episodes_title">Episódios</string>
     <string name="tmdb_episodes_subtitle">Títulos, sinopses, miniaturas e duração dos episódios do TMDB</string>
+    <string name="tmdb_season_posters_title">Cartazes de temporadas</string>
+    <string name="tmdb_season_posters_subtitle">Cartazes de temporadas do TMDB para os separadores de temporadas na página de detalhes</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Candidatos a trailer a partir dos vídeos do TMDB para a secção de trailers nos detalhes</string>
     <string name="tmdb_more_like_this_title">Semelhantes</string>
@@ -1842,6 +1855,9 @@
     <string name="catalog_order_disabled_on_home">Desativado no Início</string>
     <string name="catalog_order_enable">Ativar</string>
     <string name="catalog_order_disable">Desativar</string>
+    <string name="catalog_order_pinned">Fixado</string>
+    <string name="catalog_order_pinned_to_top">Fixado no topo</string>
+    <string name="catalog_order_pin_to_move_toast">Remove a fixação no topo da coleção para mover</string>
 
 
     <string name="stream_retry">Tentar novamente</string>
@@ -2444,6 +2460,7 @@
     <string name="cast_detail_error">Algo correu mal</string>
     <string name="cast_detail_retry">Tentar novamente</string>
     <string name="cast_detail_filmography">Filmografia</string>
+    <string name="cast_detail_filter_all">Tudo</string>
     <string name="cast_detail_born">Nascimento: %1$s</string>
     <string name="cast_detail_born_died">Nascimento: %1$s — †%2$s</string>
     <string name="cast_detail_age">%1$d anos</string>
@@ -2564,6 +2581,10 @@
     <string name="plugin_repo_added_with_providers">%1$s adicionado com %2$d fornecedores</string>
     <string name="plugin_repo_removed">Repositório removido</string>
     <string name="plugin_repo_refreshed">Repositório atualizado</string>
+    <string name="plugin_repo_delete_confirm_title">Eliminar repositório?</string>
+    <string name="plugin_repo_delete_confirm_message">Tens a certeza de que pretendes eliminá-lo?</string>
+    <string name="plugin_repo_delete_no">Não</string>
+    <string name="plugin_repo_delete_yes">Sim</string>
 
     <!-- Trakt errors -->
 
@@ -2634,6 +2655,7 @@
     <string name="cd_loading_logo">A carregar logótipo</string>
     <string name="cd_move_up">Mover para cima</string>
     <string name="cd_move_down">Mover para baixo</string>
+    <string name="cd_reorder">Reorganizar</string>
     <string name="cd_edit">Editar</string>
     <string name="cd_delete">Eliminar</string>
     <string name="cd_qr_code">Código QR</string>
@@ -2705,17 +2727,28 @@
     <string name="collections_valid_summary">%1$d coleção(ões), %2$d pasta(s)</string>
     <string name="collections_confirm_import">Confirmar importação</string>
     <string name="collections_folder_count">%1$d pasta(s)</string>
+    <string name="collections_pinned">Fixado</string>
 
     <!-- Collection Editor -->
-    <string name="collections_editor_row_title">Título da fila</string>
+    <string name="collections_editor_row_title">Título da linha</string>
     <string name="collections_editor_save">Guardar</string>
+    <string name="collections_editor_unsaved_title">Guardar alterações?</string>
+    <string name="collections_editor_unsaved_subtitle">Tens alterações por guardar nesta coleção.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Alterações por guardar</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Introduz um título e adiciona pelo menos uma pasta para guardar esta coleção.</string>
+    <string name="collections_editor_unsaved_missing_title">Introduz um título para a coleção para guardar as alterações.</string>
+    <string name="collections_editor_unsaved_missing_folder">Adiciona pelo menos uma pasta para guardar esta coleção.</string>
+    <string name="collections_editor_folder_unsaved_title">Guardar alterações da pasta?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Tens alterações por guardar nesta pasta.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Alterações da pasta por guardar</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Adiciona pelo menos uma fonte para guardar esta pasta.</string>
     <string name="collections_editor_backdrop">Imagem de fundo</string>
-    <string name="collections_editor_pin_above">Afixar acima dos catálogos</string>
-    <string name="collections_editor_pin_above_desc">Mostrar esta coleção acima de todos os catálogos normais do Início. Várias coleções afixadas seguem a ordem de criação das coleções.</string>
+    <string name="collections_editor_pin_above">Fixar acima dos catálogos</string>
+    <string name="collections_editor_pin_above_desc">Mostrar esta coleção acima de todos os catálogos normais do ecrã inicial. Várias coleções fixadas seguem a ordem de criação da coleção.</string>
     <string name="collections_editor_focus_glow">Brilho de foco</string>
-    <string name="collections_editor_focus_glow_desc">Usar o brilho nativo da TV nos cartões de catálogo personalizados do ecrã inicial desta coleção</string>
+    <string name="collections_editor_focus_glow_desc">Utilizar o brilho nativo da TV nos cartões de catálogo personalizados desta coleção no ecrã inicial</string>
     <string name="collections_editor_view_mode">Modo de visualização</string>
-    <string name="collections_editor_show_all_tab">Mostrar separador \"Todos\"</string>
+    <string name="collections_editor_show_all_tab">Mostrar separador \"Tudo\"</string>
     <string name="collections_editor_show_all_tab_desc">Combinar todos os catálogos num único separador</string>
     <string name="collections_editor_folders">Pastas</string>
     <string name="collections_editor_add_folder">Adicionar pasta</string>
@@ -3496,6 +3529,13 @@
     <string name="autosync_thorough_title">Pesquisa de sincronização automática minuciosa</string>
     <string name="autosync_thorough_description">Continuar a comparar outras legendas e faixas incorporadas para obter uma correspondência mais precisa antes de sincronizar. Quando desativado, a primeira correspondência forte é aplicada mais cedo. Apenas são aplicadas correspondências com confiança.</string>
     <string name="autosync_label_synced">Sincronizado automaticamente</string>
+    <string name="autosync_status_title">Estado da sincronização automática</string>
+    <string name="autosync_status_synced">Sincronizadas</string>
+    <string name="autosync_status_not_needed">Não necessária</string>
+    <string name="autosync_status_in_progress">Em curso</string>
+    <string name="autosync_status_no_fit">Pode não corresponder</string>
+    <string name="autosync_status_no_reference">Sem legendas incorporadas</string>
+    <string name="autosync_status_failed">Falhou</string>
     <string name="stream_resume_from_time">Retomar a partir de %1$s</string>
     <string name="stream_resume_from_percent">Retomar a partir de %1$d%%</string>
 </resources>
