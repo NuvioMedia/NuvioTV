@@ -627,6 +627,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Sử dụng hiệu ứng chuyển động cuộn và định vị theo tiêu điểm toàn cục tùy chỉnh của Nuvio.</string>
     <string name="advanced_rgb565">Giải mã hình ảnh RGB565</string>
     <string name="advanced_rgb565_subtitle">Dùng màu 16 bit để tiết kiệm bộ nhớ cho các hình ảnh không trong suốt. Thay đổi tùy chọn này sẽ khởi động lại ứng dụng.</string>
+    <string name="advanced_hardware_bitmaps">Giải mã hình ảnh bằng phần cứng</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Chỉ giữ hình ảnh đã giải mã trong bộ nhớ đồ họa. Giảm dung lượng RAM sử dụng, nhưng việc tải hình ảnh mới có thể bị giật trên GPU yếu.</string>
     <string name="advanced_memory_only_vertical_scroll">Cuộn dọc chỉ trong bộ nhớ:</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Bỏ qua các yêu cầu tải ảnh từ đĩa và mạng trong khi cuộn dọc qua các hàng trên trang chủ.</string>
     <string name="advanced_compose_highlighter">Bộ tô sáng Compose</string>
@@ -1310,6 +1312,7 @@
     <string name="mdblist_rate_limited">Đã đạt giới hạn yêu cầu của MDBList. Quá trình đồng bộ sẽ tiếp tục sau khi giới hạn được đặt lại.</string>
     <string name="mdblist_revoke_failed">Đã ngắt kết nối trên thiết bị này. Vui lòng xóa ứng dụng trong phần cài đặt tài khoản MDBList để thu hồi quyền truy cập.</string>
     <string name="mdblist_title">Điểm đánh giá MDBList</string>
+    <string name="mdblist_subtitle">Cấu hình điểm đánh giá bên ngoài hiển thị ở khu vực nổi bật</string>
     <string name="mdblist_enable_title">Bật điểm đánh giá MDBList</string>
     <string name="mdblist_enable_subtitle">Lấy điểm đánh giá từ các nhà cung cấp bên ngoài trên màn hình chi tiết siêu dữ liệu</string>
     <string name="mdblist_api_key_title">Mã khóa API</string>
@@ -1336,6 +1339,7 @@
     <string name="mdblist_show_on_hero_title">Sử dụng điểm đánh giá trên Khu vực nổi bật</string>
     <string name="mdblist_show_on_hero_subtitle">Hiển thị điểm đánh giá MDBList trên vòng quay khu vực nổi bật (hiện đại và cổ điển/lưới)</string>
     <string name="mdblist_rating_order_title">Thứ tự điểm đánh giá</string>
+    <string name="mdblist_rating_order_subtitle">3 điểm đánh giá đầu tiên được bật và có sẵn sẽ hiển thị ở khu vực nổi bật hiện đại. Sử dụng nút sắp xếp lại để thay đổi thứ tự.</string>
     <string name="mdblist_dialog_title">Mã khóa API của MDBList</string>
     <string name="mdblist_dialog_subtitle">Nhập mã khóa API để lấy điểm đánh giá bên ngoài</string>
     <string name="mdblist_dialog_placeholder">Nhập mã khóa API của MDBList</string>
@@ -1851,6 +1855,9 @@
     <string name="catalog_order_disabled_on_home">Đã tắt trên Trang chủ</string>
     <string name="catalog_order_enable">Bật</string>
     <string name="catalog_order_disable">Tắt</string>
+    <string name="catalog_order_pinned">Đã ghim</string>
+    <string name="catalog_order_pinned_to_top">Đã ghim lên đầu</string>
+    <string name="catalog_order_pin_to_move_toast">Bỏ ghim lên đầu khỏi bộ sưu tập để di chuyển</string>
 
 
     <string name="stream_retry">Thử lại</string>
@@ -2453,6 +2460,7 @@
     <string name="cast_detail_error">Đã xảy ra lỗi</string>
     <string name="cast_detail_retry">Thử lại</string>
     <string name="cast_detail_filmography">Sự nghiệp</string>
+    <string name="cast_detail_filter_all">Tất cả</string>
     <string name="cast_detail_born">Sinh: %1$s</string>
     <string name="cast_detail_born_died">Sinh: %1$s — †%2$s</string>
     <string name="cast_detail_age">%1$d tuổi</string>
@@ -2573,6 +2581,10 @@
     <string name="plugin_repo_added_with_providers">Đã thêm %1$s với %2$d nhà cung cấp</string>
     <string name="plugin_repo_removed">Kho lưu trữ đã bị xóa</string>
     <string name="plugin_repo_refreshed">Kho lưu trữ đã làm mới</string>
+    <string name="plugin_repo_delete_confirm_title">Xóa kho lưu trữ?</string>
+    <string name="plugin_repo_delete_confirm_message">Bạn có chắc chắn muốn xóa không?</string>
+    <string name="plugin_repo_delete_no">Không</string>
+    <string name="plugin_repo_delete_yes">Có</string>
 
     <!-- Trakt errors -->
 
@@ -2643,6 +2655,7 @@
     <string name="cd_loading_logo">Logo đang tải</string>
     <string name="cd_move_up">Chuyển lên</string>
     <string name="cd_move_down">Chuyển xuống</string>
+    <string name="cd_reorder">Sắp xếp lại</string>
     <string name="cd_edit">Sửa</string>
     <string name="cd_delete">Xóa</string>
     <string name="cd_qr_code">Mã QR</string>
@@ -2714,10 +2727,21 @@
     <string name="collections_valid_summary">%1$d bộ sưu tập, %2$d thư mục</string>
     <string name="collections_confirm_import">Xác nhận nhập</string>
     <string name="collections_folder_count">%1$d thư mục</string>
+    <string name="collections_pinned">Đã ghim</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Tiêu đề hàng</string>
     <string name="collections_editor_save">Lưu</string>
+    <string name="collections_editor_unsaved_title">Lưu thay đổi?</string>
+    <string name="collections_editor_unsaved_subtitle">Bạn có thay đổi chưa được lưu trong bộ sưu tập này.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Thay đổi chưa lưu</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Nhập tiêu đề và thêm ít nhất một thư mục để lưu bộ sưu tập này.</string>
+    <string name="collections_editor_unsaved_missing_title">Nhập tiêu đề bộ sưu tập để lưu thay đổi của bạn.</string>
+    <string name="collections_editor_unsaved_missing_folder">Thêm ít nhất một thư mục để lưu bộ sưu tập này.</string>
+    <string name="collections_editor_folder_unsaved_title">Lưu thay đổi thư mục?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Bạn có thay đổi chưa được lưu trong thư mục này.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Thay đổi thư mục chưa lưu</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Thêm ít nhất một nguồn để lưu thư mục này.</string>
     <string name="collections_editor_backdrop">Ảnh phông nền</string>
     <string name="collections_editor_pin_above">Ghim phía trên các danh mục</string>
     <string name="collections_editor_pin_above_desc">Hiển thị bộ sưu tập này phía trên tất cả danh mục trang chủ thông thường. Các bộ sưu tập được ghim sẽ theo thứ tự tạo bộ sưu tập.</string>
@@ -3496,6 +3520,13 @@
     <string name="autosync_thorough_title">Tìm kiếm tự động đồng bộ chính xác</string>
     <string name="autosync_thorough_description">Tiếp tục so sánh các phụ đề khác với bản nhúng sẵn để tìm bản khớp hơn trước khi đồng bộ. Khi tắt, bản khớp đầu tiên sẽ được dùng ngay. Chỉ bản khớp có độ tin cậy cao mới được áp dụng</string>
     <string name="autosync_label_synced">Đã tự động đồng bộ</string>
+    <string name="autosync_status_title">Trạng thái tự động đồng bộ</string>
+    <string name="autosync_status_synced">Đã đồng bộ</string>
+    <string name="autosync_status_not_needed">Không cần thiết</string>
+    <string name="autosync_status_in_progress">Đang tiến hành</string>
+    <string name="autosync_status_no_fit">Có thể không khớp</string>
+    <string name="autosync_status_no_reference">Không có phụ đề nhúng</string>
+    <string name="autosync_status_failed">Không thành công</string>
     <string name="stream_resume_from_time">Xem tiếp từ %1$s</string>
     <string name="stream_resume_from_percent">Xem tiếp từ %1$d%%</string>
 </resources>
