@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -289,6 +290,24 @@ fun FolderEditorContent(
     val sourceItems = remember(sourceKeys, folder.sources) {
         sourceKeys.zip(folder.sources).mapIndexed { index, (key, source) ->
             FolderSourceItem(key = key, index = index, source = source)
+        }
+    }
+
+    val singleSourceFocusRequester = sourceItems.singleOrNull()?.let { item ->
+        val addonSource = item.source as? AddonCatalogCollectionSource
+        val catalog = addonSource?.let { addon ->
+            uiState.availableCatalogs.find {
+                it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
+            }
+        }
+        val hasGenreOptions = addonSource != null && catalog?.genreOptions?.isNotEmpty() == true
+        when {
+            item.source is TmdbCollectionSource || item.source is TraktCollectionSource ->
+                sourceEditFocusRequesters.getOrPut(item.key) { FocusRequester() }
+            hasGenreOptions ->
+                sourceGenreFocusRequesters.getOrPut(item.key) { FocusRequester() }
+            else ->
+                sourceRemoveFocusRequesters.getOrPut(item.key) { FocusRequester() }
         }
     }
 
@@ -706,7 +725,13 @@ fun FolderEditorContent(
                     onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .blockHorizontalFocus()
+                        .focusProperties {
+                            left = FocusRequester.Cancel
+                            right = FocusRequester.Cancel
+                            if (singleSourceFocusRequester != null) {
+                                down = singleSourceFocusRequester
+                            }
+                        }
                         .semantics {
                             role = Role.Switch
                             toggleableState = if (folder.hideTitle) ToggleableState.On else ToggleableState.Off
@@ -786,7 +811,13 @@ fun FolderEditorContent(
                         pendingFocusTarget = FolderFocusTarget.AddCatalog
                         viewModel.showCatalogPicker()
                     },
-                    modifier = Modifier.focusRequester(addCatalogFocusRequester),
+                    modifier = Modifier
+                        .focusRequester(addCatalogFocusRequester)
+                        .focusProperties {
+                            if (singleSourceFocusRequester != null) {
+                                up = singleSourceFocusRequester
+                            }
+                        },
                     enabled = uiState.movingSourceKey == null
                 ) {
                     Icon(Icons.Default.Add, null)
@@ -798,7 +829,13 @@ fun FolderEditorContent(
                         pendingFocusTarget = FolderFocusTarget.AddTmdb
                         viewModel.showTmdbSourcePicker()
                     },
-                    modifier = Modifier.focusRequester(addTmdbFocusRequester),
+                    modifier = Modifier
+                        .focusRequester(addTmdbFocusRequester)
+                        .focusProperties {
+                            if (singleSourceFocusRequester != null) {
+                                up = singleSourceFocusRequester
+                            }
+                        },
                     enabled = uiState.movingSourceKey == null
                 ) {
                     Icon(Icons.Default.Add, null)
@@ -810,7 +847,13 @@ fun FolderEditorContent(
                         pendingFocusTarget = FolderFocusTarget.AddTrakt
                         viewModel.showTraktSourcePicker()
                     },
-                    modifier = Modifier.focusRequester(addTraktFocusRequester),
+                    modifier = Modifier
+                        .focusRequester(addTraktFocusRequester)
+                        .focusProperties {
+                            if (singleSourceFocusRequester != null) {
+                                up = singleSourceFocusRequester
+                            }
+                        },
                     enabled = uiState.movingSourceKey == null
                 ) {
                     Icon(Icons.Default.Add, null)

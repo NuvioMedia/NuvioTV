@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -211,6 +212,9 @@ fun CollectionEditorScreen(
     }
 
     val foldersMovingIndex = uiState.folders.indexOfFirst { it.id == uiState.movingFolderKey }
+    val singleFolderEditRequester = uiState.folders.singleOrNull()?.id?.let { singleId ->
+        folderFocusRequesters.getOrPut(singleId) { FocusRequester() }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
     TvReorderList(
         items = uiState.folders,
@@ -422,6 +426,13 @@ fun CollectionEditorScreen(
                             onClick = { viewModel.setViewMode(mode) },
                             modifier = Modifier
                                 .focusRequester(viewModeFocusRequesters.getValue(mode))
+                                .focusProperties {
+                                    if (uiState.viewMode != FolderViewMode.TABBED_GRID &&
+                                        singleFolderEditRequester != null
+                                    ) {
+                                        down = singleFolderEditRequester
+                                    }
+                                }
                                 .semantics {
                                     role = Role.RadioButton
                                     selected = isSelected
@@ -455,7 +466,13 @@ fun CollectionEditorScreen(
                         onClick = { viewModel.setShowAllTab(!uiState.showAllTab) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .blockHorizontalFocus()
+                            .focusProperties {
+                                left = FocusRequester.Cancel
+                                right = FocusRequester.Cancel
+                                if (singleFolderEditRequester != null) {
+                                    down = singleFolderEditRequester
+                                }
+                            }
                             .semantics {
                                 role = Role.Switch
                                 toggleableState = if (uiState.showAllTab) ToggleableState.On else ToggleableState.Off
@@ -549,7 +566,13 @@ fun CollectionEditorScreen(
                     enabled = uiState.movingFolderKey == null,
                     modifier = Modifier
                         .focusRequester(addFolderFocusRequester)
-                        .blockHorizontalFocus()
+                        .focusProperties {
+                            left = FocusRequester.Cancel
+                            right = FocusRequester.Cancel
+                            if (singleFolderEditRequester != null) {
+                                up = singleFolderEditRequester
+                            }
+                        }
                 ) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
