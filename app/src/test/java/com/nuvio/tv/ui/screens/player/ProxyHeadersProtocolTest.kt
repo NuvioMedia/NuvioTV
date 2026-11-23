@@ -28,4 +28,12 @@ class ProxyHeadersProtocolTest {
         assertEquals(listOf(Protocol.HTTP_1_1), client.protocols)
         assertEquals(baseInterceptors + 1, client.interceptors.size)
     }
+
+    @Test
+    fun `withHttp2On403Fallback keeps http 1_1 primary protocol and adds retry interceptor`() {
+        val base = PlayerPlaybackNetworking.playbackHttpClient
+        val wrapped = PlayerPlaybackNetworking.withHttp2On403Fallback(base)
+        assertEquals(listOf(Protocol.HTTP_1_1), wrapped.protocols)
+        assertEquals(base.interceptors.size + 1, wrapped.interceptors.size)
+    }
 }

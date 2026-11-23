@@ -101,11 +101,11 @@ internal object AutoSyncSubtitleCueParser {
             if (text.regionMatches(idx, "[Events]", 0, 8, ignoreCase = true)) {
                 var left = idx - 1
                 while (left >= 0 && (text[left] == ' ' || text[left] == '\t')) left--
-                val lineStartOk = left < 0 || text[left] == '\n'
+                val lineStartOk = left < 0 || text[left] == '\n' || text[left] == '\r'
                 if (lineStartOk) {
                     var right = idx + 8
                     while (right < len && (text[right] == ' ' || text[right] == '\t')) right++
-                    if (right >= len || text[right] == '\n') return true
+                    if (right >= len || text[right] == '\n' || text[right] == '\r') return true
                 }
             }
             idx = text.indexOf('[', idx + 1)
@@ -424,19 +424,28 @@ internal object AutoSyncSubtitleCueParser {
         val len = text.length
         var scan = startPos
         while (scan < len) {
-            val hStart = if (text[scan] == '[') {
-                scan
+            val bracket = text.indexOf('[', scan)
+            if (bracket < 0) return len
+            var lineStart = bracket
+            while (lineStart > 0 && text[lineStart - 1] != '\n' && text[lineStart - 1] != '\r') {
+                val prev = text[lineStart - 1]
+                if (prev != ' ' && prev != '\t') {
+                    lineStart = -1
+                    break
+                }
+                lineStart--
+            }
+            if (lineStart >= startPos) {
+                var hLineEnd = bracket
+                while (hLineEnd < len && text[hLineEnd] != '\n' && text[hLineEnd] != '\r') hLineEnd++
+                val hTrimEnd = trimEndIndex(text, bracket, hLineEnd)
+                if (hTrimEnd > bracket + 2 && text[hTrimEnd - 1] == ']' && isKnownAssSectionHeader(text, bracket, hTrimEnd)) {
+                    return lineStart
+                }
+                scan = hLineEnd + 1
             } else {
-                val nextBracket = text.indexOf("\n[", scan)
-                if (nextBracket < 0) return len
-                nextBracket + 1
+                scan = bracket + 1
             }
-            val hLineEnd = text.indexOf('\n', hStart).let { if (it < 0) len else it }
-            val hTrimEnd = trimEndIndex(text, hStart, hLineEnd)
-            if (hTrimEnd > hStart + 2 && text[hTrimEnd - 1] == ']' && isKnownAssSectionHeader(text, hStart, hTrimEnd)) {
-                return hStart
-            }
-            scan = hLineEnd + 1
         }
         return len
     }
