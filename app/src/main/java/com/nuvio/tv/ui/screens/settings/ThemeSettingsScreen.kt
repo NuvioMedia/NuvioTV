@@ -558,7 +558,7 @@ private fun SettingsStyleOptionCard(
             Text(
                 text = style.localizedDescription(),
                 style = MaterialTheme.typography.bodySmall,
-                color = NuvioTheme.colors.TextTertiary,
+                color = if (isSelected) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary,
                 maxLines = 2
             )
         }
