@@ -19,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EmbeddedSubtitleTimelineLoaderTest {
@@ -127,6 +128,15 @@ class EmbeddedSubtitleTimelineLoaderTest {
             assertEquals(starts.size, cues.size)
             assertEquals(0L, cues.first().startTimeMs)
         }
+    }
+
+    @Test
+    fun legacyMatroskaAssCodecIdsAreTreatedAsAss() {
+        listOf("S_TEXT/ASS", "S_TEXT/SSA", "S_ASS", "S_SSA", "s_ass").forEach { codecId ->
+            assertTrue(codecId, EmbeddedSubtitleTimelineLoader.isMatroskaAssCodec(codecId))
+        }
+        assertFalse(EmbeddedSubtitleTimelineLoader.isMatroskaAssCodec("S_TEXT/UTF8"))
+        assertFalse(EmbeddedSubtitleTimelineLoader.isMatroskaAssCodec(null))
     }
 
     private fun rangeDispatcher(

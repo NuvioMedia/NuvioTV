@@ -69,6 +69,8 @@ internal object EmbeddedSubtitleTimelineLoader {
     private const val MATROSKA_PGS_CODEC_ID = "S_HDMV/PGS"
     private const val MATROSKA_ASS_CODEC_ID = "S_TEXT/ASS"
     private const val MATROSKA_SSA_CODEC_ID = "S_TEXT/SSA"
+    private const val MATROSKA_LEGACY_ASS_CODEC_ID = "S_ASS"
+    private const val MATROSKA_LEGACY_SSA_CODEC_ID = "S_SSA"
     private const val MIN_INDEXED_CUES = 8
     private const val MIN_INDEXED_SPAN_MS = 30_000L
     private const val MAX_CACHE_ENTRIES = 2
@@ -1686,9 +1688,11 @@ internal object EmbeddedSubtitleTimelineLoader {
         return value
     }
 
-    private fun isMatroskaAssCodec(codecId: String?): Boolean =
+    internal fun isMatroskaAssCodec(codecId: String?): Boolean =
         codecId.equals(MATROSKA_ASS_CODEC_ID, ignoreCase = true) ||
-            codecId.equals(MATROSKA_SSA_CODEC_ID, ignoreCase = true)
+            codecId.equals(MATROSKA_SSA_CODEC_ID, ignoreCase = true) ||
+            codecId.equals(MATROSKA_LEGACY_ASS_CODEC_ID, ignoreCase = true) ||
+            codecId.equals(MATROSKA_LEGACY_SSA_CODEC_ID, ignoreCase = true)
 
     private fun buildFallbackTrackLabel(track: MatroskaSubtitleTrack): String {
         val language = track.languageIetf?.takeIf { it.isNotBlank() }

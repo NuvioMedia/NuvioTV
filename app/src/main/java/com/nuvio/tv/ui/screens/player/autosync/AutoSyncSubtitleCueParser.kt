@@ -427,7 +427,7 @@ internal object AutoSyncSubtitleCueParser {
             val bracket = text.indexOf('[', scan)
             if (bracket < 0) return len
             var lineStart = bracket
-            while (lineStart > 0 && text[lineStart - 1] != '\n') {
+            while (lineStart > 0 && text[lineStart - 1] != '\n' && text[lineStart - 1] != '\r') {
                 val prev = text[lineStart - 1]
                 if (prev != ' ' && prev != '\t') {
                     lineStart = -1
@@ -436,7 +436,8 @@ internal object AutoSyncSubtitleCueParser {
                 lineStart--
             }
             if (lineStart >= startPos) {
-                val hLineEnd = text.indexOf('\n', bracket).let { if (it < 0) len else it }
+                var hLineEnd = bracket
+                while (hLineEnd < len && text[hLineEnd] != '\n' && text[hLineEnd] != '\r') hLineEnd++
                 val hTrimEnd = trimEndIndex(text, bracket, hLineEnd)
                 if (hTrimEnd > bracket + 2 && text[hTrimEnd - 1] == ']' && isKnownAssSectionHeader(text, bracket, hTrimEnd)) {
                     return lineStart

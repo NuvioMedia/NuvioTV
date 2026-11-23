@@ -100,4 +100,18 @@ class AutoSyncSubtitleCueParserTest {
         val raw = "[Script Info]\r\nScriptType: v4.00+\r\n\r\n[Events]\r\nFormat: Start, End, Text\r\n"
         assertTrue(AutoSyncSubtitleCueParser.hasAssEventsHeader(raw))
     }
+
+    @Test
+    fun bulkSectionSkipFindsIndentedHeaderAfterCarriageReturnLines() {
+        val raw = "[Fonts]\rfontname: a.ttf\rAB[CD\r  [Events]\rFormat: Start, End, Text\r"
+        val found = AutoSyncSubtitleCueParser.findNextAssSectionAfterBulk(raw, raw.indexOf('\r') + 1)
+        assertEquals(raw.indexOf("  [Events]"), found)
+    }
+
+    @Test
+    fun bulkSectionSkipFindsIndentedHeaderAfterCrLfLines() {
+        val raw = "[Fonts]\r\nfontname: a.ttf\r\nAB[CD\r\n  [Events]\r\nFormat: Start, End, Text\r\n"
+        val found = AutoSyncSubtitleCueParser.findNextAssSectionAfterBulk(raw, raw.indexOf('\n') + 1)
+        assertEquals(raw.indexOf("  [Events]"), found)
+    }
 }
