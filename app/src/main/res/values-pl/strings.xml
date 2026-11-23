@@ -944,6 +944,7 @@
     <string name="subtitle_style_defaults">Domyślne</string>
     <string name="subtitle_style_on">Wł.</string>
     <string name="subtitle_style_off">Wył.</string>
+    <string name="subtitle_style_customize_ass">Dostosuj styl ASS/SSA</string>
     <string name="panel_failed_load_streams">Nie udało się załadować strumieni</string>
     <string name="panel_failed_load_episodes">Nie udało się załadować odcinków</string>
 

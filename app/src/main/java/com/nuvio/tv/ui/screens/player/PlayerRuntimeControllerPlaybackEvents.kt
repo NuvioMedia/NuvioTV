@@ -2103,57 +2103,76 @@ fun PlayerRuntimeController.onEvent(
         PlayerEvent.OnStillWatchingContinue -> onStillWatchingContinue()
         PlayerEvent.OnDismissStillWatchingPrompt -> onDismissStillWatchingPrompt()
         is PlayerEvent.OnSetSubtitleSize -> {
-            scope.launch { playerSettingsDataStore.setSubtitleSize(event.size) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleSize(event.size, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleHdrBrightness -> {
             scope.launch { playerSettingsDataStore.setSubtitleHdrBrightness(event.brightness) }
         }
         is PlayerEvent.OnSetSubtitleTextColor -> {
             val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
+            val ass = _uiState.value.isAssSubtitleStyleActive
             scope.launch {
                 if (editingHdr) {
                     playerSettingsDataStore.setSubtitleHdrTextColor(event.color)
                 } else {
-                    playerSettingsDataStore.setSubtitleTextColor(event.color)
+                    playerSettingsDataStore.setSubtitleTextColor(event.color, ass = ass)
                 }
             }
         }
         is PlayerEvent.OnSetSubtitleBold -> {
-            scope.launch { playerSettingsDataStore.setSubtitleBold(event.bold) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleBold(event.bold, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleOutlineEnabled -> {
-            scope.launch { playerSettingsDataStore.setSubtitleOutlineEnabled(event.enabled) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleOutlineEnabled(event.enabled, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleOutlineColor -> {
-            scope.launch { playerSettingsDataStore.setSubtitleOutlineColor(event.color) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleOutlineColor(event.color, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleVerticalOffset -> {
-            scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleFont -> {
-            scope.launch { playerSettingsDataStore.setSubtitleFontId(event.fontId) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleFontId(event.fontId, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleBackgroundColor -> {
-            scope.launch { playerSettingsDataStore.setSubtitleBackgroundColor(event.color) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundColor(event.color, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleBackgroundRadius -> {
-            scope.launch { playerSettingsDataStore.setSubtitleBackgroundRadius(event.radius) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundRadius(event.radius, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleShadowEnabled -> {
-            scope.launch { playerSettingsDataStore.setSubtitleShadowEnabled(event.enabled) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleShadowEnabled(event.enabled, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleShadowOpacity -> {
-            scope.launch { playerSettingsDataStore.setSubtitleShadowOpacity(event.opacity) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleShadowOpacity(event.opacity, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleShadowSize -> {
-            scope.launch { playerSettingsDataStore.setSubtitleShadowSize(event.size) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch { playerSettingsDataStore.setSubtitleShadowSize(event.size, ass = ass) }
         }
         is PlayerEvent.OnSetSubtitleCustomizeAss -> {
             scope.launch { playerSettingsDataStore.setSubtitleCustomizeAss(event.enabled) }
         }
         PlayerEvent.OnResetSubtitleDefaults -> {
             val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
-            scope.launch { playerSettingsDataStore.resetSubtitleAppearance(resetHdrText = editingHdr) }
+            val ass = _uiState.value.isAssSubtitleStyleActive
+            scope.launch {
+                if (ass) {
+                    playerSettingsDataStore.resetAssSubtitleAppearance()
+                } else {
+                    playerSettingsDataStore.resetSubtitleAppearance(resetHdrText = editingHdr)
+                }
+            }
         }
         PlayerEvent.OnToggleAspectRatio -> {
             val state = _uiState.value

@@ -61,6 +61,9 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var pendingAspectRetryCount = 0
     private var styledSubtitlesEnabled = false
     private var lastAppliedSubtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings()
+    private var lastAppliedAssSubtitleStyle: SubtitleStyleSettings =
+        SubtitleStyleSettings(size = SubtitleStyleSettings.ASS_SIZE_DEFAULT)
+    private var appliedStyleIsAss: Boolean? = null
     private var appliedAssOverride: String? = null
     private var appliedAssBold: Boolean? = null
     private var appliedSubPos: Double? = null
@@ -277,7 +280,12 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         if (!initialized) return null
         return runCatching {
             val codec = mpv.getPropertyString("current-tracks/sub/codec")?.lowercase(Locale.US)
-            applyAssSubtitleOverride(codec, lastAppliedSubtitleStyle)
+            val isAss = isAssSubtitleCodec(codec)
+            if (appliedStyleIsAss != isAss) {
+                applySubtitleStyleForCodec(codec)
+            } else {
+                applyAssSubtitleOverride(isAss, if (isAss) lastAppliedAssSubtitleStyle else lastAppliedSubtitleStyle)
+            }
             val styled = enabled && codec != null && codec in MPV_STYLED_SUBTITLE_CODECS
             val sid = mpv.getPropertyString(MPV_SID_PROPERTY)
             if (sid != null && sid != "no" && sid != "false") {
@@ -483,42 +491,50 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     var subtitleLiftFraction: Double = 0.0
 
-    fun applySubtitleStyle(style: SubtitleStyleSettings) {
+    fun applySubtitleStyle(style: SubtitleStyleSettings, assStyle: SubtitleStyleSettings) {
         lastAppliedSubtitleStyle = style
+        lastAppliedAssSubtitleStyle = assStyle
         if (!initialized) return
         runCatching {
-            val scale = subtitleScale(style)
-            val codec = mpv.getPropertyString("current-tracks/sub/codec")?.lowercase(Locale.US)
-            val outlineSize = when {
-                !style.outlineEnabled -> 0.0
-                codec == "ass" || codec == "ssa" || isAssOrSsaSubtitleSelectedNow() ->
-                    style.outlineWidth.coerceIn(1, 6).toDouble()
-                else -> style.outlineWidth * MPV_TEXT_OUTLINE_SIZE_PER_WIDTH
-            }
-            val backgroundAlpha = (style.backgroundColor ushr 24) and 0xFF
-            val borderStyle = if (backgroundAlpha > 0) "background-box" else "outline-and-shadow"
-            // In background-box mode, sub-shadow-offset controls the box padding/margin
-            val shadowOffset = if (backgroundAlpha > 0) 5.0 else 0.0
-
-            mpv.setPropertyDouble("sub-scale", scale)
-            mpv.setPropertyBoolean("sub-bold", style.bold)
-            mpv.setPropertyDouble("sub-outline-size", outlineSize)
-            mpv.setPropertyDouble("sub-shadow-offset", shadowOffset)
-            mpv.setPropertyString("sub-border-style", borderStyle)
-            mpv.setPropertyString("sub-color", toMpvColor(style.textColor))
-            mpv.setPropertyString("sub-back-color", toMpvColor(style.backgroundColor))
-            mpv.setPropertyString("sub-outline-color", toMpvColor(style.outlineColor))
-            mpv.setPropertyBoolean("sub-filter-sdh", style.stripSdh)
-            mpv.setPropertyBoolean("sub-filter-sdh-harder", style.stripSdh)
-            applyAssSubtitleOverride(codec, style)
+            applySubtitleStyleForCodec(mpv.getPropertyString("current-tracks/sub/codec")?.lowercase(Locale.US))
         }.onFailure {
             Log.w(TAG, "Failed to apply subtitle style on mpv: ${it.message}")
         }
     }
 
-    private fun applyAssSubtitleOverride(codec: String?, style: SubtitleStyleSettings) {
+    private fun isAssSubtitleCodec(codec: String?): Boolean =
+        codec == "ass" || codec == "ssa" || (codec.isNullOrEmpty() && isAssOrSsaSubtitleSelectedNow())
+
+    private fun applySubtitleStyleForCodec(codec: String?) {
+        val isAss = isAssSubtitleCodec(codec)
+        val style = if (isAss) lastAppliedAssSubtitleStyle else lastAppliedSubtitleStyle
         val scale = subtitleScale(style)
-        val isAss = codec == "ass" || codec == "ssa" || (codec.isNullOrEmpty() && isAssOrSsaSubtitleSelectedNow())
+        val outlineSize = when {
+            !style.outlineEnabled -> 0.0
+            isAss -> style.outlineWidth.coerceIn(1, 6).toDouble()
+            else -> style.outlineWidth * MPV_TEXT_OUTLINE_SIZE_PER_WIDTH
+        }
+        val backgroundAlpha = (style.backgroundColor ushr 24) and 0xFF
+        val borderStyle = if (backgroundAlpha > 0) "background-box" else "outline-and-shadow"
+        // In background-box mode, sub-shadow-offset controls the box padding/margin
+        val shadowOffset = if (backgroundAlpha > 0) 5.0 else 0.0
+
+        mpv.setPropertyDouble("sub-scale", scale)
+        mpv.setPropertyBoolean("sub-bold", style.bold)
+        mpv.setPropertyDouble("sub-outline-size", outlineSize)
+        mpv.setPropertyDouble("sub-shadow-offset", shadowOffset)
+        mpv.setPropertyString("sub-border-style", borderStyle)
+        mpv.setPropertyString("sub-color", toMpvColor(style.textColor))
+        mpv.setPropertyString("sub-back-color", toMpvColor(style.backgroundColor))
+        mpv.setPropertyString("sub-outline-color", toMpvColor(style.outlineColor))
+        mpv.setPropertyBoolean("sub-filter-sdh", style.stripSdh)
+        mpv.setPropertyBoolean("sub-filter-sdh-harder", style.stripSdh)
+        applyAssSubtitleOverride(isAss, style)
+        appliedStyleIsAss = isAss
+    }
+
+    private fun applyAssSubtitleOverride(isAss: Boolean, style: SubtitleStyleSettings) {
+        val scale = subtitleScale(style)
         val assOverride = when {
             !isAss -> "no"
             style.customizeAss -> "force"
@@ -890,6 +906,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         appliedHi10pGnextSoftwareFallback = null
         cachedTrackList = null
         appliedAssOverride = null
+        appliedStyleIsAss = null
         appliedAssBold = null
         appliedSubPos = null
         appliedSubMarginY = null

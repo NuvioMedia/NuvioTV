@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.core.streams.CompiledStreamBadgeFilter
@@ -20,6 +21,7 @@ import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.SourceChipItem
+import java.util.Locale
 
 enum class PlayerExitReason {
     StillWatchingPrompt
@@ -140,6 +142,7 @@ data class PlayerUiState(
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
+    val assSubtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(size = SubtitleStyleSettings.ASS_SIZE_DEFAULT),
     // Current video is HDR10/HDR10+/HLG/Dolby Vision; selects the HDR subtitle style when enabled
     val isHdrVideo: Boolean = false,
     // Addon subtitles
@@ -267,8 +270,21 @@ data class PlayerUiState(
     val isEditingHdrSubtitleStyle: Boolean
         get() = isHdrVideo && subtitleStyle.hdrStyleEnabled
 
+    val effectiveAssSubtitleStyle: SubtitleStyleSettings
+        get() = assSubtitleStyle.forVideo(isHdrVideo)
+
+    val isAssSubtitleSelected: Boolean
+        get() {
+            selectedAddonSubtitle?.let { return PlayerSubtitleUtils.mimeTypeFromUrl(it.url) == MimeTypes.TEXT_SSA }
+            val codec = subtitleTracks.getOrNull(selectedSubtitleTrackIndex)?.codec?.lowercase(Locale.US) ?: return false
+            return codec.contains("ass") || codec.contains("ssa")
+        }
+
+    val isAssSubtitleStyleActive: Boolean
+        get() = isAssSubtitleSelected && (internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER || useLibass)
+
     val editableSubtitleStyle: SubtitleStyleSettings
-        get() = subtitleStyle.editableForVideo(isHdrVideo)
+        get() = (if (isAssSubtitleStyleActive) assSubtitleStyle else subtitleStyle).editableForVideo(isHdrVideo)
 
     /** Brightness factor for the player controls and menus drawn over the video (1 = undimmed). */
     val playerControlsBrightness: Float

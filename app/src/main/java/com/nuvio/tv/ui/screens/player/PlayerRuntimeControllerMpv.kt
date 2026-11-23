@@ -34,7 +34,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle, _uiState.value.effectiveAssSubtitleStyle)
         view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
@@ -151,7 +151,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle, _uiState.value.effectiveAssSubtitleStyle)
         view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
