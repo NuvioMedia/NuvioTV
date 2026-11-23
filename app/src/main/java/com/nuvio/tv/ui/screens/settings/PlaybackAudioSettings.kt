@@ -111,7 +111,14 @@ internal fun PlaybackAudioSection(
         subtitle = stringResource(R.string.audio_tunneled_sub),
         checked = settings.effectiveTunnelingEnabled,
         onToggle = { onUpdate { setTunnelingEnabled(!settings.effectiveTunnelingEnabled) } },
-        enabled = enabled && settings.isTunnelingCompatible
+        enabled = enabled && settings.isTunnelingCompatible && !settings.effectiveExoDecoupledPlaybackEnabled
+    )
+    SettingsToggleRow(
+        title = stringResource(R.string.audio_exo_decoupled_playback),
+        subtitle = stringResource(R.string.audio_exo_decoupled_playback_sub),
+        checked = settings.effectiveExoDecoupledPlaybackEnabled,
+        onToggle = { onUpdate { setExoDecoupledPlaybackEnabled(!settings.effectiveExoDecoupledPlaybackEnabled) } },
+        enabled = enabled && !settings.effectiveTunnelingEnabled
     )
     SettingsToggleRow(
         title = stringResource(R.string.audio_force_optical_passthrough),

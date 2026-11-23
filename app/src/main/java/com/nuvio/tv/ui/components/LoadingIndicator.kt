@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.lerp
 
 private val LoadingEasing = CubicBezierEasing(0.333f, 0f, 0.667f, 1f)
@@ -45,6 +46,7 @@ fun LoadingIndicator(
         Spacer(
             modifier = Modifier
                 .size(NuvioTheme.spacing.xxxl)
+                .graphicsLayer()
                 .drawWithCache {
                     val scale = size.minDimension * 0.75f / 350f
                     val center = Offset(size.width / 2f, size.height / 2f)

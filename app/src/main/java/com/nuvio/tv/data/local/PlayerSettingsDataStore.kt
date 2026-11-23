@@ -411,7 +411,8 @@ data class PlayerSettings(
     val enableBufferLogs: Boolean = false,
     val resizeMode: Int = 0,
     // Nuvio ExoPlayer Performance Mode
-    val nuvioPerformanceModeEnabled: Boolean = DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
+    val nuvioPerformanceModeEnabled: Boolean = DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED,
+    val exoDecoupledPlaybackEnabled: Boolean = DEFAULT_EXO_DECOUPLED_PLAYBACK_ENABLED
 ) {
     /** Prefer FFmpeg/extension audio decoder (EXTENSION_RENDERER_MODE_PREFER). */
     val isPreferAppDecoder: Boolean
@@ -439,6 +440,10 @@ data class PlayerSettings(
 
     val effectiveTunnelingEnabled: Boolean
         get() = tunnelingEnabled && isTunnelingCompatible
+
+    /** Decoupled playback cannot be used at the same time as tunneled playback. */
+    val effectiveExoDecoupledPlaybackEnabled: Boolean
+        get() = exoDecoupledPlaybackEnabled && !effectiveTunnelingEnabled
 
     /** Tunneled playback bypasses the video effects pipeline, so overlay is the only option. */
     val effectiveLibassRenderMode: LibassRenderMode
@@ -495,6 +500,7 @@ data class PlayerSettings(
         const val MAX_PARALLEL_CHUNK_SIZE_KB = 128 * 1024
         const val DEFAULT_ENABLE_HTTP2 = false
         const val DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED = false
+        const val DEFAULT_EXO_DECOUPLED_PLAYBACK_ENABLED = false
     }
 }
 
@@ -796,6 +802,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val backBufferDurationMsKey = intPreferencesKey("back_buffer_duration_ms")
     private val retainBackBufferFromKeyframeKey = booleanPreferencesKey("retain_back_buffer_from_keyframe")
     private val nuvioPerformanceModeEnabledKey = booleanPreferencesKey("nuvio_performance_mode_enabled")
+    private val exoDecoupledPlaybackEnabledKey = booleanPreferencesKey("exo_decoupled_playback_enabled")
 
     private val migrationLoadControlDefaultsAlignedDoneKey = booleanPreferencesKey("migration_load_control_defaults_aligned_done")
     private val migrationLoadControlDefaultsRetunedDoneKey = booleanPreferencesKey("migration_load_control_defaults_retuned_done")
@@ -1219,6 +1226,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 enableHttp2 = prefs[enableHttp2Key] ?: PlayerSettings.DEFAULT_ENABLE_HTTP2,
                 nuvioPerformanceModeEnabled = (prefs[nuvioPerformanceModeEnabledKey] ?: PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED) &&
                         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O,
+                exoDecoupledPlaybackEnabled = prefs[exoDecoupledPlaybackEnabledKey]
+                    ?: PlayerSettings.DEFAULT_EXO_DECOUPLED_PLAYBACK_ENABLED,
                 subtitleStyle = run {
                     val resolvedPreferredLanguage = resolveSubtitlePreferredLanguage(
                         prefs[subtitlePreferredLanguageKey],
@@ -2132,6 +2141,12 @@ class PlayerSettingsDataStore @Inject constructor(
                 prefs.remove(parallelChunkSizeMbKey)
                 prefs[bufferBudgetManagedKey] = true
             }
+        }
+    }
+
+    suspend fun setExoDecoupledPlaybackEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[exoDecoupledPlaybackEnabledKey] = enabled
         }
     }
 

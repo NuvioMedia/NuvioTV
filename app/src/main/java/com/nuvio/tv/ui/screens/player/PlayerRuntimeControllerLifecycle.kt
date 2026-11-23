@@ -113,6 +113,10 @@ internal fun PlayerRuntimeController.releasePlayer(
     }
     _exoPlayer = null
     activeAssVideoEffect = null
+    val releasedAllocator = _loadControl?.allocator
+    if (releasedAllocator != null && NuvioExoPlayerPerformanceHelper.liveAllocator === releasedAllocator) {
+        NuvioExoPlayerPerformanceHelper.liveAllocator = null
+    }
     _loadControl = null
     currentBitrateAwareLoadControl = null
     currentParallelChunkOverheadMb = 0

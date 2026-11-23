@@ -36,7 +36,15 @@ object NuvioExoPlayerPerformanceHelper {
             val supported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
             val newValue = value && supported
             field = newValue
-            applyEngineConfig(newValue)
+            applyEngineConfig()
+        }
+
+    /** Whether the opt-in decoupled ExoPlayer playback & async audio engine is active. */
+    @Volatile
+    var decoupledPlaybackEnabled: Boolean = false
+        set(value) {
+            field = value
+            applyEngineConfig()
         }
 
     // Rebuilding this on a settings change handed already built data sources a pool that nothing
@@ -433,17 +441,42 @@ object NuvioExoPlayerPerformanceHelper {
     // ─── Engine Config ───────────────────────────────────────────────────────
 
     /**
-     * Applies [NuvioEngineConfig] based on the toggle state.
-     * When enabled: native off-heap allocation + zero-copy ByteBuffer pipeline + 64 KB scratch.
-     * When disabled: stock heap allocation + standard byte[] pipeline + 4 KB scratch.
+     * Applies [NuvioEngineConfig] from the independent native-memory and decoupled playback opt-in
+     * toggles.
      *
      * Must be called **before** building an ExoPlayer instance.
      */
-    private fun applyEngineConfig(performanceModeEnabled: Boolean) {
-        if (performanceModeEnabled) {
-            NuvioEngineConfig.set(NuvioEngineConfig.nuvioMode())
+    fun configureEngine(
+        nativeMemoryEnabled: Boolean,
+        decoupledPlaybackEnabled: Boolean
+    ) {
+        val supportedNative = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+        enabled = nativeMemoryEnabled && supportedNative
+        this.decoupledPlaybackEnabled = decoupledPlaybackEnabled
+        applyEngineConfig()
+    }
+
+    private fun applyEngineConfig() {
+        val builder = NuvioEngineConfig.Builder()
+        if (enabled) {
+            builder
+                .setAllocationMode(NuvioEngineConfig.AllocationMode.NATIVE_OFF_HEAP)
+                .setDataPipelineMode(NuvioEngineConfig.DataPipelineMode.ZERO_COPY)
+                .setExtractorScratchSize(NuvioEngineConfig.NUVIO_EXTRACTOR_SCRATCH_SIZE)
         } else {
-            NuvioEngineConfig.set(NuvioEngineConfig.stockMode())
+            builder
+                .setAllocationMode(NuvioEngineConfig.AllocationMode.STOCK_HEAP)
+                .setDataPipelineMode(NuvioEngineConfig.DataPipelineMode.STOCK)
+                .setExtractorScratchSize(NuvioEngineConfig.STOCK_EXTRACTOR_SCRATCH_SIZE)
         }
+        if (decoupledPlaybackEnabled) {
+            builder
+                .setAsyncAudioSinkEnabled(true)
+                .setAsyncVideoReleaseEnabled(true)
+                .setRealtimePlaybackThreadEnabled(true)
+                .setDiscardBufferThrottleMs(NuvioEngineConfig.DEFAULT_DISCARD_BUFFER_THROTTLE_MS)
+                .setRendererTimeLimitMs(NuvioEngineConfig.DEFAULT_RENDERER_TIME_LIMIT_MS)
+        }
+        NuvioEngineConfig.set(builder.build())
     }
 }
