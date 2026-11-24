@@ -888,7 +888,7 @@
     <string name="audio_dv7_preserve_mapping_sub">Megőrzi az alkotó által szándékolt eredeti tónusleképezést, képkockánként egy kicsit több feldolgozás árán.</string>
     <string name="dv7_libdovi_mode_caption" translatable="false">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
     <string name="dv7_libdovi_mode_row_title" translatable="false">Conversion mode</string>
-    <string name="dv7_libdovi_mode_none_title" translatable="false">Nincs</string>
+    <string name="dv7_libdovi_mode_none_title" translatable="false">None</string>
     <string name="dv7_libdovi_mode_none_sub" translatable="false">No override. Uses the automatically selected conversion mode.</string>
     <string name="dv7_libdovi_mode_0_title" translatable="false">Mode 0 — Copy (no convert)</string>
     <string name="dv7_libdovi_mode_0_sub" translatable="false">Parse the RPU and write it back untouched. No profile conversion.</string>
