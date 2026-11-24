@@ -8,6 +8,7 @@ import com.nuvio.tv.core.plugin.absoluteAnimeEpisodeNumber
 import com.nuvio.tv.core.streams.StreamRankingProfile
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.util.parseRuntimeMinutes
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.repository.SimklIdResolver
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
@@ -355,7 +356,9 @@ class BuiltInUsenetService @Inject constructor(
     /** The metas that give an anime catalog's ids their IMDb equivalent; null in unit tests without them. */
     private val metas: MetaRepository? = null,
     /** Maps an anime catalog's ids when their meta does not; null in unit tests without it. */
-    private val simkl: SimklIdResolver? = null
+    private val simkl: SimklIdResolver? = null,
+    /** Whether results show the size badge; null in unit tests, which keep the size in the details. */
+    private val badgeSettings: StreamBadgeSettingsDataStore? = null
 ) {
     /** A translated message; [english], the same wording, where there is no context. */
     private fun text(id: Int, english: String, vararg args: Any): String =
@@ -390,6 +393,9 @@ class BuiltInUsenetService @Inject constructor(
                 season ?: idSeason, episode ?: idEpisode)
         }
         val profile = config.ranking.profile()
+        val sizeBadges = try { badgeSettings?.settings?.first()?.showFileSizeBadges == true }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { false }
         coroutineScope {
             // A failed child would cancel this scope; keep lookup failures per indexer.
             val metadata = async(start = CoroutineStart.LAZY) {
@@ -477,7 +483,7 @@ class BuiltInUsenetService @Inject constructor(
                             val outcome = outcomes.getValue(it.nzbUrl)
                             it.toStream(config, series, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
                                 seasonEpisodes = seasonCounts(), sibling = outcome.sibling, searched = searched,
-                                runtimeMinutes = { runtime }, profile = profile)
+                                runtimeMinutes = { runtime }, profile = profile, sizeBadge = sizeBadges)
                         })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
@@ -623,18 +629,20 @@ class BuiltInUsenetService @Inject constructor(
 
     /**
      * [runtimeMinutes], the movie's or episode's, gives the bitrate; [profile], the ranking profile,
-     * the release's quality tier.
+     * the release's quality tier. With [sizeBadge], the size badge results show, a single video's
+     * size is left out of the details: the badge shows the same.
      */
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, series: Boolean, failed: Boolean = false,
         played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null,
-        searched: Pair<Int, Int>? = null, runtimeMinutes: () -> Int? = { null }, profile: StreamRankingProfile? = null): Stream {
+        searched: Pair<Int, Int>? = null, runtimeMinutes: () -> Int? = { null }, profile: StreamRankingProfile? = null,
+        sizeBadge: Boolean = false): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
         // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
         // size badge shows an episode's share and the details keep the whole size.
         val episodeShare = episodeSize(seasonEpisodes).takeIf { pack && it != size }
         val season = packSeasons.size == 1
         val sizeLabel = if (size <= 0) null else when {
-            !pack -> gb(size)
+            !pack -> gb(size).takeUnless { sizeBadge }
             episodeShare != null && season -> text(R.string.usenet_size_season_share,
                 "%1\$s whole season (~%2\$s per episode)", gb(size), gb(episodeShare))
             episodeShare != null -> text(R.string.usenet_size_pack_share,

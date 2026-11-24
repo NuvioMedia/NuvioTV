@@ -421,6 +421,31 @@ class BuiltInUsenetServiceTest {
             stream(config.copy(showReleaseNames = false)).description)
     }
 
+    @Test fun `with size badges shown, only a pack's details keep its size`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            showReleaseNames = false)
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Show.S01E02.1080p-GRP", "https://a.test/nzb/episode", size = 2L shl 30, indexerId = "a", indexerName = "A"),
+            UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
+        coEvery { tmdbApi.getTvDetails(42, any(), any()) } returns Response.success(showSeasons(1 to 9))
+        fun badges(sizes: Boolean) = mockk<com.nuvio.tv.data.local.StreamBadgeSettingsDataStore> {
+            every { settings } returns kotlinx.coroutines.flow.flowOf(
+                com.nuvio.tv.core.streams.StreamBadgeSettings(showFileSizeBadges = sizes))
+        }
+        suspend fun details(sizes: Boolean) = BuiltInUsenetService(client, tmdb, tmdbApi, badgeSettings = badges(sizes))
+            .search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams
+            .associate { it.title to it.description }
+        assertEquals(mapOf("Show.S01E02.1080p-GRP" to "A • GRP",
+            "Show.S01.1080p-GRP" to "9.00 GB whole season (~1.00 GB per episode) • A • GRP"), details(sizes = true))
+        assertEquals("2.00 GB • A • GRP", details(sizes = false)["Show.S01E02.1080p-GRP"])
+    }
+
     @Test fun `with fallback on lower priority indexers are only searched when higher ones find nothing`() = runTest {
         val first = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api", priority = 1)
         val shared = UsenetIndexer(id = "b", name = "B", apiUrl = "https://b.test/api", priority = 1)
