@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sync_setting_title">Synchronizovať titulky so zvukom</string>
+    <string name="audio_sync_setting_description">Zarovná titulky s dialógmi, keď automatická synchronizácia nenájde spoľahlivú zhodu.</string>
+    <string name="audio_sync_model_title">Anglický hlasový model (%1$d MB)</string>
+    <string name="audio_sync_model_description">Voliteľné. Rozpoznáva anglickú reč a priraďuje ju k externým anglickým titulkom pre rýchlejšiu a presnejšiu synchronizáciu. Vyžaduje viac procesora a pamäte.</string>
+    <string name="audio_sync_model_downloading">Sťahuje sa… %1$d%%</string>
+    <string name="audio_sync_model_ready">Stiahnuté. Ak má prehrávanie problémy, odstráňte ho a synchronizujte iba pomocou detekcie reči.</string>
+    <string name="audio_sync_model_failed">Sťahovanie zlyhalo. Vyberte pre opakovanie. Detekcia reči naďalej funguje.</string>
+    <string name="audio_sync_model_download">Stiahnuť</string>
+    <string name="audio_sync_model_delete">Odstrániť</string>
+    <string name="audio_sync_sampling_title">Vzorkovanie zvuku</string>
+    <string name="audio_sync_sampling_description">Počúva dialógy vopred pred prehrávaním, aby sa synchronizácia našla skôr.</string>
+    <string name="audio_sync_sampling_off">Vypnuté</string>
+    <string name="audio_sync_sampling_low">Nízke</string>
+    <string name="audio_sync_sampling_high">Vysoké</string>
+    <string name="audio_sync_sampling_off_description">Počúva iba to, čo sa práve prehráva, takže synchronizácia trvá dlhšie. Nefunguje s prehrávačom mpv.</string>
+    <string name="audio_sync_sampling_low_description">Počúva vopred niekoľko dialógových scén cez jedno dodatočné pripojenie, až do 75 MB na titul. Používa sa aj namiesto vysokého nastavenia v sieťach s obmedzenými dátami.</string>
+    <string name="audio_sync_sampling_high_description">Najrýchlejšia synchronizácia. Počúva vopred viac scén cez viaceré pripojenia, zvyčajne až do 150 MB na titul, a viac zaťažuje procesor. Niektoré servery obmedzujú počet povolených pripojení.</string>
+    <string name="licenses_attributions_audio_sync_title">Synchronizácia titulkov podľa zvuku</string>
+    <string name="licenses_attributions_audio_sync_body">Detekcia reči používa váhy Silero VAD v5 (MIT, Silero Team). Voliteľné rozpoznávanie reči používa sherpa-onnx (Apache-2.0, k2-fsa) a jeho anglický model Zipformer GigaSpeech (Apache-2.0). Úplné oznámenia sú súčasťou aplikácie v súbore licenses/audio_sync_NOTICE.md.</string>
+</resources>

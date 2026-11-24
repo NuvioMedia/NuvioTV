@@ -341,12 +341,15 @@ android {
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
+            jniLibs.srcDir(layout.buildDirectory.dir("generated/usenet/jniLibs"))
+            assets.srcDir(rootProject.file("native/usenet/licenses"))
         }
     }
 
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += "**/libnuvio_usenet.so"
             // Audio Sync uses the JNI API; these unused native APIs duplicate runtime code.
             excludes += listOf("lib/*/libsherpa-onnx-c-api.so", "lib/*/libsherpa-onnx-cxx-api.so")
             // Keep one consistent native set across dependencies.
@@ -513,6 +516,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp)
+    // Bounded-time matching for native stream profile rules.
+    implementation(libs.re2j)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
@@ -636,6 +641,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.core)
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
@@ -644,3 +650,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+extra["usenetSdkDirectory"] = android.sdkDirectory.absolutePath
+extra["usenetNdkVersion"] = android.ndkVersion
+apply(from = rootProject.file("native/usenet/android.gradle.kts"))

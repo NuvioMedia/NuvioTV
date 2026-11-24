@@ -3,6 +3,7 @@ package com.nuvio.tv.data.local
 import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -162,7 +163,8 @@ data class SubtitleStyleSettings(
     val shadowEnabled: Boolean = false,
     val shadowOpacity: Int = SHADOW_OPACITY_DEFAULT,
     val shadowSize: Int = SHADOW_SIZE_DEFAULT,
-    val fileColorBrightness: Float = 1f
+    val fileColorBrightness: Float = 1f,
+    val customizeAss: Boolean = false
 ) {
     /**
      * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
@@ -206,6 +208,7 @@ data class SubtitleStyleSettings(
         const val SHADOW_SIZE_MIN = 1
         const val SHADOW_SIZE_MAX = 8
         const val SHADOW_SIZE_DEFAULT = 2
+        const val ASS_SIZE_DEFAULT = 100
 
         /** Maps the 0-100 setting onto 30%-100% of full brightness, so 0 still leaves readable text. */
         private fun hdrBrightnessFactor(brightness: Int): Float =
@@ -318,6 +321,7 @@ data class PlayerSettings(
     val libassRenderScale: LibassRenderScale = LibassRenderScale.FULL,
     val libassRenderMode: LibassRenderMode = LibassRenderMode.DEFAULT,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
+    val assSubtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(size = SubtitleStyleSettings.ASS_SIZE_DEFAULT),
     val bufferSettings: BufferSettings = BufferSettings(),
     // Audio settings
     val decoderPriority: Int = 1, // EXTENSION_RENDERER_MODE_ON (0=off, 1=on, 2=prefer)
@@ -792,6 +796,20 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleShadowEnabledKey = booleanPreferencesKey("subtitle_shadow_enabled")
     private val subtitleShadowOpacityKey = intPreferencesKey("subtitle_shadow_opacity")
     private val subtitleShadowSizeKey = intPreferencesKey("subtitle_shadow_size")
+    private val subtitleCustomizeAssKey = booleanPreferencesKey("subtitle_customize_ass")
+    private val assSubtitleSizeKey = intPreferencesKey("ass_subtitle_size")
+    private val assSubtitleVerticalOffsetKey = intPreferencesKey("ass_subtitle_vertical_offset")
+    private val assSubtitleBoldKey = booleanPreferencesKey("ass_subtitle_bold")
+    private val assSubtitleTextColorKey = intPreferencesKey("ass_subtitle_text_color")
+    private val assSubtitleBackgroundColorKey = intPreferencesKey("ass_subtitle_background_color")
+    private val assSubtitleOutlineEnabledKey = booleanPreferencesKey("ass_subtitle_outline_enabled")
+    private val assSubtitleOutlineColorKey = intPreferencesKey("ass_subtitle_outline_color")
+    private val assSubtitleOutlineWidthKey = intPreferencesKey("ass_subtitle_outline_width")
+    private val assSubtitleFontIdKey = stringPreferencesKey("ass_subtitle_font_id")
+    private val assSubtitleBackgroundRadiusKey = intPreferencesKey("ass_subtitle_background_radius")
+    private val assSubtitleShadowEnabledKey = booleanPreferencesKey("ass_subtitle_shadow_enabled")
+    private val assSubtitleShadowOpacityKey = intPreferencesKey("ass_subtitle_shadow_opacity")
+    private val assSubtitleShadowSizeKey = intPreferencesKey("ass_subtitle_shadow_size")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -1276,7 +1294,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     backBufferDurationMs = prefs[backBufferDurationMsKey] ?: BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS,
                     retainBackBufferFromKeyframe = prefs[retainBackBufferFromKeyframeKey] ?: false
                 )
-            )
+            ).withAssSubtitleStyle(prefs)
         } catch (e: ClassCastException) {
             Log.w("PlayerSettingsDataStore", "Corrupt preference value, using defaults", e)
             PlayerSettings()
@@ -1858,16 +1876,30 @@ class PlayerSettingsDataStore @Inject constructor(
             else prefs.remove(subtitleSecondaryLanguageKey)
         }
     }
-    suspend fun setSubtitleSize(size: Int) { store().edit { it[subtitleSizeKey] = size.coerceIn(50, 200) } }
-    suspend fun setSubtitleVerticalOffset(offset: Int) { store().edit { it[subtitleVerticalOffsetKey] = offset.coerceIn(-20, 50) } }
-    suspend fun setSubtitleBold(bold: Boolean) { store().edit { it[subtitleBoldKey] = bold } }
-    suspend fun setSubtitleTextColor(color: Int) { store().edit { it[subtitleTextColorKey] = color } }
-    suspend fun setSubtitleBackgroundColor(color: Int) { store().edit { it[subtitleBackgroundColorKey] = color } }
-    suspend fun setSubtitleOutlineEnabled(enabled: Boolean) { store().edit { it[subtitleOutlineEnabledKey] = enabled } }
-    suspend fun setSubtitleOutlineColor(color: Int) { store().edit { it[subtitleOutlineColorKey] = color } }
-    suspend fun setSubtitleOutlineWidth(width: Int) {
+    suspend fun setSubtitleSize(size: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleSizeKey else subtitleSizeKey] = size.coerceIn(50, 200) }
+    }
+    suspend fun setSubtitleVerticalOffset(offset: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleVerticalOffsetKey else subtitleVerticalOffsetKey] = offset.coerceIn(-20, 50) }
+    }
+    suspend fun setSubtitleBold(bold: Boolean, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleBoldKey else subtitleBoldKey] = bold }
+    }
+    suspend fun setSubtitleTextColor(color: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleTextColorKey else subtitleTextColorKey] = color }
+    }
+    suspend fun setSubtitleBackgroundColor(color: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleBackgroundColorKey else subtitleBackgroundColorKey] = color }
+    }
+    suspend fun setSubtitleOutlineEnabled(enabled: Boolean, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleOutlineEnabledKey else subtitleOutlineEnabledKey] = enabled }
+    }
+    suspend fun setSubtitleOutlineColor(color: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleOutlineColorKey else subtitleOutlineColorKey] = color }
+    }
+    suspend fun setSubtitleOutlineWidth(width: Int, ass: Boolean = false) {
         store().edit {
-            it[subtitleOutlineWidthKey] = width.coerceIn(
+            it[if (ass) assSubtitleOutlineWidthKey else subtitleOutlineWidthKey] = width.coerceIn(
                 SubtitleStyleSettings.OUTLINE_WIDTH_MIN,
                 SubtitleStyleSettings.OUTLINE_WIDTH_MAX
             )
@@ -1886,16 +1918,29 @@ class PlayerSettingsDataStore @Inject constructor(
             )
         }
     }
-    suspend fun setSubtitleFontId(fontId: String) { store().edit { it[subtitleFontIdKey] = fontId } }
-    suspend fun setSubtitleBackgroundRadius(radius: Int) {
-        store().edit { it[subtitleBackgroundRadiusKey] = radius.coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX) }
+    suspend fun setSubtitleFontId(fontId: String, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleFontIdKey else subtitleFontIdKey] = fontId }
     }
-    suspend fun setSubtitleShadowEnabled(enabled: Boolean) { store().edit { it[subtitleShadowEnabledKey] = enabled } }
-    suspend fun setSubtitleShadowOpacity(opacity: Int) { store().edit { it[subtitleShadowOpacityKey] = opacity.coerceIn(0, 100) } }
-    suspend fun setSubtitleShadowSize(size: Int) {
+    suspend fun setSubtitleBackgroundRadius(radius: Int, ass: Boolean = false) {
         store().edit {
-            it[subtitleShadowSizeKey] = size.coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
+            it[if (ass) assSubtitleBackgroundRadiusKey else subtitleBackgroundRadiusKey] =
+                radius.coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX)
         }
+    }
+    suspend fun setSubtitleShadowEnabled(enabled: Boolean, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleShadowEnabledKey else subtitleShadowEnabledKey] = enabled }
+    }
+    suspend fun setSubtitleShadowOpacity(opacity: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleShadowOpacityKey else subtitleShadowOpacityKey] = opacity.coerceIn(0, 100) }
+    }
+    suspend fun setSubtitleShadowSize(size: Int, ass: Boolean = false) {
+        store().edit {
+            it[if (ass) assSubtitleShadowSizeKey else subtitleShadowSizeKey] =
+                size.coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
+        }
+    }
+    suspend fun setSubtitleCustomizeAss(enabled: Boolean) {
+        store().edit { it[subtitleCustomizeAssKey] = enabled }
     }
     suspend fun resetSubtitleAppearance(resetHdrText: Boolean = false) {
         val defaults = SubtitleStyleSettings()
@@ -1919,6 +1964,50 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[subtitleShadowOpacityKey] = defaults.shadowOpacity
             prefs[subtitleShadowSizeKey] = defaults.shadowSize
         }
+    }
+
+    suspend fun resetAssSubtitleAppearance() {
+        store().edit { prefs ->
+            prefs.remove(assSubtitleSizeKey)
+            prefs.remove(assSubtitleVerticalOffsetKey)
+            prefs.remove(assSubtitleBoldKey)
+            prefs.remove(assSubtitleTextColorKey)
+            prefs.remove(assSubtitleBackgroundColorKey)
+            prefs.remove(assSubtitleOutlineEnabledKey)
+            prefs.remove(assSubtitleOutlineColorKey)
+            prefs.remove(assSubtitleOutlineWidthKey)
+            prefs.remove(assSubtitleFontIdKey)
+            prefs.remove(assSubtitleBackgroundRadiusKey)
+            prefs.remove(assSubtitleShadowEnabledKey)
+            prefs.remove(assSubtitleShadowOpacityKey)
+            prefs.remove(assSubtitleShadowSizeKey)
+            prefs.remove(subtitleCustomizeAssKey)
+        }
+    }
+
+    private fun PlayerSettings.withAssSubtitleStyle(prefs: Preferences): PlayerSettings {
+        val defaults = SubtitleStyleSettings()
+        return copy(
+            assSubtitleStyle = subtitleStyle.copy(
+                size = prefs[assSubtitleSizeKey] ?: SubtitleStyleSettings.ASS_SIZE_DEFAULT,
+                verticalOffset = prefs[assSubtitleVerticalOffsetKey] ?: defaults.verticalOffset,
+                bold = prefs[assSubtitleBoldKey] ?: defaults.bold,
+                textColor = prefs[assSubtitleTextColorKey] ?: defaults.textColor,
+                backgroundColor = prefs[assSubtitleBackgroundColorKey] ?: defaults.backgroundColor,
+                outlineEnabled = prefs[assSubtitleOutlineEnabledKey] ?: defaults.outlineEnabled,
+                outlineColor = prefs[assSubtitleOutlineColorKey] ?: defaults.outlineColor,
+                outlineWidth = (prefs[assSubtitleOutlineWidthKey] ?: defaults.outlineWidth)
+                    .coerceIn(SubtitleStyleSettings.OUTLINE_WIDTH_MIN, SubtitleStyleSettings.OUTLINE_WIDTH_MAX),
+                fontId = prefs[assSubtitleFontIdKey] ?: defaults.fontId,
+                backgroundRadius = (prefs[assSubtitleBackgroundRadiusKey] ?: defaults.backgroundRadius)
+                    .coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX),
+                shadowEnabled = prefs[assSubtitleShadowEnabledKey] ?: defaults.shadowEnabled,
+                shadowOpacity = (prefs[assSubtitleShadowOpacityKey] ?: defaults.shadowOpacity).coerceIn(0, 100),
+                shadowSize = (prefs[assSubtitleShadowSizeKey] ?: defaults.shadowSize)
+                    .coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX),
+                customizeAss = prefs[subtitleCustomizeAssKey] ?: false
+            )
+        )
     }
 
     suspend fun setUseForcedSubtitles(enabled: Boolean) {

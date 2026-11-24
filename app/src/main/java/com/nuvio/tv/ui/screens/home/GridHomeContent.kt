@@ -75,6 +75,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import coil3.Image
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -95,6 +96,7 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
+import com.nuvio.tv.ui.components.rememberCollectionFolderCover
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -1038,8 +1040,12 @@ private fun GridCollectionFolderCard(
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val cardDepthStyle = LocalCardDepthStyle.current
     var isFocused by remember { mutableStateOf(false) }
+    val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
+    val coverRequest = rememberCollectionFolderCover(activeImageUrl)
+    val loadedCover = remember(activeImageUrl) { mutableStateOf<Image?>(null) }
     val cardGlow = rememberArtworkBackedCardGlow(
-        imageUrl = folder.coverImageUrl,
+        cover = loadedCover.value,
+        isFocused = isFocused,
         fallbackSeed = "$collectionTitle:${folder.title}:${folder.coverEmoji.orEmpty()}",
         enabled = focusGlowEnabled
     )
@@ -1082,13 +1088,13 @@ private fun GridCollectionFolderCard(
                     style = cardDepthStyle
                 )
         ) {
-            val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
-            if (!activeImageUrl.isNullOrBlank()) {
+            if (coverRequest != null) {
                 AsyncImage(
-                    model = activeImageUrl,
+                    model = coverRequest,
                     contentDescription = folder.title,
                     modifier = Modifier.fillMaxSize().clip(cardShape),
-                    contentScale = ContentScale.FillBounds
+                    contentScale = ContentScale.FillBounds,
+                    onSuccess = { loadedCover.value = it.result.image }
                 )
             } else if (!folder.coverEmoji.isNullOrBlank()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

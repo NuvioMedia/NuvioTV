@@ -7,6 +7,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.usenetFailureExplanation
+import com.nuvio.tv.core.player.usenetFailureKind
 import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
@@ -172,7 +174,9 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     if (responseException != null) {
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
-        val providerHint = httpStatusExplanation(context, code)
+        // A stream the Usenet engine gave up on says why instead of reading as an expired link.
+        val providerHint = usenetFailureExplanation(usenetFailureKind(responseException.headerFields))
+            ?.let(context::getString) ?: httpStatusExplanation(context, code)
         return buildString {
             append("HTTP $code")
             statusText?.let { append(" $it") }
@@ -508,6 +512,26 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
         showRecoveryOverlay()
+        // A Blu-ray clip under another name, or a web listing of a disc folder. Probed only now,
+        // so streams that play never pay for it.
+        if (currentStreamBluray == null && !BlurayPlaylistResolver.isLikelyBdavM2tsUrl(currentStreamUrl)) {
+            val bluray = PlayerMediaSourceFactory.probeBlurayLayout(url = currentStreamUrl, headers = currentHeaders)
+            if (bluray != null) {
+                Log.i(PlayerRuntimeController.TAG, "Stream probe found Blu-ray ${bluray::class.simpleName}. Retrying playback...")
+                currentStreamBluray = bluray
+                releasePlayer(flushPlaybackState = false)
+                if (savedPosition > 0L) {
+                    _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+                }
+                initializePlayer(
+                    currentStreamUrl,
+                    currentHeaders,
+                    overrideInternalPlayerEngine = runtimeInternalPlayerEngineOverride,
+                    startPaused = paused
+                )
+                return@launch
+            }
+        }
         val probedMime = PlayerMediaSourceFactory.probeNetworkMimeType(
             url = currentStreamUrl,
             headers = currentHeaders
@@ -550,6 +574,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 return@launch
             }
             val userFacingError = error.toDisplayMessage(context)
+            if (tryNextStream(userFacingError)) return@launch
             _uiState.update {
                 it.copy(
                     error = userFacingError,

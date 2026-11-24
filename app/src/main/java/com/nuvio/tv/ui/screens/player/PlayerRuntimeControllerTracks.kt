@@ -152,7 +152,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             name = format.label ?: format.language ?: context.getString(com.nuvio.tv.R.string.player_track_subtitle_fallback, subtitleTracks.size + 1),
                             language = format.language,
                             trackId = format.id,
-                            codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType),
+                            codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                                ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs),
                             isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
                             isSelected = isSelected
                         )

@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -170,7 +171,8 @@ internal fun SubtitleSelectionOverlay(
             installedAddonOrder = sessionInstalledSubtitleAddonOrder,
             selectedOptionId = activeSelectedOptionId,
             builtInLabel = builtInLabel,
-            forcedLabel = forcedLabel
+            forcedLabel = forcedLabel,
+            unknownLabel = unknownLabel
         )
     }
 
@@ -268,7 +270,7 @@ internal fun SubtitleSelectionOverlay(
     val styleTargetKey = remember(lastStyleFocusKey) {
         lastStyleFocusKey ?: StyleFocusKey.DelaySet
     }
-    val isStyleDisabledByLibass = remember(
+    val isAssTrackActive = remember(
         useLibass,
         isUsingMpv,
         subtitleOptions,
@@ -280,26 +282,14 @@ internal fun SubtitleSelectionOverlay(
         if (!useLibass && !isUsingMpv) return@remember false
         val selectedOption = subtitleOptions.firstOrNull { it.id == selectedOptionId }
         val isAss = when (selectedOption?.kind) {
-            SubtitleOptionKind.INTERNAL -> {
-                val track = selectedOption.internalTrackIndex?.let { sessionInternalTracks.getOrNull(it) }
-                val codec = track?.codec?.lowercase(java.util.Locale.US).orEmpty()
-                codec.contains("ass") || codec.contains("ssa") || track?.name?.contains("ASS", ignoreCase = true) == true
-            }
-            SubtitleOptionKind.ADDON -> {
-                val url = selectedOption.addonSubtitle?.url?.lowercase(java.util.Locale.US).orEmpty()
-                url.contains(".ass") || url.contains(".ssa")
-            }
-            null -> {
-                val currentInternalTrack = sessionInternalTracks.getOrNull(sessionSelectedInternalIndex)
-                val internalCodec = currentInternalTrack?.codec?.lowercase(java.util.Locale.US).orEmpty()
-                val addonUrl = sessionSelectedAddonSubtitle?.url?.lowercase(java.util.Locale.US).orEmpty()
-                internalCodec.contains("ass") || internalCodec.contains("ssa") ||
-                    currentInternalTrack?.name?.contains("ASS", ignoreCase = true) == true ||
-                    addonUrl.contains(".ass") || addonUrl.contains(".ssa")
-            }
+            SubtitleOptionKind.INTERNAL, SubtitleOptionKind.ADDON -> selectedOption.formatBadge == "ASS"
+            null -> sessionSelectedAddonSubtitle?.subtitleFormatBadge()?.let { it == "ASS" }
+                ?: (sessionInternalTracks.getOrNull(sessionSelectedInternalIndex)?.subtitleFormatBadge() == "ASS")
         }
         isAss && (isUsingMpv || useLibass)
     }
+    val supportsAssStyleCustomization = isAssTrackActive && isUsingMpv
+    val isStyleDisabledByLibass = isAssTrackActive && !(supportsAssStyleCustomization && subtitleStyle.customizeAss)
 
     fun requestLanguageFocus(targetKey: String?) {
         val resolvedKey = targetKey
@@ -345,9 +335,14 @@ internal fun SubtitleSelectionOverlay(
     }
 
     fun requestStyleFocus(targetKey: String?, reason: String) {
-        if (isStyleDisabledByLibass) return
         val requestedKey = targetKey ?: StyleFocusKey.DelaySet
         val resolvedKey = when {
+            requestedKey == StyleFocusKey.CustomizeAss && !supportsAssStyleCustomization -> {
+                StyleFocusKey.FontSizeDecrease
+            }
+            isStyleDisabledByLibass && !requestedKey.isAssAlwaysEnabledFocusKey(supportsAssStyleCustomization) -> {
+                if (supportsAssStyleCustomization) StyleFocusKey.CustomizeAss else StyleFocusKey.FontSizeDecrease
+            }
             requestedKey.startsWith("${StyleFocusKey.OutlineColorPrefix}:") && !subtitleStyle.outlineEnabled -> {
                 StyleFocusKey.OutlineToggle
             }
@@ -397,7 +392,6 @@ internal fun SubtitleSelectionOverlay(
     }
 
     fun moveFocusToStyleRail() {
-        if (isStyleDisabledByLibass) return
         styleEntryOptionId = optionFocusMemory[selectedLanguageKey]?.takeIf { id ->
             subtitleOptions.any { it.id == id }
         } ?: selectedOptionId?.takeIf { id ->
@@ -449,14 +443,18 @@ internal fun SubtitleSelectionOverlay(
             }
         }
 
-        LaunchedEffect(visible, styleRailVisible, styleFocusToken, isStyleDisabledByLibass) {
-            if (!visible || !styleRailVisible || styleFocusToken <= 0 || isStyleDisabledByLibass) return@LaunchedEffect
+        LaunchedEffect(visible, styleRailVisible, styleFocusToken) {
+            if (!visible || !styleRailVisible || styleFocusToken <= 0) return@LaunchedEffect
             val targetKey = pendingStyleFocusKey ?: return@LaunchedEffect
             val requester = styleRequesters[targetKey] ?: run {
                 pendingStyleFocusKey = null
                 return@LaunchedEffect
             }
-            val targetIndex = styleListIndexForFocusKey(targetKey, hasHdrBrightnessItem = isEditingHdrStyle)
+            val targetIndex = styleListIndexForFocusKey(
+                focusKey = targetKey,
+                hasHdrBrightnessItem = isEditingHdrStyle,
+                hasCustomizeAssItem = supportsAssStyleCustomization
+            )
             repeat(8) { attempt ->
                 styleListState.scrollItemIntoView(targetIndex)
                 Log.d(
@@ -611,7 +609,8 @@ internal fun SubtitleSelectionOverlay(
                             persistedStyleFocusKey = it
                         },
                         onEvent = onEvent,
-                        isStyleDisabledByLibass = isStyleDisabledByLibass
+                        isStyleDisabledByLibass = isStyleDisabledByLibass,
+                        supportsAssStyleCustomization = supportsAssStyleCustomization
                     )
                 }
             }
@@ -829,7 +828,8 @@ private fun SubtitleStyleRail(
     focusRequesters: Map<String, FocusRequester>,
     onStyleFocused: (String) -> Unit,
     onEvent: (PlayerEvent) -> Unit,
-    isStyleDisabledByLibass: Boolean = false
+    isStyleDisabledByLibass: Boolean = false,
+    supportsAssStyleCustomization: Boolean = false
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
@@ -838,12 +838,20 @@ private fun SubtitleStyleRail(
             onEvent(event)
         }
     }
-    val styleCardModifier = if (isStyleDisabledByLibass) Modifier.alpha(0.35f) else Modifier
-    val styleRailModifier = if (isStyleDisabledByLibass) Modifier.focusProperties { canFocus = false } else Modifier
+    val styleCardModifier = if (isStyleDisabledByLibass) {
+        Modifier
+            .alpha(0.35f)
+            .focusGroup()
+            .focusProperties {
+                canFocus = false
+                onEnter = { cancelFocusChange() }
+            }
+    } else {
+        Modifier
+    }
     RailColumn(
         width = 280.dp,
-        title = stringResource(R.string.subtitle_style_title),
-        modifier = styleRailModifier
+        title = stringResource(R.string.subtitle_style_title)
     ) {
         LazyColumn(
             state = listState,
@@ -854,12 +862,11 @@ private fun SubtitleStyleRail(
         ) {
             item {
                 Card(
-                    onClick = { dispatchStyleEvent(PlayerEvent.OnShowSubtitleDelayOverlay) },
+                    onClick = { onEvent(PlayerEvent.OnShowSubtitleDelayOverlay) },
                     colors = overlayCardColors(selected = false),
                     shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(styleCardModifier)
                         .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.DelaySet]))
                         .onPreviewKeyEvent { event ->
                             when (event.nativeKeyEvent.keyCode) {
@@ -901,6 +908,40 @@ private fun SubtitleStyleRail(
                     }
                 }
             }
+            if (supportsAssStyleCustomization) {
+                item {
+                    OverlaySectionCard(
+                        title = stringResource(R.string.subtitle_style_customize_ass)
+                    ) {
+                        ToggleChip(
+                            label = if (subtitleStyle.customizeAss) stringResource(R.string.subtitle_style_on) else stringResource(R.string.subtitle_style_off),
+                            isEnabled = subtitleStyle.customizeAss,
+                            onMoveLeft = onMoveLeft,
+                            focusRequester = focusRequesters[StyleFocusKey.CustomizeAss],
+                            focusKey = StyleFocusKey.CustomizeAss,
+                            onFocused = onStyleFocused,
+                            onClick = { onEvent(PlayerEvent.OnSetSubtitleCustomizeAss(!subtitleStyle.customizeAss)) }
+                        )
+                    }
+                }
+            }
+            item {
+                OverlaySectionCard(
+                    title = stringResource(R.string.subtitle_style_font_size)
+                ) {
+                    StepperRow(
+                        value = "${subtitleStyle.size}%",
+                        onDecrease = { onEvent(PlayerEvent.OnSetSubtitleSize(subtitleStyle.size - 10)) },
+                        onIncrease = { onEvent(PlayerEvent.OnSetSubtitleSize(subtitleStyle.size + 10)) },
+                        onMoveLeft = onMoveLeft,
+                        decrementFocusRequester = focusRequesters[StyleFocusKey.FontSizeDecrease],
+                        incrementFocusRequester = focusRequesters[StyleFocusKey.FontSizeIncrease],
+                        decrementFocusKey = StyleFocusKey.FontSizeDecrease,
+                        incrementFocusKey = StyleFocusKey.FontSizeIncrease,
+                        onFocusChanged = onStyleFocused
+                    )
+                }
+            }
             item {
                 SubtitleFontStyleCard(
                     subtitleStyle = subtitleStyle,
@@ -910,24 +951,6 @@ private fun SubtitleStyleRail(
                     onEvent = dispatchStyleEvent,
                     modifier = styleCardModifier
                 )
-            }
-            item {
-                OverlaySectionCard(
-                    title = stringResource(R.string.subtitle_style_font_size),
-                    modifier = styleCardModifier
-                ) {
-                    StepperRow(
-                        value = "${subtitleStyle.size}%",
-                        onDecrease = { dispatchStyleEvent(PlayerEvent.OnSetSubtitleSize(subtitleStyle.size - 10)) },
-                        onIncrease = { dispatchStyleEvent(PlayerEvent.OnSetSubtitleSize(subtitleStyle.size + 10)) },
-                        onMoveLeft = onMoveLeft,
-                        decrementFocusRequester = focusRequesters[StyleFocusKey.FontSizeDecrease],
-                        incrementFocusRequester = focusRequesters[StyleFocusKey.FontSizeIncrease],
-                        decrementFocusKey = StyleFocusKey.FontSizeDecrease,
-                        incrementFocusKey = StyleFocusKey.FontSizeIncrease,
-                        onFocusChanged = onStyleFocused
-                    )
-                }
             }
             item {
                 OverlaySectionCard(
@@ -1322,16 +1345,29 @@ private fun SubtitleOptionCard(
                     )
                     item.addonSubtitle?.let { AutoSyncedChip(it.url, item.isSelected) } // AutoSync hook
                 }
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = titleColor
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = titleColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    item.formatBadge?.let { badge ->
+                        SubtitleFormatBadge(label = badge, selected = item.isSelected)
+                    }
+                }
                 if (!item.meta.isNullOrBlank()) {
                     Text(
                         text = item.meta,
                         style = MaterialTheme.typography.bodySmall,
-                        color = metaColor
+                        color = metaColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -1406,6 +1442,34 @@ private fun SourceChip(label: String, selected: Boolean = false, modifier: Modif
             },
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun SubtitleFormatBadge(label: String, selected: Boolean) {
+    Box(
+        modifier = Modifier
+            .background(
+                if (selected) {
+                    NuvioTheme.colors.OnSecondary.copy(alpha = 0.14f)
+                } else {
+                    Color.White.copy(alpha = 0.08f)
+                },
+                RoundedCornerShape(999.dp)
+            )
+            .padding(horizontal = NuvioTheme.spacing.sm, vertical = 3.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) {
+                NuvioTheme.colors.OnSecondary.copy(alpha = 0.9f)
+            } else {
+                Color.White.copy(alpha = 0.78f)
+            },
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
@@ -1788,6 +1852,7 @@ private fun overlaySwatchColorLabel(color: Color): String {
 }
 
 internal object StyleFocusKey {
+    const val CustomizeAss = "customize_ass"
     const val FontSizeDecrease = "font_size_decrease"
     const val FontSizeIncrease = "font_size_increase"
     const val Bold = "bold"
@@ -1825,18 +1890,32 @@ private enum class OverlayFocusRail {
 private fun String.isHdrBrightnessFocusKey(): Boolean =
     this == StyleFocusKey.HdrBrightnessDecrease || this == StyleFocusKey.HdrBrightnessIncrease
 
-/** The HDR brightness item sits right after opacity, shifting every later item down by one. */
-private fun styleListIndexForFocusKey(focusKey: String, hasHdrBrightnessItem: Boolean): Int {
-    if (focusKey.isHdrBrightnessFocusKey()) return 6
+private fun String.isAssAlwaysEnabledFocusKey(supportsAssStyleCustomization: Boolean): Boolean =
+    this == StyleFocusKey.DelaySet ||
+        this == StyleFocusKey.FontSizeDecrease ||
+        this == StyleFocusKey.FontSizeIncrease ||
+        (supportsAssStyleCustomization && this == StyleFocusKey.CustomizeAss)
+
+/** Optional ASS toggle sits after delay, and HDR brightness sits right after opacity. */
+private fun styleListIndexForFocusKey(
+    focusKey: String,
+    hasHdrBrightnessItem: Boolean,
+    hasCustomizeAssItem: Boolean
+): Int {
+    if (focusKey == StyleFocusKey.DelaySet) return 0
+    if (focusKey == StyleFocusKey.CustomizeAss) return if (hasCustomizeAssItem) 1 else 0
+    val customizeOffset = if (hasCustomizeAssItem) 1 else 0
+    if (focusKey.isHdrBrightnessFocusKey()) return 6 + customizeOffset
     val index = styleListIndexForFocusKey(focusKey)
-    return if (hasHdrBrightnessItem && index >= 6) index + 1 else index
+    val hdrOffset = if (hasHdrBrightnessItem && index >= 6) 1 else 0
+    return index + customizeOffset + hdrOffset
 }
 
 private fun styleListIndexForFocusKey(focusKey: String): Int {
     return when {
         focusKey == StyleFocusKey.DelaySet -> 0
-        focusKey == StyleFocusKey.FontDecrease || focusKey == StyleFocusKey.FontIncrease -> 1
-        focusKey == StyleFocusKey.FontSizeDecrease || focusKey == StyleFocusKey.FontSizeIncrease -> 2
+        focusKey == StyleFocusKey.FontSizeDecrease || focusKey == StyleFocusKey.FontSizeIncrease -> 1
+        focusKey == StyleFocusKey.FontDecrease || focusKey == StyleFocusKey.FontIncrease -> 2
         focusKey == StyleFocusKey.Bold -> 3
         focusKey.startsWith("${StyleFocusKey.TextColorPrefix}:") -> 4
         focusKey == StyleFocusKey.OpacityDecrease || focusKey == StyleFocusKey.OpacityIncrease -> 5
@@ -1862,6 +1941,7 @@ private fun rememberFocusRequesterMap(keys: List<String>): Map<String, FocusRequ
 private fun rememberStyleFocusRequesters(): Map<String, FocusRequester> {
     return remember {
         listOf(
+            StyleFocusKey.CustomizeAss,
             StyleFocusKey.FontSizeDecrease,
             StyleFocusKey.FontSizeIncrease,
             StyleFocusKey.Bold,
@@ -1929,6 +2009,7 @@ private data class SubtitleOptionRailItem(
     val sourceLabel: String,
     val meta: String?,
     val isSelected: Boolean,
+    val formatBadge: String? = null,
     val internalTrackIndex: Int? = null,
     val addonSubtitle: Subtitle? = null
 )
@@ -2019,7 +2100,8 @@ private fun buildSubtitleOptionRailItems(
     installedAddonOrder: List<String>,
     selectedOptionId: String?,
     builtInLabel: String,
-    forcedLabel: String
+    forcedLabel: String,
+    unknownLabel: String
 ): List<SubtitleOptionRailItem> {
     if (selectedLanguageKey == SubtitleOffLanguageKey) return emptyList()
 
@@ -2037,6 +2119,7 @@ private fun buildSubtitleOptionRailItems(
             sourceLabel = if (subtitle.isStreamProvided) builtInLabel else subtitle.addonName,
             meta = subtitle.id.takeIf { it.isNotBlank() && it != subtitle.lang && it != subtitle.url },
             isSelected = optionId == selectedOptionId,
+            formatBadge = subtitle.subtitleFormatBadge(),
             addonSubtitle = subtitle
         )
     }
@@ -2055,13 +2138,11 @@ private fun buildSubtitleOptionRailItems(
             SubtitleOptionRailItem(
                 id = "internal:${track.index}",
                 kind = SubtitleOptionKind.INTERNAL,
-                title = track.name,
+                title = internalSubtitleTitle(track, selectedLanguageKey, unknownLabel),
                 sourceLabel = builtInLabel,
-                meta = listOfNotNull(
-                    track.codec,
-                    if (track.isForced) forcedLabel else null
-                ).joinToString(" • ").ifBlank { null },
+                meta = if (track.isForced) forcedLabel else null,
                 isSelected = "internal:${track.index}" == selectedOptionId,
+                formatBadge = track.subtitleFormatBadge(),
                 internalTrackIndex = track.index
             )
         }
@@ -2121,6 +2202,26 @@ private fun selectedSubtitleOptionId(
 
     return null
 }
+
+private fun internalSubtitleTitle(track: TrackInfo, languageKey: String, unknownLabel: String): String {
+    track.name.takeUnless { it.isBlank() || it.equals(track.language, ignoreCase = true) }?.let { return it }
+    return languageKey
+        .takeUnless { track.language.isNullOrBlank() || it == SubtitleUnknownLanguageKey || it == "und" }
+        ?.let { Subtitle.languageCodeToName(it) }
+        ?: unknownLabel
+}
+
+private fun TrackInfo.subtitleFormatBadge(): String? =
+    when (codec?.trim()?.lowercase(java.util.Locale.US)) {
+        "ass", "ssa" -> "ASS"
+        "pgs", "hdmv_pgs_subtitle", "pgssub" -> "PGS"
+        "vobsub", "dvd_subtitle", "dvdsub" -> "VobSub"
+        "dvb", "dvb_subtitle", "dvbsub" -> "DVB"
+        else -> null
+    }
+
+private fun Subtitle.subtitleFormatBadge(): String? =
+    if (PlayerSubtitleUtils.mimeTypeFromUrl(url) == androidx.media3.common.MimeTypes.TEXT_SSA) "ASS" else null
 
 private fun addonSubtitleOptionId(subtitle: Subtitle): String {
     return "addon:${subtitle.addonName}:${subtitle.id}:${subtitle.url}"
