@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
@@ -71,7 +72,12 @@ fun TrailerSection(
 
     val trailerFallbackTitle = stringResource(R.string.detail_tab_trailer)
     val trailerItems = remember(trailers, trailerFallbackTitle, fallbackThumbnail) {
-        trailers.mapNotNull { trailer ->
+        val orderedTrailers = if (AppFeaturePolicy.youTubeTrailerPlaybackEnabled) {
+            trailers
+        } else {
+            trailers.sortedByDescending { it.ytId.isNullOrBlank() && !it.url.isNullOrBlank() }
+        }
+        orderedTrailers.mapNotNull { trailer ->
             val key = trailer.playbackKey ?: return@mapNotNull null
             val ytId = trailer.ytId?.trim()?.takeIf { it.isNotBlank() }
             val title = trailer.name?.takeIf { it.isNotBlank() }
