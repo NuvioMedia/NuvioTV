@@ -13,9 +13,11 @@ import androidx.media3.extractor.ts.PesReader
 import androidx.media3.extractor.ts.TsPayloadReader
 
 /**
- * Adds two Blu-ray stream types to Media3's TS payload readers, which skip them: Dolby TrueHD
- * (HDMV stream type 0x83), without which a clip offers only its AC-3 tracks, and presentation
- * graphics (0x90), the disc's subtitles.
+ * Reads Blu-ray stream types the way the disc defines them. Media3's TS payload readers skip
+ * Dolby TrueHD (HDMV stream type 0x83), without which a clip offers only its AC-3 tracks,
+ * presentation graphics (0x90), the disc's subtitles, and DTS-HD (0x85, and 0x86, which they take
+ * for splice information), the main audio of many discs. They also read LPCM (0x80) as MPEG-2
+ * video that never gets a format, so a clip with an LPCM track would never finish preparing.
  */
 internal class BdavTsPayloadReaderFactory(
     private val delegate: TsPayloadReader.Factory
@@ -26,11 +28,18 @@ internal class BdavTsPayloadReaderFactory(
         when (streamType) {
             STREAM_TYPE_HDMV_TRUEHD -> PesReader(BdavTrueHdReader(esInfo.language, esInfo.roleFlags))
             STREAM_TYPE_HDMV_PGS -> PesReader(BdavPgsReader(esInfo.language, esInfo.roleFlags))
+            STREAM_TYPE_HDMV_DTS_HD_HRA, STREAM_TYPE_HDMV_DTS_HD_MA ->
+                PesReader(BdavDtsHdReader(esInfo.language, esInfo.roleFlags))
+            // No reader for LPCM: the clip plays without that track.
+            STREAM_TYPE_HDMV_LPCM -> null
             else -> delegate.createPayloadReader(streamType, esInfo)
         }
 
     companion object {
+        const val STREAM_TYPE_HDMV_LPCM = 0x80
         const val STREAM_TYPE_HDMV_TRUEHD = 0x83
+        const val STREAM_TYPE_HDMV_DTS_HD_HRA = 0x85
+        const val STREAM_TYPE_HDMV_DTS_HD_MA = 0x86
         const val STREAM_TYPE_HDMV_PGS = 0x90
 
         fun withDefaults(flags: Int) = BdavTsPayloadReaderFactory(DefaultTsPayloadReaderFactory(flags))
