@@ -336,6 +336,11 @@ internal fun PlayerRuntimeController.markMpvTracksStale() {
     mpvTrackRefreshGate.markStale()
 }
 
+/** Makes the next progress tick re-read mpv chapters. Safe to call from any thread. */
+internal fun PlayerRuntimeController.markMpvChaptersStale() {
+    mpvChapterRefreshGate.markStale()
+}
+
 /**
  * Progress-tick entry point. Reading the track list costs about a dozen synchronous mpv property
  * reads per track on the main thread, so the tick only re-reads it after mpv reports a
@@ -358,6 +363,13 @@ internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
         subtitleTracks = state.subtitleTracks
     )
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+}
+
+internal fun PlayerRuntimeController.updateMpvChaptersOnTick() {
+    if (!isUsingMpvEngine()) return
+    val view = mpvView ?: return
+    if (!mpvChapterRefreshGate.isStale) return
+    refreshMpvChapters(view)
 }
 
 /** mpv only reports the video transfer once it has decoded video params, so this is re-read each tick. */

@@ -670,6 +670,7 @@ class PlayerRuntimeController(
     internal var mpvChaptersStreamUrl: String? = null
     internal var exoChapterLoadJob: Job? = null
     internal val mpvTrackRefreshGate = MpvTrackRefreshGate()
+    internal val mpvChapterRefreshGate = MpvTrackRefreshGate()
     internal var pendingMpvHardRestartOnNextAttach: Boolean = false
     internal var mpvEventRelay: MpvEventRelay? = null
     internal var mpvEventRelayEpoch: Long = 0

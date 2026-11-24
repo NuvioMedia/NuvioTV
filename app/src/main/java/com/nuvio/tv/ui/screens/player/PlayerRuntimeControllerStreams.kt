@@ -1775,6 +1775,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     currentTraktEpisodeMapping = null
     currentTraktEpisodeMappingKey = null
     lastSavedPosition = 0L
+    resetPlaybackTimeline()
 
     _uiState.update {
         it.clearFrameRateDetection().copy(

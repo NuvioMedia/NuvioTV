@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -60,5 +61,85 @@ class PlayerChaptersTest {
     @Test
     fun `previous in the first chapter restarts it`() {
         assertEquals(0L, PlayerChapters.previousStartMs(chapters, 1_000L))
+    }
+
+    @Test
+    fun `mpv chapters are not read while mpv still reports outgoing media`() {
+        assertFalse(
+            shouldReadMpvChapters(
+                fromRequestedMedia = false,
+                chaptersStreamUrl = null,
+                currentStreamUrl = "https://cdn.example/ep2.mkv",
+                hasSkipDetectionChapters = false,
+                showChapters = true,
+                hasUiChapters = false
+            )
+        )
+    }
+
+    @Test
+    fun `mpv chapters are read when stream url changes`() {
+        assertTrue(
+            shouldReadMpvChapters(
+                fromRequestedMedia = true,
+                chaptersStreamUrl = "https://cdn.example/ep1.mkv",
+                currentStreamUrl = "https://cdn.example/ep2.mkv",
+                hasSkipDetectionChapters = true,
+                showChapters = true,
+                hasUiChapters = true
+            )
+        )
+    }
+
+    @Test
+    fun `mpv chapters are retried when previous read returned empty`() {
+        assertTrue(
+            shouldReadMpvChapters(
+                fromRequestedMedia = true,
+                chaptersStreamUrl = "https://cdn.example/ep2.mkv",
+                currentStreamUrl = "https://cdn.example/ep2.mkv",
+                hasSkipDetectionChapters = false,
+                showChapters = true,
+                hasUiChapters = false
+            )
+        )
+    }
+
+    @Test
+    fun `mpv chapters are read when chapters ui is enabled mid-stream`() {
+        assertTrue(
+            shouldReadMpvChapters(
+                fromRequestedMedia = true,
+                chaptersStreamUrl = "https://cdn.example/ep2.mkv",
+                currentStreamUrl = "https://cdn.example/ep2.mkv",
+                hasSkipDetectionChapters = true,
+                showChapters = true,
+                hasUiChapters = false
+            )
+        )
+    }
+
+    @Test
+    fun `mpv chapters are skipped once already read for current stream`() {
+        assertFalse(
+            shouldReadMpvChapters(
+                fromRequestedMedia = true,
+                chaptersStreamUrl = "https://cdn.example/ep2.mkv",
+                currentStreamUrl = "https://cdn.example/ep2.mkv",
+                hasSkipDetectionChapters = true,
+                showChapters = false,
+                hasUiChapters = false
+            )
+        )
+        assertFalse(
+            shouldReadMpvChapters(
+                fromRequestedMedia = true,
+                chaptersStreamUrl = "https://cdn.example/ep2.mkv",
+                currentStreamUrl = "https://cdn.example/ep2.mkv",
+                hasSkipDetectionChapters = true,
+                showChapters = true,
+                hasUiChapters = true
+            )
+        )
     }
 }
