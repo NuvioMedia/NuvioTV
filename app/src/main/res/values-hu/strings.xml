@@ -7,14 +7,14 @@
     <string name="type_series_plural">Sorozatok</string>
     <string name="type_unknown">Ismeretlen</string>
 
-    <string name="web_manage_addons_title">Bővítmények kezelése</string>
-    <string name="web_manage_addons_subtitle">Bővítmények, katalógusok és gyűjtemények kezelése</string>
-    <string name="web_manage_addons_only_subtitle">Bővítmények telepítése vagy eltávolítása</string>
-    <string name="web_add_addon_url">Bővítmény hozzáadása URL-ből</string>
+    <string name="web_manage_addons_title">Kiegészítők kezelése</string>
+    <string name="web_manage_addons_subtitle">Kiegészítők, katalógusok és gyűjtemények kezelése</string>
+    <string name="web_manage_addons_only_subtitle">Kiegészítők telepítése vagy eltávolítása</string>
+    <string name="web_add_addon_url">Kiegészítő hozzáadása URL-ből</string>
     <string name="web_placeholder_url">https://example.com/manifest.json</string>
     <string name="web_btn_add">Hozzáadás</string>
-    <string name="web_installed_addons">Telepített bővítmények</string>
-    <string name="web_no_addons">Nincsenek telepített bővítmények</string>
+    <string name="web_installed_addons">Telepített kiegészítők</string>
+    <string name="web_no_addons">Nincsenek telepített kiegészítők</string>
     <string name="web_home_catalogs">Kezdőlap katalógusok és gyűjtemények</string>
     <string name="web_no_catalogs">Nincsenek elérhető kezdőlap katalógusok</string>
     <string name="web_btn_save">Változtatások mentése</string>
@@ -24,11 +24,11 @@
     <string name="web_badge_disabled">Kikapcsolva</string>
     <string name="web_btn_enable">Engedélyezés</string>
     <string name="web_btn_disable">Letiltás</string>
-    <string name="web_error_addon_exists">Ez a bővítmény már szerepel a listában</string>
+    <string name="web_error_addon_exists">Ez a kiegészítő már szerepel a listában</string>
     <string name="web_status_waiting_tv">Várakozás a TV-re</string>
     <string name="web_status_msg_waiting_tv">Kérlek, hagyd jóvá a változtatásokat a TV-den az alkalmazáshoz.</string>
     <string name="web_status_changes_applied">Változtatások alkalmazva</string>
-    <string name="web_status_msg_addon_updated">A bővítmény konfigurációja frissítve lett a TV-n.</string>
+    <string name="web_status_msg_addon_updated">A kiegészítő konfigurációja frissítve lett a TV-n.</string>
     <string name="web_status_msg_repo_updated">A tároló konfigurációja frissítve lett a TV-n.</string>
     <string name="web_status_changes_rejected">Változtatások elutasítva</string>
     <string name="web_status_msg_changes_rejected">A változtatások el lettek utasítva a TV-n. A listád visszaállt.</string>
@@ -47,7 +47,7 @@
     <string name="web_manage_collections_title">Gyűjtemények kezelése</string>
     <string name="web_manage_collections_subtitle">Saját gyűjteményeid létrehozása és kezelése</string>
     <string name="web_status_msg_collections_updated">A gyűjteményeid frissítve lettek a TV-n.</string>
-    <string name="web_tab_addons">Bővítmények</string>
+    <string name="web_tab_addons">Kiegészítők</string>
     <string name="web_tab_home_layout">Kezdőlap elrendezése</string>
     <string name="web_tab_collections">Gyűjtemények</string>
     <string name="web_btn_enable_all">Összes engedélyezése</string>
@@ -96,8 +96,8 @@
     <string name="web_import_success">Sikeresen importálva: {count} gyűjtemény. Ellenőrizd, majd kattints a Változtatások mentése gombra az alkalmazáshoz.</string>
     <string name="web_import_invalid_json">Érvénytelen JSON</string>
 
-    <string name="home_no_addons">Nincsenek telepített bővítmények. A kezdéshez adj hozzá egyet.</string>
-    <string name="home_no_catalog_addons">Nincsenek katalógusbővítmények. Telepíts egyet a tartalom megtekintéséhez.</string>
+    <string name="home_no_addons">Nincsenek telepített kiegészítők. A kezdéshez adj hozzá egyet.</string>
+    <string name="home_no_catalog_addons">Nincsenek katalóguskiegészítők. Telepíts egyet a tartalom megtekintéséhez.</string>
     <string name="auth_notice_nuvio_logged_out">Kijelentkeztél a Nuvio-ból. Kérlek, jelentkezz be újra.</string>
     <string name="auth_notice_trakt_logged_out">Kijelentkeztél a Trakt-ból. Kérlek, csatlakozz újra.</string>
     <string name="error_generic">Hiba történt</string>
@@ -106,35 +106,35 @@
     <string name="error_state_generic_issue">Valami hiba történt.</string>
     <string name="error_state_possible_fix">Lehetséges megoldás: %1$s</string>
     <string name="error_state_fix_retry_soon">próbáld újra egy pillanat múlva.</string>
-    <string name="error_state_issue_no_metadata_any_addon">Nem sikerült betölteni a részleteket ehhez az azonosítóhoz, mert egyik telepített bővítmény sem küldött vissza metaadatot.</string>
-    <string name="error_state_fix_no_metadata_any_addon">próbálj meg egy másik bővítményt, kapcsold ki a \"Külső bővítmény metaadatainak előnyben részesítése\" opciót az Elrendezés beállításokban, vagy győződj meg róla, hogy egy telepített bővítmény támogatja ezt az azonosítót.</string>
-    <string name="error_state_prefix_no_supported_metadata">Nincs olyan telepített bővítmény, amely támogatná a metaadatokat ehhez: </string>
-    <string name="error_state_prefix_no_addon_for_id">Nincs olyan telepített bővítmény, amely metaadatot tudott volna biztosítani a következő azonosítóhoz: id=</string>
-    <string name="error_state_fix_no_supported_metadata">telepíts vagy frissíts egy olyan bővítményt, amely támogatja ezt a tartalomtípust, majd próbáld újra.</string>
-    <string name="error_state_prefix_tried_meta_addons">Kipróbált meta bővítmények:</string>
-    <string name="error_state_fix_tried_meta_addons">telepíts egy olyan bővítményt, amely támogatja ezt az azonosítót, vagy konfiguráld újra/frissítsd a bővítményt, majd próbáld újra.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Nem sikerült betölteni a részleteket ehhez az azonosítóhoz, mert egyik telepített kiegészítő sem küldött vissza metaadatot.</string>
+    <string name="error_state_fix_no_metadata_any_addon">próbálj meg egy másik kiegészítőt, kapcsold ki a \"Külső kiegészítő metaadatainak előnyben részesítése\" opciót az Elrendezés beállításokban, vagy győződj meg róla, hogy egy telepített kiegészítő támogatja ezt az azonosítót.</string>
+    <string name="error_state_prefix_no_supported_metadata">Nincs olyan telepített kiegészítő, amely támogatná a metaadatokat ehhez: </string>
+    <string name="error_state_prefix_no_addon_for_id">Nincs olyan telepített kiegészítő, amely metaadatot tudott volna biztosítani a következő azonosítóhoz: id=</string>
+    <string name="error_state_fix_no_supported_metadata">telepíts vagy frissíts egy olyan kiegészítőt, amely támogatja ezt a tartalomtípust, majd próbáld újra.</string>
+    <string name="error_state_prefix_tried_meta_addons">Kipróbált meta kiegészítők:</string>
+    <string name="error_state_fix_tried_meta_addons">telepíts egy olyan kiegészítőt, amely támogatja ezt az azonosítót, vagy konfiguráld újra/frissítsd a kiegészítőt, majd próbáld újra.</string>
     <string name="error_state_issue_missing_metadata_for_id">nem rendelkezik metaadattal ehhez az azonosítóhoz</string>
-    <string name="error_state_fix_missing_metadata_for_id">nyisd meg ezt az azonosítót egy másik bővítményből, kapcsold ki a \"Külső bővítmény metaadatainak előnyben részesítése\" opciót, vagy ellenőrizd, hogy a bővítmény támogatja-e ezt az azonosítót.</string>
+    <string name="error_state_fix_missing_metadata_for_id">nyisd meg ezt az azonosítót egy másik kiegészítőből, kapcsold ki a \"Külső kiegészítő metaadatainak előnyben részesítése\" opciót, vagy ellenőrizd, hogy a kiegészítő támogatja-e ezt az azonosítót.</string>
     <string name="error_state_issue_addon_unreachable">nem volt elérhető</string>
-    <string name="error_state_fix_addon_unreachable">ellenőrizd az internetkapcsolatodat, bizonyosodj meg róla, hogy a bővítmény URL-je még mindig működik, majd próbáld újra.</string>
+    <string name="error_state_fix_addon_unreachable">ellenőrizd az internetkapcsolatodat, bizonyosodj meg róla, hogy a kiegészítő URL-je még mindig működik, majd próbáld újra.</string>
     <string name="error_state_issue_addon_connection_failed">elutasította a kapcsolatot</string>
-    <string name="error_state_fix_addon_connection_failed">győződj meg róla, hogy a bővítmény szervere online és elérhető, majd próbáld újra.</string>
+    <string name="error_state_fix_addon_connection_failed">győződj meg róla, hogy a kiegészítő szervere online és elérhető, majd próbáld újra.</string>
     <string name="error_state_issue_addon_timeout">túl lassan válaszolt</string>
-    <string name="error_state_fix_addon_timeout">próbáld újra egy pillanat múlva, vagy próbálj meg egy másik bővítményt, ha ez többször is előfordul.</string>
+    <string name="error_state_fix_addon_timeout">próbáld újra egy pillanat múlva, vagy próbálj meg egy másik kiegészítőt, ha ez többször is előfordul.</string>
     <string name="error_state_issue_addon_cleartext">nem biztonságos HTTP kapcsolatot használ, amit az Android blokkolt</string>
-    <string name="error_state_fix_addon_cleartext">változtasd a bővítmény URL-jét HTTPS-re, vagy frissítsd a bővítmény konfigurációját.</string>
-    <string name="error_state_fix_addon_generic">próbáld újra, frissítsd vagy telepítsd újra a bővítményt, esetleg próbálj meg egy másikat.</string>
+    <string name="error_state_fix_addon_cleartext">változtasd a kiegészítő URL-jét HTTPS-re, vagy frissítsd a kiegészítő konfigurációját.</string>
+    <string name="error_state_fix_addon_generic">próbáld újra, frissítsd vagy telepítsd újra a kiegészítőt, esetleg próbálj meg egy másikat.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
     <string name="error_meta_not_found">Metaadat nem található</string>
-    <string name="error_meta_no_supported_addon">Egyetlen telepített bővítmény sem támogatja a metaadatokat ehhez: \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Egyetlen telepített bővítmény sem tudott metaadatot biztosítani ehhez: id=%1$s (típus=%2$s).</string>
-    <string name="error_meta_tried_none">Kipróbált meta bővítmények: %1$s. Egyik sem biztosított metaadatot ehhez: id=%2$s (típus=%3$s).</string>
-    <string name="error_meta_tried_generic">Kipróbált meta bővítmények: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s).</string>
-    <string name="error_meta_tried_issues">Kipróbált meta bővítmények: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Egyetlen telepített bővítmény sem támogatja a streameket ehhez: \"%1$s\".</string>
-    <string name="error_stream_tried_none">Kipróbált stream bővítmények: %1$s. Egyik sem adott vissza streameket a következőhöz: id=%2$s (típus=%3$s).</string>
-    <string name="error_stream_tried_generic">Kipróbált stream bővítmények: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s).</string>
-    <string name="error_stream_tried_issues">Kipróbált stream bővítmények: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
+    <string name="error_meta_no_supported_addon">Egyetlen telepített kiegészítő sem támogatja a metaadatokat ehhez: \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Egyetlen telepített kiegészítő sem tudott metaadatot biztosítani ehhez: id=%1$s (típus=%2$s).</string>
+    <string name="error_meta_tried_none">Kipróbált meta kiegészítők: %1$s. Egyik sem biztosított metaadatot ehhez: id=%2$s (típus=%3$s).</string>
+    <string name="error_meta_tried_generic">Kipróbált meta kiegészítők: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s).</string>
+    <string name="error_meta_tried_issues">Kipróbált meta kiegészítők: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Egyetlen telepített kiegészítő sem támogatja a streameket ehhez: \"%1$s\".</string>
+    <string name="error_stream_tried_none">Kipróbált stream kiegészítők: %1$s. Egyik sem adott vissza streameket a következőhöz: id=%2$s (típus=%3$s).</string>
+    <string name="error_stream_tried_generic">Kipróbált stream kiegészítők: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s).</string>
+    <string name="error_stream_tried_issues">Kipróbált stream kiegészítők: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
 
     <string name="continue_watching">Megtekintés folytatása</string>
     <string name="cw_upcoming">Hamarosan</string>
@@ -471,11 +471,11 @@
     <string name="settings_profiles">Profilok</string>
     <string name="settings_layout">Elrendezés</string>
     <string name="settings_content_discovery">Tartalom és felfedezés</string>
-    <string name="settings_content_discovery_subtitle">Bővítmények, beépülő modulok, katalógusok és felfedezési források</string>
-    <string name="settings_content_discovery_addons_subtitle">Bővítmények, katalógussorrend és gyűjtemények kezelése</string>
+    <string name="settings_content_discovery_subtitle">Kiegészítők, bővítmények, katalógusok és felfedezési források</string>
+    <string name="settings_content_discovery_addons_subtitle">Kiegészítők, katalógussorrend és gyűjtemények kezelése</string>
     <string name="settings_content_discovery_plugins_subtitle">Tárolók és streamszolgáltatók kezelése</string>
-    <string name="settings_plugins">Beépülő modulok</string>
-    <string name="settings_plugins_subtitle">Tárhelyek és szolgáltatók.</string>
+    <string name="settings_plugins">Bővítmények</string>
+    <string name="settings_plugins_subtitle">Tárolók és szolgáltatók.</string>
     <string name="settings_integration">Integrációk</string>
     <string name="settings_playback">Lejátszás</string>
     <string name="settings_trakt_subtitle">Trakt kapcsolat beállítása.</string>
@@ -514,8 +514,8 @@
     <string name="experience_mode_advanced">Haladó</string>
     <string name="experience_mode_choose_title">Válaszd ki a Nuvio élményt</string>
     <string name="experience_mode_choose_subtitle">Kezdd egyszerűen, vagy oldj fel minden testreszabást. Bármikor válthatsz.</string>
-    <string name="experience_mode_essential_card_subtitle">Fókuszált beállítás, bővítmények, lejátszási alapok, Trakt és fiókbeállítások.</string>
-    <string name="experience_mode_advanced_card_subtitle">Teljes beállítások, elrendezés vezérlők, katalógus sorrend, gyűjtemények, beépülő modulok és diagnosztika.</string>
+    <string name="experience_mode_essential_card_subtitle">Fókuszált beállítás, kiegészítők, lejátszási alapok, Trakt és fiókbeállítások.</string>
+    <string name="experience_mode_advanced_card_subtitle">Teljes beállítások, elrendezés vezérlők, katalógus sorrend, gyűjtemények, bővítmények és diagnosztika.</string>
     <string name="experience_mode_group_title">Élmény mód</string>
     <string name="essential_addon_continue_for_now">Folytatás egyelőre</string>
     <string name="essential_playback_basics">Lejátszási alapok</string>
@@ -570,7 +570,7 @@
     <string name="experience_mode_switch_to_essential_subtitle">Speciális beállítások elrejtése anélkül, hogy a mentett értékek megváltoznának.</string>
     <string name="experience_mode_switch_to_advanced">Váltás Haladó módra</string>
     <string name="experience_mode_switch_to_advanced_header_subtitle">Válts Haladó módra a teljes beállítási felülethez.</string>
-    <string name="experience_mode_switch_to_advanced_subtitle">Teljes elrendezés, beépülő modul, integráció, katalógus, gyűjtemény és finomhangolási beállítások megjelenítése.</string>
+    <string name="experience_mode_switch_to_advanced_subtitle">Teljes elrendezés, bővítmény, integráció, katalógus, gyűjtemény és finomhangolási beállítások megjelenítése.</string>
     <string name="experience_mode_confirm_essential_title">Váltasz Alapvető módra?</string>
     <string name="experience_mode_confirm_advanced_title">Váltasz Haladó módra?</string>
     <string name="experience_mode_confirm_essential_subtitle">A speciális beállítási felületek rejtve lesznek, de a mentett beállításaid változatlanok maradnak. Bármikor visszaválthatsz.</string>
@@ -641,10 +641,10 @@
     <string name="advanced_confirm_exit_subtitle">Kilépéskor az alkalmazás teljes leállítása és a memória felszabadítása. A megerősítéshez kétszer kell megnyomni a Vissza gombot.</string>
     <string name="confirm_exit_toast">A kilépéshez nyomd meg újra a Vissza gombot</string>
     <string name="settings_debug">Hibakeresés</string>
-    <string name="settings_plugins_section_subtitle">Tárhelyek, szolgáltatók és beépülő modulok kezelése.</string>
+    <string name="settings_plugins_section_subtitle">Tárolók, szolgáltatók és bővítmények kezelése.</string>
     <string name="settings_account_section_subtitle">Fiók és szinkronizálási állapot.</string>
-    <string name="account_stat_addons">bővítmény</string>
-    <string name="account_stat_plugins">beépülő modul</string>
+    <string name="account_stat_addons">kiegészítő</string>
+    <string name="account_stat_plugins">bővítmény</string>
     <string name="account_stat_library">könyvtár</string>
     <string name="account_stat_progress">folyamatban</string>
     <string name="account_stat_watched">megnézve</string>
@@ -793,7 +793,7 @@
     <string name="playback_release_decoder_on_background">Dekóder felszabadítása a háttérben</string>
     <string name="playback_release_decoder_on_background_sub">Felszabadítja a videódekódert, amikor a Nuvio a háttérbe kerül. Kapcsold be, ha az alkalmazásba visszatérve dekóderhiba miatt nem működik a lejátszás. Visszatéréskor a lejátszó újratöltődik, a képernyőkímélő után is.</string>
     <string name="playback_external_forward_subtitles">Feliratok továbbítása külső lejátszónak</string>
-    <string name="playback_external_forward_subtitles_sub">Töltsd le a feliratokat az előnyben részesített nyelven a bővítményekből, és add át a külső lejátszónak.</string>
+    <string name="playback_external_forward_subtitles_sub">Töltsd le a feliratokat az előnyben részesített nyelven a kiegészítőkből, és add át a külső lejátszónak.</string>
     <string name="playback_external_send_skip_segments">Intrók és stáblisták időbélyegeinek küldése</string>
     <string name="playback_external_send_skip_segments_sub">Átadja az intrók és stáblisták átugrásához szükséges időbélyegeket a külső lejátszónak. Csak az ezt támogató lejátszókban működik; a többi figyelmen kívül hagyja.</string>
     <string name="playback_section_subtitles">Feliratok</string>
@@ -830,7 +830,7 @@
     <string name="playback_chapter_title_sub">Az aktuális fejezet nevének megjelenítése az idősáv felett.</string>
     <string name="audio_trailer_section">Előzetes</string>
     <string name="audio_autoplay_trailers">Előzetesek automatikus lejátszása</string>
-    <string name="audio_autoplay_trailers_sub">Előzetesek automatikus lejátszása a részletek oldalon és a lejátszás utáni képernyőn</string>
+    <string name="audio_autoplay_trailers_sub">Előzetesek automatikus lejátszása az adatlapon és a lejátszás utáni képernyőn</string>
     <string name="audio_trailer_delay">Előzetes késleltetése</string>
     <string name="audio_section">Hang</string>
     <string name="audio_lang_default">Alapértelmezett (médiafájl szerint)</string>
@@ -984,10 +984,10 @@
     <string name="sub_libass_render_mode_overlay_sub">A feliratokat külön felületi rétegen jeleníti meg. Megőrzi a HDR-kimenetet. Egyes eszközökön a feliratok időzítése nem feltétlenül tökéletesen pontos.</string>
     <string name="sub_org_none">Nincs (alapértelmezett sorrend)</string>
     <string name="sub_org_by_lang">Nyelv szerint</string>
-    <string name="sub_org_by_addon">Bővítmény szerint</string>
-    <string name="sub_org_none_desc">A bővítmények által küldött eredeti sorrend használata.</string>
+    <string name="sub_org_by_addon">Kiegészítő szerint</string>
+    <string name="sub_org_none_desc">A kiegészítők által küldött eredeti sorrend használata.</string>
     <string name="sub_org_by_lang_desc">Feliratok csoportosítása nyelv szerint.</string>
-    <string name="sub_org_by_addon_desc">Feliratok csoportosítása forrás (bővítmény) szerint.</string>
+    <string name="sub_org_by_addon_desc">Feliratok csoportosítása forrás (kiegészítő) szerint.</string>
     <string name="autoplay_preload_next_episode">Következő epizód forrásainak előtöltése</string>
     <string name="autoplay_preload_next_episode_sub">A forráskeresés már a következő epizód gombjának megjelenése előtt elindul a háttérben.</string>
 
@@ -1012,7 +1012,7 @@
     <string name="autoplay_next_episode_fallback">Másik forrás használata, ha a forráscsoport nem elérhető</string>
     <string name="autoplay_next_episode_fallback_sub">Automatikusan kiválasztja az első elérhető forrást, ha az előző epizód forráscsoportja nem található. Kikapcsolva a forrásválasztó jelenik meg.</string>
     <string name="autoplay_prefer_binge_group">Binge-csoport előnyben részesítése (Következő epizód)</string>
-    <string name="autoplay_prefer_binge_group_sub">Először ugyanazzal a forrásprofillal próbálkozzon (azonos bővítmény/minőségi csoport), mielőtt a normál automatikus lejátszási szabályokat alkalmazná.</string>
+    <string name="autoplay_prefer_binge_group_sub">Először ugyanazzal a forrásprofillal próbálkozzon (azonos kiegészítő/minőségi csoport), mielőtt a normál automatikus lejátszási szabályokat alkalmazná.</string>
     <string name="autoplay_reuse_binge_group">Binge csoport újrahasználata</string>
     <string name="autoplay_reuse_binge_group_sub">Megjegyzi és újra felhasználja az utolsó binge-csoportot a munkamenetek között (Megtekintés folytatása, Részletek stb.).</string>
     <string name="autoplay_threshold_pct">Százalék</string>
@@ -1023,29 +1023,29 @@
     <string name="autoplay_threshold_min_title">Időalapú küszöb (perc)</string>
     <string name="autoplay_threshold_min_sub">Tartalék megoldás, ha a stáblista kezdete nem ismert.</string>
     <string name="autoplay_scope_all">Összes forrás</string>
-    <string name="autoplay_scope_addons">Csak a telepített bővítmények</string>
-    <string name="autoplay_scope_plugins">Csak az engedélyezett beépülő modulok</string>
+    <string name="autoplay_scope_addons">Csak a telepített kiegészítők</string>
+    <string name="autoplay_scope_plugins">Csak az engedélyezett bővítmények</string>
     <string name="autoplay_scope">Auto-play források köre</string>
     <string name="autoplay_timeout_title">Stream kiválasztási időkorlát</string>
-    <string name="autoplay_timeout_sub">Várakozási idő a bővítményekre a kiválasztás előtt.</string>
+    <string name="autoplay_timeout_sub">Várakozási idő a kiegészítőkre a kiválasztás előtt.</string>
     <string name="autoplay_timeout_instant">Azonnal</string>
     <string name="autoplay_timeout_unlimited">Korlátlan</string>
-    <string name="autoplay_allowed_addons">Engedélyezett bővítmények</string>
-    <string name="autoplay_all_addons">Minden telepített bővítmény</string>
-    <string name="autoplay_allowed_plugins">Engedélyezett beépülő modulok</string>
-    <string name="autoplay_all_plugins">Minden engedélyezett beépülő modul</string>
+    <string name="autoplay_allowed_addons">Engedélyezett kiegészítők</string>
+    <string name="autoplay_all_addons">Minden telepített kiegészítő</string>
+    <string name="autoplay_allowed_plugins">Engedélyezett bővítmények</string>
+    <string name="autoplay_all_plugins">Minden engedélyezett bővítmény</string>
     <string name="autoplay_regex_placeholder">Nincs minta. Példa: 4K|2160p|Remux</string>
     <string name="autoplay_regex_title">Regex minta</string>
     <string name="autoplay_no_items">Nincsenek elérhető elemek</string>
     <string name="autoplay_mode_manual_desc">Mindig jelenítse meg a források listáját a választáshoz.</string>
     <string name="autoplay_mode_first_desc">Az első elérhető forrás automatikus lejátszása.</string>
     <string name="autoplay_mode_regex_desc">Az első olyan forrás lejátszása, amelynek szövege illeszkedik a regex mintára.</string>
-    <string name="autoplay_scope_all_desc">Az automatikus lejátszás telepített bővítményeket és beépülő modulokat is használhat.</string>
-    <string name="autoplay_scope_addons_desc">Csak a telepített bővítményekből származó streameket veszi figyelembe.</string>
-    <string name="autoplay_scope_plugins_desc">Csak az engedélyezett beépülő modulokból származó streameket veszi figyelembe.</string>
+    <string name="autoplay_scope_all_desc">Az automatikus lejátszás telepített kiegészítőket és bővítményeket is használhat.</string>
+    <string name="autoplay_scope_addons_desc">Csak a telepített kiegészítőkből származó streameket veszi figyelembe.</string>
+    <string name="autoplay_scope_plugins_desc">Csak az engedélyezett bővítményekből származó streameket veszi figyelembe.</string>
     <string name="autoplay_threshold_pct_desc">Megjelenítés a lejátszási százalék alapján, ha nincs outro jelző.</string>
     <string name="autoplay_threshold_min_desc">Megjelenítés ennyi perccel az epizód vége előtt, ha nincs outro jelző.</string>
-    <string name="autoplay_regex_matches">Illeszkedik a stream nevére/címére/leírására/bővítményére/URL-jére. Példa: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_matches">Illeszkedik a stream nevére/címére/leírására/kiegészítőjére/URL-jére. Példa: 4K|2160p|Remux</string>
     <string name="autoplay_regex_presets">Sablonok</string>
     <string name="autoplay_invalid_regex">Érvénytelen regex minta</string>
 
@@ -1095,17 +1095,17 @@
     <string name="layout_discover_location_in_sidebar_desc">A Felfedezés saját elemet kap az oldalsó panelen.</string>
     <string name="layout_poster_labels">Poszter feliratok megjelenítése</string>
     <string name="layout_poster_labels_sub">Címek megjelenítése a poszterek alatt a sorokban, rácsban és az összes nézetben.</string>
-    <string name="layout_addon_name">Bővítmény nevének megjelenítése</string>
+    <string name="layout_addon_name">Kiegészítő nevének megjelenítése</string>
     <string name="layout_addon_name_sub">Forrás nevének megjelenítése a katalóguscímek alatt.</string>
     <string name="layout_catalog_type">Katalógus típusának megjelenítése</string>
     <string name="layout_catalog_type_sub">Típus utótag megjelenítése a katalógus neve mellett (Film/Sorozat).</string>
     <string name="layout_hide_unreleased">Még meg nem jelent tartalmak elrejtése</string>
     <string name="layout_hide_unreleased_sub">A még be nem mutatott filmek és sorozatok elrejtése a listákból.</string>
-    <string name="layout_section_detail">Részletek oldal</string>
+    <string name="layout_section_detail">Adatlap</string>
     <string name="layout_section_detail_desc">Beállítások a részletek és epizódok képernyőhöz.</string>
     <string name="layout_overall_ratings">Általános értékelések</string>
     <string name="layout_overall_ratings_sub_on">A normál és a TMDB értékelések látszanak.</string>
-    <string name="layout_overall_ratings_sub_off">A normál és a TMDB értékelések rejtve vannak. A részletek oldalon az MDBList szolgáltatóbeállításai élveznek elsőbbséget.</string>
+    <string name="layout_overall_ratings_sub_off">A normál és a TMDB értékelések rejtve vannak. Az adatlapon az MDBList szolgáltatóbeállításai élveznek elsőbbséget.</string>
     <string name="layout_episode_ratings">Epizódértékelések</string>
     <string name="layout_episode_ratings_sub">Válaszd ki, mely epizódértékelések látszanak.</string>
     <string name="layout_ratings_show">Megjelenítés</string>
@@ -1158,7 +1158,7 @@
     <string name="layout_cw_click_details_upcoming_desc">A még adásba nem került epizódoknál az adatlap, a többinél a stream nyílik meg</string>
     <string name="upcoming_section_title">Hamarosan</string>
     <string name="layout_trailer_button">Előzetes gomb megjelenítése</string>
-    <string name="layout_trailer_button_sub">Előzetes gomb a részletek oldalon (csak ha van elérhető előzetes).</string>
+    <string name="layout_trailer_button_sub">Előzetes gomb az adatlapon (csak ha van elérhető előzetes).</string>
     <string name="layout_trailer_play_in_background">Lejátszás a háttérben</string>
     <string name="layout_trailer_play_in_background_sub">Az előzetes a háttérkép helyén indul el, miközben az oldal látható marad.</string>
     <string name="layout_trailer_pause_on_scroll">Szünet görgetéskor</string>
@@ -1170,8 +1170,8 @@
     <string name="layout_detail_group_episodes">Epizódok</string>
     <string name="layout_detail_group_trailers">Előzetesek</string>
     <string name="layout_detail_group_metadata">Metaadatok</string>
-    <string name="layout_prefer_external_meta">Külső bővítmény metaadatainak előnyben részesítése</string>
-    <string name="layout_prefer_external_meta_sub">Külső bővítmény metaadatainak használata a katalógus-bővítményé helyett.</string>
+    <string name="layout_prefer_external_meta">Külső kiegészítő metaadatainak előnyben részesítése</string>
+    <string name="layout_prefer_external_meta_sub">Külső kiegészítő metaadatainak használata a katalógus-kiegészítőé helyett.</string>
     <string name="layout_show_full_release_date">Teljes megjelenési dátum mutatása</string>
     <string name="layout_show_full_release_date_sub">Filmeknél a teljes megjelenési dátum mutatása csak az évszám helyett.</string>
     <string name="layout_section_focused">Fókuszált poszter</string>
@@ -1253,10 +1253,10 @@
     <string name="layout_custom_poster_screen_collections">Gyűjtemények</string>
     <string name="layout_custom_poster_screen_library">Könyvtár</string>
     <string name="layout_custom_poster_screen_search">Keresés</string>
-    <string name="layout_custom_poster_screen_details">Részletek képernyője</string>
+    <string name="layout_custom_poster_screen_details">Adatlap</string>
     <string name="layout_custom_poster_screen_tv_recommendations">TV-ajánlások</string>
     <string name="layout_always_show_landscape_clearlogo">Fekvő poszter helyett háttérkép logóval</string>
-    <string name="layout_always_show_landscape_clearlogo_sub">A bővítmény fekvő posztere helyett a háttérkép jelenik meg a tartalom logójával.</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">A kiegészítő fekvő posztere helyett a háttérkép jelenik meg a tartalom logójával.</string>
     <string name="layout_hero_description_auto_scroll">Leírások automatikus görgetése</string>
     <string name="layout_hero_description_auto_scroll_sub">A kezdőlapon a hosszú leírásokat levágás helyett lassan görgeti.</string>
     <string name="web_custom_poster_title">Egyéni poszterforrás</string>
@@ -1307,7 +1307,7 @@
     <string name="mdblist_title">MDBList értékelések</string>
     <string name="mdblist_subtitle">Az adatlap kiemelt részén megjelenő külső értékelések beállítása</string>
     <string name="mdblist_enable_title">MDBList értékelések engedélyezése</string>
-    <string name="mdblist_enable_subtitle">Értékelések lekérése külső szolgáltatóktól a részletek képernyőn</string>
+    <string name="mdblist_enable_subtitle">Értékelések lekérése külső szolgáltatóktól az adatlapon</string>
     <string name="mdblist_api_key_title">API-kulcs</string>
     <string name="mdblist_api_key_subtitle">Szükséges az értékelések lekéréséhez az MDBList-ről</string>
     <string name="mdblist_ratings_credentials_subtitle">Használd a Követés menüben csatlakoztatott MDBList-fiókodat, vagy adj meg külön API-kulcsot az értékelésekhez.</string>
@@ -1482,8 +1482,8 @@
     <string name="settings_stream_player_badges_title">Lejátszó jelvényei</string>
     <string name="settings_stream_player_badges_description">A lejátszó által használt jelvénycsomag kiválasztása.</string>
     <string name="settings_stream_player_badges_same">Megegyezik a stream jelvényeivel</string>
-    <string name="settings_stream_addon_logo_title">Bővítmény logója</string>
-    <string name="settings_stream_addon_logo_description">A bővítmény logójának és nevének megjelenítése a stream források mellett.</string>
+    <string name="settings_stream_addon_logo_title">Kiegészítő logója</string>
+    <string name="settings_stream_addon_logo_description">A kiegészítő logójának és nevének megjelenítése a stream források mellett.</string>
     <string name="settings_stream_display_section">Megjelenítés</string>
     <string name="settings_stream_badge_position_title">Jelvény pozíciója</string>
     <string name="settings_stream_badge_position_description">Válaszd ki, hogy a Fusion-jelvények és a fájlméretjelzők a forráskártyák felett vagy alatt jelenjenek meg.</string>
@@ -1528,7 +1528,7 @@
     <string name="tmdb_title">TMDB adatbővítés</string>
     <string name="tmdb_subtitle">Válaszd ki, mely metaadat-mezők származzanak a TMDB-ről</string>
     <string name="tmdb_enable_title">TMDB adatbővítés engedélyezése</string>
-    <string name="tmdb_enable_subtitle">A TMDB használata metaadat-forrásként a bővítmények adatainak kiegészítéséhez</string>
+    <string name="tmdb_enable_subtitle">A TMDB használata metaadat-forrásként a kiegészítők adatainak kiegészítéséhez</string>
     <string name="tmdb_modern_home_title">Engedélyezés Modern nézetben</string>
     <string name="tmdb_modern_home_subtitle">TMDB adatbővítés alkalmazása a Modern kezdőlap kiemelt elemeire és a fókuszált kártyákra.</string>
     <string name="tmdb_enrich_continue_watching_title">Megtekintés folytatása bővítése</string>
@@ -1552,9 +1552,9 @@
     <string name="tmdb_season_posters_title">Évadposzterek</string>
     <string name="tmdb_season_posters_subtitle">TMDB-évadposzterek az adatlap évadfüleihez</string>
     <string name="tmdb_trailers_title">Előzetesek</string>
-    <string name="tmdb_trailers_subtitle">Előzetes jelöltek a TMDB videókból a részletek oldal előzetes szekciójához</string>
+    <string name="tmdb_trailers_subtitle">Előzetes jelöltek a TMDB videókból az adatlap előzetes szekciójához</string>
     <string name="tmdb_more_like_this_title">Hasonlóak</string>
-    <string name="tmdb_more_like_this_subtitle">TMDB ajánlások a részletek oldalon és a lejátszás utáni képernyőn</string>
+    <string name="tmdb_more_like_this_subtitle">TMDB ajánlások az adatlapon és a lejátszás utáni képernyőn</string>
     <string name="tmdb_collections_title">Gyűjtemények</string>
     <string name="tmdb_collections_subtitle">TMDB filmgyűjtemények megjelenési sorrendben</string>
 
@@ -1606,15 +1606,15 @@
     <string name="trakt_unaired_now_shown">A még nem vetített következő epizódok mostantól láthatók</string>
     <string name="trakt_unaired_now_hidden">A még nem vetített következő epizódok mostantól rejtettek</string>
     <string name="trakt_comments_title">Vélemények</string>
-    <string name="trakt_comments_subtitle">Trakt vélemények megjelenítése a részletek oldalon</string>
+    <string name="trakt_comments_subtitle">Trakt vélemények megjelenítése az adatlapon</string>
     <string name="trakt_comments_dialog_title">Vélemények</string>
-    <string name="trakt_comments_dialog_subtitle">Válaszd ki, hogy a részletek oldal megjelenítse-e a Trakt véleményeket, ha csatlakozva vagy.</string>
+    <string name="trakt_comments_dialog_subtitle">Válaszd ki, hogy az adatlap megjelenítse-e a Trakt véleményeket, ha csatlakozva vagy.</string>
     <string name="trakt_comments_now_shown">A Trakt vélemények mostantól láthatóak</string>
     <string name="trakt_comments_now_hidden">A Trakt vélemények mostantól rejtettek</string>
     <string name="trakt_more_like_this_source_title">Hasonló tartalmak forrása</string>
-    <string name="trakt_more_like_this_source_subtitle">Válaszd ki, honnan származzanak az ajánlások a részletek oldalon és a lejátszás utáni képernyőn</string>
+    <string name="trakt_more_like_this_source_subtitle">Válaszd ki, honnan származzanak az ajánlások az adatlapon és a lejátszás utáni képernyőn</string>
     <string name="trakt_more_like_this_source_dialog_title">Hasonló tartalmak forrása</string>
-    <string name="trakt_more_like_this_source_dialog_subtitle">Válaszd ki a részletek oldalon és a lejátszás után megjelenő ajánlások forrását.</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">Válaszd ki az adatlapon és a lejátszás után megjelenő ajánlások forrását.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
     <string name="trakt_more_like_this_source_simkl">Simkl</string>
@@ -1693,14 +1693,14 @@
     <string name="profile_edit_title">%1$s profil szerkesztése</string>
     <string name="profile_name_placeholder">Profil neve</string>
     <string name="profile_avatar_color">Avatar színe</string>
-    <string name="profile_use_primary_addons">Elsődleges profil bővítményeinek használata</string>
-    <string name="profile_use_primary_plugins">Elsődleges profil beépülő moduljainak használata</string>
+    <string name="profile_use_primary_addons">Elsődleges profil kiegészítőinek használata</string>
+    <string name="profile_use_primary_plugins">Elsődleges profil bővítményeinek használata</string>
     <string name="profile_creating">Létrehozás\u2026</string>
     <string name="profile_create_btn">Létrehozás</string>
     <string name="profile_confirm">Megerősítés</string>
     <string name="profile_delete">Törlés</string>
-    <string name="profile_addons">bővítmények</string>
-    <string name="profile_plugins">beépülő modulok</string>
+    <string name="profile_addons">kiegészítők</string>
+    <string name="profile_plugins">bővítmények</string>
     <string name="profile_choose_avatar">Avatar választása</string>
     <string name="profile_custom_avatar_web_panel_note">Az egyedi avatar URL-ek a Nuvio webes felületén konfigurálhatók.</string>
     <string name="profile_editor_tab_avatar">Avatar</string>
@@ -1736,8 +1736,8 @@
     <string name="profile_copy_settings_apply">Alkalmazás</string>
     <string name="profile_copy_settings_credentials_off">API-kulcsok: másolás nélkül</string>
     <string name="profile_copy_settings_credentials_on">API-kulcsok: a hiányzók másolása</string>
-    <string name="profile_copy_settings_details">A meglévő API-kulcsok megmaradnak. Az OAuth-kapcsolatok, bővítmények, beépülő modulok, kezdőlapelrendezés, PIN-kód, előzmények, könyvtár, letöltések és eszközspecifikus beállítások nem változnak.</string>
-    <string name="profile_copy_settings_exclusions">Az OAuth-kapcsolatok, bővítmények, beépülő modulok, kezdőlapelrendezés, PIN-kód, előzmények, könyvtár, letöltések és eszközspecifikus beállítások nem változnak.</string>
+    <string name="profile_copy_settings_details">A meglévő API-kulcsok megmaradnak. Az OAuth-kapcsolatok, kiegészítők, bővítmények, kezdőlapelrendezés, PIN-kód, előzmények, könyvtár, letöltések és eszközspecifikus beállítások nem változnak.</string>
+    <string name="profile_copy_settings_exclusions">Az OAuth-kapcsolatok, kiegészítők, bővítmények, kezdőlapelrendezés, PIN-kód, előzmények, könyvtár, letöltések és eszközspecifikus beállítások nem változnak.</string>
     <string name="profile_copy_settings_success">Beállítások átmásolva: %1$s → %2$s.</string>
     <string name="profile_copy_settings_error">Nem sikerült átmásolni a beállításokat. Ellenőrizd a kapcsolatot, és próbáld újra.</string>
     <string name="profile_copy_settings_created_success">A profil létrejött. A beállítások forrása: %1$s.</string>
@@ -1779,17 +1779,17 @@
 
 
     <!-- Essential addon setup wizard -->
-    <string name="essential_addon_setup_title">Bővítmények beállítása</string>
-    <string name="essential_addon_setup_subtitle">Telepíts egy bővítményt a streaming megkezdéséhez. Később továbbiakat is hozzáadhatsz a Bővítmények menüből.</string>
+    <string name="essential_addon_setup_title">Kiegészítők beállítása</string>
+    <string name="essential_addon_setup_subtitle">Telepíts egy kiegészítőt a streaming megkezdéséhez. Később továbbiakat is hozzáadhatsz a Kiegészítők menüből.</string>
     <string name="essential_addon_show_qr">QR megjelenítése</string>
     <!-- Collection editor fallbacks -->
     <string name="collection_editor_no_trakt_lists_found">Nem találhatók Trakt listák</string>
     <string name="collection_editor_untitled_folder">Névtelen</string>
     <string name="collection_editor_untitled_collection">Névtelen gyűjtemény</string>
     <!-- AddonManagerScreen -->
-    <string name="addon_title">Bővítmények</string>
-    <string name="addon_readonly_notice">Az elsődleges profil bővítményeit használod, ezek nem módosíthatók</string>
-    <string name="addon_install_title">Bővítmény telepítése</string>
+    <string name="addon_title">Kiegészítők</string>
+    <string name="addon_readonly_notice">Az elsődleges profil kiegészítőit használod, ezek nem módosíthatók</string>
+    <string name="addon_install_title">Kiegészítő telepítése</string>
     <string name="addon_install_placeholder">https://pelda.hu</string>
     <string name="addon_installing">Telepítés</string>
     <string name="addon_install_btn">Telepítés</string>
@@ -1801,27 +1801,27 @@
     <string name="addon_tracking_consent_unchecked">Nincs bejelölve</string>
     <string name="addon_tracking_consent_cancel">Mégse</string>
     <string name="addon_tracking_consent_install">Telepítés</string>
-    <string name="addon_error_invalid_url">Adj meg egy érvényes bővítmény URL-t</string>
-    <string name="addon_error_invalid_scheme">A bővítmény URL-jének http-vel vagy https-sel kell kezdődnie</string>
+    <string name="addon_error_invalid_url">Adj meg egy érvényes kiegészítő URL-t</string>
+    <string name="addon_error_invalid_scheme">A kiegészítő URL-jének http-vel vagy https-sel kell kezdődnie</string>
     <string name="addon_installed_section">Telepítve</string>
-    <string name="addon_empty">Nincsenek telepített bővítmények. A kezdéshez adj hozzá egyet.</string>
+    <string name="addon_empty">Nincsenek telepített kiegészítők. A kezdéshez adj hozzá egyet.</string>
     <string name="addon_remove">Eltávolítás</string>
-    <string name="addon_delete_confirm_title">Törlöd a bővítményt?</string>
+    <string name="addon_delete_confirm_title">Törlöd a kiegészítőt?</string>
     <string name="addon_delete_confirm_message">Biztosan törölni szeretnéd?</string>
     <string name="addon_delete_no">Nem</string>
     <string name="addon_delete_yes">Igen</string>
     <string name="addons_badge_disabled">Kikapcsolva</string>
     <string name="addon_manage_from_phone_title">Kezelés telefonról</string>
-    <string name="addon_manage_from_phone_subtitle">Olvasd be a QR-kódot a bővítmények és a kezdőlap katalógusainak telefonos kezeléséhez</string>
-    <string name="addon_manage_addons_only_from_phone_subtitle">Olvasd be a QR-kódot bővítmények telepítéséhez vagy eltávolításához a telefonodról</string>
+    <string name="addon_manage_from_phone_subtitle">Olvasd be a QR-kódot a kiegészítők és a kezdőlap katalógusainak telefonos kezeléséhez</string>
+    <string name="addon_manage_addons_only_from_phone_subtitle">Olvasd be a QR-kódot kiegészítők telepítéséhez vagy eltávolításához a telefonodról</string>
     <string name="addon_manage_collections_from_phone_subtitle">Szkenneld be a QR-kódot a gyűjtemények telefonról történő kezeléséhez</string>
     <string name="addon_reorder_title">Kezdőlap katalógusainak sorrendje</string>
     <string name="addon_reorder_subtitle">A katalógusok sorrendjének módosítása a kezdőlapon (Klasszikus + Modern + Rács)</string>
-    <string name="addon_qr_scan_instruction">Olvasd be a telefonoddal a bővítmények és katalógusok kezeléséhez</string>
-    <string name="addon_qr_addons_only_scan_instruction">Olvasd be a telefonoddal bővítmények telepítéséhez vagy eltávolításához</string>
+    <string name="addon_qr_scan_instruction">Olvasd be a telefonoddal a kiegészítők és katalógusok kezeléséhez</string>
+    <string name="addon_qr_addons_only_scan_instruction">Olvasd be a telefonoddal kiegészítők telepítéséhez vagy eltávolításához</string>
     <string name="addon_qr_collections_scan_instruction">Szkenneld be telefonoddal a gyűjtemények kezeléséhez</string>
     <string name="addon_qr_close">Bezárás</string>
-    <string name="addon_confirm_title">Bővítmény- és katalógusmódosítások megerősítése</string>
+    <string name="addon_confirm_title">Kiegészítő- és katalógusmódosítások megerősítése</string>
     <string name="addon_confirm_subtitle">A következő módosítások történtek a telefonról:</string>
     <string name="addon_confirm_added">Hozzáadva:</string>
     <string name="addon_confirm_removed">Eltávolítva:</string>
@@ -1831,19 +1831,19 @@
     <string name="addon_confirm_no_changes">Nem történt látható változás</string>
     <string name="addon_confirm_reject">Elvetés</string>
     <string name="addon_confirm_confirm">Megerősítés</string>
-    <string name="addon_refresh_action">Bővítmények frissítése</string>
-    <string name="addon_refresh_default_subtitle">A legújabb bővítmény-változások letöltése az aktuális profilhoz</string>
-    <string name="addon_refresh_done_subtitle">Bővítmények épp most frissítve</string>
+    <string name="addon_refresh_action">Kiegészítők frissítése</string>
+    <string name="addon_refresh_default_subtitle">A legújabb kiegészítő-változások letöltése az aktuális profilhoz</string>
+    <string name="addon_refresh_done_subtitle">Kiegészítők épp most frissítve</string>
     <string name="addon_pending_collections_updated">Gyűjtemények frissítve</string>
     <string name="addon_pending_collections_replace">%1$d gyűjtemény fogja felülírni a jelenlegieket</string>
-    <string name="addon_confirm_total_addons">Összes bővítmény: %1$d</string>
+    <string name="addon_confirm_total_addons">Összes kiegészítő: %1$d</string>
     <string name="addon_confirm_total_catalogs">Összes katalógus: %1$d</string>
     <string name="addon_catalogs_types">Katalógusok: %1$d – Típusok: %2$s</string>
 
     <string name="catalog_order_title">A kezdőlap katalógusainak sorrendje</string>
     <string name="catalog_order_subtitle">A kezdőlap katalógusainak sorrendjét módosítja (Klasszikus + Modern + Rács).</string>
-    <string name="catalog_order_follow_addons">Bővítmények sorrendjének követése</string>
-    <string name="catalog_order_follow_addons_desc">A katalógusok a bővítmények manifest sorrendjét követik. A gyűjtemények továbbra is mozgathatók a bővítmények között.</string>
+    <string name="catalog_order_follow_addons">Kiegészítők sorrendjének követése</string>
+    <string name="catalog_order_follow_addons_desc">A katalógusok a kiegészítők manifest sorrendjét követik. A gyűjtemények továbbra is mozgathatók a kiegészítők között.</string>
     <string name="catalog_order_empty">Még nincsenek elérhető katalógusok.</string>
     <string name="catalog_order_disabled_on_home">Letiltva a kezdőlapon</string>
     <string name="catalog_order_enable">Engedélyezés</string>
@@ -1855,7 +1855,7 @@
 
     <string name="stream_retry">Újra</string>
     <string name="stream_no_streams">Nem találhatók források</string>
-    <string name="stream_no_streams_hint">Próbálj meg több bővítményt telepíteni a források kereséséhez</string>
+    <string name="stream_no_streams_hint">Próbálj meg több kiegészítőt telepíteni a források kereséséhez</string>
     <string name="stream_finding_source">Forrás keresése</string>
     <string name="debrid_resolving_stream">Debrid stream feloldása</string>
     <string name="debrid_stale_stream">Ez a Debrid eredmény lejárt. Streamek frissítése.</string>
@@ -1908,7 +1908,7 @@
     <string name="player_loading_detecting_format">Stream formátumának észlelése…</string>
     <string name="external_player_loading_skip_segments">Főcím- és stáblistaszakaszok betöltése…</string>
     <string name="player_loading_subtitles">Feliratok lekérése…</string>
-    <string name="player_loading_subtitles_from">Feliratok lekérése %1$d bővítményből…</string>
+    <string name="player_loading_subtitles_from">Feliratok lekérése %1$d kiegészítőből…</string>
     <string name="player_loading_subtitles_progress">Feliratok lekérése… (%1$d / %2$d)</string>
     <string name="player_loading_subtitles_addon">Feliratok: %1$s (%2$d / %3$d)</string>
     <string name="player_loading_building">Lejátszó felépítése…</string>
@@ -1989,7 +1989,7 @@
     <string name="stream_info_language">Nyelv</string>
     <string name="stream_info_name">Név</string>
     <string name="stream_info_source">Forrás</string>
-    <string name="stream_info_subtitle_source_addon">Bővítmény</string>
+    <string name="stream_info_subtitle_source_addon">Kiegészítő</string>
     <string name="stream_info_subtitle_source_embedded">Beépített</string>
     <string name="stream_info_player_engine">Lejátszó motor</string>
 
@@ -2043,13 +2043,13 @@
     <string name="audio_downmix_lfe_level_full">100%</string>
     <string name="subtitle_dialog_title">Feliratok</string>
     <string name="subtitle_no_builtin">Nincs elérhető beépített felirat</string>
-    <string name="subtitle_loading_addon">Külső feliratok betöltése a bővítményekből\u2026</string>
-    <string name="subtitle_no_addon">Nincs elérhető felirat a bővítményekből</string>
+    <string name="subtitle_loading_addon">Külső feliratok betöltése a kiegészítőkből\u2026</string>
+    <string name="subtitle_no_addon">Nincs elérhető felirat a kiegészítőkből</string>
     <string name="subtitle_text_color">Szövegszín</string>
     <string name="subtitle_outline_color">Körvonal színe</string>
     <string name="subtitle_reset_defaults">Alaphelyzet</string>
     <string name="subtitle_tab_builtin">Beépített</string>
-    <string name="subtitle_tab_addons">Bővítmények</string>
+    <string name="subtitle_tab_addons">Kiegészítők</string>
     <string name="subtitle_tab_languages">Nyelvek</string>
     <string name="subtitle_tab_style">Stílus</string>
     <string name="subtitle_tab_delay">Késleltetés</string>
@@ -2141,7 +2141,7 @@
     <string name="search_voice_unavailable">A hangalapú keresés nem érhető el ezen az eszközön.</string>
     <string name="search_no_results_title">Nincs találat</string>
     <string name="search_no_results_subtitle">Próbálkozz más kulcsszavakkal</string>
-    <string name="search_error_no_catalogs">Nincsenek kereshető katalógusok a telepített bővítményekben</string>
+    <string name="search_error_no_catalogs">Nincsenek kereshető katalógusok a telepített kiegészítőkben</string>
 
     <string name="library_syncing">Trakt könyvtár szinkronizálása\u2026</string>
     <string name="library_title">Könyvtár</string>
@@ -2283,7 +2283,7 @@
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Betöltés\u2026</string>
-    <string name="account_sync_description">Könyvtár, megtekintési előzmények, bővítmények és beépülő modulok szinkronizálása az eszközök között.</string>
+    <string name="account_sync_description">Könyvtár, megtekintési előzmények, kiegészítők és bővítmények szinkronizálása az eszközök között.</string>
     <string name="account_sync_restart_note">A szinkronizálás nem valós idejű az aktív eszközök között. Indítsd újra ezt az eszközt bejelentkezés után, vagy ha máshol végzett módosításokat szeretnél érvényesíteni.</string>
     <string name="account_signin_qr_title">Bejelentkezés QR-kóddal</string>
     <string name="account_signin_qr_subtitle">Olvasd be a QR-kódot, és fejezd be a bejelentkezést e-mailben a telefonodon</string>
@@ -2294,7 +2294,7 @@
     <string name="account_loading_sync">Szinkronizálási adatok betöltése\u2026</string>
     <string name="account_sign_out">Kijelentkezés</string>
     <string name="account_sign_out_confirm_title">Kijelentkezel?</string>
-    <string name="account_sign_out_confirm_subtitle">Újra be kell majd jelentkezned, hogy a könyvtár, a megtekintési állapot, a bővítmények és a beépülő modulok szinkronizálódjanak ezen az eszközön.</string>
+    <string name="account_sign_out_confirm_subtitle">Újra be kell majd jelentkezned, hogy a könyvtár, a megtekintési állapot, a kiegészítők és a bővítmények szinkronizálódjanak ezen az eszközön.</string>
     <string name="account_error_signin_required">Előbb jelentkezz be egy fiókkal.</string>
     <string name="account_signin_create_title">Bejelentkezés / Fiók létrehozása</string>
     <string name="account_signin_create_desc">Használd az e-mail címed és jelszavad a bejelentkezéshez vagy új fiók létrehozásához.</string>
@@ -2386,7 +2386,7 @@
 
     <string name="sync_claim_title">Eszköz összekapcsolása</string>
     <string name="sync_claim_subtitle">Add meg a másik eszközről származó szinkronizációs kódot és PIN-t az összekapcsoláshoz.</string>
-    <string name="sync_claim_success">Eszköz összekapcsolva! A bővítmények és beépülő modulok mostantól szinkronizálva lesznek.</string>
+    <string name="sync_claim_success">Eszköz összekapcsolva! A kiegészítők és bővítmények mostantól szinkronizálva lesznek.</string>
     <string name="sync_claim_done">Kész</string>
     <string name="sync_claim_code_label">Szinkronizációs kód</string>
     <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
@@ -2394,27 +2394,27 @@
     <string name="sync_claim_pin_placeholder">PIN megadása</string>
     <string name="sync_claim_linking">Összekapcsolás\u2026</string>
 
-    <string name="plugin_readonly_notice">Az elsődleges profil beépülő moduljait használod – ezek nem módosíthatók</string>
-    <string name="plugin_repositories_section">Adattárak (%1$d)</string>
+    <string name="plugin_readonly_notice">Az elsődleges profil bővítményeit használod – ezek nem módosíthatók</string>
+    <string name="plugin_repositories_section">Tárolók (%1$d)</string>
     <string name="plugin_providers_section">Szolgáltatók (%1$d)</string>
-    <string name="plugin_title">Beépülő modulok</string>
+    <string name="plugin_title">Bővítmények</string>
     <string name="plugin_subtitle">Helyi adatgyűjtők (scrapers) és szolgáltatók kezelése</string>
-    <string name="plugin_enable_plugins_title">Beépülő szolgáltatók globális engedélyezése</string>
-    <string name="plugin_enable_plugins_subtitle">Beépülő szolgáltatók használata a streamek felfedezése során</string>
-    <string name="plugin_group_by_repository_title">Beépülő szolgáltatók csoportosítása tároló szerint</string>
+    <string name="plugin_enable_plugins_title">Szolgáltatói bővítmények globális engedélyezése</string>
+    <string name="plugin_enable_plugins_subtitle">Szolgáltatói bővítmények használata a streamek felfedezése során</string>
+    <string name="plugin_group_by_repository_title">Bővítmények csoportosítása tároló szerint</string>
     <string name="plugin_group_by_repository_subtitle">A Streamekben tárolónként egy szolgáltató megjelenítése forrásonként egy helyett</string>
-    <string name="plugin_add_repository">Adattár hozzáadása</string>
+    <string name="plugin_add_repository">Tároló hozzáadása</string>
     <string name="plugin_add_btn">Hozzáadás</string>
     <string name="plugin_manage_from_phone_title">Kezelés telefonról</string>
-    <string name="plugin_manage_from_phone_subtitle">Olvasd be a QR-kódot adattárak hozzáadásához vagy törléséhez a telefonodról</string>
-    <string name="plugin_qr_instruction">Olvasd be a telefonoddal az adattárak kezeléséhez</string>
+    <string name="plugin_manage_from_phone_subtitle">Olvasd be a QR-kódot tárolók hozzáadásához vagy törléséhez a telefonodról</string>
+    <string name="plugin_qr_instruction">Olvasd be a telefonoddal a tárolók kezeléséhez</string>
     <string name="plugin_qr_close">Bezárás</string>
-    <string name="plugin_confirm_title">Adattár-módosítások megerősítése</string>
+    <string name="plugin_confirm_title">Tárolómódosítások megerősítése</string>
     <string name="plugin_confirm_subtitle">A következő módosítások történtek a telefonról:</string>
     <string name="plugin_confirm_added">Hozzáadva:</string>
     <string name="plugin_confirm_removed">Eltávolítva:</string>
     <string name="plugin_confirm_no_changes">Nem történt változás</string>
-    <string name="plugin_confirm_total">Összes adattár: %1$d</string>
+    <string name="plugin_confirm_total">Összes tároló: %1$d</string>
     <string name="plugin_confirm_reject">Elvetés</string>
     <string name="plugin_confirm_confirm">Megerősítés</string>
     <string name="plugin_url_or_short_code_placeholder">URL vagy rövid kód</string>
@@ -2431,9 +2431,9 @@
     <string name="plugin_providers_count">%1$d szolgáltató</string>
     <string name="plugin_enabled">Engedélyezve</string>
     <string name="plugin_disabled">Letiltva</string>
-    <string name="plugin_no_repos">Nincsenek hozzáadott adattárak.\nAdj hozzá egyet a kezdéshez.</string>
+    <string name="plugin_no_repos">Nincsenek hozzáadott tárolók.\nAdj hozzá egyet a kezdéshez.</string>
     <string name="plugin_error_invalid_url">Kérlek, adj meg egy érvényes URL-t</string>
-    <string name="plugin_error_add_repo">Nem sikerült hozzáadni az adattárat: %1$s</string>
+    <string name="plugin_error_add_repo">Nem sikerült hozzáadni a tárolót: %1$s</string>
     <string name="plugin_error_refresh">Nem sikerült a frissítés: %1$s</string>
     <string name="plugin_error_test">A teszt sikertelen: %1$s</string>
     <string name="plugin_test_no_results">Nem található találat</string>
@@ -2447,7 +2447,7 @@
     <string name="profile_selection_primary_badge">ELSŐDLEGES</string>
     <string name="profile_selection_options_title">Profil beállításai</string>
     <string name="profile_delete_confirm_title">Törlöd a profilt?</string>
-    <string name="profile_delete_confirm_subtitle">Ez véglegesen törli a profilt és annak minden adatát, beleértve a könyvtárat, az előzményeket és a bővítmény beállításokat. Ez a művelet nem vonható vissza.</string>
+    <string name="profile_delete_confirm_subtitle">Ez véglegesen törli a profilt és annak minden adatát, beleértve a könyvtárat, az előzményeket és a kiegészítő beállításokat. Ez a művelet nem vonható vissza.</string>
     <string name="profile_delete_btn">Profil törlése</string>
     <string name="profile_saving">Mentés\u2026</string>
 
@@ -2480,7 +2480,7 @@
     <string name="update_unknown_sources">A folytatáshoz engedélyezd a telepítést ismeretlen forrásokból.</string>
     <!-- AccountScreen -->
     <string name="account_title">Fiók</string>
-    <string name="account_sign_in_description">Jelentkezz be a könyvtár, a megtekintési előzmények és a bővítmények eszközök közötti szinkronizálásához. A könyvtár és az előzmények szinkronizálása csak akkor működik, ha a Trakt nincs csatlakoztatva.</string>
+    <string name="account_sign_in_description">Jelentkezz be a könyvtár, a megtekintési előzmények és a kiegészítők eszközök közötti szinkronizálásához. A könyvtár és az előzmények szinkronizálása csak akkor működik, ha a Trakt nincs csatlakoztatva.</string>
     <string name="account_sync_code_title">Szinkronizációs kód</string>
     <string name="account_sync_code_description">Szinkronizálás az eszközök között fiók létrehozása nélkül.</string>
     <string name="account_linked_devices">Összekapcsolt eszközök (%1$d)</string>
@@ -2524,7 +2524,7 @@
     <string name="nav_discover">Felfedezés</string>
     <string name="nav_search">Keresés</string>
     <string name="nav_library">Könyvtár</string>
-    <string name="nav_addons">Bővítmények</string>
+    <string name="nav_addons">Kiegészítők</string>
     <string name="nav_movies">Filmek</string>
     <string name="nav_series">Sorozatok</string>
     <string name="nav_settings">Beállítások</string>
@@ -2573,9 +2573,9 @@
 
     <!-- Plugin errors -->
     <string name="plugin_repo_added_with_providers">Hozzáadva: %1$s, %2$d szolgáltatóval</string>
-    <string name="plugin_repo_removed">Adattár eltávolítva</string>
-    <string name="plugin_repo_refreshed">Adattár frissítve</string>
-    <string name="plugin_repo_delete_confirm_title">Törlöd az adattárat?</string>
+    <string name="plugin_repo_removed">Tároló eltávolítva</string>
+    <string name="plugin_repo_refreshed">Tároló frissítve</string>
+    <string name="plugin_repo_delete_confirm_title">Törlöd a tárolót?</string>
     <string name="plugin_repo_delete_confirm_message">Biztosan törölni szeretnéd?</string>
     <string name="plugin_repo_delete_no">Nem</string>
     <string name="plugin_repo_delete_yes">Igen</string>
@@ -2607,15 +2607,15 @@
 
     <!-- General errors -->
     <string name="error_unknown">Ismeretlen hiba</string>
-    <string name="addon_error_not_found">Bővítmény nem található</string>
+    <string name="addon_error_not_found">Kiegészítő nem található</string>
 
     <!-- Account errors -->
 
     <!-- Search errors -->
 
     <!-- Home errors -->
-    <string name="home_error_no_addons">Nincsenek telepített bővítmények</string>
-    <string name="home_error_no_catalog_addons">Nincsenek telepített katalógusbővítmények</string>
+    <string name="home_error_no_addons">Nincsenek telepített kiegészítők</string>
+    <string name="home_error_no_catalog_addons">Nincsenek telepített katalóguskiegészítők</string>
 
     <!-- Player errors -->
     <string name="player_error_failed_start_torrent">Nem sikerült elindítani a torrentet: %1$s</string>
@@ -2696,7 +2696,7 @@
     <string name="collections_saved_downloads">Mentve a Letöltések mappába</string>
     <string name="collections_export_failed">Az exportálás sikertelen</string>
     <string name="collections_import_header">Gyűjtemények importálása</string>
-    <string name="collections_import_description">Gyűjtemények importálása JSON-ből. Olyan bővítményekhez tartozó katalógusok esetén, amelyek nincsenek telepítve, figyelmeztetés jelenik meg.</string>
+    <string name="collections_import_description">Gyűjtemények importálása JSON-ből. Olyan kiegészítőkhöz tartozó katalógusok esetén, amelyek nincsenek telepítve, figyelmeztetés jelenik meg.</string>
     <string name="collections_import_url_placeholder">https://pelda.hu/collections.json</string>
     <string name="collections_import_failed_fetch_http">Lekérés sikertelen: HTTP %1$d</string>
     <string name="collections_import_failed_fetch_url">Nem sikerült lekérni az URL-t: %1$s</string>
@@ -2776,7 +2776,7 @@
     <string name="collections_editor_shape_poster">Poszter</string>
     <string name="collections_editor_shape_wide">Széles</string>
     <string name="collections_editor_shape_square">Négyzet</string>
-    <string name="collections_editor_addon_missing">A bővítmény nincs telepítve: %1$s</string>
+    <string name="collections_editor_addon_missing">A kiegészítő nincs telepítve: %1$s</string>
     <string name="collections_editor_catalog_missing">A katalógus nem érhető el</string>
     <string name="collections_editor_add_tmdb_source">TMDB forrás hozzáadása</string>
     <string name="collections_editor_add_trakt_source">Trakt lista hozzáadása</string>
@@ -3168,7 +3168,7 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="poster_options_error_update_lists_failed">A listák frissítése sikertelen</string>
 
     <!-- Search errors -->
-    <string name="search_error_load_addons_failed">A bővítmények betöltése sikertelen</string>
+    <string name="search_error_load_addons_failed">A kiegészítők betöltése sikertelen</string>
     <string name="search_error_failed">A keresés sikertelen</string>
 
     <!-- Stream / TMDB / addons fallbacks -->
@@ -3219,19 +3219,19 @@ Próbálj meg egy másik forrást. [%1$s]</string>
 
     <!-- Meta repository: addon detail error fragments -->
     <string name="meta_error_detail_no_metadata_for_id">nem adott vissza metaadatot ehhez az azonosítóhoz</string>
-    <string name="meta_error_detail_addon_unreachable">nem sikerült elérni a bővítmény szerverét</string>
-    <string name="meta_error_detail_addon_connection_failed">a csatlakozás a bővítményhez sikertelen</string>
-    <string name="meta_error_detail_addon_timeout">a bővítmény kérés időtúllépés miatt megszakadt</string>
-    <string name="meta_error_detail_addon_cleartext_blocked">a bővítmény nem biztonságos HTTP kapcsolatot használ, amelyet az Android blokkol</string>
-    <string name="meta_error_detail_addon_request_failed">a bővítmény kérés sikertelen</string>
+    <string name="meta_error_detail_addon_unreachable">nem sikerült elérni a kiegészítő szerverét</string>
+    <string name="meta_error_detail_addon_connection_failed">a csatlakozás a kiegészítőhöz sikertelen</string>
+    <string name="meta_error_detail_addon_timeout">a kiegészítő kérés időtúllépés miatt megszakadt</string>
+    <string name="meta_error_detail_addon_cleartext_blocked">a kiegészítő nem biztonságos HTTP kapcsolatot használ, amelyet az Android blokkol</string>
+    <string name="meta_error_detail_addon_request_failed">a kiegészítő kérés sikertelen</string>
 
     <!-- Stream repository: addon detail error fragments + fetch -->
     <string name="stream_error_detail_no_streams_for_id">nem adott vissza streamet ehhez az azonosítóhoz</string>
-    <string name="stream_error_detail_addon_unreachable">nem sikerült elérni a bővítmény szerverét</string>
-    <string name="stream_error_detail_addon_connection_failed">a csatlakozás a bővítményhez sikertelen</string>
-    <string name="stream_error_detail_addon_timeout">a bővítmény kérés időtúllépés miatt megszakadt</string>
-    <string name="stream_error_detail_addon_cleartext_blocked">a bővítmény nem biztonságos HTTP kapcsolatot használ, amelyet az Android blokkol</string>
-    <string name="stream_error_detail_addon_request_failed">a bővítmény kérés sikertelen</string>
+    <string name="stream_error_detail_addon_unreachable">nem sikerült elérni a kiegészítő szerverét</string>
+    <string name="stream_error_detail_addon_connection_failed">a csatlakozás a kiegészítőhöz sikertelen</string>
+    <string name="stream_error_detail_addon_timeout">a kiegészítő kérés időtúllépés miatt megszakadt</string>
+    <string name="stream_error_detail_addon_cleartext_blocked">a kiegészítő nem biztonságos HTTP kapcsolatot használ, amelyet az Android blokkol</string>
+    <string name="stream_error_detail_addon_request_failed">a kiegészítő kérés sikertelen</string>
     <string name="stream_error_fetch_failed">A streamek lekérése sikertelen</string>
 
     <!-- Trakt: paginated fetch + comments -->
@@ -3504,7 +3504,7 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="shuffle_change_selection">Epizódok kiválasztása</string>
     <string name="shuffle_badge">Véletlenszerű lejátszás bekapcsolva</string>
     <string name="autosync_setting_title">Feliratok automatikus időzítése</string>
-    <string name="autosync_setting_description">A bővítményből kiválasztott feliratot a videó beágyazott feliratához időzíti.</string>
+    <string name="autosync_setting_description">A kiegészítőből kiválasztott feliratot a videó beágyazott feliratához időzíti.</string>
     <string name="autosync_tolerance_title">Automatikus időzítés tűréshatára</string>
     <string name="autosync_tolerance_description">Az eredeti időzítés megmarad, ha a szükséges korrekció nem nagyobb ennél.</string>
     <string name="autosync_tolerance_off">Ki</string>
