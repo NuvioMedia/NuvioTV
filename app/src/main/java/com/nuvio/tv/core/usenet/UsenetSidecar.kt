@@ -53,12 +53,14 @@ class UsenetSidecar private constructor(private val context: Context) {
     private val cleanup = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val http = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS).callTimeout(150, TimeUnit.SECONDS).build()
+    private val liveStatsHttp = http.newBuilder().callTimeout(800, TimeUnit.MILLISECONDS).build()
     private var process: Process? = null
     private var processProfile: String? = null
     private var endpoint: String? = null
-    private var token: String? = null
+    @Volatile private var token: String? = null
     private var sessionId: String? = null
     @Volatile private var playbackUrl: String? = null
+    @Volatile private var liveSession: Pair<String, List<String>>? = null
     private var idleStop: Job? = null
     private val retiredSessions = mutableSetOf<String>() // guarded by mutex
     /** A live session's servers, in the order its open sent them, and what it plays. */
@@ -310,6 +312,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             coroutineContext.ensureActive()
             sessionId = newId
             playbackUrl = url
+            liveSession = url to stream.servers.orEmpty()
             UsenetStartupDiagnostics.bind(url, trace, result.optJSONObject("startup"))
             // Only an NZB the engine says it fetched counts as a download from the indexer.
             val nzbLookup = result.optJSONObject("startup")?.optJSONObject("nzbCache")?.optString("lookup")
@@ -381,6 +384,20 @@ class UsenetSidecar private constructor(private val context: Context) {
                 }
             }
         } }
+    }
+
+    fun liveStats(url: String): UsenetLiveStats? {
+        if (url != playbackUrl) return null
+        val diagnostics = UsenetEngineUrls.sessionDiagnostics(url) ?: return null
+        val bearer = token ?: return null
+        return runCatching {
+            val request = Request.Builder().url(diagnostics).header("Authorization", "Bearer $bearer").get().build()
+            liveStatsHttp.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@use null
+                val servers = liveSession?.takeIf { it.first == url }?.second.orEmpty()
+                response.body?.string()?.let(UsenetLiveStats::parse)?.copy(servers = servers)
+            }
+        }.getOrNull()
     }
 
     /** Only release the session owned by the exiting player. An older screen must
