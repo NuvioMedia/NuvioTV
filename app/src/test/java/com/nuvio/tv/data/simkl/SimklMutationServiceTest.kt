@@ -250,6 +250,34 @@ class SimklMutationServiceTest {
     }
 
     @Test
+    fun `a scrobble tells Simkl where a stop becomes a watch`() = runBlocking {
+        val engine = RecordingEngine(
+            response(201, """{"action":"scrobble","progress":96}"""),
+            response(201, """{"action":"pause","progress":90,"rewatch_id":77,"rewatch_status":"active"}""")
+        )
+        val service = SimklMutationService(client(engine))
+
+        service.scrobble(
+            TrackingScrobbleAction.STOP,
+            TrackingScrobbleEvent(movie(), 96.0),
+            completionThresholdPercent = 96.0
+        )
+        service.scrobble(
+            TrackingScrobbleAction.STOP,
+            TrackingScrobbleEvent(movie(), 90.0),
+            recordRewatch = true,
+            completionThresholdPercent = 90.0
+        )
+
+        assertEquals(listOf("/scrobble/stop", "/scrobble/stop"), engine.paths)
+        assertTrue("min_progress=96" in engine.urls[0])
+        assertFalse("allow_rewatch" in engine.urls[0])
+        // The rewatch flag rides beside the threshold, and both are what the account reads.
+        assertTrue("min_progress=90" in engine.urls[1])
+        assertTrue("allow_rewatch=yes" in engine.urls[1])
+    }
+
+    @Test
     fun `invalid mutation identity fails before network access`() {
         val engine = RecordingEngine(response(200))
         val service = SimklMutationService(client(engine))
@@ -304,6 +332,7 @@ class SimklMutationServiceTest {
     private class RecordingEngine(vararg responses: SimklRawHttpResponse) : SimklHttpEngine {
         private val queued = responses.toMutableList()
         val paths = mutableListOf<String>()
+        val urls = mutableListOf<String>()
 
         override suspend fun execute(
             method: String,
@@ -311,6 +340,7 @@ class SimklMutationServiceTest {
             headers: Map<String, String>,
             body: String
         ): SimklRawHttpResponse {
+            urls += url
             paths += url.substringAfter("api.simkl.com").substringBefore('?')
             return queued.removeAt(0)
         }
@@ -320,4 +350,70 @@ class SimklMutationServiceTest {
         val configuration = SimklApiConfiguration("client-id", "nuvio", "1.0")
         fun response(status: Int, body: String = "{}") = SimklRawHttpResponse(status, body)
     }
+    @Test
+    fun `a mark of a repeat asks for a rewatch and the answer says how it was booked`() = runBlocking {
+        val engine = RecordingEngine(
+            response(
+                201,
+                """{"added":{"movies":0,"shows":0,"episodes":1,"statuses":[{"response":{"status":"completed","rewatch_id":21284,"rewatch_status":"active"}}]},"not_found":{"movies":[],"shows":[],"episodes":[]}}"""
+            )
+        )
+        val result = SimklMutationService(client(engine)).addToHistory(
+            listOf(
+                TrackingHistoryItem(show(TrackingEpisode(season = 2, number = 7)), 1_700_000_000_000L)
+                    .copy(isRewatch = true, rewatchId = 21284L)
+            )
+        )
+
+        // Without the query flag Simkl reads the very same write as a plain add and records it as
+        // nothing, which is what left a marked episode unrecorded and the run untouched.
+        assertTrue("allow_rewatch=yes" in engine.urls.single())
+        // The body the flag rides on is asserted where the bodies are read back
+        // (SimklRewatchWriteTest); what this call owes is the answer, which a caller reports to the user.
+        assertEquals("active", result.resolutions.single().rewatchStatus)
+        assertEquals(1, result.addedCount)
+    }
+
+    @Test
+    fun `a history rewatch inside the two day gap is a no-op`() = runBlocking {
+        // Simkl answers 201 with zero counts and no added.statuses for a repeat it folded into the
+        // original watch. The absence of a rewatch status is what the UI must read as "not booked".
+        val engine = RecordingEngine(
+            response(201, """{"added":{"movies":0,"shows":0,"episodes":0}}""")
+        )
+        val result = SimklMutationService(client(engine)).addToHistory(
+            listOf(
+                TrackingHistoryItem(show(TrackingEpisode(season = 2, number = 7)), 1_700_000_000_000L)
+                    .copy(isRewatch = true)
+            )
+        )
+
+        assertTrue("allow_rewatch=yes" in engine.urls.single())
+        assertTrue(result.isComplete)
+        assertEquals(0, result.addedCount)
+        assertTrue(result.resolutions.isEmpty())
+    }
+
+    @Test
+    fun `an active session answer with no added episode is not a recorded rewatch`() = runBlocking {
+        // A running session can be echoed back even when the episode inside the 2-day gap was not
+        // added. The status looks successful, which is why the added count has to decide.
+        val engine = RecordingEngine(
+            response(
+                201,
+                """{"added":{"movies":0,"shows":0,"episodes":0,"statuses":[{"response":{"status":"completed","rewatch_id":21284,"rewatch_status":"active"}}]}}"""
+            )
+        )
+        val result = SimklMutationService(client(engine)).addToHistory(
+            listOf(
+                TrackingHistoryItem(show(TrackingEpisode(season = 2, number = 7)), 1_700_000_000_000L)
+                    .copy(isRewatch = true, rewatchId = 21284L)
+            )
+        )
+
+        assertEquals("active", result.resolutions.single().rewatchStatus)
+        assertEquals(0, result.addedCount)
+        assertFalse(simklHistoryRewatchWasRecorded("active", result.addedCount))
+    }
+
 }
