@@ -21,7 +21,7 @@ import java.util.Locale
  * absolute episode, plugins must use that with `season = null`.
  */
 
-private val ANIME_ID_PREFIXES = setOf("kitsu", "mal", "anilist", "anidb")
+internal val ANIME_ID_PREFIXES = setOf("kitsu", "mal", "anilist", "anidb")
 
 /**
  * Absolute episode number encoded in [videoId], or null when the id is not an

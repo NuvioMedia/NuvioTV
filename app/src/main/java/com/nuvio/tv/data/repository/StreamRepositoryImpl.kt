@@ -110,7 +110,8 @@ class StreamRepositoryImpl @Inject constructor(
         forceRefresh: Boolean,
         priorityBingeGroup: String?,
         preferredPluginOnly: Boolean,
-        continuePluginOnly: Boolean
+        continuePluginOnly: Boolean,
+        contentId: String?
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         val sourceConfiguration = captureSourceConfiguration()
         val isNativeServerRequest = serverStreams.isNativeRequest(videoId)
@@ -148,7 +149,8 @@ class StreamRepositoryImpl @Inject constructor(
                     },
                     priorityBingeGroup = priorityBingeGroup,
                     preferredPluginOnly = preferredPluginOnly,
-                    continuePluginOnly = continuePluginOnly
+                    continuePluginOnly = continuePluginOnly,
+                    contentId = contentId
                 )
             }.map { result ->
                 // Cached results predate releases tried since: label and arrange them on every delivery.
@@ -252,7 +254,8 @@ class StreamRepositoryImpl @Inject constructor(
         serverSources: List<ServerStreamSource>,
         priorityBingeGroup: String?,
         preferredPluginOnly: Boolean,
-        continuePluginOnly: Boolean
+        continuePluginOnly: Boolean,
+        contentId: String? = null
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         emit(NetworkResult.Loading)
 
@@ -287,7 +290,7 @@ class StreamRepositoryImpl @Inject constructor(
                 launch {
                     try {
                         if (!usenetSources.ready) return@launch
-                        builtInUsenetService.search(usenetSources, type, videoId, season, episode).collect { result ->
+                        builtInUsenetService.search(usenetSources, type, videoId, season, episode, contentId).collect { result ->
                             result.group?.let { resultChannel.send(it) }
                             result.failure?.let {
                                 attemptedFailures += StreamAttemptFailure(BuiltInUsenetService.GROUP_NAME,

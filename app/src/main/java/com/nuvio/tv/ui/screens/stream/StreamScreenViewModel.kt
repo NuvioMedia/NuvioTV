@@ -505,7 +505,8 @@ class StreamScreenViewModel @Inject constructor(
                     sources?.let { config ->
                         com.nuvio.tv.core.usenet.BuiltInUsenetService.restoredStream(nzbUrl, cached.streamName,
                             cached.releaseTitle, cached.videoSize, cached.publishedAt, config,
-                            series = !contentType.equals("movie", ignoreCase = true))?.also { restored ->
+                            series = !contentType.equals("movie", ignoreCase = true))
+                            ?.copy(usenetSeason = cached.usenetSeason, usenetEpisode = cached.usenetEpisode)?.also { restored ->
                             // No search lists it: its download and playback count for the indexer its link names.
                             com.nuvio.tv.core.usenet.BuiltInUsenetService.keptLinkIndexer(nzbUrl, config)?.let { indexer ->
                                 com.nuvio.tv.core.usenet.UsenetSourceStats.get(context).remember(listOfNotNull(restored.nzbUrl),
@@ -862,7 +863,8 @@ class StreamScreenViewModel @Inject constructor(
                     season = season,
                     episode = episode,
                     forceRefresh = forceRefresh,
-                    priorityBingeGroup = persistedBingeGroup
+                    priorityBingeGroup = persistedBingeGroup,
+                    contentId = contentId
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {
@@ -1942,7 +1944,9 @@ class StreamScreenViewModel @Inject constructor(
                 year = year,
                 nzbUrl = com.nuvio.tv.core.usenet.BuiltInUsenetService.withoutApiKeys(nzbUrl, sources),
                 releaseTitle = stream.title,
-                publishedAt = stream.publishedAt
+                publishedAt = stream.publishedAt,
+                usenetSeason = stream.usenetSeason,
+                usenetEpisode = stream.usenetEpisode
             )
         }
     }

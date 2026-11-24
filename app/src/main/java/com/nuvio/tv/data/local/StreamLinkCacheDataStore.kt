@@ -33,7 +33,10 @@ data class CachedStreamLink(
     val audioDelayLanguage: String? = null,
     val addonName: String? = null,
     val addonLogo: String? = null,
-    val streamDescription: String? = null
+    val streamDescription: String? = null,
+    /** The season and episode the Usenet release was searched by, when the episode's own numbering differs. */
+    val usenetSeason: Int? = null,
+    val usenetEpisode: Int? = null
 )
 
 @Singleton
@@ -70,7 +73,9 @@ class StreamLinkCacheDataStore @Inject constructor(
         audioDelayLanguage: String? = null,
         addonName: String? = null,
         addonLogo: String? = null,
-        streamDescription: String? = null
+        streamDescription: String? = null,
+        usenetSeason: Int? = null,
+        usenetEpisode: Int? = null
     ) {
         // Loopback Usenet capabilities expire with the playback process; the release is kept instead.
         if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return
@@ -96,6 +101,8 @@ class StreamLinkCacheDataStore @Inject constructor(
             addonName?.let { put("addonName", it) }
             addonLogo?.let { put("addonLogo", it) }
             streamDescription?.let { put("streamDescription", it) }
+            usenetSeason?.let { put("usenetSeason", it) }
+            usenetEpisode?.let { put("usenetEpisode", it) }
         }.toString()
 
         store().edit { prefs ->
@@ -164,7 +171,9 @@ class StreamLinkCacheDataStore @Inject constructor(
                 audioDelayLanguage = json.optString("audioDelayLanguage", "").ifBlank { null },
                 addonName = json.optString("addonName", "").ifBlank { null },
                 addonLogo = json.optString("addonLogo", "").ifBlank { null },
-                streamDescription = json.optString("streamDescription", "").ifBlank { null }
+                streamDescription = json.optString("streamDescription", "").ifBlank { null },
+                usenetSeason = if (json.has("usenetSeason")) json.optInt("usenetSeason", -1).takeIf { it >= 0 } else null,
+                usenetEpisode = if (json.has("usenetEpisode")) json.optInt("usenetEpisode", -1).takeIf { it >= 1 } else null
             )
         }.getOrNull()
 
