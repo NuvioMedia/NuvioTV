@@ -193,12 +193,12 @@ class MetaMapperTest {
         assertEquals(listOf("aaaaaaaaaaa", "bbbbbbbbbbb"), result.trailerYtIds)
         assertEquals(listOf("https://cdn.example/trailer.mp4"), result.trailerUrls)
         assertEquals(
-            listOf("aaaaaaaaaaa", "https://cdn.example/trailer.mp4", "bbbbbbbbbbb"),
+            listOf("https://cdn.example/trailer.mp4", "aaaaaaaaaaa", "bbbbbbbbbbb"),
             result.trailers.map { it.playbackKey }
         )
-        assertEquals("Duplicate", result.trailers[0].name)
-        assertEquals("Plex 1080p", result.trailers[1].name)
-        assertEquals("https://cdn.example/thumb.jpg", result.trailers[1].thumbnail)
+        assertEquals("Plex 1080p", result.trailers[0].name)
+        assertEquals("https://cdn.example/thumb.jpg", result.trailers[0].thumbnail)
+        assertEquals("Duplicate", result.trailers[1].name)
         assertEquals("Teaser", result.trailers[2].name)
     }
 
@@ -227,11 +227,11 @@ class MetaMapperTest {
         assertEquals(listOf("aaaaaaaaaaa", "bbbbbbbbbbb"), result.trailerYtIds)
         assertEquals(listOf("https://cdn.example/trailer.mp4"), result.trailerUrls)
         assertEquals(
-            listOf("aaaaaaaaaaa", "bbbbbbbbbbb", "https://cdn.example/trailer.mp4"),
+            listOf("https://cdn.example/trailer.mp4", "aaaaaaaaaaa", "bbbbbbbbbbb"),
             result.trailers.map { it.playbackKey }
         )
-        assertEquals("Plex 1080p", result.trailers[2].name)
-        assertEquals("https://cdn.example/thumb.jpg", result.trailers[2].thumbnail)
+        assertEquals("Plex 1080p", result.trailers[0].name)
+        assertEquals("https://cdn.example/thumb.jpg", result.trailers[0].thumbnail)
     }
 
     private fun parse(json: String) = requireNotNull(adapter.fromJson(json)?.meta).toDomain()

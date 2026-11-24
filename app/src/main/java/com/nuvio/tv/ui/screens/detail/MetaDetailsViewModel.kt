@@ -3220,8 +3220,8 @@ class MetaDetailsViewModel @Inject constructor(
             return "meta:$fallback"
         }
 
-        existing.forEach { trailer -> merged.putIfAbsent(keyOf(trailer), trailer) }
         incoming.forEach { trailer -> merged.putIfAbsent(keyOf(trailer), trailer) }
+        existing.forEach { trailer -> merged.putIfAbsent(keyOf(trailer), trailer) }
         return merged.values.toList()
     }
 

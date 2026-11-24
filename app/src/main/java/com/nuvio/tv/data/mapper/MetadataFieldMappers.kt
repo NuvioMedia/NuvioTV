@@ -99,7 +99,7 @@ internal fun mapTrailers(
         if (!seenUrls.add(url)) return@mapNotNull null
         MetaTrailer(name = name, url = url, thumbnail = thumbnail)
     }
-    return fromTrailers + fromStreams
+    return (fromTrailers + fromStreams).sortedByDescending { it.url != null }
 }
 
 private fun isHttpTrailerUrl(url: String): Boolean =
