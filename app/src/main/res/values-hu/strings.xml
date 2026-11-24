@@ -416,6 +416,8 @@
     <string name="about_update_auto_install_subtitle">Az új verziók letöltése a háttérben, majd telepítésük, amikor az eszköz tétlen</string>
     <string name="about_update_auto_install_notice_title">Értesítés az automatikus frissítés után</string>
     <string name="about_update_auto_install_notice_subtitle">Értesítési sáv megjelenítése a következő indításkor, miután az alkalmazás automatikusan frissült</string>
+    <string name="about_update_optimize_install_title">Frissítések optimalizálása telepítéskor</string>
+    <string name="about_update_optimize_install_subtitle">Gyorsabb első indítás frissítés után, de az alkalmazás a telepítés alatt körülbelül egy percre bezárul. Kapcsold ki, ha inkább az Android telepítőképernyőjét használnád</string>
     <string name="about_update_channel_title">Frissítési csatorna</string>
     <string name="about_update_channel_subtitle">Válaszd ki, milyen alkalmazásfrissítéseket szeretnél kapni</string>
     <string name="about_check_updates">Frissítések keresése</string>
@@ -624,6 +626,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">A Nuvio saját, globális fókusz görgetési animációjának és pozicionálásának használata.</string>
     <string name="advanced_rgb565">Képek dekódolása RGB565 formátumban</string>
     <string name="advanced_rgb565_subtitle">Az arra alkalmas, átlátszatlan képeket 16 bites színmélységgel tölti be, így kevesebb memóriát használ. A beállítás módosítása újraindítja az alkalmazást.</string>
+    <string name="advanced_hardware_bitmaps">Hardveres képdekódolás</string>
+    <string name="advanced_hardware_bitmaps_subtitle">A dekódolt képek csak a grafikus memóriában maradnak. Kevesebb RAM-ot használ, de gyengébb GPU-kon az új képek betöltése akadozhat.</string>
     <string name="advanced_memory_only_vertical_scroll">Csak memóriás függőleges görgetés</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">A lemez- és hálózati képkérések kihagyása a kezdőlap sorainak függőleges görgetése közben.</string>
     <string name="advanced_compose_highlighter">Compose Kiemelő</string>
@@ -650,6 +654,7 @@
     <string name="settings_mdblist_subtitle">Külső értékelési szolgáltatók</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro átugrási időbélyegek</string>
     <string name="settings_debrid_subtitle">Kísérleti felhőfiók források</string>
+    <string name="settings_usenet_subtitle">Szolgáltatók, indexelők, lejátszás és diagnosztika</string>
 
     <string name="playback_title">Lejátszási beállítások</string>
     <string name="playback_subtitle">Videólejátszás és feliratok konfigurálása</string>
@@ -775,6 +780,16 @@
     <string name="playback_engine_mvplayer">Libmpv (Béta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatikus motorváltás indítási hiba esetén</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ha a stream indítása sikertelen, váltson automatikusan az ExoPlayer és libmpv között.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Ehhez kapcsold ki a „Következő egyező forrás hiba esetén” beállítást.</string>
+    <string name="autoplay_fallback_next_source">Következő egyező forrás hiba esetén</string>
+    <string name="autoplay_fallback_next_source_sub">Ha az automatikusan kiválasztott forrás hibát ad vagy nem indul el időben, a háttérben megpróbálja a következő egyező forrásokat.</string>
+    <string name="autoplay_fallback_max_sources">Kipróbálandó források száma hiba esetén</string>
+    <string name="autoplay_fallback_max_sources_sub">Hány további egyező forrást próbáljon ki a hibaüzenet megjelenítése előtt.</string>
+    <string name="autoplay_fallback_startup_timeout">Várakozási idő a forrás indulására</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Mennyi ideig várjon egy forrás indulására, mielőtt a következőt próbálja.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$ds</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Ehhez kapcsold ki az „Automatikus motorváltás indítási hiba esetén” beállítást.</string>
+    <string name="player_error_source_startup_timeout">A forrás nem indult el %1$d másodpercen belül.</string>
     <string name="playback_release_decoder_on_background">Dekóder felszabadítása a háttérben</string>
     <string name="playback_release_decoder_on_background_sub">Felszabadítja a videódekódert, amikor a Nuvio a háttérbe kerül. Kapcsold be, ha az alkalmazásba visszatérve dekóderhiba miatt nem működik a lejátszás. Visszatéréskor a lejátszó újratöltődik, a képernyőkímélő után is.</string>
     <string name="playback_external_forward_subtitles">Feliratok továbbítása külső lejátszónak</string>
@@ -811,6 +826,8 @@
     <string name="playback_true_black_letterbox_sub">A kép körüli sávok HDR-ben is feketék maradnak. Kapcsold ki, ha világos csík jelenik meg rajtuk.</string>
     <string name="playback_exo_chapters_title">Fejezetek megjelenítése</string>
     <string name="playback_exo_chapters_sub">Az MKV-fájlok fejezeteinek beolvasása, hogy megjelenjenek a folyamatjelzőn, és lehessen köztük lépkedni.</string>
+    <string name="playback_chapter_title_title">Fejezetcím megjelenítése</string>
+    <string name="playback_chapter_title_sub">Az aktuális fejezet nevének megjelenítése az idősáv felett.</string>
     <string name="audio_trailer_section">Előzetes</string>
     <string name="audio_autoplay_trailers">Előzetesek automatikus lejátszása</string>
     <string name="audio_autoplay_trailers_sub">Előzetesek automatikus lejátszása a részletek oldalon és a lejátszás utáni képernyőn</string>
@@ -923,12 +940,35 @@
     <string name="sub_outline">Körvonal</string>
     <string name="sub_outline_sub">Körvonal megjelenítése a jobb olvashatóság érdekében</string>
     <string name="sub_outline_color">Körvonal színe</string>
+    <string name="sub_outline_width">Körvonal vastagsága</string>
     <string name="sub_hdr_style">Külön stílus HDR-hez / Dolby Visionhöz</string>
     <string name="sub_hdr_style_sub">Eltérő szövegszín és alacsonyabb fényerő használata a HDR- és Dolby Vision-videók feliratainál</string>
     <string name="sub_hdr_text_color">HDR szövegszíne</string>
     <string name="sub_hdr_brightness">HDR-felirat fényereje</string>
     <string name="sub_hdr_dim_player_controls">Lejátszóvezérlők fényerejének csökkentése HDR esetén</string>
     <string name="sub_hdr_dim_player_controls_sub">A HDR-fényerő alkalmazása a HDR- és Dolby Vision-videók felett megjelenő lejátszóvezérlőkre és menükre</string>
+    <string name="sub_appearance">Felirat megjelenése</string>
+    <string name="sub_appearance_desc">Betűtípus, színek, háttér és árnyék</string>
+    <string name="sub_appearance_hint">Szöveges feliratokra vonatkozik. A formázott ASS és a képalapú feliratok megtartják eredeti megjelenésüket.</string>
+    <string name="sub_preview">Előnézet</string>
+    <string name="sub_preview_text">Minden történet egy kis kíváncsisággal kezdődik.</string>
+    <string name="sub_font">Betűtípus</string>
+    <string name="sub_font_default">Alapértelmezett</string>
+    <string name="sub_font_serif">Talpas (serif)</string>
+    <string name="sub_font_mono">Fix szélességű (monospace)</string>
+    <string name="sub_font_import">Importálás telefonról</string>
+    <string name="sub_font_import_desc">Adj hozzá egy legfeljebb 10 MB-os .ttf vagy .otf betűtípust. Az importált betűtípusok ezen a tévén maradnak.</string>
+    <string name="sub_font_import_qr">Olvasd be a telefonoddal egy .ttf vagy .otf betűtípus hozzáadásához</string>
+    <string name="sub_font_missing">A betűtípus nem érhető el ezen az eszközön. Helyette az alapértelmezett betűtípus látható.</string>
+    <string name="sub_font_remove">%1$s eltávolítása</string>
+    <string name="sub_background">Háttér</string>
+    <string name="sub_bg_opacity">Háttér átlátszatlansága</string>
+    <string name="sub_bg_roundness">Sarkok kerekítése</string>
+    <string name="sub_shadow">Vetett árnyék</string>
+    <string name="sub_shadow_desc">Elválasztja a szöveget a világos jelenetektől</string>
+    <string name="sub_shadow_opacity">Árnyék átlátszatlansága</string>
+    <string name="sub_shadow_size">Árnyék mérete</string>
+    <string name="sub_reset_appearance">Megjelenés visszaállítása</string>
     <string name="sub_advanced_section">Speciális felirat-megjelenítés</string>
     <string name="sub_libass">Libass használata ASS/SSA feliratokhoz</string>
     <string name="sub_libass_sub">Fejlett ASS/SSA megjelenítés (stílusok, pozicionálás, animációk)</string>
@@ -1079,6 +1119,8 @@
     <string name="layout_cw_enabled_sub">A Megtekintés folytatása sor megjelenítése a kezdőlapon.</string>
     <string name="layout_use_episode_thumbnails_cw">Epizód miniatűrök használata a folytatásnál</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Epizód miniatűrök használata alapértelmezett képként. Ha ki van kapcsolva, a háttérképet használja.</string>
+    <string name="layout_season_posters">Évadposzterek</string>
+    <string name="layout_season_posters_sub">Az évadok poszterként jelenjenek meg szöveges fülek helyett, ha elérhetők.</string>
     <string name="layout_blur_unwatched">Nem látott epizódok elmosása</string>
     <string name="layout_blur_unwatched_sub">Epizód előnézeti képek elmosása megtekintésig a spoilerek elkerülése végett.</string>
     <string name="layout_episode_options_overlay">Epizódbeállítások megjelenése</string>
@@ -1106,6 +1148,14 @@
     <string name="layout_cw_sort_streaming_desc">Megjelent elemek elöl, hamarosan megjelenők a végén</string>
     <string name="layout_cw_sort_split_upcoming">Külön Hamarosan sor</string>
     <string name="layout_cw_sort_split_upcoming_desc">A még le nem adott epizódok áthelyezése külön Hamarosan sorba</string>
+    <string name="layout_cw_click_action">Kiválasztáskor</string>
+    <string name="layout_cw_click_action_sub">Mi nyíljon meg, ha kiválasztasz egy elemet a Nézés folytatása sorban</string>
+    <string name="layout_cw_click_stream">Stream megnyitása</string>
+    <string name="layout_cw_click_stream_desc">Forrás kiválasztása vagy a lejátszás folytatása</string>
+    <string name="layout_cw_click_details">Adatlap megnyitása</string>
+    <string name="layout_cw_click_details_desc">A cím adatlapjának megnyitása</string>
+    <string name="layout_cw_click_details_upcoming">Adatlap csak a közelgőknél</string>
+    <string name="layout_cw_click_details_upcoming_desc">A még adásba nem került epizódoknál az adatlap, a többinél a stream nyílik meg</string>
     <string name="upcoming_section_title">Hamarosan</string>
     <string name="layout_trailer_button">Előzetes gomb megjelenítése</string>
     <string name="layout_trailer_button_sub">Előzetes gomb a részletek oldalon (csak ha van elérhető előzetes).</string>
@@ -1115,6 +1165,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Az előzetes szünetel, ha lefelé görgetsz, majd folytatódik, amikor visszatérsz az oldal tetejére.</string>
     <string name="layout_trailer_4k">4K előzetesek</string>
     <string name="layout_trailer_4k_sub">Előzetesek lejátszása 1080p feletti felbontásban, ha elérhető. Jóval több memóriát használ, ezért 2 GB vagy kevesebb RAM-mal rendelkező eszközökön alapból ki van kapcsolva.</string>
+    <string name="layout_trailer_subtitles">Előzetesek feliratai</string>
+    <string name="layout_trailer_subtitles_sub">Feliratok megjelenítése az előzeteseken a preferált feliratnyelveden, ha elérhető.</string>
     <string name="layout_detail_group_episodes">Epizódok</string>
     <string name="layout_detail_group_trailers">Előzetesek</string>
     <string name="layout_detail_group_metadata">Metaadatok</string>
@@ -1135,6 +1187,8 @@
     <string name="layout_trailer_muted">Előzetes lejátszása némítva</string>
     <string name="layout_trailer_muted_sub_preview">Előzetes hangjának némítása automatikus lejátszáskor.</string>
     <string name="layout_trailer_muted_sub_expanded">Előzetes hangjának némítása a kiterjesztett kártyákon.</string>
+    <string name="layout_trailer_continue_in_details">Előzetes folytatása az adatlapon</string>
+    <string name="layout_trailer_continue_in_details_sub">Az előzetes tovább játszódik, amikor megnyitod az adatlapot.</string>
     <string name="layout_section_card_style">Poszterkártya stílusa</string>
     <string name="layout_section_card_style_desc">Kártyaszélesség és sarokkerekítés finomhangolása.</string>
     <string name="settings_card_depth_title">Kártyák mélységhatása</string>
@@ -1170,6 +1224,7 @@
     <string name="layout_trailer_location_sub">Válaszd ki, hol induljon az előzetes Modern nézetben.</string>
     <string name="layout_trailer_expanded_card">Kiterjesztett kártya</string>
     <string name="layout_trailer_hero_media">Kiemelt média</string>
+    <string name="layout_trailer_hero_media_no_expand">Kiemelt média (kibontás nélkül)</string>
     <string name="layout_preset_compact">Kompakt</string>
     <string name="layout_preset_dense">Sűrű</string>
     <string name="layout_preset_standard">Szabványos</string>
@@ -1220,6 +1275,13 @@
     <string name="web_custom_poster_none">Nincs megadva URL-minta</string>
     <string name="web_custom_poster_loading">Betöltés…</string>
     <string name="web_custom_poster_placeholders_info">Helyőrzők: a {id} minden elérhető tartalomazonosítót továbbít. A {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} egyetlen azonosítótípust céloz; ha nem elérhető, az eredeti poszter marad. A {imdb_id|tmdb_id|kitsu_id} felsorolja a támogatott azonosítótípusokat; a megfelelő lesz használva, egyébként az eredeti poszter marad. A helyőrzőt a ? jellel teheted opcionálissá, ilyenkor kihagyás helyett üres értéket kap: {imdb_id?}. További helyőrzők: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Feliratbetűtípusok</string>
+    <string name="web_subtitle_font_subtitle">Válassz egy .ttf vagy .otf fájlt, hogy a tévéden a feliratokhoz használd.</string>
+    <string name="web_subtitle_font_choose">Betűtípusfájl kiválasztása</string>
+    <string name="web_subtitle_font_uploading">Feltöltés…</string>
+    <string name="web_subtitle_font_added">Hozzáadva a tévédhez</string>
+    <string name="web_subtitle_font_error">Nem sikerült importálni ezt a betűtípust. Válassz egy érvényes, 10 MB-nál kisebb .ttf vagy .otf fájlt.</string>
+    <string name="web_subtitle_font_connection_error">Kapcsolódási hiba</string>
     <string name="mdblist_name">MDBList</string>
     <string name="mdblist_tracking_description">Megtekintési előzmények és lejátszási állapot szinkronizálása az eszközök között</string>
     <string name="mdblist_connected_as">Csatlakoztatott fiók: %1$s</string>
@@ -1243,6 +1305,7 @@
 
 
     <string name="mdblist_title">MDBList értékelések</string>
+    <string name="mdblist_subtitle">Az adatlap kiemelt részén megjelenő külső értékelések beállítása</string>
     <string name="mdblist_enable_title">MDBList értékelések engedélyezése</string>
     <string name="mdblist_enable_subtitle">Értékelések lekérése külső szolgáltatóktól a részletek képernyőn</string>
     <string name="mdblist_api_key_title">API-kulcs</string>
@@ -1269,6 +1332,7 @@
     <string name="mdblist_show_on_hero_title">MDBList-értékelések megjelenítése a kiemelt tartalmaknál</string>
     <string name="mdblist_show_on_hero_subtitle">MDBList-értékelések megjelenítése a kiemelt tartalmak modern és klasszikus/rácsos nézetében</string>
     <string name="mdblist_rating_order_title">Értékelések sorrendje</string>
+    <string name="mdblist_rating_order_subtitle">A modern kiemelt részen az első 3 bekapcsolt és elérhető értékelés jelenik meg. A sorrendet az átrendezés gombbal módosíthatod.</string>
     <string name="mdblist_dialog_title">MDBList API-kulcs</string>
     <string name="mdblist_dialog_subtitle">Add meg az API-kulcsot a külső értékelések lekéréséhez</string>
     <string name="mdblist_dialog_placeholder">MDBList API-kulcs megadása</string>
@@ -1485,6 +1549,8 @@
     <string name="tmdb_networks_subtitle">Csatornák és logóik a TMDB-ről</string>
     <string name="tmdb_episodes_title">Epizódok</string>
     <string name="tmdb_episodes_subtitle">Epizódcímek, leírások, miniatűrök és hosszak a TMDB-ről</string>
+    <string name="tmdb_season_posters_title">Évadposzterek</string>
+    <string name="tmdb_season_posters_subtitle">TMDB-évadposzterek az adatlap évadfüleihez</string>
     <string name="tmdb_trailers_title">Előzetesek</string>
     <string name="tmdb_trailers_subtitle">Előzetes jelöltek a TMDB videókból a részletek oldal előzetes szekciójához</string>
     <string name="tmdb_more_like_this_title">Hasonlóak</string>
@@ -1728,6 +1794,13 @@
     <string name="addon_installing">Telepítés</string>
     <string name="addon_install_btn">Telepítés</string>
     <string name="addon_install_success">Telepítve: %1$s</string>
+    <string name="addon_tracking_consent_title">Aktivitáskövető kiegészítő</string>
+    <string name="addon_tracking_consent_body">A(z) %1$s egy aktivitáskövető kiegészítő. A Nuvio elküldi neki a tevékenységedet: mit indítasz el, szüneteltetsz és állítasz le (a lejátszási pozícióval együtt), mit adsz hozzá a könyvtáradhoz vagy távolítasz el onnan, és mit jelölsz megtekintettként vagy nem megtekintettként. Ezek az adatok elhagyják a Nuviót, és a kiegészítő fejlesztője, valamint az általa használt szolgáltatás kezeli őket.</string>
+    <string name="addon_tracking_consent_checkbox">Hozzájárulok, hogy a megtekintési aktivitásomat és a könyvtáramat megosszam ezzel a kiegészítővel</string>
+    <string name="addon_tracking_consent_checked">Bejelölve</string>
+    <string name="addon_tracking_consent_unchecked">Nincs bejelölve</string>
+    <string name="addon_tracking_consent_cancel">Mégse</string>
+    <string name="addon_tracking_consent_install">Telepítés</string>
     <string name="addon_error_invalid_url">Adj meg egy érvényes bővítmény URL-t</string>
     <string name="addon_error_invalid_scheme">A bővítmény URL-jének http-vel vagy https-sel kell kezdődnie</string>
     <string name="addon_installed_section">Telepítve</string>
@@ -1775,6 +1848,9 @@
     <string name="catalog_order_disabled_on_home">Letiltva a kezdőlapon</string>
     <string name="catalog_order_enable">Engedélyezés</string>
     <string name="catalog_order_disable">Letiltás</string>
+    <string name="catalog_order_pinned">Kitűzött</string>
+    <string name="catalog_order_pinned_to_top">Felülre kitűzve</string>
+    <string name="catalog_order_pin_to_move_toast">A mozgatáshoz szüntesd meg a gyűjtemény felülre kitűzését</string>
 
 
     <string name="stream_retry">Újra</string>
@@ -1991,6 +2067,7 @@
     <string name="subtitle_off">Ki</string>
     <string name="subtitle_style_title">Felirat stílusa</string>
     <string name="subtitle_style_customize">Testreszabás</string>
+    <string name="subtitle_style_customize_ass">ASS/SSA formázás testreszabása</string>
     <string name="subtitle_style_color">Szín</string>
     <string name="subtitle_style_reset">Visszaállítás</string>
     <string name="subtitle_style_font_size">Betűméret</string>
@@ -2157,6 +2234,10 @@
     <string name="library_status_dropped">Abbahagyott</string>
     <string name="library_syncing_library">Könyvtár szinkronizálása\u2026</string>
     <string name="library_type_all">Összes</string>
+    <string name="library_empty_title">Nincs megjeleníthető elem</string>
+    <string name="library_empty_local_hint">Módosítsd a szűrőket, vagy ments el kedvenceket, hogy itt megjelenjenek</string>
+    <string name="library_empty_trakt_hint">Módosítsd a szűrőket, vagy az adatlapon a + gombbal adj hozzá elemeket a megnézendőkhöz vagy a listáidhoz</string>
+    <string name="library_empty_simkl_hint">Módosítsd a szűrőket, vagy az adatlapon a + gombbal sorold be az elemeket egy Simkl-állapotba</string>
     <string name="library_empty_trakt_not_auth_title">A Trakt nincs csatlakoztatva</string>
     <string name="library_empty_trakt_not_auth_subtitle">Csatlakoztasd a Trakt fiókodat a Beállításokban a Trakt könyvtárad megtekintéséhez</string>
     <string name="library_empty_simkl_not_auth_title">A Simkl nincs csatlakoztatva</string>
@@ -2373,6 +2454,7 @@
     <string name="cast_detail_error">Valami hiba történt</string>
     <string name="cast_detail_retry">Újra</string>
     <string name="cast_detail_filmography">Filmográfia</string>
+    <string name="cast_detail_filter_all">Összes</string>
     <string name="cast_detail_born">Született: %1$s</string>
     <string name="cast_detail_born_died">Született: %1$s – † %2$s</string>
     <string name="cast_detail_age">%1$d éves</string>
@@ -2453,6 +2535,8 @@
     <string name="update_checking">Frissítések keresése\u2026</string>
     <string name="update_waiting_for_stable">A következő stabil verziót akkor kapod meg, amikor megjelenik</string>
     <string name="update_download_complete">A letöltés befejeződött. Telepítésre kész.</string>
+    <string name="update_ready_closes">A letöltés kész. Az alkalmazás bezárul, amíg a frissítés települ, ez egy percig is eltarthat. Utána nyisd meg újra.</string>
+    <string name="update_ready_closes_and_reopens">A letöltés kész. Az alkalmazás bezárul, amíg a frissítés települ, majd magától újra megnyílik. Ez egy percig is eltarthat.</string>
     <string name="update_installed_automatically">Automatikusan frissítve, amíg az eszköz tétlen volt</string>
     <string name="update_up_to_date">A rendszer naprakész. Legújabb változások:</string>
     <string name="update_close">Bezárás</string>
@@ -2491,6 +2575,10 @@
     <string name="plugin_repo_added_with_providers">Hozzáadva: %1$s, %2$d szolgáltatóval</string>
     <string name="plugin_repo_removed">Adattár eltávolítva</string>
     <string name="plugin_repo_refreshed">Adattár frissítve</string>
+    <string name="plugin_repo_delete_confirm_title">Törlöd az adattárat?</string>
+    <string name="plugin_repo_delete_confirm_message">Biztosan törölni szeretnéd?</string>
+    <string name="plugin_repo_delete_no">Nem</string>
+    <string name="plugin_repo_delete_yes">Igen</string>
 
     <!-- Trakt errors -->
 
@@ -2561,6 +2649,7 @@
     <string name="cd_loading_logo">Logó betöltése</string>
     <string name="cd_move_up">Mozgatás felfelé</string>
     <string name="cd_move_down">Mozgatás lefelé</string>
+    <string name="cd_reorder">Átrendezés</string>
     <string name="cd_edit">Szerkesztés</string>
     <string name="cd_delete">Törlés</string>
     <string name="cd_qr_code">QR-kód</string>
@@ -2632,10 +2721,21 @@
     <string name="collections_valid_summary">%1$d gyűjtemény, %2$d mappa</string>
     <string name="collections_confirm_import">Importálás megerősítése</string>
     <string name="collections_folder_count">%1$d mappa</string>
+    <string name="collections_pinned">Kitűzött</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Sor címe</string>
     <string name="collections_editor_save">Mentés</string>
+    <string name="collections_editor_unsaved_title">Mented a módosításokat?</string>
+    <string name="collections_editor_unsaved_subtitle">Ennek a gyűjteménynek nem mentett módosításai vannak.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Nem mentett módosítások</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">A gyűjtemény mentéséhez adj meg egy címet, és adj hozzá legalább egy mappát.</string>
+    <string name="collections_editor_unsaved_missing_title">A módosítások mentéséhez adj meg egy gyűjteménycímet.</string>
+    <string name="collections_editor_unsaved_missing_folder">A gyűjtemény mentéséhez adj hozzá legalább egy mappát.</string>
+    <string name="collections_editor_folder_unsaved_title">Mented a mappa módosításait?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Ennek a mappának nem mentett módosításai vannak.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Nem mentett mappamódosítások</string>
+    <string name="collections_editor_folder_unsaved_missing_source">A mappa mentéséhez adj hozzá legalább egy forrást.</string>
     <string name="collections_editor_backdrop">Háttérkép</string>
     <string name="collections_editor_pin_above">Rögzítés a katalógusok fölé</string>
     <string name="collections_editor_pin_above_desc">Ez a gyűjtemény jelenjen meg minden általános kezdőlap katalógus fölött. Több rögzített gyűjtemény a létrehozás sorrendjét követi.</string>
@@ -3375,6 +3475,13 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="stream_test_error_prefix">Hiba: %1$s</string>
     <string name="stream_test_video_bitrate">A videó átlagos bitrátája: %1$s</string>
     <string name="stream_test_error_connection">A kapcsolat nem jött létre. A legutóbb lejátszott stream link lejárhatott, vagy nem elérhető. Játszd le újra a videót, majd próbáld meg ismét.</string>
+    <string name="player_finding_next_stream">Következő stream keresése…</string>
+    <string name="player_trying_next_stream">Következő stream kipróbálása (%1$d. próbálkozás)…</string>
+    <string name="player_stream_fallback_exhausted">Nincs több működő stream. Válassz másik forrást, vagy próbáld újra.</string>
+    <string name="usenet_builtin_addon_title">Beépített Usenet</string>
+    <string name="usenet_builtin_addon_desc">Találatok a saját NNTP-szolgáltatóidtól és Newznab-indexelőidtől. Mozgasd, hogy eldöntsd, hol jelenjenek meg a listában.</string>
+    <string name="usenet_fallback">Automatikus Usenet-tartalék</string>
+    <string name="usenet_fallback_description">Ha egy Usenet-stream hibát ad, a következő Usenet-források kipróbálása a beállított próbálkozási korlátig. A torrent- és egyéb streamek soha nem váltanak automatikusan.</string>
     <string name="random_episode_title">Véletlenszerű lejátszás</string>
     <string name="layout_random_episode_sub">Véletlenszerű epizódok lejátszása bármely sorozatból. Kikapcsoláskor a véletlenszerű lejátszás szünetel.</string>
     <string name="random_episode_unwatched">Nem látott epizódok</string>
@@ -3405,7 +3512,23 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="autosync_thorough_title">Alaposabb feliratszinkronizálás</string>
     <string name="autosync_thorough_description">A pontosabb egyezésért további feliratokat és beágyazott sávokat is összehasonlít. Kikapcsolva hamarabb alkalmazza az első megbízható egyezést. Csak biztos egyezés esetén módosítja az időzítést.</string>
     <string name="autosync_label_synced">Automatikusan időzítve</string>
+    <string name="autosync_status_title">Automatikus szinkronizálás állapota</string>
+    <string name="autosync_status_synced">Szinkronizálva</string>
+    <string name="autosync_status_not_needed">Nem szükséges</string>
+    <string name="autosync_status_in_progress">Folyamatban</string>
+    <string name="autosync_status_no_fit">Lehet, hogy nem egyezik</string>
+    <string name="autosync_status_no_reference">Nincs beágyazott felirat</string>
+    <string name="autosync_status_failed">Sikertelen</string>
     <string name="stream_resume_from_time">Folytatás innen: %1$s</string>
     <string name="stream_resume_from_percent">Folytatás innen: %1$d%%</string>
+    <string name="player_disc_titles">Lemez címei</string>
+    <string name="player_disc_title_feature">Főfilm · %1$d perc</string>
+    <string name="player_disc_title_extra">Extra · %1$d perc</string>
+    <string name="player_disc_title_subtitles">Feliratok: %1$s</string>
+    <string name="player_disc_title_failed">Ez a cím nem játszható le</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d klip</item>
+        <item quantity="other">%d klip</item>
+    </plurals>
 
 </resources>
