@@ -167,6 +167,7 @@ private class DetailTapScroll {
 }
 
 private const val RAPID_DOWN_TAP_MS = 280L
+private const val LEFT_GRADIENT_FADE_FRACTION = 0.78f
 
 private enum class PeopleSectionTab {
     CAST,
@@ -912,6 +913,7 @@ fun MetaDetailsScreen(
                     modifier = Modifier.graphicsLayer {
                         alpha = playOnLoadReturnContentAlpha
                     },
+                    drawBackground = playOnLoad && !playOnLoadReturnContentRevealed,
                     heroBackdropUrl = heroBackdropUrl,
                     meta = meta,
                     detailReturnEpisodeFocusRequest = DetailReturnEpisodeFocusRequest(
@@ -1259,6 +1261,7 @@ fun MetaDetailsScreen(
 @Composable
 private fun MetaDetailsContent(
     modifier: Modifier = Modifier,
+    drawBackground: Boolean = false,
     heroBackdropUrl: String? = null,
     meta: Meta,
     detailReturnEpisodeFocusRequest: DetailReturnEpisodeFocusRequest? = null,
@@ -2301,7 +2304,7 @@ private fun MetaDetailsContent(
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
         val bmp = android.graphics.Bitmap.createBitmap(w, 2, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
-        val fadeWidth = w * 0.78f
+        val fadeWidth = w * LEFT_GRADIENT_FADE_FRACTION
         val shader = if (isRtl) {
             android.graphics.LinearGradient(
                 w.toFloat(), 0f, w - fadeWidth, 0f,
@@ -2380,6 +2383,7 @@ private fun MetaDetailsContent(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
+                if (!drawBackground) return@drawBehind
                 val ownTrailerRendering = (isTrailerPlaying || isBackgroundTrailerPlaying) &&
                     contentBackgroundTrailerController?.isRendering(trailerUrl) == true
                 if (!ownTrailerRendering) drawRect(backgroundColor)
@@ -3478,9 +3482,22 @@ private fun BackdropLayer(
                 .drawWithCache {
                     onDrawBehind {
                         if (gradientAlphaState.value > 0f) {
+                            val srcWidth = kotlin.math.ceil(leftGradient.width * LEFT_GRADIENT_FADE_FRACTION).toInt()
+                                .coerceIn(1, leftGradient.width)
+                            val dstWidth = kotlin.math.ceil(size.width * srcWidth / leftGradient.width).toInt()
+                            val rtl = layoutDirection == LayoutDirection.Rtl
                             drawImage(
                                 leftGradient,
-                                dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+                                srcOffset = androidx.compose.ui.unit.IntOffset(
+                                    if (rtl) leftGradient.width - srcWidth else 0,
+                                    0
+                                ),
+                                srcSize = androidx.compose.ui.unit.IntSize(srcWidth, leftGradient.height),
+                                dstOffset = androidx.compose.ui.unit.IntOffset(
+                                    if (rtl) size.width.toInt() - dstWidth else 0,
+                                    0
+                                ),
+                                dstSize = androidx.compose.ui.unit.IntSize(dstWidth, size.height.toInt()),
                                 alpha = gradientAlphaState.value,
                                 filterQuality = androidx.compose.ui.graphics.FilterQuality.Low
                             )
