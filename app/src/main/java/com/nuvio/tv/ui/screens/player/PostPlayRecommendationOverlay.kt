@@ -320,7 +320,7 @@ fun PostPlayRecommendationOverlay(
                     val showTrailerButton = shouldShowPostPlayTrailerAction(
                         recommendation = recommendation,
                         isTrailerPlaying = state.isTrailerPlaying,
-                        inAppTrailerPlaybackEnabled = AppFeaturePolicy.inAppTrailerPlaybackEnabled
+                        inAppTrailerPlaybackEnabled = AppFeaturePolicy.youTubeTrailerPlaybackEnabled
                     )
                     val showNavigationButtons = state.recommendationCount > 1
                     val actionButtonCount = if (showTrailerButton) 2 else 1

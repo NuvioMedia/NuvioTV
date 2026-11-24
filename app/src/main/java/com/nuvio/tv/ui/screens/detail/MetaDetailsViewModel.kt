@@ -164,6 +164,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerPlayInBackground = false
     private var trailerHasPlayed = false
     private var trailerHandoffActive = false
+    private var trailerUrlIsExternal = false
     private var handoffTrailerYoutubeKey: String? = null
     private var suppressSeasonAutoSwitch = false
 
@@ -2923,7 +2924,7 @@ class MetaDetailsViewModel @Inject constructor(
                 null
             }
 
-            val source = if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            val inAppSource = if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
                 trailerService.getTrailerPlaybackSource(
                     title = meta.name,
                     year = year,
@@ -2939,6 +2940,9 @@ class MetaDetailsViewModel @Inject constructor(
                     )
                 }
             } else {
+                null
+            }
+            val externalSource = if (inAppSource == null && !AppFeaturePolicy.youTubeTrailerPlaybackEnabled) {
                 val externalUrl = if (AppFeaturePolicy.externalTrailerPlaybackEnabled) {
                     trailerService.getExternalTrailerUrl(
                         tmdbId = tmdbId,
@@ -2950,7 +2954,11 @@ class MetaDetailsViewModel @Inject constructor(
                     null
                 }
                 externalUrl?.let { com.nuvio.tv.data.trailer.TrailerPlaybackSource(videoUrl = it) }
+            } else {
+                null
             }
+            trailerUrlIsExternal = inAppSource == null && externalSource != null
+            val source = inAppSource ?: externalSource
             val url = source?.videoUrl
             val audioUrl = source?.audioUrl
 
@@ -2969,7 +2977,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            if (url != null && isPlayButtonFocused && AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            if (url != null && isPlayButtonFocused && AppFeaturePolicy.inAppTrailerPlaybackEnabled && !trailerUrlIsExternal) {
                 startIdleTimer()
             }
         }
@@ -2977,7 +2985,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun startIdleTimer() {
         idleTimerJob?.cancel()
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled || trailerUrlIsExternal) return
 
         val state = _uiState.value
         if (state.trailerUrl == null || state.isTrailerPlaying || state.isBackgroundTrailerPlaying) return
@@ -3037,7 +3045,7 @@ class MetaDetailsViewModel @Inject constructor(
     private fun handleTrailerButtonClick() {
         val state = _uiState.value
         if (state.trailerUrl.isNullOrBlank()) return
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled || trailerUrlIsExternal) {
             openExternalTrailer(state.trailerUrl)
             return
         }
@@ -3099,7 +3107,9 @@ class MetaDetailsViewModel @Inject constructor(
             return
         }
 
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
+        val playsInApp = AppFeaturePolicy.inAppTrailerPlaybackEnabled &&
+            (directUrl != null || AppFeaturePolicy.youTubeTrailerPlaybackEnabled)
+        if (!playsInApp && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
             openExternalTrailer(directUrl ?: "https://www.youtube.com/watch?v=$ytId")
             return
         }
