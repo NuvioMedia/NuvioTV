@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.components
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -12,16 +13,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
-import coil3.imageLoader
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
-import coil3.request.SuccessResult
+import coil3.BitmapImage
+import coil3.Image
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -29,61 +27,63 @@ import kotlin.math.max
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun rememberArtworkBackedCardGlow(
-    imageUrl: String?,
+    cover: Image?,
+    isFocused: Boolean,
     fallbackSeed: String,
     enabled: Boolean,
     fallbackColor: Color = NuvioTheme.colors.FocusBackground
 ): CardGlow {
-    val focusedGlow = rememberArtworkBackedFocusGlow(imageUrl, fallbackSeed, enabled, fallbackColor)
+    val focusedGlow = rememberArtworkBackedFocusGlow(cover, isFocused, fallbackSeed, enabled, fallbackColor)
     return remember(focusedGlow) { CardDefaults.glow(focusedGlow = focusedGlow) }
 }
 
 /** The focused [Glow] of [rememberArtworkBackedCardGlow], for cards that take a plain [Glow]. */
 @Composable
 fun rememberArtworkBackedFocusGlow(
-    imageUrl: String?,
+    cover: Image?,
+    isFocused: Boolean,
     fallbackSeed: String,
     enabled: Boolean,
     fallbackColor: Color = NuvioTheme.colors.FocusBackground
 ): Glow {
     if (!enabled) return Glow.None
 
-    val context = LocalContext.current
-    var glowColor by remember(imageUrl, fallbackSeed, fallbackColor) {
-        mutableStateOf(deriveFallbackGlowColor(fallbackSeed, fallbackColor))
+    val fallback = remember(fallbackSeed, fallbackColor) {
+        deriveFallbackGlowColor(fallbackSeed, fallbackColor)
     }
-
-    LaunchedEffect(context, imageUrl, fallbackSeed, fallbackColor, enabled) {
-        if (!enabled) {
-            glowColor = deriveFallbackGlowColor(fallbackSeed, fallbackColor)
-            return@LaunchedEffect
-        }
-
-        val fallback = deriveFallbackGlowColor(fallbackSeed, fallbackColor)
-        if (imageUrl.isNullOrBlank()) {
-            glowColor = fallback
-            return@LaunchedEffect
-        }
-
-        glowColor = withContext(Dispatchers.IO) {
-            val request = ImageRequest.Builder(context)
-                .data(imageUrl)
-                .allowHardware(false)
-                .size(coil3.size.Size(96, 96))
-                .build()
-            val result = context.imageLoader.execute(request)
-            val image = (result as? SuccessResult)?.image ?: return@withContext fallback
-            val bitmap = (image as? coil3.BitmapImage)?.bitmap ?: return@withContext fallback
-            sampledGlowColor(bitmap)
-                ?: fallback
+    var artworkColor by remember(cover, fallback) { mutableStateOf<Color?>(null) }
+    LaunchedEffect(cover, isFocused, fallback) {
+        if (isFocused && cover is BitmapImage && artworkColor == null) {
+            // Use the cover that's already on screen. A separate small Coil
+            // request can still fetch the entire image on a cold cache.
+            artworkColor = withContext(Dispatchers.Default) {
+                sampleCoverGlow(cover.bitmap) ?: fallback
+            }
         }
     }
 
+    val glowColor = artworkColor ?: fallback
     return remember(glowColor) {
         Glow(
             elevationColor = glowColor,
             elevation = 28.dp
         )
+    }
+}
+
+private fun sampleCoverGlow(bitmap: Bitmap): Color? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || bitmap.config != Bitmap.Config.HARDWARE) {
+        return sampledGlowColor(bitmap)
+    }
+    val readable = try {
+        bitmap.copy(Bitmap.Config.ARGB_8888, false)
+    } catch (_: IllegalStateException) {
+        null
+    } ?: return null
+    return try {
+        sampledGlowColor(readable)
+    } finally {
+        readable.recycle()
     }
 }
 
