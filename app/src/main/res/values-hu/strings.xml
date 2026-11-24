@@ -244,7 +244,7 @@
     <string name="detail_comments_episode_picker_title">Epizód kiválasztása</string>
     <string name="detail_comments_episode_picker_subtitle">Válassz egy epizódot a Trakt-kritikák megtekintéséhez</string>
     <string name="detail_section_network">Csatorna</string>
-    <string name="detail_section_production">Gyártó</string>
+    <string name="detail_section_production">Gyártás</string>
     <string name="detail_comments_empty">Még nincsenek Trakt-kritikák.</string>
     <string name="detail_comments_error">Jelenleg nem sikerült betölteni a Trakt-kritikákat.</string>
     <string name="detail_trailer_loading">Előzetes betöltése...</string>
@@ -763,7 +763,7 @@
     <string name="playback_auto_skip_segments_sub">Válaszd ki, mely szakaszokat ugorja át automatikusan.</string>
     <string name="auto_skip_intro">Intró / főcímdal</string>
     <string name="auto_skip_intro_sub">Intrók és animék főcímdalainak automatikus átugrása.</string>
-    <string name="auto_skip_recap">Recap (összefoglaló)</string>
+    <string name="auto_skip_recap">Összefoglaló (Recap)</string>
     <string name="auto_skip_recap_sub">Összefoglalók automatikus átugrása.</string>
     <string name="auto_skip_outro">Outró / zárócím</string>
     <string name="auto_skip_outro_sub">Outrók és animék zárócímeinek automatikus átugrása.</string>
@@ -2153,7 +2153,7 @@
     <string name="library_filter_watched">Megtekintett</string>
     <string name="library_watched_filter_all">Összes</string>
     <string name="library_watched_filter_watched">Megtekintett</string>
-    <string name="library_watched_filter_unwatched">Nem látott</string>
+    <string name="library_watched_filter_unwatched">Nem megtekintett</string>
     <string name="genre_action">Akció</string>
     <string name="genre_adventure">Kaland</string>
     <string name="genre_animation">Animáció</string>
