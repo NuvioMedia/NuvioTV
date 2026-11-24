@@ -7,7 +7,6 @@ import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
 import android.util.Log
-import com.nuvio.tv.core.util.hasPendingJob
 import com.nuvio.tv.core.util.scheduleSafely
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -22,7 +21,6 @@ import kotlinx.coroutines.launch
 private const val TAG = "TvChannelSync"
 private const val JOB_ID_PERIODIC = 10_010
 private const val JOB_ID_IMMEDIATE = 10_011
-private const val PERIODIC_INTERVAL_MS = 15 * 60_000L  // 15 minutes (JobScheduler OS minimum)
 
 /**
  * Background job that keeps the Continue Watching preview channel in sync when the app
@@ -81,19 +79,9 @@ class TvChannelRefreshJobService : JobService() {
     }
 
     companion object {
-        fun schedulePeriodic(context: Context) {
+        fun cancelPeriodic(context: Context) {
             val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-            if (scheduler.hasPendingJob(JOB_ID_PERIODIC)) return
-            val job = JobInfo.Builder(
-                JOB_ID_PERIODIC,
-                ComponentName(context, TvChannelRefreshJobService::class.java)
-            )
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setPeriodic(PERIODIC_INTERVAL_MS)
-                .setPersisted(true)
-                .build()
-            if (!scheduler.scheduleSafely(job)) return
-            Log.d(TAG, "Scheduled periodic TV channel refresh every ${PERIODIC_INTERVAL_MS / 60_000}min")
+            scheduler.cancel(JOB_ID_PERIODIC)
         }
 
         fun scheduleImmediate(context: Context) {
