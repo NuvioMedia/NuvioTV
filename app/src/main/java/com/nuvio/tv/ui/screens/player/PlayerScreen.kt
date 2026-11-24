@@ -700,11 +700,29 @@ fun PlayerScreen(
                     }
                 }
 
-                if (keyEvent.nativeKeyEvent.keyCode != KeyEvent.KEYCODE_CAPTIONS) {
+                val keyCode = keyEvent.nativeKeyEvent.keyCode
+                if (keyCode != KeyEvent.KEYCODE_CAPTIONS && keyCode != KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK) {
                     return@onPreviewKeyEvent false
                 }
 
                 if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_UP) {
+                    return@onPreviewKeyEvent true
+                }
+
+                if (keyCode == KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK) {
+                    if (
+                        !uiState.showSubtitleDelayOverlay &&
+                        !uiState.showEpisodesPanel &&
+                        !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
+                        !uiState.showPartyPanel &&
+                        !uiState.showAudioOverlay &&
+                        !uiState.showSubtitleOverlay &&
+                        !uiState.showSubtitleStylePanel &&
+                        !uiState.showSubtitleTimingDialog &&
+                        !(uiState.showSpeedDialog || uiState.showDiscTitlesDialog)
+                    ) {
+                        viewModel.onEvent(PlayerEvent.OnShowAudioOverlay)
+                    }
                     return@onPreviewKeyEvent true
                 }
 
