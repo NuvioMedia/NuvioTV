@@ -719,7 +719,7 @@ fun PlayerScreen(
                         !uiState.showSubtitleOverlay &&
                         !uiState.showSubtitleStylePanel &&
                         !uiState.showSubtitleTimingDialog &&
-                        !uiState.showSpeedDialog
+                        !(uiState.showSpeedDialog || uiState.showDiscTitlesDialog)
                     ) {
                         viewModel.onEvent(PlayerEvent.OnShowAudioOverlay)
                     }
