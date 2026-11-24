@@ -36,6 +36,7 @@ fun MetaPreviewDto.toDomainOrNull(catalogType: String, sourceAddonBaseUrl: Strin
         behaviorHints = mapBehaviorHints(behaviorHints),
         trailers = mapTrailers(trailers, trailerStreams),
         trailerYtIds = collectTrailerYtIds(trailers, trailerStreams),
+        trailerUrls = collectTrailerUrls(trailers, trailerStreams),
         sourceAddonBaseUrl = sourceAddonBaseUrl
     )
 }

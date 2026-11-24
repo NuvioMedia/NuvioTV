@@ -1695,7 +1695,8 @@ class MetaDetailsViewModel @Inject constructor(
             if (mergedTrailers.isNotEmpty()) {
                 updated = updated.copy(
                     trailers = mergedTrailers,
-                    trailerYtIds = mergedTrailers.mapNotNull { it.ytId }.distinct()
+                    trailerYtIds = mergedTrailers.mapNotNull { it.ytId }.distinct(),
+                    trailerUrls = mergedTrailers.mapNotNull { it.url }.distinct()
                 )
             }
         }
@@ -2928,7 +2929,9 @@ class MetaDetailsViewModel @Inject constructor(
                     year = year,
                     tmdbId = tmdbId,
                     type = meta.apiType
-                ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                ) ?: meta.trailerUrls.firstOrNull()?.let { url ->
+                    com.nuvio.tv.data.trailer.TrailerPlaybackSource(videoUrl = url)
+                } ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
                     trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
                         youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
                         title = meta.name,
@@ -2940,7 +2943,7 @@ class MetaDetailsViewModel @Inject constructor(
                     trailerService.getExternalTrailerUrl(
                         tmdbId = tmdbId,
                         type = meta.apiType
-                    ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                    ) ?: meta.trailerUrls.firstOrNull() ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
                         "https://www.youtube.com/watch?v=$ytId"
                     }
                 } else {
@@ -3081,7 +3084,8 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun handleSharedTrailerSelected(trailer: MetaTrailer) {
         val ytId = trailer.ytId?.trim().orEmpty()
-        if (ytId.isBlank()) {
+        val directUrl = trailer.url?.trim()?.takeIf { ytId.isBlank() && it.isNotBlank() }
+        if (ytId.isBlank() && directUrl == null) {
             _uiState.update { state ->
                 state.copy(
                     isSharedTrailerOverlayVisible = true,
@@ -3096,7 +3100,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
-            openExternalTrailer("https://www.youtube.com/watch?v=$ytId")
+            openExternalTrailer(directUrl ?: "https://www.youtube.com/watch?v=$ytId")
             return
         }
 
@@ -3108,6 +3112,20 @@ class MetaDetailsViewModel @Inject constructor(
                 showControls = false,
                 hideLogo = false
             )
+        }
+
+        if (directUrl != null) {
+            _uiState.update { state ->
+                state.copy(
+                    isSharedTrailerOverlayVisible = true,
+                    isSharedTrailerLoading = false,
+                    sharedTrailerUrl = directUrl,
+                    sharedTrailerAudioUrl = null,
+                    sharedTrailerErrorMessage = null,
+                    selectedSharedTrailer = trailer
+                )
+            }
+            return
         }
 
         _uiState.update { state ->
@@ -3133,7 +3151,7 @@ class MetaDetailsViewModel @Inject constructor(
             )
 
             _uiState.update { state ->
-                if (state.selectedSharedTrailer?.ytId != trailer.ytId) {
+                if (state.selectedSharedTrailer?.playbackKey != trailer.playbackKey) {
                     state
                 } else {
                     state.copy(
@@ -3177,7 +3195,7 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun mergeTrailers(existing: List<MetaTrailer>, incoming: List<MetaTrailer>): List<MetaTrailer> {
-        if (existing.isEmpty()) return incoming.distinctBy { it.ytId ?: it.name ?: it.type ?: "" }
+        if (existing.isEmpty()) return incoming.distinctBy { it.playbackKey ?: it.name ?: it.type ?: "" }
         if (incoming.isEmpty()) return existing
 
         val merged = LinkedHashMap<String, MetaTrailer>()
@@ -3185,6 +3203,8 @@ class MetaDetailsViewModel @Inject constructor(
         fun keyOf(trailer: MetaTrailer): String {
             val yt = trailer.ytId?.trim().orEmpty()
             if (yt.isNotBlank()) return "yt:$yt"
+            val url = trailer.url?.trim().orEmpty()
+            if (url.isNotBlank()) return "url:$url"
             val fallback = listOf(trailer.name, trailer.type, trailer.lang)
                 .joinToString("|") { it?.trim()?.lowercase().orEmpty() }
             return "meta:$fallback"

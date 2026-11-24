@@ -1945,7 +1945,7 @@ private fun MetaDetailsContent(
     }
     val hasCastSection = directorWriterMembers.isNotEmpty() || normalCastMembers.isNotEmpty()
     val hasMoreLikeThisSection = moreLikeThis.isNotEmpty()
-    val hasTrailerSection = remember(meta.trailers) { meta.trailers.any { !it.ytId.isNullOrBlank() } }
+    val hasTrailerSection = remember(meta.trailers) { meta.trailers.any { it.playbackKey != null } }
     val showEpisodeImdbRatings = detailImdbRatingsVisibility.showEpisodeRatings
     val visibleEpisodeImdbRatings = remember(
         episodeImdbRatings,
@@ -2862,6 +2862,7 @@ private fun MetaDetailsContent(
                             PeopleSectionTab.TRAILER -> {
                                 TrailerSection(
                                     trailers = meta.trailers,
+                                    fallbackThumbnail = meta.backdropUrl,
                                     listState = trailerListState,
                                     posterCardCornerRadius = posterCardCornerRadiusDp.dp,
                                     upFocusRequester = if (hasVisiblePeopleTabs) trailerTabFocusRequester else seasonDownFocusRequester ?: heroPlayFocusRequester,
@@ -2871,7 +2872,7 @@ private fun MetaDetailsContent(
                                         else -> null
                                     },
                                     sectionFocusRequester = trailerSectionFocusRequester,
-                                    restoreTrailerId = if (restoreSharedTrailerFocusToken > 0) selectedSharedTrailer?.ytId else null,
+                                    restoreTrailerId = if (restoreSharedTrailerFocusToken > 0) selectedSharedTrailer?.playbackKey else null,
                                     restoreFocusToken = restoreSharedTrailerFocusToken,
                                     lastFocusedTrailerId = lastFocusedTrailerId,
                                     onLastFocusedTrailerIdChange = { lastFocusedTrailerId = it },

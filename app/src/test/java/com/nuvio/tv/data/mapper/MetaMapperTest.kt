@@ -168,5 +168,38 @@ class MetaMapperTest {
         assertEquals(listOf(1, 2, null, null, null), result.videos.map { it.imdbEpisode })
     }
 
+    @Test
+    fun `trailer streams keep direct urls next to youtube ids`() {
+        val result = parse(
+            """
+            {
+              "meta": {
+                "id": "tt1",
+                "type": "movie",
+                "name": "Movie",
+                "trailers": [{ "source": "aaaaaaaaaaa", "type": "Trailer" }],
+                "trailerStreams": [
+                  { "ytId": "aaaaaaaaaaa", "title": "Duplicate" },
+                  { "url": "https://cdn.example/trailer.mp4", "title": "Plex 1080p", "thumbnail": "https://cdn.example/thumb.jpg" },
+                  { "url": "https://cdn.example/trailer.mp4", "name": "Duplicate" },
+                  { "url": "magnet:?xt=urn:btih:abc" },
+                  { "ytId": "bbbbbbbbbbb", "name": "Teaser" }
+                ]
+              }
+            }
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("aaaaaaaaaaa", "bbbbbbbbbbb"), result.trailerYtIds)
+        assertEquals(listOf("https://cdn.example/trailer.mp4"), result.trailerUrls)
+        assertEquals(
+            listOf("aaaaaaaaaaa", "https://cdn.example/trailer.mp4", "bbbbbbbbbbb"),
+            result.trailers.map { it.playbackKey }
+        )
+        assertEquals("Plex 1080p", result.trailers[1].name)
+        assertEquals("https://cdn.example/thumb.jpg", result.trailers[1].thumbnail)
+        assertEquals("Teaser", result.trailers[2].name)
+    }
+
     private fun parse(json: String) = requireNotNull(adapter.fromJson(json)?.meta).toDomain()
 }

@@ -53,7 +53,12 @@ data class MetaDto(
 
 @JsonClass(generateAdapter = true)
 data class TrailerStreamDto(
-    @Json(name = "ytId") val ytId: String? = null
+    @Json(name = "ytId") val ytId: String? = null,
+    @Json(name = "url") val url: String? = null,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "thumbnail") val thumbnail: String? = null
 )
 
 @JsonClass(generateAdapter = true)

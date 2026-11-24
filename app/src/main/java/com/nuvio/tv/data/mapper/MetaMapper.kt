@@ -58,6 +58,7 @@ fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
         language = language,
         links = links?.mapNotNull { it.toDomain() } ?: emptyList(),
         trailerYtIds = trailersList.mapNotNull { it.ytId }.distinct(),
+        trailerUrls = trailersList.mapNotNull { it.url }.distinct(),
         rawPosterUrl = rawPosterUrl,
         behaviorHints = mapBehaviorHints(behaviorHints),
         trailers = trailersList,

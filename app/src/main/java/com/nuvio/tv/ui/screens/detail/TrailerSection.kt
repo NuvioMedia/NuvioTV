@@ -53,6 +53,7 @@ private data class TrailerListItem(
 fun TrailerSection(
     trailers: List<MetaTrailer>,
     listState: LazyListState,
+    fallbackThumbnail: String? = null,
     posterCardCornerRadius: Dp = NuvioTheme.spacing.md,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
@@ -69,10 +70,10 @@ fun TrailerSection(
     if (trailers.isEmpty()) return
 
     val trailerFallbackTitle = stringResource(R.string.detail_tab_trailer)
-    val trailerItems = remember(trailers, trailerFallbackTitle) {
+    val trailerItems = remember(trailers, trailerFallbackTitle, fallbackThumbnail) {
         trailers.mapNotNull { trailer ->
-            val ytId = trailer.ytId?.trim().orEmpty()
-            if (ytId.isBlank()) return@mapNotNull null
+            val key = trailer.playbackKey ?: return@mapNotNull null
+            val ytId = trailer.ytId?.trim()?.takeIf { it.isNotBlank() }
             val title = trailer.name?.takeIf { it.isNotBlank() }
                 ?: trailer.type?.takeIf { it.isNotBlank() }
                 ?: trailerFallbackTitle
@@ -84,10 +85,12 @@ fun TrailerSection(
             TrailerListItem(
                 trailer = trailer,
                 preview = MetaPreview(
-                    id = ytId,
+                    id = key,
                     type = ContentType.MOVIE,
                     name = title,
-                    poster = "https://img.youtube.com/vi/$ytId/hqdefault.jpg",
+                    poster = ytId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" }
+                        ?: trailer.thumbnail
+                        ?: fallbackThumbnail,
                     posterShape = PosterShape.LANDSCAPE,
                     background = null,
                     logo = null,
@@ -95,7 +98,8 @@ fun TrailerSection(
                     releaseInfo = subtitle.ifBlank { null },
                     imdbRating = null,
                     genres = emptyList(),
-                    trailerYtIds = listOf(ytId),
+                    trailerYtIds = listOfNotNull(ytId),
+                    trailerUrls = listOfNotNull(trailer.url?.takeIf { ytId == null }),
                     trailers = listOf(trailer)
                 )
             )
