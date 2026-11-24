@@ -43,6 +43,7 @@ data class TraktUiState(
     val deviceCodeExpiresAtMillis: Long? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
     val showMetaComments: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_META_COMMENTS,
+    val postPlayRatingPrompt: Boolean = TraktSettingsDataStore.DEFAULT_POST_PLAY_RATING_PROMPT,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null,
@@ -96,6 +97,22 @@ class TraktViewModel @Inject constructor(
                         context.getString(R.string.trakt_comments_now_shown)
                     } else {
                         context.getString(R.string.trakt_comments_now_hidden)
+                    }
+                )
+            }
+        }
+    }
+
+    fun onPostPlayRatingPromptChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setPostPlayRatingPrompt(enabled)
+            _uiState.update {
+                it.copy(
+                    postPlayRatingPrompt = enabled,
+                    statusMessage = if (enabled) {
+                        context.getString(R.string.trakt_post_play_rating_now_enabled)
+                    } else {
+                        context.getString(R.string.trakt_post_play_rating_now_disabled)
                     }
                 )
             }
@@ -230,11 +247,13 @@ class TraktViewModel @Inject constructor(
             combine(
                 traktSettingsDataStore.continueWatchingDaysCap,
                 traktSettingsDataStore.showMetaComments,
+                traktSettingsDataStore.postPlayRatingPrompt,
                 traktSettingsDataStore.moreLikeThisSource
-            ) { daysCap, showMetaComments, moreLikeThisSource ->
+            ) { daysCap, showMetaComments, postPlayRatingPrompt, moreLikeThisSource ->
                 SettingsSnapshot(
                     continueWatchingDaysCap = daysCap,
                     showMetaComments = showMetaComments,
+                    postPlayRatingPrompt = postPlayRatingPrompt,
                     moreLikeThisSource = moreLikeThisSource
                 )
             }.collectLatest { snapshot ->
@@ -242,6 +261,7 @@ class TraktViewModel @Inject constructor(
                     it.copy(
                         continueWatchingDaysCap = snapshot.continueWatchingDaysCap,
                         showMetaComments = snapshot.showMetaComments,
+                        postPlayRatingPrompt = snapshot.postPlayRatingPrompt,
                         moreLikeThisSource = snapshot.moreLikeThisSource
                     )
                 }
@@ -252,6 +272,7 @@ class TraktViewModel @Inject constructor(
     private data class SettingsSnapshot(
         val continueWatchingDaysCap: Int,
         val showMetaComments: Boolean,
+        val postPlayRatingPrompt: Boolean,
         val moreLikeThisSource: MoreLikeThisSourcePreference
     )
 
