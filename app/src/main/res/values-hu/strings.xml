@@ -417,7 +417,7 @@
     <string name="about_update_auto_install_notice_title">Értesítés az automatikus frissítés után</string>
     <string name="about_update_auto_install_notice_subtitle">Értesítési sáv megjelenítése a következő indításkor, miután az alkalmazás automatikusan frissült</string>
     <string name="about_update_optimize_install_title">Frissítések optimalizálása telepítéskor</string>
-    <string name="about_update_optimize_install_subtitle">Gyorsabb első indítás frissítés után, de az alkalmazás a telepítés alatt körülbelül egy percre bezárul. Kapcsold ki, ha inkább az Android telepítőképernyőjét használnád</string>
+    <string name="about_update_optimize_install_subtitle">Gyorsabb első indítás frissítés után, de az alkalmazás telepítés közben körülbelül egy percre bezárul. Kapcsold ki, ha inkább az Android telepítőképernyőjét használnád</string>
     <string name="about_update_channel_title">Frissítési csatorna</string>
     <string name="about_update_channel_subtitle">Válaszd ki, milyen alkalmazásfrissítéseket szeretnél kapni</string>
     <string name="about_check_updates">Frissítések keresése</string>
@@ -957,8 +957,8 @@
     <string name="sub_font_serif">Talpas (serif)</string>
     <string name="sub_font_mono">Fix szélességű (monospace)</string>
     <string name="sub_font_import">Importálás telefonról</string>
-    <string name="sub_font_import_desc">Adj hozzá egy legfeljebb 10 MB-os .ttf vagy .otf betűtípust. Az importált betűtípusok ezen a tévén maradnak.</string>
-    <string name="sub_font_import_qr">Olvasd be a telefonoddal egy .ttf vagy .otf betűtípus hozzáadásához</string>
+    <string name="sub_font_import_desc">Adj hozzá legfeljebb 10 MB-os .ttf vagy .otf betűtípust. Az importált betűtípusok ezen a tévén maradnak.</string>
+    <string name="sub_font_import_qr">Olvasd be a telefonoddal .ttf vagy .otf betűtípus hozzáadásához</string>
     <string name="sub_font_missing">A betűtípus nem érhető el ezen az eszközön. Helyette az alapértelmezett betűtípus látható.</string>
     <string name="sub_font_remove">%1$s eltávolítása</string>
     <string name="sub_background">Háttér</string>
@@ -1276,7 +1276,7 @@
     <string name="web_custom_poster_loading">Betöltés…</string>
     <string name="web_custom_poster_placeholders_info">Helyőrzők: a {id} minden elérhető tartalomazonosítót továbbít. A {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} egyetlen azonosítótípust céloz; ha nem elérhető, az eredeti poszter marad. A {imdb_id|tmdb_id|kitsu_id} felsorolja a támogatott azonosítótípusokat; a megfelelő lesz használva, egyébként az eredeti poszter marad. A helyőrzőt a ? jellel teheted opcionálissá, ilyenkor kihagyás helyett üres értéket kap: {imdb_id?}. További helyőrzők: {id_type}, {typed_id}, {type}, {shape}.</string>
     <string name="web_subtitle_font_title">Feliratbetűtípusok</string>
-    <string name="web_subtitle_font_subtitle">Válassz egy .ttf vagy .otf fájlt, hogy a tévéden a feliratokhoz használd.</string>
+    <string name="web_subtitle_font_subtitle">Válassz egy .ttf vagy .otf fájlt a tévén megjelenő feliratokhoz.</string>
     <string name="web_subtitle_font_choose">Betűtípusfájl kiválasztása</string>
     <string name="web_subtitle_font_uploading">Feltöltés…</string>
     <string name="web_subtitle_font_added">Hozzáadva a tévédhez</string>
@@ -2535,8 +2535,8 @@
     <string name="update_checking">Frissítések keresése\u2026</string>
     <string name="update_waiting_for_stable">Amint megjelenik a következő stabil kiadás, megkapod</string>
     <string name="update_download_complete">A letöltés befejeződött. Telepítésre kész.</string>
-    <string name="update_ready_closes">A letöltés kész. Az alkalmazás bezárul, amíg a frissítés települ, ez egy percig is eltarthat. Utána nyisd meg újra.</string>
-    <string name="update_ready_closes_and_reopens">A letöltés kész. Az alkalmazás bezárul, amíg a frissítés települ, majd magától újra megnyílik. Ez egy percig is eltarthat.</string>
+    <string name="update_ready_closes">A letöltés befejeződött. Az alkalmazás bezárul, amíg a frissítés települ, ez egy percig is tarthat. Utána nyisd meg újra.</string>
+    <string name="update_ready_closes_and_reopens">A letöltés befejeződött. Az alkalmazás bezárul, amíg a frissítés települ, majd magától újra megnyílik. Ez egy percig is tarthat.</string>
     <string name="update_installed_automatically">Automatikusan frissítve, amíg az eszköz tétlen volt</string>
     <string name="update_up_to_date">A rendszer naprakész. Legújabb változások:</string>
     <string name="update_close">Bezárás</string>
