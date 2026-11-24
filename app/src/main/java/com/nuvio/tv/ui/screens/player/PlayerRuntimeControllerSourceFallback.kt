@@ -78,7 +78,7 @@ internal fun PlayerRuntimeController.showErrorUnlessSourceFallback(errorMessage:
 internal fun PlayerRuntimeController.tryFallbackToNextSourceAfterError(errorMessage: String): Boolean {
     if (sourceFallbackJob?.isActive == true) return true
     if (!streamAutoPlayFallbackActive || autoSwitchInternalPlayerOnErrorEnabled) return false
-    if (hasRenderedFirstFrame) return false
+    if (hasRenderedFirstFrame && !tunneledFirstFrameAssumed) return false
     val failedUrl = currentStreamUrl
     if (failedUrl.isBlank() || failedUrl != autoSelectedSourceUrl) return false
     if (sourceFallbackAttempts >= streamAutoPlayFallbackMaxSources) {

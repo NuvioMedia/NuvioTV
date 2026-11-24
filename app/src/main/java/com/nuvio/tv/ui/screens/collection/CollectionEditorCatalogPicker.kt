@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -43,8 +44,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -82,6 +83,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -98,6 +100,17 @@ fun CatalogPickerContent(
     onToggle: (AvailableCatalog) -> Unit,
     onBack: () -> Unit
 ) {
+    val firstCatalogFocusRequester = remember { FocusRequester() }
+    val doneButtonFocusRequester = remember { FocusRequester() }
+    val pickerListState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        val target = if (catalogs.isNotEmpty()) firstCatalogFocusRequester else doneButtonFocusRequester
+        if (!requestFocusWhenReady(target) && target !== doneButtonFocusRequester) {
+            requestFocusWhenReady(doneButtonFocusRequester)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -113,12 +126,20 @@ fun CatalogPickerContent(
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioTheme.colors.TextPrimary
             )
-            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_done)) }
+            NuvioButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .focusRequester(doneButtonFocusRequester)
+                    .focusProperties { canFocus = pickerListState.firstVisibleItemIndex == 0 }
+                    .blockHorizontalFocus()
+            ) { Text(stringResource(R.string.collections_editor_done)) }
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
+        Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
+            state = pickerListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
@@ -126,7 +147,7 @@ fun CatalogPickerContent(
             itemsIndexed(
                 items = catalogs,
                 key = { index, c -> "${c.addonId}_${c.type}_${c.catalogId}_$index" }
-            ) { _, catalog ->
+            ) { index, catalog ->
                 val isAdded = alreadyAdded.any {
                     it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && catalogTypesMatch(it.type, catalog.type) && it.catalogId == catalog.catalogId
                 }
@@ -134,6 +155,8 @@ fun CatalogPickerContent(
                     onClick = { onToggle(catalog) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .blockHorizontalFocus()
+                        .then(if (index == 0) Modifier.focusRequester(firstCatalogFocusRequester) else Modifier)
                         .semantics {
                             role = Role.Checkbox
                             toggleableState = if (isAdded) ToggleableState.On else ToggleableState.Off
@@ -195,6 +218,8 @@ fun CatalogPickerContent(
                     }
                 }
             }
+        }
+        SettingsVerticalScrollIndicators(state = pickerListState)
         }
     }
 }

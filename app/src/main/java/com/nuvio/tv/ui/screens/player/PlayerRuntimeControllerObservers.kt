@@ -140,9 +140,11 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
         try {
             val subtitles = fetchAddonSubtitlesNow(
                 onSubtitlesEmitted = { currentList ->
+                    com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.offerSubtitles(this@fetchAddonSubtitles, currentList)
                     _uiState.update { it.copy(addonSubtitles = currentList) }
                 }
             )
+            com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.offerSubtitles(this@fetchAddonSubtitles, subtitles)
             val visibleSubtitles = filterToVisibleAddonSubtitles(subtitles)
             Log.d(PlayerRuntimeController.TAG, "fetchAddonSubtitles done: ${subtitles.size} subs, visible=${visibleSubtitles.size}, persistedPref=${persistedTrackPreference?.subtitle?.javaClass?.simpleName}")
             _uiState.update {
@@ -352,6 +354,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
 
                 state.copy(
                     subtitleStyle = settings.subtitleStyle,
+                    assSubtitleStyle = settings.assSubtitleStyle,
                     loadingOverlayEnabled = settings.loadingOverlayEnabled,
                     showPlayerLoadingStatus = settings.showPlayerLoadingStatus,
                     playbackIssueReportsEnabled = settings.playbackIssueReportsEnabled,
@@ -965,12 +968,16 @@ internal fun PlayerRuntimeController.handleVc1PlaybackFailure(errorMessage: Stri
     val displayMessage = errorMessage?.takeIf { it.isNotBlank() }
         ?: _exoPlayer?.playerError?.toDisplayMessage(context)
         ?: return
+    if (returnToFeatureAfterExtraFailure(displayMessage)) return
+    if (tryNextStream(displayMessage)) return
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
     cancelStableProgressReset()
     errorRetryJob?.cancel()
     errorRetryJob = null
     releasePlayer(flushPlaybackState = false)
+    // An auto-selected source tries the next matching one before showing the VC-1 error.
+    if (tryFallbackToNextSourceAfterError(displayMessage)) return
     cancelNextEpisodeAutoPlayOnFatalError()
     _uiState.update {
         it.copy(

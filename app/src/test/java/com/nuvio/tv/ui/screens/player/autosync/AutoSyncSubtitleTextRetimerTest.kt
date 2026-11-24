@@ -164,6 +164,18 @@ class AutoSyncSubtitleTextRetimerTest {
         assertNull(AutoSyncSubtitleTextRetimer.retime("no timing here", delayOnly))
     }
 
+    @Test
+    fun malformedAssFormatWithCollidingStartAndDefaultEndDoesNotCrash() {
+        val malformed = """
+            [Events]
+            Format: Layer, Name, Start, Text
+            Dialogue: 0,Actor,0:00:01.00,Hello
+        """.trimIndent()
+        val delayOnly = timeline(cues = emptyList(), interceptMs = 1_000.0)
+
+        assertNull(AutoSyncSubtitleTextRetimer.retime(malformed, delayOnly))
+    }
+
     private fun shifted(srtOrVtt: String, offsetMs: Long): AutoSyncTimelineRetimeResult =
         timeline(
             cues = AutoSyncSubtitleCueParser.parse(srtOrVtt).map { cue ->

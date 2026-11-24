@@ -868,7 +868,6 @@
 
 
     <string name="mdblist_title">Рейтинги MDBList</string>
-    <string name="mdblist_subtitle">Налаштування зовнішніх рейтингів, що відображаються в головному блоці деталей</string>
     <string name="mdblist_enable_title">Увімкнути рейтинги MDBList</string>
     <string name="mdblist_enable_subtitle">Отримувати рейтинги від зовнішніх провайдерів на сторінці метаданих</string>
     <string name="mdblist_api_key_title">API Ключ</string>

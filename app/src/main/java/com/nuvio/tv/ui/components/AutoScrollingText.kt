@@ -40,8 +40,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 
-private const val AUTO_SCROLL_START_DELAY_MS = 3_000L
-private const val AUTO_SCROLL_END_PAUSE_MS = 3_000L
+private const val AUTO_SCROLL_START_DELAY_MS = 6_000L
+private const val AUTO_SCROLL_END_PAUSE_MS = 4_000L
 private const val AUTO_SCROLL_RETURN_DURATION_MS = 600
 // Time per line of text rather than a fixed dp speed, so the reading pace is the same at any text
 // size. About 240 words a minute at the 9 to 10 words a hero description line holds.

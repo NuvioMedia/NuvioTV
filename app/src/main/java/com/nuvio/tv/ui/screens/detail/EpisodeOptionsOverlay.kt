@@ -2,6 +2,16 @@ package com.nuvio.tv.ui.screens.detail
 
 import android.content.Context
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
@@ -52,6 +62,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +78,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.transformations
 import com.nuvio.tv.R
+import com.nuvio.tv.core.tracking.TrackingMediaReference
+import com.nuvio.tv.core.tracking.TrackingRatingState
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
@@ -83,6 +96,7 @@ import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 private data class EpisodeOverlayAction(
     val label: String,
     val enabled: Boolean = true,
+    val isRating: Boolean = false,
     val onClick: () -> Unit
 )
 
@@ -116,7 +130,8 @@ internal fun EpisodeOptionsOverlay(
     onMarkPreviousEpisodesWatched: () -> Unit = {},
     showWatchedActions: Boolean = true,
     isCurrentlyPlaying: Boolean = false,
-    onNavigateEpisode: ((Int) -> Unit)? = null
+    onNavigateEpisode: ((Int) -> Unit)? = null,
+    ratingMedia: TrackingMediaReference? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -127,6 +142,11 @@ internal fun EpisodeOptionsOverlay(
     val detailsFocusRequester = remember { FocusRequester() }
     val detailsScrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
+    val ratingState = ratingMedia?.let { rememberRatingState(it).value } ?: TrackingRatingState()
+    var showRating by remember(episode.id) { mutableStateOf(false) }
+    var ratingVisited by remember(episode.id) { mutableStateOf(false) }
+    val ratingFocusRequester = remember { FocusRequester() }
+    val ratingPageVisible = showRating && ratingMedia != null && ratingState.isAvailable
     val title = episode.title.localizeEpisodeTitle(context)
     val description = episode.overview?.trim().orEmpty()
     val titleStyle = episodeOverlayTitleStyle(title.length)
@@ -241,6 +261,23 @@ internal fun EpisodeOptionsOverlay(
                 )
             )
         }
+        if (ratingState.isAvailable) {
+            val rated = ratingState.rating
+            add(
+                EpisodeOverlayAction(
+                    label = if (rated != null) {
+                        stringResource(R.string.rating_rated, formatRating(rated))
+                    } else {
+                        stringResource(R.string.rating_rate_episode)
+                    },
+                    isRating = true,
+                    onClick = {
+                        ratingVisited = true
+                        showRating = true
+                    }
+                )
+            )
+        }
         add(
             EpisodeOverlayAction(
                 label = stringResource(
@@ -285,6 +322,12 @@ internal fun EpisodeOptionsOverlay(
     val hasEnabledAction = actions.any { it.enabled }
     var descriptionFocused by remember { mutableStateOf(false) }
 
+    LaunchedEffect(ratingPageVisible) {
+        if (!ratingPageVisible && ratingVisited) {
+            ratingFocusRequester.requestFocusAfterFrames()
+        }
+    }
+
     LaunchedEffect(episode.id) {
         detailsScrollState.scrollTo(0)
         if (descriptionFocused) return@LaunchedEffect
@@ -295,7 +338,9 @@ internal fun EpisodeOptionsOverlay(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (ratingPageVisible) showRating = false else onDismiss()
+        },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false
@@ -385,10 +430,12 @@ internal fun EpisodeOptionsOverlay(
                                     .verticalScroll(detailsScrollState)
                                     .focusRequester(detailsFocusRequester)
                                     .focusProperties {
-                                        if (isRtl) {
-                                            left = primaryFocusRequester
-                                        } else {
-                                            right = primaryFocusRequester
+                                        if (!ratingPageVisible) {
+                                            if (isRtl) {
+                                                left = primaryFocusRequester
+                                            } else {
+                                                right = primaryFocusRequester
+                                            }
                                         }
                                     }
                                     .focusable()
@@ -398,7 +445,8 @@ internal fun EpisodeOptionsOverlay(
                                         val step = episodeStepForKey(event.nativeKeyEvent.keyCode, isRtl)
                                         when {
                                             event.type != KeyEventType.KeyDown -> false
-                                            onNavigateEpisode != null && (step == -1 || (step == 1 && !hasEnabledAction)) -> {
+                                            onNavigateEpisode != null && !ratingPageVisible &&
+                                                (step == -1 || (step == 1 && !hasEnabledAction)) -> {
                                                 onNavigateEpisode(step)
                                                 true
                                             }
@@ -483,56 +531,85 @@ internal fun EpisodeOptionsOverlay(
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .width(actionsWidth)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown || onNavigateEpisode == null) {
-                                return@onPreviewKeyEvent false
-                            }
-                            val step = episodeStepForKey(event.nativeKeyEvent.keyCode, isRtl)
-                            if (step == 1 || (step == -1 && isNoneStyle)) {
-                                onNavigateEpisode(step)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        .focusGroup(),
-                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-                ) {
-                    actions.forEachIndexed { index, action ->
-                        Button(
-                            onClick = action.onClick,
-                            enabled = action.enabled,
+                AnimatedContent(
+                    targetState = ratingPageVisible,
+                    modifier = Modifier.width(actionsWidth),
+                    transitionSpec = {
+                        val forward = targetState
+                        val motion = spring<IntOffset>(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
+                        (slideInHorizontally(motion) { if (forward) it / 3 else -it / 3 } + fadeIn(tween(180))) togetherWith
+                            (slideOutHorizontally(motion) { if (forward) -it / 3 else it / 3 } + fadeOut(tween(120))) using
+                            SizeTransform(clip = false)
+                    },
+                    contentAlignment = Alignment.Center,
+                    label = "episode_overlay_page"
+                ) { rating ->
+                    if (rating && ratingMedia != null) {
+                        RatingPanel(
+                            media = ratingMedia,
+                            state = ratingState,
+                            onFinished = onDismiss
+                        )
+                    } else {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    if (isNoneStyle) {
-                                        Modifier
-                                    } else {
-                                        Modifier.focusProperties {
-                                            if (isRtl) {
-                                                right = detailsFocusRequester
-                                            } else {
-                                                left = detailsFocusRequester
-                                            }
-                                        }
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type != KeyEventType.KeyDown || onNavigateEpisode == null) {
+                                        return@onPreviewKeyEvent false
                                     }
-                                )
-                                .then(
-                                    if (index == initialActionIndex) {
-                                        Modifier.focusRequester(primaryFocusRequester)
+                                    val step = episodeStepForKey(event.nativeKeyEvent.keyCode, isRtl)
+                                    if (step == 1 || (step == -1 && isNoneStyle)) {
+                                        onNavigateEpisode(step)
+                                        true
                                     } else {
-                                        Modifier
+                                        false
                                     }
-                                ),
-                            colors = ButtonDefaults.colors(
-                                containerColor = NuvioTheme.colors.BackgroundCard,
-                                contentColor = NuvioTheme.colors.TextPrimary
-                            )
+                                }
+                                .focusGroup(),
+                            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
                         ) {
-                            Text(action.label)
+                            actions.forEachIndexed { index, action ->
+                                Button(
+                                    onClick = action.onClick,
+                                    enabled = action.enabled,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .then(
+                                            if (isNoneStyle) {
+                                                Modifier
+                                            } else {
+                                                Modifier.focusProperties {
+                                                    if (isRtl) {
+                                                        right = detailsFocusRequester
+                                                    } else {
+                                                        left = detailsFocusRequester
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        .then(
+                                            if (index == initialActionIndex) {
+                                                Modifier.focusRequester(primaryFocusRequester)
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
+                                        .then(
+                                            if (action.isRating) {
+                                                Modifier.focusRequester(ratingFocusRequester)
+                                            } else {
+                                                Modifier
+                                            }
+                                        ),
+                                    colors = ButtonDefaults.colors(
+                                        containerColor = NuvioTheme.colors.BackgroundCard,
+                                        contentColor = NuvioTheme.colors.TextPrimary
+                                    )
+                                ) {
+                                    Text(action.label)
+                                }
+                            }
                         }
                     }
                 }

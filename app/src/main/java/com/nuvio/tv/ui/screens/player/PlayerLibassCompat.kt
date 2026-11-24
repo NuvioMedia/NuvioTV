@@ -23,6 +23,7 @@ import java.util.Collections
 import java.util.WeakHashMap
 
 private val assHandlersByPlayer = Collections.synchronizedMap(WeakHashMap<ExoPlayer, AssHandler>())
+private val assFontScaleByHandler = Collections.synchronizedMap(WeakHashMap<AssHandler, Float>())
 
 @OptIn(UnstableApi::class)
 internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
@@ -64,6 +65,16 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
 
 internal fun ExoPlayer.getAssHandlerCompat(): AssHandler? = assHandlersByPlayer[this]
 
+internal fun AssHandler.applyAssFontScaleCompat(scale: Float) {
+    val clamped = scale.coerceIn(0.5f, 3.0f)
+    assFontScaleByHandler[this] = clamped
+    renderCallback = { assRender ->
+        val desired = assFontScaleByHandler[this] ?: 1.0f
+        assRender?.setFontScale(desired)
+    }
+    render?.setFontScale(clamped)
+}
+
 /**
  * Releases the AssHandler associated with this player and removes it from the map.
  * Must be called when the player is being disposed to free native libass resources
@@ -71,6 +82,7 @@ internal fun ExoPlayer.getAssHandlerCompat(): AssHandler? = assHandlersByPlayer[
  */
 internal fun ExoPlayer.releaseAssHandlerCompat() {
     val handler = assHandlersByPlayer.remove(this)
+    handler?.let { assFontScaleByHandler.remove(it) }
     handler?.release()
 }
 

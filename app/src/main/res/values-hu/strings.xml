@@ -1243,7 +1243,6 @@
 
 
     <string name="mdblist_title">MDBList értékelések</string>
-    <string name="mdblist_subtitle">Külső értékelések beállítása a részletek oldalon</string>
     <string name="mdblist_enable_title">MDBList értékelések engedélyezése</string>
     <string name="mdblist_enable_subtitle">Értékelések lekérése külső szolgáltatóktól a részletek képernyőn</string>
     <string name="mdblist_api_key_title">API-kulcs</string>
@@ -1270,7 +1269,6 @@
     <string name="mdblist_show_on_hero_title">MDBList-értékelések megjelenítése a kiemelt tartalmaknál</string>
     <string name="mdblist_show_on_hero_subtitle">MDBList-értékelések megjelenítése a kiemelt tartalmak modern és klasszikus/rácsos nézetében</string>
     <string name="mdblist_rating_order_title">Értékelések sorrendje</string>
-    <string name="mdblist_rating_order_subtitle">Az első három engedélyezett és elérhető értékelés jelenik meg a modern kiemelt nézetben. A nyilakkal módosíthatod a sorrendet.</string>
     <string name="mdblist_dialog_title">MDBList API-kulcs</string>
     <string name="mdblist_dialog_subtitle">Add meg az API-kulcsot a külső értékelések lekéréséhez</string>
     <string name="mdblist_dialog_placeholder">MDBList API-kulcs megadása</string>
@@ -3406,7 +3404,6 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Alaposabb feliratszinkronizálás</string>
     <string name="autosync_thorough_description">A pontosabb egyezésért további feliratokat és beágyazott sávokat is összehasonlít. Kikapcsolva hamarabb alkalmazza az első megbízható egyezést. Csak biztos egyezés esetén módosítja az időzítést.</string>
-    <string name="autosync_toast_no_fit">Sikertelen szinkronizálás: ezek a feliratok nem illeszkednek a videó ezen változatához.</string>
     <string name="autosync_label_synced">Automatikusan időzítve</string>
     <string name="stream_resume_from_time">Folytatás innen: %1$s</string>
     <string name="stream_resume_from_percent">Folytatás innen: %1$d%%</string>

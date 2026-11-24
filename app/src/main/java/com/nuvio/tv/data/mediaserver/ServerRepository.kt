@@ -67,6 +67,11 @@ class ServerRepository(
         ensureLoaded()
     }
 
+    fun profileDeviceId(clientId: String): String {
+        val profileId = loadedProfileId ?: activeProfileId
+        return if (profileId == 1) clientId else "$clientId-p$profileId"
+    }
+
     fun connection(connectionId: String): ServerConnection? {
         ensureLoaded()
         return mutableState.value.connections.firstOrNull { it.id == connectionId }

@@ -236,7 +236,8 @@ class SimklTrackingProvider @Inject constructor(
             TrackingCapability.WATCHED_WRITE,
             TrackingCapability.PROGRESS_READ,
             TrackingCapability.PROGRESS_WRITE,
-            TrackingCapability.SCROBBLE
+            TrackingCapability.SCROBBLE,
+            TrackingCapability.RATINGS
         )
     )
     override val isAuthenticated = authRepository.state

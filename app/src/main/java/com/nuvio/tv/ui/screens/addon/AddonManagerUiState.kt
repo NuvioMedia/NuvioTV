@@ -1,13 +1,17 @@
 package com.nuvio.tv.ui.screens.addon
 
 import android.graphics.Bitmap
+import com.nuvio.tv.core.usenet.BuiltInUsenetOrder
 import com.nuvio.tv.domain.model.Addon
+
+internal const val BUILT_IN_USENET_KEY = "built-in-usenet"
 
 data class AddonManagerUiState(
     val isLoading: Boolean = false,
     val isInstalling: Boolean = false,
     val installUrl: String = "",
     val installedAddons: List<Addon> = emptyList(),
+    val movingAddonKey: String? = null,
     val error: String? = null,
     val transientMessage: String? = null,
     val transientMessageIsError: Boolean = false,
@@ -16,8 +20,21 @@ data class AddonManagerUiState(
     val qrCodeBitmap: Bitmap? = null,
     val serverUrl: String? = null,
     // Pending change from phone
-    val pendingChange: PendingChangeInfo? = null
-)
+    val pendingChange: PendingChangeInfo? = null,
+    /** Null when built-in Usenet has no provider or indexer yet. */
+    val builtInUsenet: BuiltInUsenetRow? = null,
+    internal val draftUsenetIndex: Int? = null
+) {
+    internal val addonOrderKeys: List<String>
+        get() = installedAddons.mapTo(mutableListOf()) { it.baseUrl }.apply {
+            builtInUsenet?.let { row ->
+                val index = draftUsenetIndex ?: BuiltInUsenetOrder.index(this, row.addonsAbove)
+                add(index, BUILT_IN_USENET_KEY)
+            }
+        }
+}
+
+data class BuiltInUsenetRow(val enabled: Boolean, val addonsAbove: List<String>?, val firstUseAccepted: Boolean)
 
 data class PendingChangeInfo(
     val changeId: String,

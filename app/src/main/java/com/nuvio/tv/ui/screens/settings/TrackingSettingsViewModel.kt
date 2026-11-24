@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.core.tracking.TrackingRatings
 import com.nuvio.tv.core.tracking.TrackingSourceController
 import com.nuvio.tv.core.tracking.TrackingSourceSelection
 import com.nuvio.tv.core.tracking.availableLibrarySourceModes
@@ -43,6 +44,8 @@ data class TrackingSettingsUiState(
     val simklRewatchMode: SimklRewatchMode = SimklRewatchMode.Default,
     val simklWatchedThresholdPercent: Int =
         TraktSettingsDataStore.DEFAULT_SIMKL_WATCHED_THRESHOLD_PERCENT,
+    val ratingSource: TrackingProviderId? = null,
+    val availableRatingSources: List<TrackingProviderId> = emptyList(),
     val isReady: Boolean = false
 ) {
     val availableWatchProgressSources: List<WatchProgressSource>
@@ -78,7 +81,9 @@ internal fun trackingSettingsUiState(
     watchProgressSource: WatchProgressSource,
     librarySourceMode: LibrarySourceMode,
     connectedProviderIds: Set<TrackingProviderId>?,
-    simklPreferences: SimklTrackingPreferences
+    simklPreferences: SimklTrackingPreferences,
+    ratingSource: TrackingProviderId? = null,
+    availableRatingSources: (Set<TrackingProviderId>) -> List<TrackingProviderId> = { emptyList() }
 ): TrackingSettingsUiState {
     if (connectedProviderIds == null) return TrackingSettingsUiState()
     val effective = effectiveTrackingSourceSelection(
@@ -92,6 +97,8 @@ internal fun trackingSettingsUiState(
         simklAnimeIdPreference = simklPreferences.animeIdPreference,
         simklRewatchMode = simklPreferences.rewatchMode,
         simklWatchedThresholdPercent = simklPreferences.watchedThresholdPercent,
+        ratingSource = ratingSource?.takeIf { it in connectedProviderIds },
+        availableRatingSources = availableRatingSources(connectedProviderIds),
         isReady = true
     )
 }
@@ -101,6 +108,7 @@ class TrackingSettingsViewModel @Inject constructor(
     private val sourceController: TrackingSourceController,
     private val settingsDataStore: TraktSettingsDataStore,
     private val simklSyncRepository: SimklSyncRepository,
+    private val trackingRatings: TrackingRatings,
     traktAuthDataStore: TraktAuthDataStore,
     private val simklAuthRepository: SimklAuthRepository,
     mdbListAuth: MdbListAuthStore,
@@ -142,13 +150,16 @@ class TrackingSettingsViewModel @Inject constructor(
                 sourceController.watchProgressSource,
                 sourceController.librarySourceMode,
                 connected,
-                simklPreferences
-            ) { watchProgressSource, librarySourceMode, connectedProviderIds, preferences ->
+                simklPreferences,
+                trackingRatings.source
+            ) { watchProgressSource, librarySourceMode, connectedProviderIds, preferences, ratingSource ->
                 trackingSettingsUiState(
                     watchProgressSource = watchProgressSource,
                     librarySourceMode = librarySourceMode,
                     connectedProviderIds = connectedProviderIds,
-                    simklPreferences = preferences
+                    simklPreferences = preferences,
+                    ratingSource = ratingSource,
+                    availableRatingSources = trackingRatings::availableSources
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -168,6 +179,12 @@ class TrackingSettingsViewModel @Inject constructor(
     fun selectLibrarySourceMode(mode: LibrarySourceMode) {
         viewModelScope.launch {
             sourceController.selectLibrarySourceMode(mode)
+        }
+    }
+
+    fun selectRatingSource(source: TrackingProviderId?) {
+        viewModelScope.launch {
+            trackingRatings.setSource(source)
         }
     }
 

@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import com.nuvio.tv.MainDispatcherRule
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingProviderId
+import com.nuvio.tv.core.tracking.TrackingRatings
 import com.nuvio.tv.core.tracking.TrackingSourceController
 import com.nuvio.tv.core.tracking.TrackingSourceSelection
 import com.nuvio.tv.data.local.TraktAuthDataStore
@@ -67,7 +68,11 @@ class TrackingSettingsViewModelTest {
         }
         val trakt = mockk<TraktAuthDataStore> { every { state } returns flowOf(TraktAuthState()) }
         val simkl = mockk<SimklAuthRepository> { every { state } returns MutableStateFlow(SimklAuthState()) }
-        val viewModel = TrackingSettingsViewModel(controller, settings, mockk(), trakt, simkl, harness.store, profiles)
+        val ratings = mockk<TrackingRatings> {
+            every { source } returns MutableStateFlow(null)
+            every { availableSources(any()) } returns emptyList()
+        }
+        val viewModel = TrackingSettingsViewModel(controller, settings, mockk(), ratings, trakt, simkl, harness.store, profiles)
         runCurrent()
         assertEquals(setOf(TrackingProviderId.MDBLIST), viewModel.uiState.value.connectedProviderIds)
         val previousCount = reconciliations.size

@@ -29,11 +29,17 @@ data class Stream(
     val debridCacheStatus: StreamDebridCacheStatus? = null,
     val badges: List<StreamBadge> = emptyList(),
     val subtitles: List<Subtitle> = emptyList(),
+    val nzbUrl: String? = null,
+    val servers: List<String>? = null,
+    val fileMustInclude: String? = null,
+    /** When a built-in Usenet release was posted, in epoch milliseconds, if its indexer said. */
+    val publishedAt: Long? = null,
     val serverTarget: ServerPlaybackTarget? = null,
     val pluginSourceName: String? = null,
     /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
     val debridResolved: Boolean = false
 ) {
+    fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**
      * Returns the primary stream source URL
      */
@@ -51,7 +57,7 @@ data class Stream(
      * the HTTP url is preferred and this returns false.
      */
     fun isTorrent(): Boolean =
-        !isDirectDebrid() &&
+        !isUsenet() && !isDirectDebrid() &&
             getStreamUrl().isNullOrBlank() &&
             (!infoHash.isNullOrBlank() || !torrentMagnetUri().isNullOrBlank() || hasTorrentUrl())
 
@@ -124,7 +130,7 @@ data class Stream(
     /**
      * Returns true if this is an external URL (opens in browser)
      */
-    fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
+    fun isExternal(): Boolean = !isUsenet() && externalUrl != null && url == null && !externalUrl.isMagnetLink()
 
     /**
      * Returns a display name for the stream, or null when no field is usable.
@@ -151,7 +157,8 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
+        append(url ?: nzbUrl ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
+        append(fileMustInclude.orEmpty())
         append('\u0000')
         append(getEffectiveFileIdx() ?: "")
         append('\u0000')
@@ -178,7 +185,12 @@ data class StreamBadge(
     val tagStyle: String = "",
     val textColor: String = "",
     val borderColor: String = ""
-)
+) {
+    companion object {
+        /** A badge a source draws as its name, in its colours, rather than as an image. */
+        const val STYLE_LABEL = "label"
+    }
+}
 
 @Immutable
 data class StreamDebridCacheStatus(

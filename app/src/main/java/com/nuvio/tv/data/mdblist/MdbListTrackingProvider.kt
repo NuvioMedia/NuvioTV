@@ -36,7 +36,7 @@ class MdbListTrackingProvider @Inject constructor(
         "MDBList",
         setOf(TrackingCapability.AUTHENTICATION, TrackingCapability.LIBRARY_READ, TrackingCapability.LIBRARY_WRITE, TrackingCapability.WATCHED_READ,
             TrackingCapability.WATCHED_WRITE, TrackingCapability.PROGRESS_READ,
-            TrackingCapability.PROGRESS_WRITE, TrackingCapability.SCROBBLE)
+            TrackingCapability.PROGRESS_WRITE, TrackingCapability.SCROBBLE, TrackingCapability.RATINGS)
     )
     override val isAuthenticated = combine(auth.state, profiles.activeProfileId) { authorization, profileId ->
         authorization.isAuthenticated && authorization.scope.profileId == profileId

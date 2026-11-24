@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreference
 import com.nuvio.tv.data.simkl.SimklRewatchMode
 import com.nuvio.tv.data.simkl.coerceSimklWatchedThresholdPercent
@@ -87,6 +88,7 @@ class TraktSettingsDataStore @Inject constructor(
      */
     private val simklRewatchModeKey = stringPreferencesKey("simkl_rewatch_mode")
     private val simklWatchedThresholdPercentKey = intPreferencesKey("simkl_watched_threshold_percent")
+    private val ratingSourceKey = stringPreferencesKey("rating_source")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -295,6 +297,22 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setSimklWatchedThresholdPercent(percent: Int) {
         store().edit { prefs ->
             prefs[simklWatchedThresholdPercentKey] = coerceSimklWatchedThresholdPercent(percent)
+        }
+    }
+
+    val ratingSource: StateFlow<TrackingProviderId?> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            TrackingProviderId.fromStorage(prefs[ratingSourceKey])
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    suspend fun setRatingSource(source: TrackingProviderId?) {
+        store().edit { prefs ->
+            if (source == null) {
+                prefs.remove(ratingSourceKey)
+            } else {
+                prefs[ratingSourceKey] = source.storageId
+            }
         }
     }
 }

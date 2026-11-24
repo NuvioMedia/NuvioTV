@@ -842,7 +842,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Rating MDBList</string>
-    <string name="mdblist_subtitle">Konfigurasikan rating eksternal yang ditampilkan di hero detail</string>
     <string name="mdblist_enable_title">Aktifkan Rating MDBList</string>
     <string name="mdblist_enable_subtitle">Ambil rating dari penyedia eksternal di layar detail metadata</string>
     <string name="mdblist_api_key_title">Kunci API</string>
@@ -2895,7 +2894,6 @@
     <string name="mdblist_show_on_hero_title">Gunakan Rating di Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Tampilkan rating MDBList pada karusel hero (modern dan klasik/grid)</string>
     <string name="mdblist_rating_order_title">Urutan Rating</string>
-    <string name="mdblist_rating_order_subtitle">3 rating pertama yang aktif dan tersedia ditampilkan pada hero modern. Gunakan panah untuk mengubah urutan.</string>
     <string name="mdblist_library_lists">Daftar pustaka</string>
     <string name="mdblist_library_lists_description">Pilih daftar MDBList mana yang muncul di Pustaka dan di Kelola Daftar. Daftar Tontonan selalu ditampilkan.</string>
     <string name="mdblist_library_lists_empty">Belum ada daftar yang ditemukan di akun MDBList Anda. Sinkronkan untuk memuatnya.</string>
@@ -3454,7 +3452,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Pencarian Sinkronisasi Otomatis Menyeluruh</string>
     <string name="autosync_thorough_description">Terus bandingkan subtitle lain dan jalur tertanam untuk kecocokan yang lebih dekat sebelum sinkronisasi. Saat nonaktif, kecocokan kuat pertama digunakan lebih cepat. Hanya kecocokan yang meyakinkan yang akan diterapkan.</string>
-    <string name="autosync_toast_no_fit">Sinkronisasi gagal: subtitle ini tidak cocok dengan versi video tersebut.</string>
     <string name="autosync_label_synced">Tersinkron otomatis</string>
     <string name="stream_resume_from_time">Lanjutkan dari %1$s</string>
     <string name="stream_resume_from_percent">Lanjutkan dari %1$d%%</string>

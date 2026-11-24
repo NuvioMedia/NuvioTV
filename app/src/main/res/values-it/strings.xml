@@ -1065,7 +1065,6 @@
 
 
 <string name="mdblist_title">Valutazioni MDBList</string>
-<string name="mdblist_subtitle">Configura le valutazioni esterne mostrate nella sezione hero dei dettagli</string>
 <string name="mdblist_enable_title">Abilita valutazioni MDBList</string>
 <string name="mdblist_enable_subtitle">Recupera le valutazioni da provider esterni nella schermata dei dettagli dei metadati</string>
 <string name="mdblist_api_key_title">Chiave API</string>
@@ -3274,7 +3273,6 @@
     <string name="mdblist_show_on_hero_title">Usa le valutazioni nell’hero</string>
     <string name="mdblist_show_on_hero_subtitle">Mostra le valutazioni MDBList nell’hero (Modern e Classic/Grid)</string>
     <string name="mdblist_rating_order_title">Ordine delle valutazioni</string>
-    <string name="mdblist_rating_order_subtitle">Nell’hero Modern vengono mostrate le prime 3 valutazioni abilitate e disponibili. Usa le frecce per cambiarne l’ordine.</string>
     <string name="mdblist_library_lists">Liste della libreria</string>
     <string name="mdblist_library_lists_description">Scegli quali liste MDBList mostrare nella Libreria e in Gestisci liste. La watchlist viene sempre visualizzata.</string>
     <string name="mdblist_library_lists_empty">Nessuna lista trovata nel tuo account MDBList. Sincronizza per caricarle.</string>

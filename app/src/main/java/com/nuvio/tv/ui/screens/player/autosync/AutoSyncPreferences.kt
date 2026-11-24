@@ -37,7 +37,8 @@ internal object AutoSyncPreferences {
 
     /** Keep the original timing when the needed correction is at most this; 0 disables it. */
     val syncToleranceOptionsMs = listOf(0, 100, 200, 300, 400, 500)
-    private val _syncToleranceMs = MutableStateFlow(0)
+    private const val DEFAULT_SYNC_TOLERANCE_MS = 300
+    private val _syncToleranceMs = MutableStateFlow(DEFAULT_SYNC_TOLERANCE_MS)
     val syncToleranceMs: StateFlow<Int> = _syncToleranceMs.asStateFlow()
 
     fun ensureLoaded(context: Context) {
@@ -48,8 +49,8 @@ internal object AutoSyncPreferences {
             _enabled.value = prefs.getBoolean(KEY_ENABLED, true)
             _enabledState.value = _enabled.value
             _aggressiveMode.value = prefs.getBoolean(KEY_AGGRESSIVE_MODE, true)
-            _syncToleranceMs.value = prefs.getInt(KEY_SYNC_TOLERANCE_MS, 0)
-                .takeIf { it in syncToleranceOptionsMs } ?: 0
+            _syncToleranceMs.value = prefs.getInt(KEY_SYNC_TOLERANCE_MS, DEFAULT_SYNC_TOLERANCE_MS)
+                .takeIf { it in syncToleranceOptionsMs } ?: DEFAULT_SYNC_TOLERANCE_MS
             initialized = true
         }
     }
