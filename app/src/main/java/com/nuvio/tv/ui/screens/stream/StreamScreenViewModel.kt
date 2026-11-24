@@ -863,7 +863,8 @@ class StreamScreenViewModel @Inject constructor(
                     season = season,
                     episode = episode,
                     forceRefresh = forceRefresh,
-                    priorityBingeGroup = persistedBingeGroup
+                    priorityBingeGroup = persistedBingeGroup,
+                    contentId = contentId
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {

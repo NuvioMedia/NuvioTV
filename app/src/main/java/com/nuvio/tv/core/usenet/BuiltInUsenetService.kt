@@ -4,7 +4,9 @@ import android.content.Context
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.plugin.absoluteAnimeEpisodeNumber
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.data.repository.SimklIdResolver
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
@@ -349,14 +351,17 @@ class BuiltInUsenetService @Inject constructor(
     /** Counts each indexer's searches and remembers which indexer listed each release. */
     private val stats: UsenetSourceStats? = null,
     /** The metas that give an anime catalog's ids their IMDb equivalent; null in unit tests without them. */
-    private val metas: MetaRepository? = null
+    private val metas: MetaRepository? = null,
+    /** Maps an anime catalog's ids when their meta does not; null in unit tests without it. */
+    private val simkl: SimklIdResolver? = null
 ) {
     /** A translated message; [english], the same wording, where there is no context. */
     private fun text(id: Int, english: String, vararg args: Any): String =
         context?.getString(id, *args) ?: english.format(Locale.ROOT, *args)
 
+    /** [contentId] is the title's own id, its meta's, when known. */
     fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
-        season: Int?, episode: Int?): Flow<BuiltInUsenetResult> = flow {
+        season: Int?, episode: Int?, contentId: String? = null): Flow<BuiltInUsenetResult> = flow {
         if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
         val series = type.lowercase() != "movie"
         val kind = if (series) ContentKind.SHOW else ContentKind.MOVIE
@@ -364,8 +369,10 @@ class BuiltInUsenetService @Inject constructor(
         val baseImdb = videoId.substringBefore(':').takeIf { it.matches(Regex("tt\\d+")) }
         val baseTmdb = videoId.removePrefix("tmdb:").substringBefore(':')
             .takeIf { it.toIntOrNull() != null }
-        // Indexers do not know an anime catalog's ids: its meta gives the IMDb id and numbering.
-        val equivalent = if (baseImdb == null && baseTmdb == null) catalogImdbEquivalent(type, videoId, series) else null
+        // Indexers do not know an anime catalog's ids: the title, its meta or Simkl give the IMDb id and numbering.
+        val equivalent = if (baseImdb == null && baseTmdb == null) {
+            catalogImdbEquivalent(type, videoId, series, season, episode, contentId)
+        } else null
         val resolvedSeason = equivalent?.season ?: season ?: idSeason
         val resolvedEpisode = equivalent?.episode ?: episode ?: idEpisode
         // The episode as searched, which picks its file in a pack, when it differs from the player's.
@@ -650,22 +657,64 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     /**
-     * [videoId] on IMDb when it is an anime catalog's id: from the meta the details page holds, or
-     * asked of the catalog's addon when it is no longer held. Null for any other id, or when the
-     * meta does not say.
+     * [videoId] on IMDb when it is an anime catalog's id, from the first that says:
+     * 1. the title's own IMDb id ([contentId]), with the episode's numbering;
+     * 2. the IMDb id and numbering its meta gives, from the meta the details page holds or, when it
+     *    is no longer held, from the catalog's addon;
+     * 3. Simkl's mapping: the IMDb id (the meta's first) and the episode's TVDB numbering.
+     * Null for any other id, or when none says: the catalog's own numbers would name another episode.
      */
-    private suspend fun catalogImdbEquivalent(type: String, videoId: String, series: Boolean): ImdbEquivalent? {
-        val metas = metas ?: return null
+    private suspend fun catalogImdbEquivalent(type: String, videoId: String, series: Boolean,
+        season: Int?, episode: Int?, contentId: String?): ImdbEquivalent? {
         val metaId = animeMetaId(videoId, series) ?: return null
-        val meta = try {
-            metas.getCachedMeta(type, metaId) ?: withTimeoutOrNull(META_LOOKUP_TIMEOUT_MS) {
-                (metas.getMetaFromAllAddons(type, metaId).first { it !is NetworkResult.Loading } as? NetworkResult.Success)?.data
+        val held = contentId?.let { id -> cachedMeta(type, id) }
+        val equivalent = contentImdbEquivalent(contentId, held?.videos?.firstOrNull { it.id == videoId.trim() },
+            series, season, episode)
+            ?: run {
+                val meta = held ?: cachedMeta(type, metaId) ?: fetchedMeta(type, metaId)
+                meta?.let { imdbEquivalent(it, videoId, series) } ?: simklEquivalent(videoId, series,
+                    metaImdb = meta?.let { m -> m.videos.firstOrNull { it.id == videoId.trim() }?.imdbId ?: m.imdbId })
+            }
+        runCatching { android.util.Log.i("UsenetSearch", "$videoId on IMDb: ${equivalent ?: "unknown"}") }
+        return equivalent
+    }
+
+    private fun cachedMeta(type: String, id: String): com.nuvio.tv.domain.model.Meta? =
+        try { metas?.getCachedMeta(type, id) } catch (_: Exception) { null }
+
+    private suspend fun fetchedMeta(type: String, id: String): com.nuvio.tv.domain.model.Meta? {
+        val metas = metas ?: return null
+        return try {
+            withTimeoutOrNull(META_LOOKUP_TIMEOUT_MS) {
+                (metas.getMetaFromAllAddons(type, id).first { it !is NetworkResult.Loading } as? NetworkResult.Success)?.data
             }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
-        return meta?.let { imdbEquivalent(it, videoId, series) }.also {
-            runCatching { android.util.Log.i("UsenetSearch", "$videoId on IMDb: ${it ?: "unknown"}") }
-        }
+    }
+
+    /**
+     * [videoId] on IMDb as Simkl maps its anime catalog id: [metaImdb], or Simkl's IMDb id, and for an
+     * episode the TVDB season and episode Simkl gives the catalog's episode number. Null when Simkl
+     * is not set up, does not know the id, or does not map the episode.
+     */
+    private suspend fun simklEquivalent(videoId: String, series: Boolean, metaImdb: String?): ImdbEquivalent? {
+        val simkl = simkl ?: return null
+        val parts = videoId.trim().split(':')
+        val source = parts.getOrNull(0)?.lowercase(Locale.ROOT) ?: return null
+        val id = parts.getOrNull(1)?.takeIf { it.toLongOrNull() != null } ?: return null
+        return try {
+            withTimeoutOrNull(SIMKL_LOOKUP_TIMEOUT_MS) {
+                val ids = simkl.resolveIds(source, id) ?: return@withTimeoutOrNull null
+                val imdb = listOf(metaImdb, ids.imdb).firstNotNullOfOrNull { candidate ->
+                    candidate?.trim()?.takeIf { it.matches(Regex("tt\\d+")) }
+                } ?: return@withTimeoutOrNull null
+                if (!series) return@withTimeoutOrNull ImdbEquivalent(imdb, null, null)
+                val number = absoluteAnimeEpisodeNumber(videoId) ?: return@withTimeoutOrNull null
+                simkl.getEpisodeMapping(ids.simklId, ids.type).firstOrNull { it.animeEpisode == number }
+                    ?.let { ImdbEquivalent(imdb, it.tvdbSeason, it.tvdbEpisode) }
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
     }
 
     companion object {
@@ -676,6 +725,8 @@ class BuiltInUsenetService @Inject constructor(
         private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
         /** How long a search of an anime catalog's id waits for its meta when the details page no longer holds it. */
         private const val META_LOOKUP_TIMEOUT_MS = 5_000L
+        /** How long a search of an anime catalog's id waits for Simkl's mapping when its meta gives none. */
+        private const val SIMKL_LOOKUP_TIMEOUT_MS = 5_000L
         /** How long a movie's ID results wait for its metadata before they are listed unchecked. */
         private const val ID_CHECK_WAIT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */

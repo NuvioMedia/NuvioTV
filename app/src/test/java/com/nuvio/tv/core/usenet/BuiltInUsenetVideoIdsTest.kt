@@ -37,6 +37,20 @@ class BuiltInUsenetVideoIdsTest {
         assertNull(imdbEquivalent(meta(null, episode("kitsu:1:1", imdbSeason = 1, imdbEpisode = 1)), "kitsu:1:1", series = true))
     }
 
+    @Test fun `a title's own IMDb id goes first, with its numbering unless the episode gives IMDb's`() {
+        val plain = episode("kitsu:1:5", imdbSeason = null, imdbEpisode = null)
+        val mapped = episode("kitsu:1:5", imdbSeason = 3, imdbEpisode = 2)
+        assertEquals(ImdbEquivalent("tt777", 1, 5), contentImdbEquivalent("tt777", plain, series = true, season = 1, episode = 5))
+        assertEquals(ImdbEquivalent("tt777", 1, 5), contentImdbEquivalent("tt777", null, series = true, season = 1, episode = 5))
+        assertEquals(ImdbEquivalent("tt777", 3, 2), contentImdbEquivalent("tt777", mapped, series = true, season = 1, episode = 5))
+        assertEquals(ImdbEquivalent("tt777", null, null), contentImdbEquivalent("tt777", null, series = false, season = null, episode = null))
+        // A catalog's own title id, or an episode without numbering, gives nothing.
+        assertNull(contentImdbEquivalent("kitsu:1", plain, series = true, season = 1, episode = 5))
+        assertNull(contentImdbEquivalent(null, plain, series = true, season = 1, episode = 5))
+        assertNull(contentImdbEquivalent("tt777", plain, series = true, season = null, episode = 5))
+        assertNull(contentImdbEquivalent("tt777", plain, series = true, season = 1, episode = 0))
+    }
+
     @Test fun `a film takes its meta's IMDb id`() {
         assertEquals(ImdbEquivalent("tt0245429", null, null), imdbEquivalent(meta("tt0245429"), "kitsu:1376", series = false))
         assertNull(imdbEquivalent(meta(null), "kitsu:1376", series = false))

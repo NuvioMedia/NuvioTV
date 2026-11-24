@@ -188,15 +188,23 @@ specials. Contradictory episode filenames are removed; season packs remain
 playable through the engine's episode selection. Unsupported media identifiers
 without a TMDB mapping cannot be searched.
 
-Anime catalog ids (`kitsu:`, `mal:`, `anilist:`, `anidb:`) are searched by the
-IMDb id their meta gives (`imdb_id`), from the meta the details page loaded or,
-when it is no longer held, from the catalog's addon (up to 5 s). An episode also
-needs the meta's IMDb numbering (`imdbSeason`, `imdbEpisode`): the catalog's own
-numbers restart with each season's entry or run past a thousand, so without
-them the episode is not searched rather than searched as another one. The
-release then keeps that numbering, and the engine picks its file in a pack by
-it, also when the release is reused as the last link. IMDb and TMDB ids are
-searched as before and never look at the meta.
+Anime catalog ids (`kitsu:`, `mal:`, `anilist:`, `anidb:`) are searched by an
+IMDb id and numbering, taken from the first of these that gives them:
+
+1. The title's own id, when it is an IMDb id (a title whose episodes carry
+   catalog ids), with the episode's numbering on that title.
+2. The meta's `imdb_id` with its `imdbSeason` and `imdbEpisode`, from the meta
+   the details page loaded or, when it is no longer held, from the catalog's
+   addon (up to 5 s).
+3. Simkl's mapping of the catalog id: the meta's IMDb id, or Simkl's, and the
+   episode's TVDB season and episode (up to 5 s; only with Simkl set up).
+
+The catalog's own numbers are never used with an IMDb id: they restart with each
+season's entry or run past a thousand, so an episode none of these maps is not
+searched rather than searched as another one. The release keeps the numbering
+it was searched by, and the engine picks its file in a pack by it, also when
+the release is reused as the last link. IMDb and TMDB video ids are searched as
+before and never look at the meta or Simkl.
 
 The **Built-in Usenet** result group appears once every indexer answered,
 independently of addon/plugin searches; if an indexer is slow, it shows what came

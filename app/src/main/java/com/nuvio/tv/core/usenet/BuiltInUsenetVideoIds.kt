@@ -4,6 +4,7 @@ import com.nuvio.tv.core.plugin.ANIME_ID_PREFIXES
 import com.nuvio.tv.core.plugin.absoluteAnimeEpisodeNumber
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.Video
 import java.util.Locale
 
 /** The content types the built-in Usenet search covers. */
@@ -45,6 +46,24 @@ internal fun animeMetaId(videoId: String, series: Boolean): String? {
     return id.takeIf {
         parts.size == 2 && parts[0].lowercase(Locale.ROOT) in ANIME_ID_PREFIXES && parts[1].toLongOrNull() != null
     }
+}
+
+/**
+ * [videoId] on IMDb when the title it belongs to has an IMDb id of its own ([contentId]): an
+ * episode then keeps the title's numbering ([season], [episode]), as on any IMDb title, unless its
+ * [video] gives its IMDb numbering. Null when [contentId] is not an IMDb id or an episode has no
+ * numbering.
+ */
+internal fun contentImdbEquivalent(contentId: String?, video: Video?, series: Boolean,
+    season: Int?, episode: Int?): ImdbEquivalent? {
+    val imdb = contentId?.trim()?.takeIf { IMDB_ID.matches(it) } ?: return null
+    if (!series) return ImdbEquivalent(imdb, null, null)
+    val imdbSeason = video?.imdbSeason?.takeIf { it >= 0 }
+    val imdbEpisode = video?.imdbEpisode?.takeIf { it >= 1 }
+    if (imdbSeason != null && imdbEpisode != null) return ImdbEquivalent(imdb, imdbSeason, imdbEpisode)
+    val ownSeason = season?.takeIf { it >= 0 } ?: return null
+    val ownEpisode = episode?.takeIf { it >= 1 } ?: return null
+    return ImdbEquivalent(imdb, ownSeason, ownEpisode)
 }
 
 /**

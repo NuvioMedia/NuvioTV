@@ -16,6 +16,8 @@ interface StreamRepository {
      * @param videoId The video ID (for movies: IMDB ID, for series: IMDB_ID:season:episode)
      * @param season Optional season number for TV shows (used by local plugins)
      * @param episode Optional episode number for TV shows (used by local plugins)
+     * @param contentId The title's own id (its meta's), when known; built-in Usenet reads it when
+     * the video id is an anime catalog's
      * @return Flow of AddonStreams grouped by addon
      */
     fun getStreamsFromAllAddons(
@@ -26,7 +28,8 @@ interface StreamRepository {
         forceRefresh: Boolean = false,
         priorityBingeGroup: String? = null,
         preferredPluginOnly: Boolean = false,
-        continuePluginOnly: Boolean = false
+        continuePluginOnly: Boolean = false,
+        contentId: String? = null
     ): Flow<NetworkResult<List<AddonStreams>>>
 
     /**
