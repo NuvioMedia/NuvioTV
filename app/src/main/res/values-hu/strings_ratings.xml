@@ -14,6 +14,6 @@
     <string name="tracking_ratings_subtitle">Hová mentődjenek az értékeléseid, és honnan jelenjenek meg</string>
     <string name="tracking_ratings_dialog_subtitle">A címeket az adatlapjukon értékelheted. Az értékeléseid a kiválasztott szolgáltatásba mentődnek, és onnan jelennek meg.</string>
     <string name="tracking_ratings_off_description">Az értékelés gomb elrejtése.</string>
-    <string name="tracking_ratings_simkl_description">Filmek és sorozatok értékelése. Ha olyan címet értékelsz, amely nincs a Simkl-listáidban, felkerül rájuk.</string>
+    <string name="tracking_ratings_simkl_description">Filmek és sorozatok értékelése. Ha olyan címet értékelsz, amely nincs a Simkl-listáidon, az hozzáadódik azokhoz.</string>
     <string name="tracking_ratings_mdblist_description">Filmek, sorozatok és epizódok értékelése.</string>
 </resources>
