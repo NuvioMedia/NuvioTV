@@ -581,4 +581,46 @@ class BuiltInUsenetServiceTest {
         assertEquals(played.behaviorHints?.bingeGroup, BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "A",
             played.title, null, null, config, series = false)?.behaviorHints?.bingeGroup)
     }
+
+    @Test fun `an anime catalog's episode is searched by the IMDb id and numbering its meta gives`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S02E01.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val meta = mockk<com.nuvio.tv.domain.model.Meta> {
+            every { imdbId } returns "tt22248376"
+            every { videos } returns listOf(com.nuvio.tv.domain.model.Video(id = "kitsu:49240:1", title = "1",
+                released = null, thumbnail = null, season = 1, episode = 1, overview = null, imdbSeason = 2, imdbEpisode = 1))
+        }
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta("series", "kitsu:49240") } returns meta
+        // The catalog numbers the second season's first episode S1E1; the player passes that.
+        val stream = BuiltInUsenetService(client, mockk(), mockk(), metas = metas)
+            .search(config, "series", "kitsu:49240:1", 1, 1).toList().mapNotNull { it.group }.last().streams.single()
+        coVerify { client.search(indexer, match { it.imdbId == "tt22248376" && it.season == 2 && it.episode == 1 }, any(), any()) }
+        coVerify(exactly = 0) { client.search(indexer, match { it.season == 1 }, any(), any()) }
+        // Its file in a pack is picked by the same numbering, whatever the player asks for.
+        assertEquals(2 to 1, engineEpisode(stream, 1, 1))
+    }
+
+    @Test fun `an IMDb id is searched as before, without looking at metas`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S01E03.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        val stream = BuiltInUsenetService(client, mockk(), mockk(), metas = metas)
+            .search(config, "series", "tt123:1:3", 1, 3).toList().mapNotNull { it.group }.last().streams.single()
+        coVerify { client.search(indexer, match { it.imdbId == "tt123" && it.season == 1 && it.episode == 3 }, any(), any()) }
+        coVerify(exactly = 0) { metas.getCachedMeta(any(), any()) }
+        coVerify(exactly = 0) { metas.getMetaFromAllAddons(any(), any(), any()) }
+        assertNull(stream.usenetSeason)
+        assertNull(stream.usenetEpisode)
+    }
 }

@@ -93,7 +93,12 @@ data class VideoDto(
     @Json(name = "rating") val rating: String? = null,
     @Json(name = "available") val available: Boolean? = null,
     @Json(name = "seasonPoster") val seasonPoster: String? = null,
-    @Json(name = "season_poster_path") val seasonPosterPath: String? = null
+    @Json(name = "season_poster_path") val seasonPosterPath: String? = null,
+    // Anime catalogs number episodes their own way and give the IMDb id and numbering beside them.
+    // Read as any JSON value, so one addon's unusual form cannot fail the whole meta.
+    @Json(name = "imdb_id") val imdbId: Any? = null,
+    @Json(name = "imdbSeason") val imdbSeason: Any? = null,
+    @Json(name = "imdbEpisode") val imdbEpisode: Any? = null
 )
 
 @JsonClass(generateAdapter = true)

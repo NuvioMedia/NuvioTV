@@ -88,8 +88,9 @@ class UsenetSidecar private constructor(private val context: Context) {
 
     private fun preparationKey(stream: Stream, season: Int?, episode: Int?, profileId: Int?): PreparationKey {
         val configuration = UsenetSettings.read(context)
+        val (engineSeason, engineEpisode) = engineEpisode(stream, season, episode)
         return PreparationKey(stream.nzbUrl, stream.servers?.toList(), nzbHeaders(stream, configuration), stream.fileIdx,
-            stream.fileMustInclude, season, episode, configuration, profileId)
+            stream.fileMustInclude, engineSeason, engineEpisode, configuration, profileId)
     }
 
     /**
@@ -260,8 +261,9 @@ class UsenetSidecar private constructor(private val context: Context) {
                 put("servers", JSONArray(stream.servers.orEmpty()))
                 stream.fileIdx?.let { put("fileIdx", it) }
                 stream.fileMustInclude?.let { put("fileMustInclude", it) }
-                season?.let { put("season", it) }
-                episode?.let { put("episode", it) }
+                val (engineSeason, engineEpisode) = engineEpisode(stream, season, episode)
+                engineSeason?.let { put("season", it) }
+                engineEpisode?.let { put("episode", it) }
                 put("headers", JSONObject(nzbHeaders(stream, configuration)))
                 put("config", JSONObject().apply {
                     put("profile", configuration.profile)

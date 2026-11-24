@@ -3,12 +3,14 @@ package com.nuvio.tv.core.usenet
 import android.content.Context
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.domain.repository.MetaRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.security.MessageDigest
@@ -31,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -344,7 +347,9 @@ class BuiltInUsenetService @Inject constructor(
     /** Null in unit tests, which read the English wording. */
     @ApplicationContext private val context: Context? = null,
     /** Counts each indexer's searches and remembers which indexer listed each release. */
-    private val stats: UsenetSourceStats? = null
+    private val stats: UsenetSourceStats? = null,
+    /** The metas that give an anime catalog's ids their IMDb equivalent; null in unit tests without them. */
+    private val metas: MetaRepository? = null
 ) {
     /** A translated message; [english], the same wording, where there is no context. */
     private fun text(id: Int, english: String, vararg args: Any): String =
@@ -356,18 +361,24 @@ class BuiltInUsenetService @Inject constructor(
         val series = type.lowercase() != "movie"
         val kind = if (series) ContentKind.SHOW else ContentKind.MOVIE
         val (idSeason, idEpisode) = episodeNumbers(videoId)
-        val resolvedSeason = season ?: idSeason
-        val resolvedEpisode = episode ?: idEpisode
         val baseImdb = videoId.substringBefore(':').takeIf { it.matches(Regex("tt\\d+")) }
         val baseTmdb = videoId.removePrefix("tmdb:").substringBefore(':')
             .takeIf { it.toIntOrNull() != null }
-        val request = UsenetSearchRequest(baseImdb, baseTmdb, season = resolvedSeason,
+        // Indexers do not know an anime catalog's ids: its meta gives the IMDb id and numbering.
+        val equivalent = if (baseImdb == null && baseTmdb == null) catalogImdbEquivalent(type, videoId, series) else null
+        val resolvedSeason = equivalent?.season ?: season ?: idSeason
+        val resolvedEpisode = equivalent?.episode ?: episode ?: idEpisode
+        // The episode as searched, which picks its file in a pack, when it differs from the player's.
+        val searched = if (equivalent?.season != null && equivalent.episode != null) equivalent.season to equivalent.episode else null
+        // TMDB finds the show by its IMDb id when the video id is a catalog's own.
+        val lookupId = equivalent?.imdbId ?: videoId
+        val request = UsenetSearchRequest(baseImdb ?: equivalent?.imdbId, baseTmdb, season = resolvedSeason,
             episode = resolvedEpisode, series = series)
         if (series && (resolvedSeason == null || resolvedSeason < 0 || resolvedEpisode == null || resolvedEpisode < 1)) return@flow
         coroutineScope {
             // A failed child would cancel this scope; keep lookup failures per indexer.
             val metadata = async(start = CoroutineStart.LAZY) {
-                try { metadata(request, videoId, type) }
+                try { metadata(request, lookupId, type) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { null }
             }
@@ -385,7 +396,7 @@ class BuiltInUsenetService @Inject constructor(
                 val started = System.currentTimeMillis()
                 val counts = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
                     try {
-                        (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let { id ->
+                        (request.tmdbId ?: tmdb.ensureTmdbId(lookupId, type))?.toIntOrNull()?.let { id ->
                             tmdbApi.getTvDetails(id, BuildConfig.TMDB_API_KEY).body()?.seasons?.mapNotNull {
                                 val number = it.seasonNumber ?: return@mapNotNull null
                                 it.episodeCount?.takeIf { count -> count > 0 }?.let { count -> number to count }
@@ -450,7 +461,7 @@ class BuiltInUsenetService @Inject constructor(
                         arranged.map {
                             val outcome = outcomes.getValue(it.nzbUrl)
                             it.toStream(config, series, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
-                                seasonEpisodes = seasonCounts(), sibling = outcome.sibling)
+                                seasonEpisodes = seasonCounts(), sibling = outcome.sibling, searched = searched)
                         })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
@@ -595,7 +606,8 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, series: Boolean, failed: Boolean = false,
-        played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null): Stream {
+        played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null,
+        searched: Pair<Int, Int>? = null): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
         // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
         // size badge shows an episode's share and the details keep the whole size.
@@ -633,7 +645,27 @@ class BuiltInUsenetService @Inject constructor(
                 }),
             nzbUrl = nzbUrl, servers = config.servers(),
             publishedAt = publishedAt.takeIf { it > 0 },
+            usenetSeason = searched?.first, usenetEpisode = searched?.second,
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
+    }
+
+    /**
+     * [videoId] on IMDb when it is an anime catalog's id: from the meta the details page holds, or
+     * asked of the catalog's addon when it is no longer held. Null for any other id, or when the
+     * meta does not say.
+     */
+    private suspend fun catalogImdbEquivalent(type: String, videoId: String, series: Boolean): ImdbEquivalent? {
+        val metas = metas ?: return null
+        val metaId = animeMetaId(videoId, series) ?: return null
+        val meta = try {
+            metas.getCachedMeta(type, metaId) ?: withTimeoutOrNull(META_LOOKUP_TIMEOUT_MS) {
+                (metas.getMetaFromAllAddons(type, metaId).first { it !is NetworkResult.Loading } as? NetworkResult.Success)?.data
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+        return meta?.let { imdbEquivalent(it, videoId, series) }.also {
+            runCatching { android.util.Log.i("UsenetSearch", "$videoId on IMDb: ${it ?: "unknown"}") }
+        }
     }
 
     companion object {
@@ -642,6 +674,8 @@ class BuiltInUsenetService @Inject constructor(
         private val SEASON_COUNTED = Any()
         /** How long a search may use for a season's episode count; the list never waits for it. */
         private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
+        /** How long a search of an anime catalog's id waits for its meta when the details page no longer holds it. */
+        private const val META_LOOKUP_TIMEOUT_MS = 5_000L
         /** How long a movie's ID results wait for its metadata before they are listed unchecked. */
         private const val ID_CHECK_WAIT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */
