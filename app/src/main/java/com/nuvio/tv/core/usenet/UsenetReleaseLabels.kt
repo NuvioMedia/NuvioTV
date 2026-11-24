@@ -72,6 +72,17 @@ internal data class UsenetReleaseLabels(
 
         fun codec(codec: String): String? = codec.takeIf { it != "UNKNOWN" }
 
+        /**
+         * The language codes joined, at most two: "EN+DE", or "EN+JA +5" for a release of seven.
+         * The release name, when shown, lists them all; null for none.
+         */
+        fun languages(codes: List<String>): String? = when {
+            codes.isEmpty() -> null
+            codes.size <= MAX_LISTED_LANGUAGES -> codes.joinToString("+")
+            else -> codes.take(MAX_LISTED_LANGUAGES).joinToString("+") + " +${codes.size - MAX_LISTED_LANGUAGES}"
+        }
+        private const val MAX_LISTED_LANGUAGES = 2
+
         private fun audio(tags: String): String? {
             val found = CODECS.firstNotNullOfOrNull { (name, pattern) -> pattern.find(tags)?.let { name to it } }
             val channels = found?.second?.let { match -> match.groupValues[1].takeIf { it.isNotEmpty() }?.let { "$it.${match.groupValues[2]}" } }

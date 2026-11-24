@@ -673,7 +673,7 @@ class BuiltInUsenetService @Inject constructor(
         val tier = profile?.tierOf(facts)?.takeIf { it >= 0 }?.let { "T${it + 1}" }
         val name = listOfNotNull(video, UsenetReleaseLabels.visual(facts.visual), UsenetReleaseLabels.codec(facts.codec), tier)
             .joinToString(" • ").ifEmpty { "Usenet" }
-        val details = listOfNotNull(labels.audio, labels.languages.joinToString("+").ifEmpty { null }, sizeLabel, bitrate, age,
+        val details = listOfNotNull(labels.audio, UsenetReleaseLabels.languages(labels.languages), sizeLabel, bitrate, age,
             indexerName.takeIf { it.isNotBlank() }, labels.group.takeIf { !config.showReleaseNames })
             .joinToString(" • ")
         return Stream(name = name, title = title,

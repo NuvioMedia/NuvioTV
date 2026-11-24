@@ -44,5 +44,11 @@ class UsenetReleaseLabelsTest {
     @Test fun `languages are listed as codes`() {
         assertEquals(listOf("DE"), labels("Movie.2020.GERMAN.DL.1080p.BluRay.x264-GRP").languages)
         assertEquals(listOf("MULTI"), labels("Show.S02E05.MULTi.1080p.WEB.H264-GRP").languages)
+        // A long list keeps the details on one line: two codes and how many more.
+        val many = labels("Movie.2024.Eng.Fre.Ger.Ita.Spa.Cze.Pol.Jpn.2160p.BluRay.Remux.DV.HDR.HEVC.Atmos-GRP")
+        assertEquals("EN+JA +5", UsenetReleaseLabels.languages(many.languages))
+        assertEquals("Atmos", many.audio)
+        assertEquals("DE+EN", UsenetReleaseLabels.languages(listOf("DE", "EN")))
+        assertEquals(null, UsenetReleaseLabels.languages(emptyList()))
     }
 }
