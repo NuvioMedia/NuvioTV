@@ -61,16 +61,20 @@ internal fun mapTrailers(
     trailerStreams: List<TrailerStreamDto>?
 ): List<MetaTrailer> {
     val fromTrailers = trailers.orEmpty().map {
+        val ytId = (it.source ?: it.ytId)?.takeIf(String::isNotBlank)
         MetaTrailer(
             source = it.source?.takeIf(String::isNotBlank),
             type = it.type?.takeIf(String::isNotBlank),
-            name = it.name?.takeIf(String::isNotBlank),
-            ytId = (it.source ?: it.ytId)?.takeIf(String::isNotBlank),
-            lang = it.lang?.takeIf(String::isNotBlank)
+            name = listOf(it.name, it.title, it.description)
+                .firstNotNullOfOrNull { value -> value?.trim()?.takeIf(String::isNotBlank) },
+            ytId = ytId,
+            lang = it.lang?.takeIf(String::isNotBlank),
+            url = it.url?.trim()?.takeIf { url -> ytId == null && isHttpTrailerUrl(url) },
+            thumbnail = it.thumbnail?.trim()?.takeIf(String::isNotBlank)
         )
     }
     val seenYtIds = fromTrailers.mapNotNull { it.ytId }.toMutableSet()
-    val seenUrls = mutableSetOf<String>()
+    val seenUrls = fromTrailers.mapNotNull { it.url }.toMutableSet()
     val fromStreams = trailerStreams.orEmpty().mapNotNull { stream ->
         val name = listOf(stream.title, stream.name, stream.description)
             .firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }

@@ -201,5 +201,37 @@ class MetaMapperTest {
         assertEquals("Teaser", result.trailers[2].name)
     }
 
+    @Test
+    fun `stream objects with direct urls are read from trailers too`() {
+        val result = parse(
+            """
+            {
+              "meta": {
+                "id": "tt1",
+                "type": "movie",
+                "name": "Movie",
+                "trailers": [
+                  { "source": "aaaaaaaaaaa", "type": "Trailer" },
+                  { "ytId": "bbbbbbbbbbb", "name": "Teaser" },
+                  { "url": "https://cdn.example/trailer.mp4", "title": "Plex 1080p", "thumbnail": "https://cdn.example/thumb.jpg" }
+                ],
+                "trailerStreams": [
+                  { "url": "https://cdn.example/trailer.mp4", "title": "Duplicate" }
+                ]
+              }
+            }
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("aaaaaaaaaaa", "bbbbbbbbbbb"), result.trailerYtIds)
+        assertEquals(listOf("https://cdn.example/trailer.mp4"), result.trailerUrls)
+        assertEquals(
+            listOf("aaaaaaaaaaa", "bbbbbbbbbbb", "https://cdn.example/trailer.mp4"),
+            result.trailers.map { it.playbackKey }
+        )
+        assertEquals("Plex 1080p", result.trailers[2].name)
+        assertEquals("https://cdn.example/thumb.jpg", result.trailers[2].thumbnail)
+    }
+
     private fun parse(json: String) = requireNotNull(adapter.fromJson(json)?.meta).toDomain()
 }
