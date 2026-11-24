@@ -13,7 +13,8 @@ internal fun remapEpisodeByTitleOrIndex(
     requestedVideoId: String?,
     requestedTitle: String? = null,
     addonEpisodes: List<EpisodeMappingEntry>,
-    traktEpisodes: List<EpisodeMappingEntry>
+    traktEpisodes: List<EpisodeMappingEntry>,
+    preferSameNumberOverIndex: Boolean = false
 ): EpisodeMappingEntry? {
     return remapEpisodeBetweenLists(
         requestedSeason = requestedSeason,
@@ -21,7 +22,8 @@ internal fun remapEpisodeByTitleOrIndex(
         requestedVideoId = requestedVideoId,
         requestedTitle = requestedTitle,
         sourceEpisodes = addonEpisodes,
-        targetEpisodes = traktEpisodes
+        targetEpisodes = traktEpisodes,
+        preferSameNumberOverIndex = preferSameNumberOverIndex
     )
 }
 
@@ -61,7 +63,8 @@ private fun remapEpisodeBetweenLists(
     requestedVideoId: String?,
     requestedTitle: String?,
     sourceEpisodes: List<EpisodeMappingEntry>,
-    targetEpisodes: List<EpisodeMappingEntry>
+    targetEpisodes: List<EpisodeMappingEntry>,
+    preferSameNumberOverIndex: Boolean = false
 ): EpisodeMappingEntry? {
     if (sourceEpisodes.isEmpty() || targetEpisodes.isEmpty()) return null
 
@@ -91,6 +94,14 @@ private fun remapEpisodeBetweenLists(
         if (titleMatches.size == 1) {
             return titleMatches.first()
         }
+    }
+
+    // The whole-show index below shifts every later episode when any earlier season's
+    // count differs, so an episode the target also has keeps its number.
+    if (preferSameNumberOverIndex) {
+        orderedTargetEpisodes.firstOrNull {
+            it.season == currentSourceEpisode.season && it.episode == currentSourceEpisode.episode
+        }?.let { return it }
     }
 
     val sourceIndex = orderedSourceEpisodes.indexOf(currentSourceEpisode)

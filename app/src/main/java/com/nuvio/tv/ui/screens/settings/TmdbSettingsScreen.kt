@@ -206,6 +206,16 @@ fun TmdbSettingsContent(
                     )
                 }
 
+                item(key = "tmdb_season_posters") {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.tmdb_season_posters_title),
+                        subtitle = stringResource(R.string.tmdb_season_posters_subtitle),
+                        checked = uiState.useSeasonPosters,
+                        enabled = uiState.enabled,
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleSeasonPosters(!uiState.useSeasonPosters)) }
+                    )
+                }
+
                 if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
                     item(key = "tmdb_trailers") {
                         SettingsToggleRow(

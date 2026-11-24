@@ -81,6 +81,7 @@ internal class PostPlayRecommendationController(
         val nextEpisodeAvailable: Boolean?,
         val nextEpisodeReleased: String?,
         val hasError: Boolean,
+        val isPlayingDiscExtra: Boolean,
         val hasBlockingInteraction: Boolean,
         val playbackEnded: Boolean,
         val positionMs: Long,
@@ -140,6 +141,7 @@ internal class PostPlayRecommendationController(
                     nextEpisodeAvailable = playerState.nextEpisode?.available,
                     nextEpisodeReleased = playerState.nextEpisode?.released,
                     hasError = !playerState.error.isNullOrBlank(),
+                    isPlayingDiscExtra = playerState.isPlayingDiscExtra,
                     hasBlockingInteraction = playerState.blocksPostPlayRecommendation(),
                     playbackEnded = playerState.playbackEnded,
                     positionMs = timeline.currentPosition,
@@ -259,7 +261,8 @@ internal class PostPlayRecommendationController(
             nextEpisodeReleased = snapshot.nextEpisodeReleased,
             enabled = snapshot.postPlayRecommendationsEnabled
         )
-        if (!shouldUseRecommendation || snapshot.hasError) {
+        // The end of a disc extra is not the item's.
+        if (!shouldUseRecommendation || snapshot.hasError || snapshot.isPlayingDiscExtra) {
             if (_uiState.value.recommendation != null ||
                 _uiState.value.isVisible ||
                 _uiState.value.isLoadingRecommendation ||

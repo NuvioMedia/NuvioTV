@@ -34,12 +34,12 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle, _uiState.value.effectiveAssSubtitleStyle)
         view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
-        view.setPaused(false)
+        view.setPaused(streamFallbackResumePosition != null && userPausedManually)
         applyPendingMpvSeekIfNeeded(view)
         installMpvMediaSession()
         hasRenderedFirstFrame = false
@@ -76,6 +76,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         ) {
             return@onFailure
         }
+        if (tryNextStream(detailedError)) return@onFailure
         cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update { state ->
             state.copy(
@@ -150,12 +151,12 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle, _uiState.value.effectiveAssSubtitleStyle)
         view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
-        view.setPaused(false)
+        view.setPaused(streamFallbackResumePosition != null && userPausedManually)
         applyPendingMpvSeekIfNeeded(view)
         installMpvMediaSession()
 
@@ -202,6 +203,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         ) {
             return@onFailure
         }
+        if (tryNextStream(detailedError)) return@onFailure
         cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update {
             it.copy(
@@ -227,6 +229,14 @@ private fun String.safeMpvTraceHost(): String {
 }
 
 internal fun PlayerRuntimeController.pauseForLifecycle() {
+    cancelStreamFallback(showError = true)
+    if (streamFallbackSession != null && debridResolveJob?.isActive == true) {
+        debridResolveJob?.cancel()
+        debridResolveJob = null
+        _uiState.update {
+            it.copy(isLoadingSourceStreams = false, isLoadingEpisodeStreams = false, showLoadingOverlay = false)
+        }
+    }
     // Mark we're in background so onPlayerError can defer recovery to onResume.
     isInBackground = true
 
@@ -241,6 +251,8 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
     if (isUsingMpvEngine()) {
         mpvView?.setPaused(true)
         emitPauseScrobbleForCurrentProgress()
+        // The process may be killed while backgrounded; Exo saves on its pause, MPV has to here.
+        saveWatchProgress()
         stopWatchProgressSaving()
         stopProgressUpdates()
         _uiState.update { it.copy(isPlaying = false) }

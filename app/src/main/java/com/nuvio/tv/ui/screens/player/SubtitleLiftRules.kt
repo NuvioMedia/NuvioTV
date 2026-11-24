@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.graphics.Typeface
+
 /**
  * How far to lift unpositioned subtitles above the player's bottom UI.
  *
@@ -67,8 +69,18 @@ internal data class SubtitleTextMetrics(
     val scaleX: Float,
     val innerPaddingPx: Float,
     val wrapWidthPx: Float,
-    val centerXPx: Float
+    val centerXPx: Float,
+    val typeface: Typeface? = null
 )
+
+internal fun SubtitleTextMetrics.forStyledRenderer(typeface: Typeface?): SubtitleTextMetrics {
+    val paddingPx = styledSubtitlePaddingXPx(textSizePx)
+    return copy(
+        innerPaddingPx = paddingPx,
+        wrapWidthPx = (wrapWidthPx + (innerPaddingPx - paddingPx) * 2f).coerceAtLeast(0f),
+        typeface = typeface
+    )
+}
 
 internal fun subtitleBlockWidthPx(
     text: String,

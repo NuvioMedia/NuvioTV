@@ -14,6 +14,9 @@ data class StreamDto(
     @Json(name = "title") val title: String? = null,
     @Json(name = "description") val description: String? = null,
     @Json(name = "url") val url: String? = null,
+    @Json(name = "nzbUrl") val nzbUrl: String? = null,
+    @Json(name = "servers") val servers: List<String>? = null,
+    @Json(name = "fileMustInclude") val fileMustInclude: String? = null,
     @Json(name = "ytId") val ytId: String? = null,
     @Json(name = "infoHash") val infoHash: String? = null,
     @Json(name = "fileIdx") val fileIdx: Int? = null,
@@ -112,6 +115,7 @@ data class SubtitleDto(
     @Json(name = "id") val id: String? = null,
     @Json(name = "url") val url: String,
     @Json(name = "lang") val lang: String,
+    @Json(name = "label") val label: String? = null,
     @Json(name = "headers") val headers: Map<String, String>? = null
 )
 

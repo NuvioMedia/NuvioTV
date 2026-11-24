@@ -92,6 +92,7 @@ class CustomDefaultTrackNameProvider(resources: Resources) : DefaultTrackNamePro
                 MimeTypes.APPLICATION_TTML -> "TTML"
                 MimeTypes.APPLICATION_TX3G -> "TX3G"
                 MimeTypes.APPLICATION_DVBSUBS -> "DVB"
+                MimeTypes.APPLICATION_VOBSUB -> "VobSub"
                 else -> null
             }
         }

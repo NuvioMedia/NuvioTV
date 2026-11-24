@@ -1,7 +1,9 @@
 package com.nuvio.tv.updater
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -40,6 +42,9 @@ data class UpdateUiState(
     val autoInstallEnabled: Boolean = false,
     val autoInstallSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
     val autoInstallNoticeEnabled: Boolean = true,
+    /** Updates the user installs carry dex metadata; off sends them through the system installer screen. */
+    val optimizeDuringInstall: Boolean = true,
+    val optimizeDuringInstallSupported: Boolean = ApkInstaller.supportsDexMetadata,
     /** Release installed automatically since the last launch, shown in the banner until dismissed. */
     val installedUpdate: AppUpdate? = null
 )
@@ -62,12 +67,14 @@ class UpdateViewModel @Inject constructor(
             val channel = updatePreferences.getOrInitializeUpdateChannel()
             val autoInstallEnabled = updatePreferences.autoInstallEnabled.first()
             val autoInstallNoticeEnabled = updatePreferences.autoInstallNoticeEnabled.first()
+            val optimizeDuringInstall = updatePreferences.optimizeDuringInstall.first()
             _uiState.update {
                 it.copy(
                     updateBannerEnabled = enabled,
                     updateChannel = channel,
                     autoInstallEnabled = autoInstallEnabled,
-                    autoInstallNoticeEnabled = autoInstallNoticeEnabled
+                    autoInstallNoticeEnabled = autoInstallNoticeEnabled,
+                    optimizeDuringInstall = optimizeDuringInstall
                 )
             }
             downloadStore.clearIfInstalled()
@@ -315,11 +322,20 @@ class UpdateViewModel @Inject constructor(
         }
 
         _uiState.update { it.copy(showUnknownSourcesDialog = false) }
+        // Without dex metadata a session install gains nothing over the system installer, whose screen stays up
+        // while the app is closed for the install and offers to open it again.
+        val useSystemInstaller = !ApkInstaller.supportsDexMetadata || !_uiState.value.optimizeDuringInstall
         viewModelScope.launch(Dispatchers.IO) {
+            if (useSystemInstaller) {
+                runCatching { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                    .onFailure { error -> Log.w(TAG, "System installer failed", error) }
+                return@launch
+            }
             runCatching { ApkInstaller.install(context, apkFile, background = false) }
                 .onFailure {
                     Log.w(TAG, "Session install failed, falling back to the system installer", it)
-                    ApkInstaller.launchSystemInstaller(context, apkFile)
+                    runCatching { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                        .onFailure { error -> Log.w(TAG, "System installer failed", error) }
                 }
         }
     }
@@ -349,6 +365,11 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch { updatePreferences.setAutoInstallNoticeEnabled(enabled) }
     }
 
+    fun setOptimizeDuringInstall(enabled: Boolean) {
+        _uiState.update { it.copy(optimizeDuringInstall = enabled) }
+        viewModelScope.launch { updatePreferences.setOptimizeDuringInstall(enabled) }
+    }
+
     fun setAutoInstallEnabled(enabled: Boolean) {
         _uiState.update { it.copy(autoInstallEnabled = enabled) }
         viewModelScope.launch {
@@ -373,6 +394,9 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun openUnknownSourcesSettings() {
-        ApkInstaller.buildUnknownSourcesSettingsIntent(context)?.let(context::startActivity)
+        listOfNotNull(
+            ApkInstaller.buildUnknownSourcesSettingsIntent(context),
+            Intent(Settings.ACTION_SECURITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        ).any { runCatching { context.startActivity(it) }.isSuccess }
     }
 }

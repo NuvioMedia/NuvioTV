@@ -375,6 +375,8 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
         endDetectionArmed = true
     }
     if (!_uiState.value.error.isNullOrBlank()) return
+    // The end of a disc extra is not the episode's.
+    if (isPlayingDiscExtra()) return
 
     val state = _uiState.value
     if (state.nextEpisode == null || nextEpisodeVideo == null) {

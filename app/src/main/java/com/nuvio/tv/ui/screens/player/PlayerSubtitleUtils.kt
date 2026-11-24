@@ -2,13 +2,27 @@ package com.nuvio.tv.ui.screens.player
 
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Tracks
 import androidx.media3.common.text.Cue
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import com.nuvio.tv.ui.util.LANGUAGE_OVERRIDES
 import com.nuvio.tv.ui.util.resolveLanguageNameAlias
 
 internal object PlayerSubtitleUtils {
+    private val WHITESPACE = Regex("\\s+")
+    private const val NORMALIZED_LANGUAGE_CACHE_LIMIT = 2_000
+    private val normalizedLanguageCache = ConcurrentHashMap<String, String>()
     fun normalizeLanguageCode(lang: String): String {
+        normalizedLanguageCache[lang]?.let { return it }
+        if (normalizedLanguageCache.size >= NORMALIZED_LANGUAGE_CACHE_LIMIT) normalizedLanguageCache.clear()
+        return computeNormalizedLanguageCode(lang).also { normalizedLanguageCache[lang] = it }
+    }
+
+    private fun computeNormalizedLanguageCode(lang: String): String {
         val code = lang.trim().lowercase()
         if (code.isBlank()) return ""
 
@@ -17,7 +31,7 @@ internal object PlayerSubtitleUtils {
             .replace('-', ' ')
             .replace('.', ' ')
             .replace('/', ' ')
-            .replace(Regex("\\s+"), " ")
+            .replace(WHITESPACE, " ")
             .trim()
 
         fun containsAny(vararg values: String): Boolean = values.any { value ->
@@ -267,7 +281,18 @@ internal object PlayerSubtitleUtils {
         } else {
             validTexts.distinct().joinToString("\n")
         }
-        return listOf(cues[0].buildUpon().setText(mergedText).build())
+        val first = cues[0]
+        val sharesPosition = cues.all { it.position == first.position && it.positionAnchor == first.positionAnchor }
+        val base = when {
+            sharesPosition -> first
+            else -> cues.firstOrNull { it.position == Cue.DIMEN_UNSET }
+                ?: first.buildUpon()
+                    .setPosition(Cue.DIMEN_UNSET)
+                    .setPositionAnchor(Cue.TYPE_UNSET)
+                    .setTextAlignment(null)
+                    .build()
+        }
+        return listOf(base.buildUpon().setText(mergedText).build())
     }
 
     fun normalizeBottomCuePosition(cue: Cue): Cue {
@@ -285,6 +310,27 @@ internal object PlayerSubtitleUtils {
             .setLineAnchor(Cue.TYPE_UNSET)
             .build()
     }
+
+    fun isAssOrSsaSelected(tracks: Tracks?, sidecarKey: String?): Boolean {
+        val selectedAss = tracks?.groups.orEmpty()
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .any { group ->
+                (0 until group.length).any { index ->
+                    group.isTrackSelected(index) && group.getTrackFormat(index).isAssOrSsa()
+                }
+            }
+        return selectedAss || sidecarKey?.let {
+            it.contains(".ass", ignoreCase = true) || it.contains(".ssa", ignoreCase = true)
+        } == true
+    }
+
+    private fun Format.isAssOrSsa(): Boolean =
+        sampleMimeType == MimeTypes.TEXT_SSA || codecs
+            ?.split(',')
+            ?.map { it.trim().lowercase(Locale.US) }
+            ?.any { codec ->
+                codec == MimeTypes.TEXT_SSA || codec == "s_text/ass" || codec == "s_text/ssa" || codec.endsWith("/x-ssa")
+            } == true
 
     private const val BOTTOM_CUE_LINE_FRACTION = 0.6f
 }

@@ -719,7 +719,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Рейтинги MDBList</string>
-    <string name="mdblist_subtitle">Настройка внешних рейтингов, отображаемых в главном блоке деталей</string>
     <string name="mdblist_enable_title">Включить рейтинги MDBList</string>
     <string name="mdblist_enable_subtitle">Получать рейтинги от внешних провайдеров на странице метаданных</string>
     <string name="mdblist_api_key_title">API Ключ</string>
@@ -1301,11 +1300,6 @@
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Синхронизация библиотеки\u2026</string>
     <string name="library_type_all">Все</string>
-    <string name="library_type_items">элементов</string>
-    <string name="library_empty_local_title">Пока нет %1$s</string>
-    <string name="library_empty_trakt_title">В этом списке нет %1$s</string>
-    <string name="library_empty_local_subtitle">Начните сохранять любимое, чтобы увидеть это здесь</string>
-    <string name="library_empty_trakt_subtitle">Используйте + на странице деталей, чтобы добавить в список просмотра или списки</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Загрузка\u2026</string>
@@ -2394,8 +2388,6 @@
     <string name="library_status_dropped">Брошено</string>
     <string name="library_empty_trakt_not_auth_title">Trakt не подключён</string>
     <string name="library_empty_trakt_not_auth_subtitle">Подключите аккаунт Trakt в Настройках для просмотра библиотеки Trakt</string>
-    <string name="library_empty_simkl_title">Нет %1$s в этом статусе</string>
-    <string name="library_empty_simkl_subtitle">Используйте + на странице описания, чтобы добавить элементы в статус Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl не подключён</string>
     <string name="library_empty_simkl_not_auth_subtitle">Подключите аккаунт Simkl в настройках, чтобы увидеть библиотеку Simkl</string>
     <string name="cloud_library_connect_action">Подключить аккаунт</string>
@@ -3098,17 +3090,17 @@
     <string name="stream_test_no_stream">Воспроизведений не зафиксировано. Воспроизведите видео, чтобы запустить диагностический тест его хоста.</string>
     <string name="stream_test_btn_start">Начать тест</string>
     <string name="stream_test_btn_measuring_baseline">Измерение базовой скорости…</string>
-    <string name="stream_test_btn_measuring_parallel1">Измерение параллельного (1 МБ)…</string>
-    <string name="stream_test_btn_measuring_parallel4">Измерение параллельного (4 МБ)…</string>
-    <string name="stream_test_btn_measuring_parallel8">Измерение параллельного (8 МБ)…</string>
-    <string name="stream_test_btn_measuring_parallel16">Измерение параллельного (16 МБ)…</string>
+    <string name="stream_test_btn_measuring_parallel1">Измерение параллельного (1 соединение)…</string>
+    <string name="stream_test_btn_measuring_parallel4">Измерение параллельного (4 соединения)…</string>
+    <string name="stream_test_btn_measuring_parallel8">Измерение параллельного (8 соединений)…</string>
+    <string name="stream_test_btn_measuring_parallel16">Измерение параллельного (16 соединений)…</string>
     <string name="stream_test_btn_run_again">Повторить тест</string>
     <string name="stream_test_btn_running">Выполняется…</string>
     <string name="stream_test_label_baseline">Стандартное одиночное соединение (база)</string>
-    <string name="stream_test_label_parallel1">Параллельное соединение (фрагменты по 1 МБ)</string>
-    <string name="stream_test_label_parallel4">Параллельное соединение (фрагменты по 4 МБ)</string>
-    <string name="stream_test_label_parallel8">Параллельное соединение (фрагменты по 8 МБ)</string>
-    <string name="stream_test_label_parallel16">Параллельное соединение (фрагменты по 16 МБ)</string>
+    <string name="stream_test_label_parallel1">Параллельное соединение (1 соединение)</string>
+    <string name="stream_test_label_parallel4">Параллельное соединение (4 соединения)</string>
+    <string name="stream_test_label_parallel8">Параллельное соединение (8 соединений)</string>
+    <string name="stream_test_label_parallel16">Параллельное соединение (16 соединений)</string>
     <string name="stream_test_error_prefix">Ошибка: %1$s</string>
     <string name="stream_test_video_bitrate">Средний битрейт видео: %1$s</string>
     <string name="stream_test_error_connection">Ошибка соединения. Возможно, ссылка на последний воспроизведённый поток устарела или недоступна. Воспроизведите видео заново и повторите попытку.</string>

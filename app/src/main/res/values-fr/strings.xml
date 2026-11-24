@@ -417,6 +417,8 @@
     <string name="about_update_auto_install_subtitle">Télécharger les nouvelles versions en arrière-plan et les installer lorsque l’appareil est inactif</string>
     <string name="about_update_auto_install_notice_title">Notifier après les mises à jour automatiques</string>
     <string name="about_update_auto_install_notice_subtitle">Afficher une bannière au prochain lancement, une fois que l’application s’est mise à jour d’elle-même</string>
+    <string name="about_update_optimize_install_title">Optimiser les mises à jour lors de l’installation</string>
+    <string name="about_update_optimize_install_subtitle">Premier lancement plus rapide après une mise à jour, mais l’application se ferme environ une minute le temps de l’installation. Désactivez pour utiliser l’écran d’installation d’Android à la place</string>
     <string name="about_update_channel_title">Canal de mise à jour</string>
     <string name="about_update_channel_subtitle">Choisissez le type de mises à jour à recevoir</string>
     <string name="about_check_updates">Rechercher des mises à jour</string>
@@ -625,6 +627,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Utiliser l’animation et le positionnement globaux personnalisés de Nuvio pour le défilement de la sélection.</string>
     <string name="advanced_rgb565">Décodage d’image RGB565</string>
     <string name="advanced_rgb565_subtitle">Utilise une couleur 16 bits, moins gourmande en mémoire, pour les images opaques éligibles. Cette modification redémarre l’application.</string>
+    <string name="advanced_hardware_bitmaps">Décodage matériel des images</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Conserver les images décodées uniquement dans la mémoire graphique. Utilise moins de RAM, mais le chargement de nouvelles images peut provoquer des saccades sur les GPU les moins puissants.</string>
     <string name="advanced_memory_only_vertical_scroll">Défilement vertical en mémoire uniquement</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Ignorer les requêtes d’images sur le disque et le réseau pendant le défilement vertical des rangées de l’accueil.</string>
     <string name="advanced_compose_highlighter">Surligneur Compose</string>
@@ -740,7 +744,7 @@
     <string name="playback_external_player_label">Lecteur externe</string>
     <string name="playback_afr_mode">Adaptation de la fréquence d’images</string>
     <string name="playback_dv_hdr_label">Dolby Vision et HDR</string>
-    <string name="playback_mpv_decoding_label">Décodage MPV</string>
+    <string name="playback_mpv_decoding_label">Décodage mpv</string>
     <string name="playback_network_label">Réseau</string>
     <string name="sub_languages_label">Langues</string>
     <string name="sub_style_label">Style</string>
@@ -773,9 +777,19 @@
     <string name="playback_player_ask">Demander à chaque fois</string>
     <string name="playback_internal_player_engine">Moteur interne</string>
     <string name="playback_engine_exoplayer">ExoPlayer</string>
-    <string name="playback_engine_mvplayer">Libmpv (bêta)</string>
+    <string name="playback_engine_mvplayer">libmpv (bêta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Changer automatiquement de moteur en cas d’erreur au démarrage</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si le démarrage du flux échoue, bascule automatiquement entre ExoPlayer et libmpv.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Désactivez le repli vers la source correspondante suivante pour l’utiliser.</string>
+    <string name="autoplay_fallback_next_source">Repli vers la source correspondante suivante en cas d’échec</string>
+    <string name="autoplay_fallback_next_source_sub">Si la source sélectionnée automatiquement échoue ou ne démarre pas à temps, essayer discrètement les sources correspondantes suivantes.</string>
+    <string name="autoplay_fallback_max_sources">Sources à essayer en cas d’échec</string>
+    <string name="autoplay_fallback_max_sources_sub">Nombre de sources correspondantes supplémentaires à essayer avant d’afficher l’erreur.</string>
+    <string name="autoplay_fallback_startup_timeout">Délai de démarrage d’une source</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Durée d’attente du démarrage d’une source avant d’essayer la suivante.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$d s</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Désactivez le changement automatique de moteur en cas d’erreur de démarrage pour l’utiliser.</string>
+    <string name="player_error_source_startup_timeout">La source n’a pas démarré dans un délai de %1$d secondes.</string>
     <string name="playback_release_decoder_on_background">Libérer le décodeur en arrière-plan</string>
     <string name="playback_release_decoder_on_background_sub">Libérer le décodeur vidéo lorsque Nuvio passe en arrière-plan. À activer si la lecture échoue avec une erreur de décodeur après le retour dans l’application. Le lecteur se recharge au retour, y compris après l’économiseur d’écran</string>
     <string name="playback_external_forward_subtitles">Transmettre les sous-titres au lecteur externe</string>
@@ -803,16 +817,17 @@
     <string name="playback_player_external_desc">Toujours ouvrir les flux dans une application externe</string>
     <string name="playback_player_ask_desc">Choisir le lecteur à chaque fois</string>
     <string name="playback_player_auto">Auto (le mieux adapté au contenu)</string>
-    <string name="playback_player_auto_desc">ExoPlayer pour les films et les séries · MPV pour les animés</string>
+    <string name="playback_player_auto_desc">ExoPlayer pour les films et les séries · mpv pour les animés</string>
     <string name="playback_engine_exoplayer_desc">Meilleure compatibilité avec les fonctionnalités actuelles de Nuvio.</string>
     <string name="playback_engine_mvplayer_desc">Utilise libmpv avec les commandes OSD de Nuvio. Expérimental.</string>
 
     <string name="video_section">Vidéo</string>
     <string name="playback_true_black_letterbox">Bandes noires pures</string>
     <string name="playback_true_black_letterbox_sub">Laisse les bandes autour de l’image non peintes afin que le HDR conserve un noir pur. Gardez cette option désactivée si une ligne lumineuse apparaît sur les bandes.</string>
-    <string name="playback_chapters_label">Chapitres</string>
-    <string name="playback_exo_chapters_title">Afficher les chapitres (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre. Effectue quelques petites requêtes supplémentaires une fois la lecture démarrée. mpv affiche toujours les chapitres.</string>
+    <string name="playback_exo_chapters_title">Afficher les chapitres</string>
+    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre.</string>
+    <string name="playback_chapter_title_title">Afficher le titre du chapitre</string>
+    <string name="playback_chapter_title_sub">Afficher le nom du chapitre en cours au-dessus de la barre de progression.</string>
     <string name="audio_trailer_section">Bande-annonce</string>
     <string name="audio_autoplay_trailers">Lecture automatique des bandes-annonces</string>
     <string name="audio_autoplay_trailers_sub">Lire automatiquement les bandes-annonces sur les écrans de détail et de fin de lecture</string>
@@ -885,9 +900,9 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
-    <string name="audio_mpv_hi10p_gnext_sw_title">Repli logiciel G-NEXT pour Hi10P (MPV uniquement)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Repli logiciel G-NEXT pour Hi10P (mpv uniquement)</string>
     <string name="audio_mpv_hi10p_gnext_sw_subtitle">Utilise le décodage logiciel G-NEXT lorsque les détails du flux identifient du H.264 Hi10P. Désactivé par défaut&#160;; à activer uniquement si la lecture Hi10P se fige ou échoue.</string>
-    <string name="audio_mpv_hwdec_title">Décodage matériel (MPV uniquement)</string>
+    <string name="audio_mpv_hwdec_title">Décodage matériel (mpv uniquement)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Choisissez comment libmpv doit utiliser les décodeurs matériels.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Ancien mode (direct -&gt; copy)</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Comportement par défaut précédent&#160;: essaie d’abord le décodage matériel direct, puis le copy-back.</string>
@@ -925,12 +940,35 @@
     <string name="sub_outline">Contour</string>
     <string name="sub_outline_sub">Ajouter un contour autour du texte des sous-titres pour une meilleure lisibilité</string>
     <string name="sub_outline_color">Couleur du contour</string>
+    <string name="sub_outline_width">Épaisseur du contour</string>
     <string name="sub_hdr_style">Style HDR / Dolby Vision distinct</string>
     <string name="sub_hdr_style_sub">Utiliser une autre couleur de texte et une luminosité plus faible pour les sous-titres des vidéos HDR et Dolby Vision</string>
     <string name="sub_hdr_text_color">Couleur du texte HDR</string>
     <string name="sub_hdr_brightness">Luminosité HDR</string>
     <string name="sub_hdr_dim_player_controls">Atténuer les commandes du lecteur en HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Appliquer la luminosité HDR aux commandes et aux menus du lecteur affichés sur les vidéos HDR et Dolby Vision</string>
+    <string name="sub_appearance">Apparence des sous-titres</string>
+    <string name="sub_appearance_desc">Police, couleurs, arrière-plan et ombre</string>
+    <string name="sub_appearance_hint">S’applique aux sous-titres texte. Les sous-titres ASS stylisés et les sous-titres image conservent leur apparence d’origine.</string>
+    <string name="sub_preview">Aperçu</string>
+    <string name="sub_preview_text">Chaque histoire commence par un peu de curiosité.</string>
+    <string name="sub_font">Police</string>
+    <string name="sub_font_default">Par défaut</string>
+    <string name="sub_font_serif">Avec empattement</string>
+    <string name="sub_font_mono">Chasse fixe</string>
+    <string name="sub_font_import">Importer depuis le téléphone</string>
+    <string name="sub_font_import_desc">Ajoutez une police .ttf ou .otf jusqu’à 10 Mo. Les polices importées restent sur cette TV.</string>
+    <string name="sub_font_import_qr">Scannez avec votre téléphone pour ajouter une police .ttf ou .otf</string>
+    <string name="sub_font_missing">Police indisponible sur cet appareil. Utilisation de la police par défaut.</string>
+    <string name="sub_font_remove">Retirer %1$s</string>
+    <string name="sub_background">Arrière-plan</string>
+    <string name="sub_bg_opacity">Opacité de l’arrière-plan</string>
+    <string name="sub_bg_roundness">Arrondi des coins</string>
+    <string name="sub_shadow">Ombre portée</string>
+    <string name="sub_shadow_desc">Détacher le texte des scènes lumineuses</string>
+    <string name="sub_shadow_opacity">Opacité de l’ombre</string>
+    <string name="sub_shadow_size">Taille de l’ombre</string>
+    <string name="sub_reset_appearance">Réinitialiser l’apparence</string>
     <string name="sub_advanced_section">Rendu avancé des sous-titres</string>
     <string name="sub_libass">Utiliser libass pour les sous-titres ASS/SSA</string>
     <string name="sub_libass_sub">Rendu ASS/SSA avancé (styles, positionnement, animations)</string>
@@ -1082,6 +1120,8 @@
     <string name="layout_cw_enabled_sub">Afficher la rangée Continuer à regarder sur l’écran d’accueil.</string>
     <string name="layout_use_episode_thumbnails_cw">Utiliser les miniatures d’épisodes dans Continuer à regarder</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Utiliser les miniatures d’épisodes comme image par défaut. Si cette option est désactivée, l’arrière-plan est utilisé.</string>
+    <string name="layout_season_posters">Affiches de saison</string>
+    <string name="layout_season_posters_sub">Afficher les saisons sous forme d’affiches plutôt que d’onglets de texte lorsqu’elles sont disponibles.</string>
     <string name="layout_blur_unwatched">Flouter les épisodes non vus</string>
     <string name="layout_blur_unwatched_sub">Flouter les miniatures d’épisodes jusqu’à ce qu’ils soient vus, pour éviter les spoilers.</string>
     <string name="layout_episode_options_overlay">Superposition des options d’épisode</string>
@@ -1109,6 +1149,14 @@
     <string name="layout_cw_sort_streaming_desc">Éléments sortis d’abord, éléments à venir à la fin</string>
     <string name="layout_cw_sort_split_upcoming">Rangée «&#160;À venir&#160;» séparée</string>
     <string name="layout_cw_sort_split_upcoming_desc">Déplacer les épisodes non diffusés dans une rangée «&#160;À venir&#160;» distincte</string>
+    <string name="layout_cw_click_action">À la sélection</string>
+    <string name="layout_cw_click_action_sub">Ce qui s’ouvre lorsque vous sélectionnez un élément de Continuer à regarder</string>
+    <string name="layout_cw_click_stream">Ouvrir les flux</string>
+    <string name="layout_cw_click_stream_desc">Choisir une source ou reprendre la lecture</string>
+    <string name="layout_cw_click_details">Ouvrir les détails</string>
+    <string name="layout_cw_click_details_desc">Ouvrir la page de détail du titre</string>
+    <string name="layout_cw_click_details_upcoming">Détails pour les épisodes à venir uniquement</string>
+    <string name="layout_cw_click_details_upcoming_desc">Ouvrir les détails des épisodes pas encore diffusés, et les flux pour les autres</string>
     <string name="upcoming_section_title">À venir</string>
     <string name="layout_trailer_button">Afficher le bouton bande-annonce</string>
     <string name="layout_trailer_button_sub">Afficher le bouton bande-annonce sur la page de détail (uniquement lorsqu’une bande-annonce est disponible).</string>
@@ -1118,6 +1166,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Mettre la bande-annonce en pause lorsque vous faites défiler vers le bas et la reprendre au retour en haut de la page.</string>
     <string name="layout_trailer_4k">Bandes-annonces 4K</string>
     <string name="layout_trailer_4k_sub">Lire les bandes-annonces au-delà de 1080p lorsqu’elles sont disponibles. Utilise beaucoup plus de mémoire&#160;; désactivé par défaut sur les appareils disposant de 2 Go de RAM ou moins.</string>
+    <string name="layout_trailer_subtitles">Sous-titres des bandes-annonces</string>
+    <string name="layout_trailer_subtitles_sub">Afficher des sous-titres sur les bandes-annonces dans la langue de sous-titres que vous préférez, lorsqu’ils sont disponibles.</string>
     <string name="layout_detail_group_episodes">Épisodes</string>
     <string name="layout_detail_group_trailers">Bandes-annonces</string>
     <string name="layout_detail_group_metadata">Métadonnées</string>
@@ -1138,6 +1188,8 @@
     <string name="layout_trailer_muted">Lire la bande-annonce sans le son</string>
     <string name="layout_trailer_muted_sub_preview">Couper le son de la bande-annonce pendant l’aperçu automatique.</string>
     <string name="layout_trailer_muted_sub_expanded">Couper le son de la bande-annonce dans les cartes étendues.</string>
+    <string name="layout_trailer_continue_in_details">Poursuivre la bande-annonce dans la page de détail</string>
+    <string name="layout_trailer_continue_in_details_sub">Garder la bande-annonce en lecture à l’ouverture de la page de détail.</string>
     <string name="layout_section_card_style">Carte d’affiche</string>
     <string name="layout_section_card_style_desc">Ajuster la largeur et le rayon des coins des cartes.</string>
     <string name="settings_card_depth_title">Effet de profondeur des cartes</string>
@@ -1173,6 +1225,7 @@
     <string name="layout_trailer_location_sub">Choisir où l’aperçu de la bande-annonce est lu dans l’accueil moderne.</string>
     <string name="layout_trailer_expanded_card">Carte étendue</string>
     <string name="layout_trailer_hero_media">Média du hero</string>
+    <string name="layout_trailer_hero_media_no_expand">Média du hero (sans extension)</string>
     <string name="layout_preset_compact">Compact</string>
     <string name="layout_preset_dense">Dense</string>
     <string name="layout_preset_standard">Standard</string>
@@ -1211,6 +1264,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Toujours utiliser l’arrière-plan avec logo pour les affiches paysage</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignorer l’affiche paysage fournie par l’addon et utiliser à la place l’arrière-plan avec le logo en superposition.</string>
+    <string name="layout_hero_description_auto_scroll">Défilement automatique des descriptions</string>
+    <string name="layout_hero_description_auto_scroll_sub">Faire défiler lentement les longues descriptions sur l’écran d’accueil au lieu de les couper.</string>
     <string name="web_custom_poster_title">Source d’affiches personnalisée</string>
     <string name="web_custom_poster_subtitle">Collez un modèle d’URL d’affiche ci-dessous, puis appuyez sur «&#160;Enregistrer&#160;».</string>
     <string name="web_custom_poster_label">Modèle d’URL</string>
@@ -1227,6 +1282,13 @@
     <string name="web_custom_poster_none">Aucun modèle défini</string>
     <string name="web_custom_poster_loading">Chargement…</string>
     <string name="web_custom_poster_placeholders_info">Espaces réservés&#160;: {id} transmet tous les ID de contenu. {imdb_id}, {tmdb_id}, {tvdb_id} et {kitsu_id} ciblent un seul type d’ID&#160;; s’il n’est pas disponible, l’affiche d’origine est conservée. {imdb_id|tmdb_id|kitsu_id} déclare les types d’ID pris en charge&#160;: celui qui correspond est utilisé, sinon l’affiche d’origine est conservée. Ajoutez ? pour rendre un espace réservé facultatif, qui devient alors vide au lieu d’être ignoré&#160;: {imdb_id?}. Autres espaces réservés&#160;: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Polices des sous-titres</string>
+    <string name="web_subtitle_font_subtitle">Choisissez un fichier .ttf ou .otf à utiliser pour les sous-titres sur votre TV.</string>
+    <string name="web_subtitle_font_choose">Choisir le fichier de police</string>
+    <string name="web_subtitle_font_uploading">Envoi…</string>
+    <string name="web_subtitle_font_added">Ajoutée à votre TV</string>
+    <string name="web_subtitle_font_error">Impossible d’importer cette police. Choisissez un fichier .ttf ou .otf valide de moins de 10 Mo.</string>
+    <string name="web_subtitle_font_connection_error">Erreur de connexion</string>
 
 
     <string name="mdblist_name">MDBList</string>
@@ -1277,7 +1339,7 @@
     <string name="mdblist_show_on_hero_title">Utiliser les notes dans le hero</string>
     <string name="mdblist_show_on_hero_subtitle">Afficher les notes MDBList dans le carrousel hero (moderne et classique/grille)</string>
     <string name="mdblist_rating_order_title">Ordre des notes</string>
-    <string name="mdblist_rating_order_subtitle">Les 3 premières notes activées et disponibles sont affichées dans le hero moderne. Utilisez les flèches pour les réorganiser.</string>
+    <string name="mdblist_rating_order_subtitle">Les 3 premières notes activées et disponibles sont affichées dans le hero moderne. Utilisez le bouton de réorganisation pour modifier leur ordre.</string>
     <string name="mdblist_dialog_title">Clé API MDBList</string>
     <string name="mdblist_dialog_subtitle">Saisissez votre clé API pour récupérer les notes externes</string>
     <string name="mdblist_dialog_placeholder">Saisir la clé API MDBList</string>
@@ -1494,6 +1556,8 @@
     <string name="tmdb_networks_subtitle">Chaînes avec logos depuis TMDB</string>
     <string name="tmdb_episodes_title">Épisodes</string>
     <string name="tmdb_episodes_subtitle">Titres, résumés, miniatures et durée des épisodes depuis TMDB</string>
+    <string name="tmdb_season_posters_title">Affiches de saison</string>
+    <string name="tmdb_season_posters_subtitle">Affiches de saison issues de TMDB pour les onglets de saison de la page de détail</string>
     <string name="tmdb_trailers_title">Bandes-annonces</string>
     <string name="tmdb_trailers_subtitle">Bandes-annonces candidates issues des vidéos TMDB pour la section Bande-annonce de la page de détail</string>
     <string name="tmdb_more_like_this_title">Similaires</string>
@@ -1737,6 +1801,13 @@
     <string name="addon_installing">Installation en cours</string>
     <string name="addon_install_btn">Installer</string>
     <string name="addon_install_success">%1$s installé</string>
+    <string name="addon_tracking_consent_title">Addon de suivi</string>
+    <string name="addon_tracking_consent_body">%1$s est un addon de suivi. Nuvio lui enverra votre activité&#160;: ce que vous lancez, mettez en pause et arrêtez avec la position de lecture, ce que vous ajoutez à votre bibliothèque ou en retirez, et ce que vous marquez comme vu ou non vu. Ces données quittent Nuvio et sont traitées par le développeur de l’addon et par le service auquel il se connecte.</string>
+    <string name="addon_tracking_consent_checkbox">J’accepte de partager mon activité de visionnage et ma bibliothèque avec cet addon</string>
+    <string name="addon_tracking_consent_checked">Coché</string>
+    <string name="addon_tracking_consent_unchecked">Non coché</string>
+    <string name="addon_tracking_consent_cancel">Annuler</string>
+    <string name="addon_tracking_consent_install">Installer</string>
     <string name="addon_error_invalid_url">Saisissez une URL d’addon valide</string>
     <string name="addon_error_invalid_scheme">L’URL de l’addon doit commencer par http ou https</string>
     <string name="addon_installed_section">Installés</string>
@@ -1784,6 +1855,9 @@
     <string name="catalog_order_disabled_on_home">Désactivé sur l’accueil</string>
     <string name="catalog_order_enable">Activer</string>
     <string name="catalog_order_disable">Désactiver</string>
+    <string name="catalog_order_pinned">Épinglé</string>
+    <string name="catalog_order_pinned_to_top">Épinglé en haut</string>
+    <string name="catalog_order_pin_to_move_toast">Retirez l’épingle de la collection pour la déplacer</string>
 
 
     <string name="stream_retry">Réessayer</string>
@@ -1884,7 +1958,7 @@
     <string name="player_subtitle_delay">Délai des sous-titres</string>
     <string name="player_error_title">Erreur de lecture</string>
     <string name="player_go_back">Retour</string>
-    <string name="player_switch_to_mpv">Passer au lecteur MPV</string>
+    <string name="player_switch_to_mpv">Passer au lecteur mpv</string>
     <string name="player_report_issue">Signaler un problème</string>
     <string name="player_report_issue_sending">Envoi du rapport de lecture…</string>
     <string name="player_report_issue_sending_button">Envoi en cours…</string>
@@ -2166,15 +2240,12 @@
     <string name="library_status_dropped">Abandonnés</string>
     <string name="library_syncing_library">Synchronisation de la bibliothèque…</string>
     <string name="library_type_all">Tout</string>
-    <string name="library_type_items">éléments</string>
-    <string name="library_empty_local_title">%1$s&#160;: aucun élément pour le moment</string>
-    <string name="library_empty_trakt_title">%1$s&#160;: aucun élément dans cette liste</string>
-    <string name="library_empty_local_subtitle">Commencez à enregistrer vos favoris pour les voir ici</string>
-    <string name="library_empty_trakt_subtitle">Utilisez + dans les détails pour ajouter des éléments à la liste de suivi ou à des listes</string>
+    <string name="library_empty_title">Aucun élément à afficher</string>
+    <string name="library_empty_local_hint">Modifiez vos filtres ou commencez à enregistrer vos favoris pour les voir ici</string>
+    <string name="library_empty_trakt_hint">Modifiez vos filtres ou utilisez + dans les détails pour ajouter des éléments à la liste de suivi ou à des listes</string>
+    <string name="library_empty_simkl_hint">Modifiez vos filtres ou utilisez + dans les détails pour ajouter des éléments à un statut Simkl</string>
     <string name="library_empty_trakt_not_auth_title">Trakt non connecté</string>
     <string name="library_empty_trakt_not_auth_subtitle">Connectez votre compte Trakt dans les paramètres pour afficher votre bibliothèque Trakt</string>
-    <string name="library_empty_simkl_title">%1$s&#160;: aucun élément avec ce statut</string>
-    <string name="library_empty_simkl_subtitle">Utilisez + dans les détails pour ajouter des éléments à un statut Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl non connecté</string>
     <string name="library_empty_simkl_not_auth_subtitle">Connectez votre compte Simkl dans les paramètres pour afficher votre bibliothèque Simkl</string>
     <string name="library_list_create_dialog_title">Créer une liste</string>
@@ -2389,8 +2460,9 @@
     <string name="cast_detail_error">Un problème est survenu</string>
     <string name="cast_detail_retry">Réessayer</string>
     <string name="cast_detail_filmography">Filmographie</string>
+    <string name="cast_detail_filter_all">Tout</string>
     <string name="cast_detail_born">Naissance&#160;: %1$s</string>
-    <string name="cast_detail_born_died">Naissance&#160;: %1$s — †%2$s</string>
+    <string name="cast_detail_born_died">Naissance&#160;: %1$s — Décès&#160;: %2$s</string>
     <string name="cast_detail_age">%1$d ans</string>
 
     <string name="catalog_see_all_from">depuis %1$s</string>
@@ -2469,6 +2541,8 @@
     <string name="update_checking">Recherche de mises à jour…</string>
     <string name="update_waiting_for_stable">Vous recevrez la prochaine version stable dès qu’elle sera disponible</string>
     <string name="update_download_complete">Téléchargement terminé. Prêt à installer.</string>
+    <string name="update_ready_closes">Téléchargement terminé. L’application se ferme pendant l’installation de la mise à jour, ce qui peut prendre une minute. Rouvrez-la ensuite.</string>
+    <string name="update_ready_closes_and_reopens">Téléchargement terminé. L’application se ferme pendant l’installation de la mise à jour puis se rouvre d’elle-même, ce qui peut prendre une minute.</string>
     <string name="update_installed_automatically">Mise à jour automatique effectuée pendant que l’appareil était inactif</string>
     <string name="update_up_to_date">Le système est à jour. Dernières modifications&#160;:</string>
     <string name="update_close">Fermer</string>
@@ -2507,6 +2581,10 @@
     <string name="plugin_repo_added_with_providers">%1$s ajouté avec %2$d fournisseurs</string>
     <string name="plugin_repo_removed">Dépôt supprimé</string>
     <string name="plugin_repo_refreshed">Dépôt actualisé</string>
+    <string name="plugin_repo_delete_confirm_title">Supprimer le dépôt&#160;?</string>
+    <string name="plugin_repo_delete_confirm_message">Voulez-vous vraiment le supprimer&#160;?</string>
+    <string name="plugin_repo_delete_no">Non</string>
+    <string name="plugin_repo_delete_yes">Oui</string>
 
     <!-- Trakt errors -->
 
@@ -2577,6 +2655,7 @@
     <string name="cd_loading_logo">Chargement du logo</string>
     <string name="cd_move_up">Monter</string>
     <string name="cd_move_down">Descendre</string>
+    <string name="cd_reorder">Réorganiser</string>
     <string name="cd_edit">Modifier</string>
     <string name="cd_delete">Supprimer</string>
     <string name="cd_qr_code">Code QR</string>
@@ -2648,10 +2727,21 @@
     <string name="collections_valid_summary">%1$d collection(s), %2$d dossier(s)</string>
     <string name="collections_confirm_import">Confirmer l’importation</string>
     <string name="collections_folder_count">%1$d dossier(s)</string>
+    <string name="collections_pinned">Épinglé</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Titre de la rangée</string>
     <string name="collections_editor_save">Enregistrer</string>
+    <string name="collections_editor_unsaved_title">Enregistrer les modifications&#160;?</string>
+    <string name="collections_editor_unsaved_subtitle">Cette collection contient des modifications non enregistrées.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Modifications non enregistrées</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Saisissez un titre et ajoutez au moins un dossier pour enregistrer cette collection.</string>
+    <string name="collections_editor_unsaved_missing_title">Saisissez un titre de collection pour enregistrer vos modifications.</string>
+    <string name="collections_editor_unsaved_missing_folder">Ajoutez au moins un dossier pour enregistrer cette collection.</string>
+    <string name="collections_editor_folder_unsaved_title">Enregistrer les modifications du dossier&#160;?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Ce dossier contient des modifications non enregistrées.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Modifications du dossier non enregistrées</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Ajoutez au moins une source pour enregistrer ce dossier.</string>
     <string name="collections_editor_backdrop">Image d’arrière-plan</string>
     <string name="collections_editor_pin_above">Épingler au-dessus des catalogues</string>
     <string name="collections_editor_pin_above_desc">Afficher cette collection au-dessus de tous les catalogues classiques de l’accueil. Plusieurs collections épinglées suivent l’ordre de création des collections.</string>
@@ -3383,17 +3473,17 @@
     <string name="stream_test_no_stream">Aucune lecture enregistrée. Lisez une vidéo pour lancer des tests de diagnostic sur son hôte.</string>
     <string name="stream_test_btn_start">Démarrer le test</string>
     <string name="stream_test_btn_measuring_baseline">Mesure de la référence…</string>
-    <string name="stream_test_btn_measuring_parallel1">Mesure en parallèle (1 Mo)…</string>
-    <string name="stream_test_btn_measuring_parallel4">Mesure en parallèle (4 Mo)…</string>
-    <string name="stream_test_btn_measuring_parallel8">Mesure en parallèle (8 Mo)…</string>
-    <string name="stream_test_btn_measuring_parallel16">Mesure en parallèle (16 Mo)…</string>
+    <string name="stream_test_btn_measuring_parallel1">Mesure en parallèle (1 connexion)…</string>
+    <string name="stream_test_btn_measuring_parallel4">Mesure en parallèle (4 connexions)…</string>
+    <string name="stream_test_btn_measuring_parallel8">Mesure en parallèle (8 connexions)…</string>
+    <string name="stream_test_btn_measuring_parallel16">Mesure en parallèle (16 connexions)…</string>
     <string name="stream_test_btn_run_again">Relancer</string>
     <string name="stream_test_btn_running">En cours…</string>
     <string name="stream_test_label_baseline">Connexion unique standard (référence)</string>
-    <string name="stream_test_label_parallel1">Connexion parallèle (blocs de 1 Mo)</string>
-    <string name="stream_test_label_parallel4">Connexion parallèle (blocs de 4 Mo)</string>
-    <string name="stream_test_label_parallel8">Connexion parallèle (blocs de 8 Mo)</string>
-    <string name="stream_test_label_parallel16">Connexion parallèle (blocs de 16 Mo)</string>
+    <string name="stream_test_label_parallel1">Connexion parallèle (1 connexion)</string>
+    <string name="stream_test_label_parallel4">Connexion parallèle (4 connexions)</string>
+    <string name="stream_test_label_parallel8">Connexion parallèle (8 connexions)</string>
+    <string name="stream_test_label_parallel16">Connexion parallèle (16 connexions)</string>
     <string name="stream_test_error_prefix">Erreur&#160;: %1$s</string>
     <string name="stream_test_video_bitrate">Débit vidéo moyen&#160;: %1$s</string>
     <string name="stream_test_error_connection">Échec de la connexion. Le lien du dernier flux lu a peut-être expiré ou est injoignable. Veuillez relancer la lecture de la vidéo, puis réessayer.</string>
@@ -3429,8 +3519,14 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Recherche approfondie de la synchronisation automatique</string>
     <string name="autosync_thorough_description">Continuer à comparer d’autres sous-titres et pistes intégrées pour trouver une correspondance plus précise avant de synchroniser. Lorsque cette option est désactivée, la première correspondance fiable est utilisée plus tôt. Seules les correspondances fiables sont appliquées.</string>
-    <string name="autosync_toast_no_fit">Échec de la synchronisation&#160;: ces sous-titres ne correspondent pas à cette version de la vidéo.</string>
     <string name="autosync_label_synced">Synchronisé automatiquement</string>
+    <string name="autosync_status_title">État de la synchronisation automatique</string>
+    <string name="autosync_status_synced">Synchronisé</string>
+    <string name="autosync_status_not_needed">Non nécessaire</string>
+    <string name="autosync_status_in_progress">En cours</string>
+    <string name="autosync_status_no_fit">Peut ne pas correspondre</string>
+    <string name="autosync_status_no_reference">Aucun sous-titre intégré</string>
+    <string name="autosync_status_failed">Échoué</string>
     <string name="stream_resume_from_time">Reprendre à %1$s</string>
     <string name="stream_resume_from_percent">Reprendre à %1$d&#160;%%</string>
 </resources>
