@@ -196,6 +196,7 @@ class MetaMapperTest {
             listOf("aaaaaaaaaaa", "https://cdn.example/trailer.mp4", "bbbbbbbbbbb"),
             result.trailers.map { it.playbackKey }
         )
+        assertEquals("Duplicate", result.trailers[0].name)
         assertEquals("Plex 1080p", result.trailers[1].name)
         assertEquals("https://cdn.example/thumb.jpg", result.trailers[1].thumbnail)
         assertEquals("Teaser", result.trailers[2].name)
