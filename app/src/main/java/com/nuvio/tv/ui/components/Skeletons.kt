@@ -23,10 +23,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -105,7 +110,7 @@ fun StreamCardSkeleton(
 
 @Composable
 fun MetaDetailsSkeleton(backdropAware: Boolean = false) {
-    val shimmerBrush = rememberShimmerBrush(backdropAware = backdropAware)
+    val shimmer = rememberSkeletonShimmer(backdropAware = backdropAware)
     val episodeCardColor = if (backdropAware) {
         NuvioTheme.colors.BackgroundCard.copy(alpha = 0.40f)
     } else {
@@ -125,30 +130,30 @@ fun MetaDetailsSkeleton(backdropAware: Boolean = false) {
             modifier = Modifier.fillMaxSize()
         ) {
             item {
-                MetaHeroSkeleton(shimmerBrush = shimmerBrush)
+                MetaHeroSkeleton(shimmer = shimmer)
             }
 
             item {
-                SeasonTabsSkeleton(shimmerBrush = shimmerBrush)
+                SeasonTabsSkeleton(shimmer = shimmer)
             }
 
             item {
                 EpisodesRowSkeleton(
-                    shimmerBrush = shimmerBrush,
+                    shimmer = shimmer,
                     cardColor = episodeCardColor
                 )
             }
 
             item {
-                CastSectionSkeleton(shimmerBrush = shimmerBrush)
+                CastSectionSkeleton(shimmer = shimmer)
             }
 
             item {
-                CompanyLogosSkeleton(titleWidth = 140.dp, shimmerBrush = shimmerBrush)
+                CompanyLogosSkeleton(titleWidth = 140.dp, shimmer = shimmer)
             }
 
             item {
-                CompanyLogosSkeleton(titleWidth = 110.dp, shimmerBrush = shimmerBrush)
+                CompanyLogosSkeleton(titleWidth = 110.dp, shimmer = shimmer)
             }
         }
     }
@@ -210,7 +215,7 @@ private fun BackdropLoadingScrim() {
 }
 
 @Composable
-private fun MetaHeroSkeleton(shimmerBrush: Brush) {
+private fun MetaHeroSkeleton(shimmer: SkeletonShimmer) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -223,10 +228,10 @@ private fun MetaHeroSkeleton(shimmerBrush: Brush) {
                 .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.lg),
             verticalArrangement = Arrangement.Bottom
         ) {
-            SkeletonBar(
+            ShimmerBar(
                 width = 0.4f,
                 height = 100.dp,
-                brush = shimmerBrush,
+                shimmer = shimmer,
                 cornerRadius = NuvioTheme.spacing.md
             )
 
@@ -236,58 +241,58 @@ private fun MetaHeroSkeleton(shimmerBrush: Brush) {
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SkeletonPill(width = 100.dp, height = NuvioTheme.spacing.xxxl, brush = shimmerBrush)
+                ShimmerPill(width = 100.dp, height = NuvioTheme.spacing.xxxl, shimmer = shimmer)
                 Box(
                     modifier = Modifier
                         .size(NuvioTheme.spacing.xxxl)
                         .clip(CircleShape)
-                        .background(shimmerBrush)
+                        .shimmerBackground(shimmer)
                 )
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-            SkeletonBar(width = 0.5f, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+            ShimmerBar(width = 0.5f, height = 14.dp, shimmer = shimmer, cornerRadius = 10.dp)
             Spacer(modifier = Modifier.height(10.dp))
-            SkeletonBar(width = 0.6f, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
+            ShimmerBar(width = 0.6f, height = NuvioTheme.spacing.lg, shimmer = shimmer, cornerRadius = 10.dp)
             Spacer(modifier = Modifier.height(6.dp))
-            SkeletonBar(width = 0.55f, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
+            ShimmerBar(width = 0.55f, height = NuvioTheme.spacing.lg, shimmer = shimmer, cornerRadius = 10.dp)
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-                SkeletonBar(width = 96.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                SkeletonBar(width = 72.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                SkeletonBar(width = 84.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                SkeletonBar(width = 64.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+                ShimmerBar(width = 96.dp, height = 14.dp, shimmer = shimmer, cornerRadius = 10.dp)
+                ShimmerBar(width = 72.dp, height = 14.dp, shimmer = shimmer, cornerRadius = 10.dp)
+                ShimmerBar(width = 84.dp, height = 14.dp, shimmer = shimmer, cornerRadius = 10.dp)
+                ShimmerBar(width = 64.dp, height = 14.dp, shimmer = shimmer, cornerRadius = 10.dp)
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
 
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-                SkeletonBar(width = 72.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
-                SkeletonBar(width = NuvioTheme.spacing.huge, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
+                ShimmerBar(width = 72.dp, height = NuvioTheme.spacing.md, shimmer = shimmer, cornerRadius = 10.dp)
+                ShimmerBar(width = NuvioTheme.spacing.huge, height = NuvioTheme.spacing.md, shimmer = shimmer, cornerRadius = 10.dp)
             }
         }
     }
 }
 
 @Composable
-private fun SeasonTabsSkeleton(shimmerBrush: Brush) {
+private fun SeasonTabsSkeleton(shimmer: SkeletonShimmer) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         items(5) {
-            SkeletonPill(width = 96.dp, height = 36.dp, brush = shimmerBrush)
+            ShimmerPill(width = 96.dp, height = 36.dp, shimmer = shimmer)
         }
     }
 }
 
 @Composable
 private fun EpisodesRowSkeleton(
-    shimmerBrush: Brush,
+    shimmer: SkeletonShimmer,
     cardColor: Color
 ) {
     LazyRow(
@@ -307,12 +312,12 @@ private fun EpisodesRowSkeleton(
                         .fillMaxWidth()
                         .height(158.dp)
                         .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.md, topEnd = NuvioTheme.spacing.md))
-                        .background(shimmerBrush)
+                        .shimmerBackground(shimmer)
                 )
                 Column(modifier = Modifier.padding(NuvioTheme.spacing.md)) {
-                    SkeletonBar(width = 160.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+                    ShimmerBar(width = 160.dp, height = 14.dp, shimmer = shimmer, cornerRadius = 10.dp)
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                    SkeletonBar(width = 120.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
+                    ShimmerBar(width = 120.dp, height = NuvioTheme.spacing.md, shimmer = shimmer, cornerRadius = 10.dp)
                 }
             }
         }
@@ -320,14 +325,14 @@ private fun EpisodesRowSkeleton(
 }
 
 @Composable
-private fun CastSectionSkeleton(shimmerBrush: Brush) {
+private fun CastSectionSkeleton(shimmer: SkeletonShimmer) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 20.dp, bottom = NuvioTheme.spacing.sm)
     ) {
         Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)) {
-            SkeletonBar(width = 120.dp, height = 20.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+            ShimmerBar(width = 120.dp, height = 20.dp, shimmer = shimmer, cornerRadius = 10.dp)
         }
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -346,12 +351,12 @@ private fun CastSectionSkeleton(shimmerBrush: Brush) {
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(shimmerBrush)
+                            .shimmerBackground(shimmer)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
-                    SkeletonBar(width = 90.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
+                    ShimmerBar(width = 90.dp, height = NuvioTheme.spacing.md, shimmer = shimmer, cornerRadius = 10.dp)
                     Spacer(modifier = Modifier.height(6.dp))
-                    SkeletonBar(width = 70.dp, height = 10.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+                    ShimmerBar(width = 70.dp, height = 10.dp, shimmer = shimmer, cornerRadius = 10.dp)
                 }
             }
         }
@@ -361,7 +366,7 @@ private fun CastSectionSkeleton(shimmerBrush: Brush) {
 @Composable
 private fun CompanyLogosSkeleton(
     titleWidth: Dp,
-    shimmerBrush: Brush
+    shimmer: SkeletonShimmer
 ) {
     Column(
         modifier = Modifier
@@ -369,7 +374,7 @@ private fun CompanyLogosSkeleton(
             .padding(top = 20.dp, bottom = NuvioTheme.spacing.sm)
     ) {
         Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)) {
-            SkeletonBar(width = titleWidth, height = 20.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+            ShimmerBar(width = titleWidth, height = 20.dp, shimmer = shimmer, cornerRadius = 10.dp)
         }
 
         LazyRow(
@@ -383,7 +388,7 @@ private fun CompanyLogosSkeleton(
                         .width(140.dp)
                         .height(NuvioTheme.spacing.huge)
                         .clip(RoundedCornerShape(NuvioTheme.radii.md))
-                        .background(shimmerBrush)
+                        .shimmerBackground(shimmer)
                 )
             }
         }
@@ -438,8 +443,8 @@ fun SkeletonPill(
 }
 
 @Composable
-fun rememberShimmerBrush(backdropAware: Boolean = false): Brush {
-    val shimmerColors = if (backdropAware) {
+private fun skeletonShimmerColors(backdropAware: Boolean): List<Color> =
+    if (backdropAware) {
         listOf(
             NuvioTheme.colors.TextPrimary.copy(alpha = 0.08f),
             NuvioTheme.colors.TextPrimary.copy(alpha = 0.20f),
@@ -452,6 +457,90 @@ fun rememberShimmerBrush(backdropAware: Boolean = false): Brush {
             NuvioTheme.colors.SurfaceVariant.copy(alpha = 0.30f)
         )
     }
+
+@Stable
+class SkeletonShimmer internal constructor(
+    private val colors: List<Color>,
+    private val translate: State<Float>
+) {
+    val brush: Brush by derivedStateOf {
+        val offset = translate.value
+        Brush.linearGradient(
+            colors = colors,
+            start = Offset(offset - 1000f, 0f),
+            end = Offset(offset, 0f)
+        )
+    }
+}
+
+@Composable
+fun rememberSkeletonShimmer(backdropAware: Boolean = false): SkeletonShimmer {
+    val colors = skeletonShimmerColors(backdropAware)
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translate = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = LinearEasing)
+        ),
+        label = "shimmer_translate"
+    )
+    return remember(colors, translate) { SkeletonShimmer(colors, translate) }
+}
+
+fun Modifier.shimmerBackground(shimmer: SkeletonShimmer): Modifier =
+    drawBehind { drawRect(shimmer.brush) }
+
+@Composable
+private fun ShimmerBar(
+    width: Dp,
+    height: Dp,
+    shimmer: SkeletonShimmer,
+    cornerRadius: Dp = NuvioTheme.spacing.sm
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .clip(RoundedCornerShape(cornerRadius))
+            .shimmerBackground(shimmer)
+    )
+}
+
+@Composable
+private fun ShimmerBar(
+    width: Float,
+    height: Dp,
+    shimmer: SkeletonShimmer,
+    cornerRadius: Dp = NuvioTheme.spacing.sm
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(width)
+            .height(height)
+            .clip(RoundedCornerShape(cornerRadius))
+            .shimmerBackground(shimmer)
+    )
+}
+
+@Composable
+private fun ShimmerPill(
+    width: Dp,
+    height: Dp,
+    shimmer: SkeletonShimmer
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .clip(RoundedCornerShape(NuvioTheme.spacing.xxl))
+            .shimmerBackground(shimmer)
+    )
+}
+
+@Composable
+fun rememberShimmerBrush(backdropAware: Boolean = false): Brush {
+    val shimmerColors = skeletonShimmerColors(backdropAware)
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translate by transition.animateFloat(
         initialValue = 0f,
