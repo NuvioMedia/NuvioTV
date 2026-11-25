@@ -138,7 +138,7 @@ object DoviBridge {
             0x7c, 0x01, 0x20, 0x40,
             0x21, 0x33, 0x55, 0x77, 0x11, 0x02, 0x06, 0x10
         )
-        val output = runCatching { nativeConvertDv7RpuToDv81(payload, 2) }
+        val output = runCatching { nativeConvertDv7RpuToDv81(payload, 2, false) }
             .onFailure { Log.w(TAG, "Self-test conversion failed: ${it.message}") }
             .getOrNull()
         val result = if (output != null && output.isNotEmpty()) {
@@ -188,10 +188,10 @@ object DoviBridge {
 
     fun getConversionSuccessCount(): Long = conversionSuccessCount.get()
 
-    fun convertDv7RpuToDv81(payload: ByteArray, mode: Int = 1): ByteArray? {
+    fun convertDv7RpuToDv81(payload: ByteArray, mode: Int = 1, zeroLevel5: Boolean = false): ByteArray? {
         if (!isAvailable() || payload.isEmpty()) return null
         conversionCallCount.incrementAndGet()
-        val converted = runCatching { nativeConvertDv7RpuToDv81(payload, mode) }
+        val converted = runCatching { nativeConvertDv7RpuToDv81(payload, mode, zeroLevel5) }
             .onFailure { Log.w(TAG, "Conversion failed: ${it.message}") }
             .getOrNull()
         if (converted != null && converted.isNotEmpty()) {
@@ -219,12 +219,13 @@ object DoviBridge {
         sample: ByteArray,
         offset: Int,
         len: Int,
-        mode: Int = 1
+        mode: Int = 1,
+        zeroLevel5: Boolean = false
     ): Int {
         if (!isAvailable() || len <= 0) return 0
         conversionCallCount.incrementAndGet()
         var written = runCatching {
-            nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode)
+            nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode, zeroLevel5)
         }.onFailure { Log.w(TAG, "Non-allocating conversion failed: ${it.message}") }
             .getOrDefault(0)
         if (written < 0) {
@@ -232,7 +233,7 @@ object DoviBridge {
             val required = -written
             rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
             written = runCatching {
-                nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode)
+                nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode, zeroLevel5)
             }.onFailure { Log.w(TAG, "Non-allocating retry failed: ${it.message}") }
                 .getOrDefault(0)
         }
@@ -368,7 +369,11 @@ object DoviBridge {
     private external fun nativeIsConversionPathReady(): Boolean
 
     @JvmStatic
-    private external fun nativeConvertDv7RpuToDv81(payload: ByteArray, mode: Int): ByteArray?
+    private external fun nativeConvertDv7RpuToDv81(
+        payload: ByteArray,
+        mode: Int,
+        zeroLevel5: Boolean
+    ): ByteArray?
 
     @JvmStatic
     private external fun nativeConvertDv7RpuToDv81NonAllocating(
@@ -376,7 +381,8 @@ object DoviBridge {
         offset: Int,
         len: Int,
         outBuffer: ByteArray,
-        mode: Int
+        mode: Int,
+        zeroLevel5: Boolean
     ): Int
 
     @JvmStatic

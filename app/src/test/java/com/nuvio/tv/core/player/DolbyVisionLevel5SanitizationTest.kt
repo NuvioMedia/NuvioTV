@@ -43,6 +43,33 @@ class DolbyVisionLevel5SanitizationTest {
     }
 
     @Test
+    fun matroskaTransformer_shouldTransform_isFalseWhenZeroL5DisabledAndNoOtherFeatureActive() {
+        val transformer = DolbyVisionMatroskaTransformer(
+            config = DolbyVisionConversionConfig(active = false),
+            zeroDoviLevel5 = false
+        )
+
+        assertFalse(transformer.shouldTransform("dvhe.08.06", null))
+        assertFalse(transformer.shouldTransform("dvh1.05.06", null))
+        assertFalse(transformer.shouldTransform("dvhe.07.06", null))
+    }
+
+    @Test
+    fun extractorsFactory_doesNotWrapMp4WhenAllFeaturesDisabledByDefault() {
+        val mockExtractor = mockk<Mp4Extractor>(relaxed = true)
+        val delegateFactory = ExtractorsFactory { arrayOf(mockExtractor) }
+
+        val factory = DolbyVisionExtractorsFactory(
+            delegate = delegateFactory,
+            config = DolbyVisionConversionConfig(active = false)
+        )
+
+        val extractors = factory.createExtractors()
+        assertEquals(1, extractors.size)
+        assertSame(mockExtractor, extractors[0])
+    }
+
+    @Test
     fun matroskaTransformer_zeroL5_rewritesOnlyNonZeroRpuAndPreservesElNals() {
         val fakeOutBuffer = ByteArray(64)
         val rewrittenRpu = byteArrayOf(0x7C.toByte(), 0x01, 0xAA.toByte(), 0xBB.toByte())

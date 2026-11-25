@@ -890,6 +890,8 @@
     <string name="dv7_mode_strip_dv_desc">Dolby Vision RPU katmanını tüm yayınlardan kaldırır.</string>
     <string name="audio_dv5_to_dv81_title">DV5\'i DV8.1\'e Dönüştür</string>
     <string name="audio_dv5_to_dv81_sub">HDR10 uyumlu görüntü için Profile 5 yayınlarını Profile 8.1 olarak işaretler. Yerel DV5 kod çözücüsü olmayan cihazlarda işe yarar.</string>
+    <string name="audio_zero_dovi_l5_title">Dolby Vision Letterbox Meta Verisini Yoksay (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Oynatma sırasında Dolby Vision L5 aktif alan ofsetlerini sıfırlar. Letterbox meta verisi bozuk dosyalarda kenarda görünen koyu/yarı saydam şeridi giderir.</string>
     <string name="audio_strip_hdr10plus_title">HDR10+ Meta Verilerini Kaldır</string>
     <string name="audio_strip_hdr10plus_sub">HDR10+ dinamik meta verilerini yayınlardan kaldırır. DV8.1\'e Dönüştür seçeneği de etkinse, kaldırma işlemi dönüştürmeden sonra çalışır.</string>
     <string name="audio_dv7_preserve_mapping_title">DV eşlemesini koru (DV7 -> DV8.1)</string>

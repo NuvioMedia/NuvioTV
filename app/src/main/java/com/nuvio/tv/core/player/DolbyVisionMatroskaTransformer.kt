@@ -247,13 +247,17 @@ internal class DolbyVisionMatroskaTransformer(
     // ── Conversion + NAL helpers ──
 
     private fun convertRpuNal(nal: ByteArray, primaryMode: Int): ByteArray? {
-        val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, primaryMode)
+        val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(
+            nal, 0, nal.size, primaryMode, zeroLevel5 = zeroDoviLevel5
+        )
         if (outLen > 0) {
             DolbyVisionConversionStats.recordConversionMode(primaryMode)
             return DoviBridge.rpuOutBuffer.copyOfRange(0, outLen)
         }
         if (config.allowMode2Fallback && primaryMode == 2) {
-            val fallbackLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, 1)
+            val fallbackLen = DoviBridge.convertDv7RpuToDv81NonAllocating(
+                nal, 0, nal.size, 1, zeroLevel5 = zeroDoviLevel5
+            )
             if (fallbackLen > 0) {
                 DolbyVisionConversionStats.recordConversionMode(1)
                 return DoviBridge.rpuOutBuffer.copyOfRange(0, fallbackLen)
@@ -339,7 +343,9 @@ internal class DolbyVisionMatroskaTransformer(
                 nalType == NAL_TYPE_UNSPEC63 -> changed = true
                 // RPU NAL: convert directly from sample buffer without JVM allocations
                 nalType == NAL_TYPE_UNSPEC62 -> {
-                    val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(sample, offset, nalSize, mode)
+                    val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(
+                        sample, offset, nalSize, mode, zeroLevel5 = zeroDoviLevel5
+                    )
                     if (outLen > 0) {
                         changed = true
                         if (!writeLengthField(out, outLen, nalUnitLengthFieldLength)) return false

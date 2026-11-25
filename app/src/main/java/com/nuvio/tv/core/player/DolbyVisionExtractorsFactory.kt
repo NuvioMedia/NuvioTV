@@ -48,7 +48,7 @@ internal class DolbyVisionExtractorsFactory(
     private val config: DolbyVisionConversionConfig,
     private val stripDvRpu: Boolean = false,
     private val stripHdr10PlusSei: Boolean = false,
-    private val zeroDoviLevel5: Boolean = DoviBridge.isAvailable()
+    private val zeroDoviLevel5: Boolean = false
 ) : ExtractorsFactory {
 
     override fun createExtractors(): Array<Extractor> =

@@ -911,6 +911,8 @@
     <string name="dv7_mode_strip_dv_desc">Removes the Dolby Vision RPU layer from all streams.</string>
     <string name="audio_dv5_to_dv81_title">Convert DV5 to DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Signal Profile 5 streams as Profile 8.1 for HDR10-compatible output. Helps on devices that do not have a native DV5 decoder.</string>
+    <string name="audio_zero_dovi_l5_title">Ignore Dolby Vision Letterbox Metadata (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Zeroes out Dolby Vision L5 active-area offsets during playback. Fixes darker or translucent bands along letterbox edges on files with broken L5 metadata.</string>
     <string name="audio_strip_hdr10plus_title">Strip HDR10+ Metadata</string>
     <string name="audio_strip_hdr10plus_sub">Remove HDR10+ dynamic metadata from streams. When Convert to DV8.1 is also enabled, stripping runs after conversion.</string>
     <string name="audio_dv7_preserve_mapping_title">Preserve DV mapping (DV7 to DV8.1)</string>

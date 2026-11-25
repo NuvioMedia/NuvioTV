@@ -52,33 +52,54 @@ static inline DoviRpuOpaque* dovi_parse_nal_bytes(
         return nullptr;
     }
 
-    // If an UNSPEC 62 NAL carries a non-zero nuh_layer_id (common on dual-layer DV7),
-    // normalize a temporary copy's 2-byte HEVC NAL header to layer 0 so libdovi's
-    // unspec62 parser accepts it without mutating the caller's buffer.
-    const uint8_t* parse_ptr = data;
-    thread_local std::vector<uint8_t> normalized_input;
-    if (dovi_is_unspec62_header(data, len) && ((data[0] & 0x01U) != 0U || (data[1] & 0xF8U) != 0U)) {
-        normalized_input.assign(data, data + len);
-        normalized_input[0] &= 0xFE;
-        normalized_input[1] &= 0x07;
-        parse_ptr = normalized_input.data();
-    }
-
+    const bool has_unspec62_header = dovi_is_unspec62_header(data, len);
     std::string parse_error;
-    DoviRpuOpaque* parsed = dovi_parse_unspec62_nalu(parse_ptr, len);
-    if (parsed != nullptr && !dovi_has_error(parsed, &parse_error)) {
-        return parsed;
-    }
-    if (parsed != nullptr) {
-        dovi_rpu_free(parsed);
-    }
+    std::string* err_ptr = (out_error != nullptr) ? &parse_error : nullptr;
 
-    parsed = dovi_parse_rpu(data, len);
-    if (parsed != nullptr && !dovi_has_error(parsed, &parse_error)) {
-        return parsed;
-    }
-    if (parsed != nullptr) {
-        dovi_rpu_free(parsed);
+    if (!has_unspec62_header) {
+        DoviRpuOpaque* parsed = dovi_parse_rpu(data, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
+
+        parsed = dovi_parse_unspec62_nalu(data, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
+    } else {
+        // If an UNSPEC 62 NAL carries a non-zero nuh_layer_id (common on dual-layer DV7),
+        // normalize a temporary copy's 2-byte HEVC NAL header to layer 0 so libdovi's
+        // unspec62 parser accepts it without mutating the caller's buffer.
+        const uint8_t* parse_ptr = data;
+        thread_local std::vector<uint8_t> normalized_input;
+        if ((data[0] & 0x01U) != 0U || (data[1] & 0xF8U) != 0U) {
+            normalized_input.assign(data, data + len);
+            normalized_input[0] &= 0xFE;
+            normalized_input[1] &= 0x07;
+            parse_ptr = normalized_input.data();
+        }
+
+        DoviRpuOpaque* parsed = dovi_parse_unspec62_nalu(parse_ptr, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
+
+        parsed = dovi_parse_rpu(data, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
     }
 
     if (out_error != nullptr) {
@@ -162,7 +183,8 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81(
     JNIEnv* env,
     jclass /* clazz */,
     jbyteArray payload,
-    jint mode
+    jint mode,
+    jboolean zeroLevel5
 ) {
 #if DOVI_REAL_LINKED
     if (payload == nullptr) return nullptr;
@@ -191,7 +213,9 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81(
         dovi_rpu_free(rpu);
         return nullptr;
     }
-    dovi_zero_l5_if_needed(rpu);
+    if (zeroLevel5) {
+        dovi_zero_l5_if_needed(rpu);
+    }
 
     const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
     if (out_data == nullptr || out_data->data == nullptr || out_data->len == 0U) {
@@ -243,7 +267,8 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
     jint offset,
     jint len,
     jbyteArray outBuffer,
-    jint mode
+    jint mode,
+    jboolean zeroLevel5
 ) {
 #if DOVI_REAL_LINKED
     if (sample == nullptr || outBuffer == nullptr || len <= 0 || offset < 0) return 0;
@@ -275,13 +300,15 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
     DoviRpuOpaque* rpu = dovi_parse_nal_bytes(input.data(), input.size(), nullptr);
     if (rpu == nullptr) return 0;
 
-    // 3. Convert RPU and clear non-zero L5 active area offsets
+    // 3. Convert RPU and optionally clear non-zero L5 active area offsets
     const uint8_t conversion_mode = map_conversion_mode(mode);
     if (dovi_convert_rpu_with_mode(rpu, conversion_mode) < 0) {
         dovi_rpu_free(rpu);
         return 0;
     }
-    dovi_zero_l5_if_needed(rpu);
+    if (zeroLevel5) {
+        dovi_zero_l5_if_needed(rpu);
+    }
 
     // 4. Write converted RPU
     const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
@@ -323,6 +350,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
     (void)len;
     (void)outBuffer;
     (void)mode;
+    (void)zeroLevel5;
     return 0;
 #endif
 }
