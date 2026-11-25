@@ -50,6 +50,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 internal fun PlaybackVideoSection(
     settings: PlayerSettings,
     transparentLetterbox: Boolean,
+    zeroDoviLevel5: Boolean,
     onUpdate: PlaybackSettingsUpdate,
     onOpenDialog: (PlaybackDialog) -> Unit
 ) {
@@ -121,6 +122,13 @@ internal fun PlaybackVideoSection(
             checked = settings.dv5ToDv81Enabled && dv81Conversion,
             onToggle = { onUpdate { setDv5ToDv81Enabled(!settings.dv5ToDv81Enabled) } },
             enabled = enabled && dv81Conversion
+        )
+        SettingsToggleRow(
+            title = stringResource(R.string.audio_zero_dovi_l5_title),
+            subtitle = stringResource(R.string.audio_zero_dovi_l5_sub),
+            checked = zeroDoviLevel5,
+            onToggle = { onUpdate { setZeroDoviLevel5(!zeroDoviLevel5) } },
+            enabled = enabled
         )
         SettingsToggleRow(
             title = stringResource(R.string.audio_strip_hdr10plus_title),

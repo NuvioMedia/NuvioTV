@@ -22,6 +22,7 @@ import javax.inject.Singleton
  * Currently stores:
  *  - aspectMode  (player aspect ratio mode)
  *  - transparentLetterbox  (true-black bars; device compositor behavior)
+ *  - zeroDoviLevel5  (ignore Dolby Vision L5 letterbox offsets; TV/device DV pipeline workaround)
  *  - tunneledSurfaceFill  (ExoPlayer surface fill while tunneling; does not affect aspectMode)
  *  - playerStatsHudButtonEnabled  (whether stats overlay button is available in stream info)
  *  - playerStatsHudActive  (whether playback stats HUD is turned on by the user)
@@ -41,6 +42,7 @@ class DeviceLocalPlayerPreferences @Inject constructor(
 
     private val aspectModeKey = stringPreferencesKey("aspect_mode")
     private val transparentLetterboxKey = booleanPreferencesKey("transparent_letterbox")
+    private val zeroDoviLevel5Key = booleanPreferencesKey("zero_dovi_level5")
     private val tunneledSurfaceFillKey = booleanPreferencesKey("tunneled_surface_fill")
     private val playerStatsHudButtonEnabledKey = booleanPreferencesKey("player_stats_hud_enabled")
     private val playerStatsHudActiveKey = booleanPreferencesKey("player_stats_hud_active")
@@ -65,6 +67,16 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     suspend fun setTransparentLetterbox(enabled: Boolean) {
         store.edit { prefs ->
             prefs[transparentLetterboxKey] = enabled
+        }
+    }
+
+    val zeroDoviLevel5: Flow<Boolean> = store.data.map { prefs ->
+        prefs[zeroDoviLevel5Key] ?: false
+    }
+
+    suspend fun setZeroDoviLevel5(enabled: Boolean) {
+        store.edit { prefs ->
+            prefs[zeroDoviLevel5Key] = enabled
         }
     }
 
