@@ -66,6 +66,7 @@
     <string name="usenet_indexer_fallback_description">כבוי: כל אינדקסר מחופש. מופעל: אינדקסרים בעדיפות נמוכה מחופשים רק כשהגבוהים לא מוצאים דבר, וכך נחסכות בקשות API.</string>
     <string name="usenet_hide_duplicates">הסתרת מהדורות חוזרות</string>
     <string name="usenet_show_release_names">הצגת שמות מהדורות</string>
+    <string name="usenet_show_release_names_description">הצגת שם הגרסה של כל תוצאה מעל הפרטים שלה. מוסתר, קבוצת הגרסה שלה מסיימת את הפרטים.</string>
     <string name="usenet_hide_duplicates_description">הצגת מהדורה שנמצאה בכמה אינדקסרים פעם אחת, מהאינדקסר בעל העדיפות הגבוהה ביותר.</string>
     <string name="usenet_provider_test">בדיקת ספק</string>
     <string name="usenet_provider_test_running">מתחבר לספק…</string>
