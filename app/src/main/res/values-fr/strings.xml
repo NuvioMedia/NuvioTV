@@ -192,9 +192,12 @@
     <string name="episodes_specials">Épisodes spéciaux</string>
     <string name="episodes_episode">Épisode</string>
     <string name="episodes_cd_watched">Vu</string>
+    <string name="episodes_cd_rewatched">Revu</string>
     <string name="episodes_dialog_subtitle">Actions sur l’épisode</string>
     <string name="episodes_mark_watched">Marquer comme vu</string>
     <string name="episodes_mark_unwatched">Marquer comme non vu</string>
+    <string name="episodes_mark_rewatched">Marquer comme revu</string>
+    <string name="episodes_mark_not_rewatched">Marquer comme non revu</string>
     <string name="episodes_mark_season_watched">Marquer la saison comme vue</string>
     <string name="episodes_mark_season_unwatched">Marquer la saison comme non vue</string>
     <string name="episodes_mark_previous_watched">Marquer les épisodes précédents de la saison comme vus</string>
@@ -208,6 +211,10 @@
     <string name="detail_removed_from_library">Retiré de la bibliothèque</string>
     <string name="detail_episode_marked_watched">Épisode marqué comme vu</string>
     <string name="detail_episode_marked_unwatched">Épisode marqué comme non vu</string>
+    <string name="detail_episode_marked_rewatched">Épisode marqué comme revu</string>
+    <string name="detail_episode_marked_not_rewatched">Épisode marqué comme non revu</string>
+    <string name="detail_rewatch_too_soon">Simkl n’a pas enregistré ce revisionnage&#160;: l’épisode a été regardé il y a moins de 48 heures.</string>
+    <string name="detail_rewatch_not_recorded">Simkl n’a pas enregistré ce revisionnage.</string>
     <string name="detail_lists_updated">Listes mises à jour</string>
     <string name="detail_movie_marked_watched">Marqué comme vu</string>
     <string name="detail_movie_marked_unwatched">Marqué comme non vu</string>
@@ -496,6 +503,27 @@
     <string name="tracking_simkl_anime_id_mal">Préférer MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Préférer Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Préférer TVDB</string>
+    <string name="settings_tracking_completion_title">Seuil de visionnage</string>
+    <string name="settings_tracking_completion_subtitle">Pourcentage de lecture requis pour marquer un titre comme vu. Les repères de générique de fin sont prioritaires lorsqu’ils sont disponibles.</string>
+    <string name="settings_tracking_completion_value">%1$s&#160;%%</string>
+    <string name="settings_tracking_rewatch_title">Suivre les revisionnages</string>
+    <string name="settings_tracking_rewatch_subtitle">Enregistre les visionnages répétés des titres terminés il y a plus de 2 jours sous forme de sessions de revisionnage Simkl distinctes, et suit les sessions en cours dans Continuer à regarder.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Suivre les revisionnages</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Les sessions de revisionnage nécessitent Simkl PRO ou VIP et ne sont créées que pour les titres que vous avez déjà terminés.</string>
+    <string name="settings_tracking_rewatch_off">Désactivé</string>
+    <string name="settings_tracking_rewatch_off_subtitle">N’enregistre pas les visionnages répétés sur Simkl et n’affiche pas les sessions de revisionnage en cours dans Continuer à regarder.</string>
+    <string name="settings_tracking_rewatch_semi">Semi-automatique</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Demande une fois avant de démarrer une nouvelle session de revisionnage. Une fois la session active, les épisodes restants sont enregistrés automatiquement.</string>
+    <string name="settings_tracking_rewatch_automatic">Automatique</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Démarre automatiquement une session de revisionnage et enregistre les visionnages répétés chaque fois que vous relisez un titre terminé.</string>
+    <string name="settings_tracking_rewatch_pro_title">Le suivi des revisionnages nécessite Simkl PRO ou VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl n’enregistre les revisionnages que pour les comptes Pro ou VIP. Les sessions déjà présentes sur votre compte Simkl y restent si votre abonnement change.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Mettre à niveau</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Pas maintenant</string>
+    <string name="rewatch_prompt_title">Vous avez déjà terminé ce titre.</string>
+    <string name="rewatch_prompt_subtitle">Démarrer une session de revisionnage sur Simkl&#160;?</string>
+    <string name="rewatch_prompt_confirm">Oui</string>
+    <string name="rewatch_prompt_dismiss">Non</string>
     <string name="tracking_status_connected">Connecté</string>
     <string name="tracking_status_disconnected">Non connecté</string>
     <string name="tracking_status_waiting">En attente d’approbation</string>
@@ -655,6 +683,7 @@
     <string name="settings_mdblist_subtitle">Fournisseurs de notes externes</string>
     <string name="settings_animeskip_subtitle">Repères temporels pour passer les intros et les outros d’animés</string>
     <string name="settings_debrid_subtitle">Sources de comptes cloud expérimentales</string>
+    <string name="settings_usenet_subtitle">Fournisseurs, indexeurs, lecture et diagnostics</string>
 
     <string name="playback_title">Paramètres de lecture</string>
     <string name="playback_subtitle">Configurer la lecture vidéo et les options de sous-titres</string>
@@ -794,7 +823,7 @@
     <string name="playback_release_decoder_on_background_sub">Libérer le décodeur vidéo lorsque Nuvio passe en arrière-plan. À activer si la lecture échoue avec une erreur de décodeur après le retour dans l’application. Le lecteur se recharge au retour, y compris après l’économiseur d’écran</string>
     <string name="playback_external_forward_subtitles">Transmettre les sous-titres au lecteur externe</string>
     <string name="playback_external_forward_subtitles_sub">Récupère les sous-titres dans votre langue préférée depuis les addons et les transmet au lecteur externe.</string>
-    <string name="playback_external_send_skip_segments">Envoyer les repères d’intro et d’outro</string>
+    <string name="playback_external_send_skip_segments">Envoyer les repères temporels d’intro et d’outro</string>
     <string name="playback_external_send_skip_segments_sub">Transmet au lecteur externe les repères de saut d’intro et d’outro obtenus, pour un saut automatique. Ne fonctionne qu’avec les lecteurs compatibles&#160;; les autres l’ignorent.</string>
     <string name="playback_section_subtitles">Sous-titres</string>
     <string name="playback_section_subtitles_desc">Langue, style et mode de rendu.</string>
@@ -2074,6 +2103,7 @@
     <string name="subtitle_off">Désactivé</string>
     <string name="subtitle_style_title">Style des sous-titres</string>
     <string name="subtitle_style_customize">Personnaliser</string>
+    <string name="subtitle_style_customize_ass">Personnaliser le style ASS/SSA</string>
     <string name="subtitle_style_color">Couleur</string>
     <string name="subtitle_style_reset">Réinitialiser</string>
     <string name="subtitle_style_font_size">Taille de la police</string>
@@ -3488,6 +3518,14 @@
     <string name="stream_test_video_bitrate">Débit vidéo moyen&#160;: %1$s</string>
     <string name="stream_test_error_connection">Échec de la connexion. Le lien du dernier flux lu a peut-être expiré ou est injoignable. Veuillez relancer la lecture de la vidéo, puis réessayer.</string>
 
+    <string name="player_finding_next_stream">Recherche du flux suivant…</string>
+    <string name="player_trying_next_stream">Essai du flux suivant (tentative %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">Aucun autre flux fonctionnel. Choisissez une autre source ou réessayez.</string>
+    <string name="usenet_builtin_addon_title">Usenet intégré</string>
+    <string name="usenet_builtin_addon_desc">Résultats de vos propres fournisseurs NNTP et indexeurs Newznab. Déplacez-le pour choisir où ils sont listés.</string>
+    <string name="usenet_fallback">Repli automatique Usenet</string>
+    <string name="usenet_fallback_description">Si un flux Usenet échoue, essaie les sources Usenet suivantes jusqu’à la limite de tentatives configurée. Les flux torrent et les autres flux ne basculent jamais automatiquement.</string>
+
     <string name="random_episode_title">Lecture aléatoire</string>
     <string name="layout_random_episode_sub">Lire des épisodes aléatoires de n’importe quelle série. Désactiver cette option met la lecture aléatoire en pause.</string>
     <string name="random_episode_unwatched">Épisodes non vus</string>
@@ -3529,4 +3567,13 @@
     <string name="autosync_status_failed">Échoué</string>
     <string name="stream_resume_from_time">Reprendre à %1$s</string>
     <string name="stream_resume_from_percent">Reprendre à %1$d&#160;%%</string>
+    <string name="player_disc_titles">Titres du disque</string>
+    <string name="player_disc_title_feature">Film principal · %1$d min</string>
+    <string name="player_disc_title_extra">Bonus · %1$d min</string>
+    <string name="player_disc_title_subtitles">Sous-titres %1$s</string>
+    <string name="player_disc_title_failed">Ce titre n’a pas pu être lu</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clip</item>
+        <item quantity="other">%d clips</item>
+    </plurals>
 </resources>
