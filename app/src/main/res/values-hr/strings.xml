@@ -195,9 +195,12 @@
     <string name="episodes_specials">Specijali</string>
     <string name="episodes_episode">Epizoda</string>
     <string name="episodes_cd_watched">Pogledano</string>
+    <string name="episodes_cd_rewatched">Ponovno pogledano</string>
     <string name="episodes_dialog_subtitle">Radnje za epizodu</string>
     <string name="episodes_mark_watched">Označi kao pogledano</string>
     <string name="episodes_mark_unwatched">Označi kao nepogledano</string>
+    <string name="episodes_mark_rewatched">Označi kao ponovno pogledano</string>
+    <string name="episodes_mark_not_rewatched">Označi kao nije ponovno pogledano</string>
     <string name="episodes_mark_season_watched">Označi sezonu kao pogledanu</string>
     <string name="episodes_mark_season_unwatched">Označi sezonu kao nepogledanu</string>
     <string name="episodes_mark_previous_watched">Označi prethodne u ovoj sezoni kao pogledane</string>
@@ -211,6 +214,10 @@
     <string name="detail_removed_from_library">Uklonjeno iz biblioteke</string>
     <string name="detail_episode_marked_watched">Epizoda označena kao pogledana</string>
     <string name="detail_episode_marked_unwatched">Epizoda označena kao nepogledana</string>
+    <string name="detail_episode_marked_rewatched">Epizoda označena kao ponovno pogledana</string>
+    <string name="detail_episode_marked_not_rewatched">Epizoda označena kao nije ponovno pogledana</string>
+    <string name="detail_rewatch_too_soon">Simkl nije zabilježio ovo ponovno gledanje: epizoda je pogledana prije manje od 48 sati.</string>
+    <string name="detail_rewatch_not_recorded">Simkl nije zabilježio ovo ponovno gledanje.</string>
     <string name="detail_lists_updated">Popisi ažurirani</string>
     <string name="detail_movie_marked_watched">Označeno kao pogledano</string>
     <string name="detail_movie_marked_unwatched">Označeno kao nepogledano</string>
@@ -373,6 +380,21 @@
     <string name="appearance_settings_style_subtitle">Odaberi kako se prikazuju zasloni postavki</string>
     <string name="appearance_launcher_artwork">Grafika pokretača</string>
     <string name="appearance_launcher_artwork_subtitle">Odaberi kako se Nuvio prikazuje na početnom zaslonu TV-a</string>
+    <string name="ambient_mode_title">Ambijentalni način</string>
+    <string name="ambient_mode_subtitle">Prikaži grafike iz tvojih kataloga dok TV miruje</string>
+    <string name="ambient_mode_enabled_subtitle">Ispuni zaslon pozadinskim slikama nakon razdoblja bez korištenja daljinskog upravljača</string>
+    <string name="ambient_mode_timeout">Pokreni nakon</string>
+    <string name="ambient_mode_timeout_subtitle">Koliko dugo čekati prije pokretanja ambijentalnog načina</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minute</item>
+        <item quantity="other">%1$d minuta</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Katalozi</string>
+    <string name="ambient_mode_catalogs_subtitle">Odaberi do 3 kataloga iz kojih će se preuzimati grafike</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Odaberi do 3 kataloga</string>
+    <string name="ambient_mode_catalogs_default">Isto kao istaknuto</string>
+    <string name="ambient_mode_catalogs_count">%1$d od %2$d</string>
     <string name="appearance_app_icon_and_banner">Ikona i baner aplikacije</string>
     <string name="appearance_app_icon_and_banner_subtitle">Promijeni ikonu i baner aplikacije</string>
     <string name="appearance_app_icon_picker_title">Odaberi ikonu i baner aplikacije</string>
@@ -402,6 +424,12 @@
     <string name="about_version">Verzija %1$s</string>
     <string name="about_update_banner_title">Automatski baner za ažuriranje</string>
     <string name="about_update_banner_subtitle">Prikaži baner kada je dostupna nova verzija</string>
+    <string name="about_update_auto_install_title">Automatski instaliraj ažuriranja</string>
+    <string name="about_update_auto_install_subtitle">Preuzimaj nove verzije u pozadini i instaliraj ih dok uređaj miruje</string>
+    <string name="about_update_auto_install_notice_title">Obavijesti nakon automatskih ažuriranja</string>
+    <string name="about_update_auto_install_notice_subtitle">Prikaži baner pri sljedećem pokretanju nakon što se aplikacija sama ažurira</string>
+    <string name="about_update_optimize_install_title">Optimiziraj ažuriranja tijekom instalacije</string>
+    <string name="about_update_optimize_install_subtitle">Brže prvo pokretanje nakon ažuriranja, ali se aplikacija zatvara na otprilike minutu tijekom instalacije. Isključi za korištenje Androidovog zaslona za instalaciju</string>
     <string name="about_update_channel_title">Kanal ažuriranja</string>
     <string name="about_update_channel_subtitle">Odaberi vrstu ažuriranja aplikacije koju želiš primati</string>
     <string name="about_check_updates">Provjeri ažuriranja</string>
@@ -479,6 +507,27 @@
     <string name="tracking_simkl_anime_id_mal">Preferiraj MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Preferiraj Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Preferiraj TVDB</string>
+    <string name="settings_tracking_completion_title">Prag za pogledano</string>
+    <string name="settings_tracking_completion_subtitle">Postotak reprodukcije potreban da se naslov označi kao pogledan. Oznake odjavne špice imaju prednost kada su dostupne.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">Prati ponovna gledanja</string>
+    <string name="settings_tracking_rewatch_subtitle">Bilježi ponovna gledanja naslova završenih prije više od 2 dana kao zasebne Simkl sesije ponovnog gledanja i prati aktivna gledanja u Nastavi gledati.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Prati ponovna gledanja</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Sesije ponovnog gledanja zahtijevaju Simkl PRO ili VIP i stvaraju se samo za naslove koje si već završio.</string>
+    <string name="settings_tracking_rewatch_off">Isključeno</string>
+    <string name="settings_tracking_rewatch_off_subtitle">Ne bilježi ponovna gledanja na Simkl i ne prikazuj aktivne sesije ponovnog gledanja u Nastavi gledati.</string>
+    <string name="settings_tracking_rewatch_semi">Poluautomatski</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Pitaj jednom prije pokretanja nove sesije ponovnog gledanja. Nakon aktivacije, preostale epizode bilježe se automatski.</string>
+    <string name="settings_tracking_rewatch_automatic">Automatski</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Automatski pokreni sesiju ponovnog gledanja i bilježi ponovna gledanja kad god ponovno reproduciraš završeni naslov.</string>
+    <string name="settings_tracking_rewatch_pro_title">Praćenje ponovnih gledanja zahtijeva Simkl PRO ili VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl bilježi ponovna gledanja samo za Pro ili VIP račune. Sesije koje su već na tvom Simkl računu ostaju ondje ako promijeniš plan.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Nadogradi</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Ne sada</string>
+    <string name="rewatch_prompt_title">Već si završio ovaj naslov.</string>
+    <string name="rewatch_prompt_subtitle">Pokrenuti sesiju ponovnog gledanja na Simklu?</string>
+    <string name="rewatch_prompt_confirm">Da</string>
+    <string name="rewatch_prompt_dismiss">Ne</string>
     <string name="tracking_status_connected">Povezano</string>
     <string name="tracking_status_disconnected">Nije povezano</string>
     <string name="tracking_status_waiting">Čeka se odobrenje</string>
@@ -609,6 +658,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Koristi Nuvio prilagođenu globalnu animaciju pomicanja i pozicioniranje fokusa.</string>
     <string name="advanced_rgb565">RGB565 dekodiranje slika</string>
     <string name="advanced_rgb565_subtitle">Koristi 16-bitne boje s manjom potrošnjom memorije za prikladne neprozirne slike. Promjena ponovno pokreće aplikaciju.</string>
+    <string name="advanced_hardware_bitmaps">Hardversko dekodiranje slika</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Drži dekodirane slike samo u grafičkoj memoriji. Koristi manje RAM-a, ali učitavanje novih slika može zastajkivati na slabijim GPU-ovima.</string>
     <string name="advanced_memory_only_vertical_scroll">Okomito pomicanje samo iz memorije</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Preskoči zahtjeve za slikama s diska i mreže tijekom okomitog pomicanja redova na početnom zaslonu.</string>
     <string name="advanced_compose_highlighter">Compose Highlighter</string>
@@ -635,6 +686,7 @@
     <string name="settings_mdblist_subtitle">Vanjski pružatelji ocjena</string>
     <string name="settings_animeskip_subtitle">Vremenske oznake za preskakanje uvoda/odjave animea</string>
     <string name="settings_debrid_subtitle">Eksperimentalni izvori računa u oblaku</string>
+    <string name="settings_usenet_subtitle">Pružatelji, indekseri, reprodukcija i dijagnostika</string>
 
     <string name="playback_title">Postavke reprodukcije</string>
     <string name="playback_subtitle">Konfiguriraj opcije reprodukcije videa i titlova</string>
@@ -760,6 +812,18 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatski promijeni pogon pri pogrešci pokretanja</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ako pokretanje streama ne uspije, automatski prebaci između ExoPlayera i libmpv-a.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Isključi prelazak na sljedeći odgovarajući izvor kako bi koristio ovo.</string>
+    <string name="autoplay_fallback_next_source">Prijeđi na sljedeći odgovarajući izvor pri neuspjehu</string>
+    <string name="autoplay_fallback_next_source_sub">Ako automatski odabrani izvor ne uspije ili se ne pokrene na vrijeme, tiho isprobaj sljedeće odgovarajuće izvore.</string>
+    <string name="autoplay_fallback_max_sources">Izvori za isprobavanje pri neuspjehu</string>
+    <string name="autoplay_fallback_max_sources_sub">Koliko još odgovarajućih izvora isprobati prije prikaza pogreške.</string>
+    <string name="autoplay_fallback_startup_timeout">Vrijeme za pokretanje izvora</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Koliko dugo čekati da se izvor pokrene prije isprobavanja sljedećeg.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$d s</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Isključi automatsku promjenu pokretača pri pogrešci pokretanja kako bi koristio ovo.</string>
+    <string name="player_error_source_startup_timeout">Izvor se nije pokrenuo unutar %1$d sekundi.</string>
+    <string name="playback_release_decoder_on_background">Oslobodi dekoder u pozadini</string>
+    <string name="playback_release_decoder_on_background_sub">Oslobodi video dekoder kada Nuvio prijeđe u pozadinu. Uključi ako reprodukcija ne uspije zbog pogreške dekodera nakon povratka u aplikaciju. Reproduktor se ponovno učitava pri povratku, i nakon čuvara zaslona</string>
     <string name="playback_external_forward_subtitles">Proslijedi titlove vanjskom playeru</string>
     <string name="playback_external_forward_subtitles_sub">Dohvati titlove na preferiranom jeziku iz dodataka i proslijedi ih vanjskom playeru.</string>
     <string name="playback_external_send_skip_segments">Pošalji vremenske oznake uvoda i odjave</string>
@@ -792,6 +856,10 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">Prave crne trake</string>
     <string name="playback_true_black_letterbox_sub">Ne iscrtavaj trake oko slike kako bi HDR ostao pravo crn. Ostavi isključeno ako se na trakama pojavi svijetla linija.</string>
+    <string name="playback_exo_chapters_title">Prikaži poglavlja</string>
+    <string name="playback_exo_chapters_sub">Čitaj poglavlja MKV datoteka kako bi se označila na traci napretka i omogućilo preskakanje između njih.</string>
+    <string name="playback_chapter_title_title">Prikaži naslov poglavlja</string>
+    <string name="playback_chapter_title_sub">Prikaži naziv trenutnog poglavlja iznad trake napretka.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Automatski reproduciraj trailere</string>
     <string name="audio_autoplay_trailers_sub">Automatski reproduciraj trailere na zaslonima detalja i nakon gledanja</string>
@@ -804,6 +872,17 @@
     <string name="audio_preferred_lang">Preferirani jezik zvuka</string>
     <string name="audio_skip_silence">Preskoči tišinu</string>
     <string name="audio_skip_silence_sub">Preskoči tihe dijelove zvuka tijekom reprodukcije</string>
+    <string name="audio_night_mode">Noćni način</string>
+    <string name="audio_night_mode_sub">Pojačava dijaloge i tihe zvukove kako bi glasnoća mogla ostati niska</string>
+    <string name="audio_night_mode_desc">Pojačava dijaloge i tihe zvukove; glasne scene ostaju onakve kakve su miksane. Radi na zvuku koji dekodira aplikacija. Dolby i DTS koji se kao passthrough šalju na prijemnik ili soundbar ostaju nepromijenjeni.</string>
+    <string name="audio_night_mode_value">Noćni način: %1$s</string>
+    <string name="audio_night_mode_off">Isključeno</string>
+    <string name="audio_night_mode_light">Blago</string>
+    <string name="audio_night_mode_light_desc">Lagano pojačanje, do +6 dB</string>
+    <string name="audio_night_mode_medium">Srednje</string>
+    <string name="audio_night_mode_medium_desc">Jasno pojačani dijalozi, do +10 dB</string>
+    <string name="audio_night_mode_strong">Jako</string>
+    <string name="audio_night_mode_strong_desc">Do +15 dB, za kasnonoćno gledanje uz nisku glasnoću</string>
     <string name="audio_remember_delay_per_device">Zapamti kašnjenje zvuka po uređaju</string>
     <string name="audio_remember_delay_per_device_sub">Spremi i vrati kašnjenje zvuka iz playera za trenutni audio izlaz</string>
     <string name="audio_advanced_section">Napredni zvuk</string>
@@ -879,16 +958,56 @@
     <string name="sub_outline">Obrub</string>
     <string name="sub_outline_sub">Dodaj obrub oko teksta titlova za bolju vidljivost</string>
     <string name="sub_outline_color">Boja obruba</string>
+    <string name="sub_outline_width">Širina obruba</string>
+    <string name="sub_hdr_style">Zaseban stil za HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">Koristi drugačiju boju teksta i nižu svjetlinu za titlove na HDR i Dolby Vision videu</string>
+    <string name="sub_hdr_text_color">Boja teksta za HDR</string>
+    <string name="sub_hdr_brightness">Svjetlina za HDR</string>
+    <string name="sub_hdr_dim_player_controls">Zatamni kontrole reproduktora na HDR-u</string>
+    <string name="sub_hdr_dim_player_controls_sub">Primijeni HDR svjetlinu na kontrole i izbornike reproduktora prikazane preko HDR i Dolby Vision videa</string>
+    <string name="sub_appearance">Izgled titlova</string>
+    <string name="sub_appearance_desc">Font, boje, pozadina i sjena</string>
+    <string name="sub_appearance_hint">Primjenjuje se na tekstualne titlove. Stilizirani ASS i slikovni titlovi zadržavaju izvorni izgled.</string>
+    <string name="sub_preview">Pretpregled</string>
+    <string name="sub_preview_text">Svaka priča počinje s malo znatiželje.</string>
+    <string name="sub_font">Font</string>
+    <string name="sub_font_default">Zadano</string>
+    <string name="sub_font_serif">Serif</string>
+    <string name="sub_font_mono">Monospace</string>
+    <string name="sub_font_import">Uvezi s mobitela</string>
+    <string name="sub_font_import_desc">Dodaj .ttf ili .otf font do 10 MB. Uvezeni fontovi ostaju na ovom TV-u.</string>
+    <string name="sub_font_import_qr">Skeniraj mobitelom za dodavanje .ttf ili .otf fonta</string>
+    <string name="sub_font_missing">Font nije dostupan na ovom uređaju. Koristi se zadani font.</string>
+    <string name="sub_font_remove">Ukloni %1$s</string>
+    <string name="sub_background">Pozadina</string>
+    <string name="sub_bg_opacity">Neprozirnost pozadine</string>
+    <string name="sub_bg_roundness">Zaobljenost kutova</string>
+    <string name="sub_shadow">Sjena</string>
+    <string name="sub_shadow_desc">Odvoji tekst od svijetlih scena</string>
+    <string name="sub_shadow_opacity">Neprozirnost sjene</string>
+    <string name="sub_shadow_size">Veličina sjene</string>
+    <string name="sub_reset_appearance">Vrati zadani izgled</string>
     <string name="sub_advanced_section">Napredno iscrtavanje titlova</string>
     <string name="sub_libass">Koristi libass za ASS/SSA titlove</string>
     <string name="sub_libass_sub">Eksperimentalno: napredno iscrtavanje ASS/SSA (stilovi, pozicioniranje, animacije)</string>
     <string name="sub_libass_mode">Libass način iscrtavanja</string>
+    <string name="sub_libass_render_scale">Rezolucija iscrtavanja titlova</string>
+    <string name="sub_libass_render_scale_sub">Niža rezolucija poboljšava performanse kod zahtjevnog oblikovanja teksta, nauštrb oštrine</string>
+    <string name="sub_libass_render_mode">Način iscrtavanja ASS-a</string>
+    <string name="sub_libass_render_mode_sub">Kako se ASS/SSA titlovi iscrtavaju na videu</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Tunelirana reprodukcija zaobilazi obradu video efekata. Automatski se koristi preklapanje.</string>
+    <string name="sub_libass_render_mode_video_effect">Video efekt</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Iscrtava titlove izravno na svaki video okvir. Precizno vrijeme na razini okvira na svom hardveru. HDR sadržaj se tonski mapira u SDR.</string>
+    <string name="sub_libass_render_mode_overlay">Preklapanje</string>
+    <string name="sub_libass_render_mode_overlay_sub">Iscrtava titlove na zasebnom sloju površine. Zadržava HDR izlaz. Vrijeme prikaza titlova možda neće biti savršeno precizno na nekim uređajima.</string>
     <string name="sub_org_none">Ništa (zadani redoslijed)</string>
     <string name="sub_org_by_lang">Po jeziku</string>
     <string name="sub_org_by_addon">Po dodatku</string>
     <string name="sub_org_none_desc">Prikaži titlove zadanim redoslijedom rezultata dodataka.</string>
     <string name="sub_org_by_lang_desc">Grupiraj titlove po jeziku.</string>
     <string name="sub_org_by_addon_desc">Grupiraj titlove po izvornom dodatku.</string>
+    <string name="autoplay_preload_next_episode">Unaprijed učitaj izvore sljedeće epizode</string>
+    <string name="autoplay_preload_next_episode_sub">Počni tražiti izvore u pozadini prije nego što se pojavi gumb za sljedeću epizodu.</string>
 
     <string name="autoplay_reuse_last_link">Ponovno koristi zadnju poveznicu</string>
     <string name="autoplay_reuse_last_link_sub">Automatski reproduciraj zadnji ispravni stream za isti film/epizodu dok je predmemorija još valjana</string>
@@ -1018,6 +1137,8 @@
     <string name="layout_cw_enabled_sub">Prikaži red Nastavi gledati na početnom zaslonu.</string>
     <string name="layout_use_episode_thumbnails_cw">Koristi sličice epizoda u Nastavi gledati</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Koristi sličice epizoda kao zadanu sliku. Kada je isključeno, koristi se pozadina.</string>
+    <string name="layout_season_posters">Posteri sezona</string>
+    <string name="layout_season_posters_sub">Prikaži sezone kao postere umjesto tekstualnih kartica kada su dostupni.</string>
     <string name="layout_blur_unwatched">Zamuti nepogledane epizode</string>
     <string name="layout_blur_unwatched_sub">Zamuti sličice epizoda dok ih ne pogledaš kako bi se izbjegli spojleri.</string>
     <string name="layout_episode_options_overlay">Sloj opcija epizode</string>
@@ -1045,9 +1166,28 @@
     <string name="layout_cw_sort_streaming_desc">Objavljene stavke prve, nadolazeće na kraju</string>
     <string name="layout_cw_sort_split_upcoming">Zaseban red za nadolazeće</string>
     <string name="layout_cw_sort_split_upcoming_desc">Premjesti neemitirane epizode u zaseban red Uskoro</string>
+    <string name="layout_cw_click_action">Pri odabiru</string>
+    <string name="layout_cw_click_action_sub">Što se otvara kada odabereš stavku iz Nastavi gledati</string>
+    <string name="layout_cw_click_stream">Otvori stream</string>
+    <string name="layout_cw_click_stream_desc">Odaberi izvor ili nastavi reprodukciju</string>
+    <string name="layout_cw_click_details">Otvori detalje</string>
+    <string name="layout_cw_click_details_desc">Otvori stranicu detalja naslova</string>
+    <string name="layout_cw_click_details_upcoming">Detalji samo za nadolazeće</string>
+    <string name="layout_cw_click_details_upcoming_desc">Otvori detalje za epizode koje još nisu emitirane, a stream za ostale</string>
     <string name="upcoming_section_title">Uskoro</string>
     <string name="layout_trailer_button">Prikaži gumb za trailer</string>
     <string name="layout_trailer_button_sub">Prikaži gumb za trailer na stranici detalja (samo kada je trailer dostupan).</string>
+    <string name="layout_trailer_play_in_background">Reproduciraj u pozadini</string>
+    <string name="layout_trailer_play_in_background_sub">Reproduciraj trailer umjesto pozadinske slike dok stranica ostaje vidljiva.</string>
+    <string name="layout_trailer_pause_on_scroll">Pauziraj pri pomicanju</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Pauziraj trailer kada se pomakneš prema dolje i nastavi ga kada se vratiš na vrh.</string>
+    <string name="layout_trailer_4k">4K traileri</string>
+    <string name="layout_trailer_4k_sub">Reproduciraj trailere iznad 1080p kada su dostupni. Koristi puno više memorije; zadano isključeno na uređajima s 2 GB RAM-a ili manje.</string>
+    <string name="layout_trailer_subtitles">Titlovi trailera</string>
+    <string name="layout_trailer_subtitles_sub">Prikaži titlove na trailerima na tvom preferiranom jeziku titlova, kada su dostupni.</string>
+    <string name="layout_detail_group_episodes">Epizode</string>
+    <string name="layout_detail_group_trailers">Traileri</string>
+    <string name="layout_detail_group_metadata">Metapodaci</string>
     <string name="layout_prefer_external_meta">Preferiraj metapodatke vanjskog dodatka</string>
     <string name="layout_prefer_external_meta_sub">Koristi metapodatke iz vanjskog dodatka umjesto dodatka kataloga.</string>
     <string name="layout_show_full_release_date">Prikaži puni datum izlaska</string>
@@ -1065,6 +1205,8 @@
     <string name="layout_trailer_muted">Reproduciraj trailer bez zvuka</string>
     <string name="layout_trailer_muted_sub_preview">Isključi zvuk trailera tijekom automatskog pretpregleda.</string>
     <string name="layout_trailer_muted_sub_expanded">Isključi zvuk trailera u proširenim karticama.</string>
+    <string name="layout_trailer_continue_in_details">Nastavi trailer u detaljima</string>
+    <string name="layout_trailer_continue_in_details_sub">Nastavi reproducirati trailer kada otvoriš stranicu detalja.</string>
     <string name="layout_section_card_style">Kartica postera</string>
     <string name="layout_section_card_style_desc">Podesi širinu kartice i zaobljenost kutova.</string>
     <string name="settings_card_depth_title">Efekt dubine kartica</string>
@@ -1100,6 +1242,7 @@
     <string name="layout_trailer_location_sub">Odaberi gdje se pretpregled trailera reproducira u Modernom početnom zaslonu.</string>
     <string name="layout_trailer_expanded_card">Proširena kartica</string>
     <string name="layout_trailer_hero_media">Istaknuti medij</string>
+    <string name="layout_trailer_hero_media_no_expand">Istaknuti medij (bez proširenja)</string>
     <string name="layout_preset_compact">Kompaktno</string>
     <string name="layout_preset_dense">Gusto</string>
     <string name="layout_preset_standard">Standardno</string>
@@ -1133,10 +1276,13 @@
     <string name="layout_custom_poster_screen_library">Biblioteka</string>
     <string name="layout_custom_poster_screen_search">Pretraživanje</string>
     <string name="layout_custom_poster_screen_details">Zaslon detalja</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">TV preporuke</string>
 
     <!-- Prilagođeni poster - web stranica -->
     <string name="layout_always_show_landscape_clearlogo">Uvijek pozadina s logotipom za vodoravne postere</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Zanemari vodoravni poster iz dodatka i umjesto toga koristi pozadinu s clearlogo slojem.</string>
+    <string name="layout_hero_description_auto_scroll">Automatsko pomicanje opisa</string>
+    <string name="layout_hero_description_auto_scroll_sub">Polako pomiči duge opise na početnom zaslonu umjesto da se skraćuju.</string>
     <string name="web_custom_poster_title">Prilagođeni izvor postera</string>
     <string name="web_custom_poster_subtitle">Zalijepi uzorak URL-a postera ispod i pritisni Spremi.</string>
     <string name="web_custom_poster_label">Uzorak URL-a</string>
@@ -1153,6 +1299,13 @@
     <string name="web_custom_poster_none">Uzorak nije postavljen</string>
     <string name="web_custom_poster_loading">Učitavanje…</string>
     <string name="web_custom_poster_placeholders_info">Rezervirana mjesta: {id} prosljeđuje sve ID-ove sadržaja. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} ciljaju jednu vrstu ID-a – ako nije dostupan, zadržava se izvorni poster. {imdb_id|tmdb_id|kitsu_id} navodi podržane vrste ID-a – koristi se odgovarajući ili se zadržava izvorni poster. Dodaj ? kako bi rezervirano mjesto bilo neobavezno, tj. postalo prazno umjesto preskakanja: {imdb_id?}. Ostala rezervirana mjesta: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Fontovi titlova</string>
+    <string name="web_subtitle_font_subtitle">Odaberi .ttf ili .otf datoteku za korištenje u titlovima na tvom TV-u.</string>
+    <string name="web_subtitle_font_choose">Odaberi datoteku fonta</string>
+    <string name="web_subtitle_font_uploading">Prijenos…</string>
+    <string name="web_subtitle_font_added">Dodano na tvoj TV</string>
+    <string name="web_subtitle_font_error">Nije moguće uvesti ovaj font. Odaberi ispravnu .ttf ili .otf datoteku manju od 10 MB.</string>
+    <string name="web_subtitle_font_connection_error">Pogreška veze</string>
 
 
     <string name="mdblist_name">MDBList</string>
@@ -1176,6 +1329,7 @@
     <string name="mdblist_rate_limited">Dosegnuto je ograničenje zahtjeva za MDBList. Sinkronizacija će se nastaviti nakon poništavanja ograničenja.</string>
     <string name="mdblist_revoke_failed">Veza je prekinuta na ovom uređaju. Za opoziv pristupa ukloni ovu aplikaciju u postavkama MDBList računa.</string>
     <string name="mdblist_title">MDBList ocjene</string>
+    <string name="mdblist_subtitle">Konfiguriraj vanjske ocjene prikazane u istaknutom dijelu detalja</string>
     <string name="mdblist_enable_title">Omogući MDBList ocjene</string>
     <string name="mdblist_enable_subtitle">Dohvaćaj ocjene vanjskih pružatelja na zaslonu detalja</string>
     <string name="mdblist_api_key_title">API ključ</string>
@@ -1202,11 +1356,18 @@
     <string name="mdblist_show_on_hero_title">Koristi ocjene u istaknutom odjeljku</string>
     <string name="mdblist_show_on_hero_subtitle">Prikaži MDBList ocjene u istaknutom karuselu (moderni i klasični/mrežni)</string>
     <string name="mdblist_rating_order_title">Redoslijed ocjena</string>
+    <string name="mdblist_rating_order_subtitle">Prve 3 omogućene i dostupne ocjene prikazuju se u modernom istaknutom dijelu. Koristi gumb za promjenu redoslijeda.</string>
     <string name="mdblist_dialog_title">MDBList API ključ</string>
     <string name="mdblist_dialog_subtitle">Unesi API ključ za dohvaćanje vanjskih ocjena</string>
     <string name="mdblist_dialog_placeholder">Unesi MDBList API ključ</string>
     <string name="mdblist_not_set">Nije postavljeno</string>
     <string name="mdblist_invalid_api_key">Neispravan MDBList API ključ</string>
+    <string name="mdblist_library_lists">Popisi u biblioteci</string>
+    <string name="mdblist_library_lists_description">Odaberi koji se MDBList popisi prikazuju u Biblioteci i u Upravljanju popisima. Popis za gledanje uvijek je prikazan.</string>
+    <string name="mdblist_library_lists_empty">U tvom MDBList računu još nema popisa. Sinkroniziraj kako bi ih učitao.</string>
+    <string name="mdblist_library_lists_summary">Prikazano %1$d od %2$d</string>
+    <string name="tracking_mdblist_features_title">MDBList značajke</string>
+    <string name="tracking_mdblist_features_subtitle">Postavke specifične za MDBList</string>
 
     <string name="debrid_title">Povezane usluge</string>
     <string name="debrid_subtitle">Poveži račune za poveznice i pristup biblioteci</string>
@@ -1340,6 +1501,11 @@
     <string name="settings_stream_badges_section">Fusion stil</string>
     <string name="settings_stream_size_badges_title">Oznake veličine</string>
     <string name="settings_stream_size_badges_description">Prikaži oznake veličine datoteke u rezultatima streamova i pločama izvora u playeru.</string>
+    <string name="settings_stream_badges_in_player_title">Prikaži u reproduktoru</string>
+    <string name="settings_stream_badges_in_player_description">Prikaži oznake za video i zvuk koji se reproducira ispod naslova u reproduktoru. Potreban je paket oznaka koji prepoznaje običan tekst, poput 2160p ili Atmos.</string>
+    <string name="settings_stream_player_badges_title">Oznake reproduktora</string>
+    <string name="settings_stream_player_badges_description">Odaberi paket oznaka koji reproduktor koristi.</string>
+    <string name="settings_stream_player_badges_same">Isto kao oznake streamova</string>
     <string name="settings_stream_addon_logo_title">Logo dodatka</string>
     <string name="settings_stream_addon_logo_description">Prikaži logo i naziv dodatka uz izvore streamova.</string>
     <string name="settings_stream_display_section">Prikaz</string>
@@ -1407,6 +1573,8 @@
     <string name="tmdb_networks_subtitle">Mreže s logotipima s TMDB-a</string>
     <string name="tmdb_episodes_title">Epizode</string>
     <string name="tmdb_episodes_subtitle">Naslovi, opisi, sličice i trajanje epizoda s TMDB-a</string>
+    <string name="tmdb_season_posters_title">Posteri sezona</string>
+    <string name="tmdb_season_posters_subtitle">Posteri sezona s TMDB-a za kartice sezona na stranici detalja</string>
     <string name="tmdb_trailers_title">Traileri</string>
     <string name="tmdb_trailers_subtitle">Kandidati za trailer iz TMDB videa za odjeljak trailera na detaljima</string>
     <string name="tmdb_more_like_this_title">Slično ovome</string>
@@ -1650,6 +1818,13 @@
     <string name="addon_installing">Instaliranje</string>
     <string name="addon_install_btn">Instaliraj</string>
     <string name="addon_install_success">Instalirano: %1$s</string>
+    <string name="addon_tracking_consent_title">Dodatak za praćenje</string>
+    <string name="addon_tracking_consent_body">%1$s je dodatak za praćenje. Nuvio će mu slati tvoju aktivnost: što reproduciraš, pauziraš i zaustavljaš zajedno s položajem reprodukcije, što dodaješ u biblioteku ili iz nje uklanjaš te što označavaš kao pogledano ili nepogledano. Ti podaci napuštaju Nuvio, a njima upravljaju razvijatelj dodatka i usluga s kojom se povezuje.</string>
+    <string name="addon_tracking_consent_checkbox">Pristajem dijeliti svoju aktivnost gledanja i biblioteku s ovim dodatkom</string>
+    <string name="addon_tracking_consent_checked">Označeno</string>
+    <string name="addon_tracking_consent_unchecked">Nije označeno</string>
+    <string name="addon_tracking_consent_cancel">Odustani</string>
+    <string name="addon_tracking_consent_install">Instaliraj</string>
     <string name="addon_error_invalid_url">Unesi ispravan URL dodatka</string>
     <string name="addon_error_invalid_scheme">URL dodatka mora počinjati s http ili https</string>
     <string name="addon_installed_section">Instalirano</string>
@@ -1697,6 +1872,9 @@
     <string name="catalog_order_disabled_on_home">Onemogućeno na početnom zaslonu</string>
     <string name="catalog_order_enable">Omogući</string>
     <string name="catalog_order_disable">Onemogući</string>
+    <string name="catalog_order_pinned">Prikvačeno</string>
+    <string name="catalog_order_pinned_to_top">Prikvačeno na vrh</string>
+    <string name="catalog_order_pin_to_move_toast">Ukloni prikvačivanje na vrh iz kolekcije za premještanje</string>
 
 
     <string name="stream_retry">Pokušaj ponovno</string>
@@ -1765,6 +1943,8 @@
     <string name="player_engine_switching_title">Promjena pogona playera</string>
     <string name="player_engine_switching_message">Pokretanje nije uspjelo. Prebacivanje na %1$s…</string>
     <string name="player_engine_switching_manual_message">Prebacivanje na %1$s...</string>
+    <string name="player_engine_switch_title">Prebaciti na %1$s?</string>
+    <string name="player_engine_switch_message">Video će se ponovno učitati od mjesta na kojem si.</string>
     <string name="playback_show_loading_status">Prikaži status učitavanja</string>
     <string name="playback_show_loading_status_sub">Prikaži napredak korak po korak dok se player inicijalizira.</string>
     <string name="player_sync_line">Sinkroniziraj redak</string>
@@ -1879,6 +2059,12 @@
     <string name="audio_center_mix_unavailable">Središnji miks dostupan je samo kada je aktivan FFmpeg downmix.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Zadrži izvorni zvuk pri downmixu</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">Kada je isključeno, normalizacija downmixa može smanjiti ukupnu glasnoću.</string>
+    <string name="audio_downmix_lfe_level">Razina LFE-a pri downmixu</string>
+    <string name="audio_downmix_lfe_level_sub">Umiješava kanal subwoofera (LFE) u ostale zvučnike umjesto da ga odbaci. Samo za rasporede bez LFE-a, poput 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Koristi se kada raspored downmixa nema LFE kanal. Primjenjuje se od sljedeće reprodukcije.</string>
+    <string name="audio_downmix_lfe_level_off">Isključeno</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
 
     <string name="subtitle_dialog_title">Titlovi</string>
     <string name="subtitle_no_builtin">Nema dostupnih ugrađenih titlova</string>
@@ -1906,12 +2092,16 @@
     <string name="subtitle_off">Isključeno</string>
     <string name="subtitle_style_title">Stil titlova</string>
     <string name="subtitle_style_customize">Prilagodi</string>
+    <string name="subtitle_style_customize_ass">Prilagodi stil ASS/SSA titlova</string>
     <string name="subtitle_style_color">Boja</string>
     <string name="subtitle_style_reset">Poništi</string>
     <string name="subtitle_style_font_size">Veličina fonta</string>
     <string name="subtitle_style_bold">Podebljano</string>
     <string name="subtitle_style_text_color">Boja teksta</string>
     <string name="subtitle_style_text_opacity">Neprozirnost teksta</string>
+    <string name="subtitle_style_text_color_hdr">Boja teksta (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Neprozirnost teksta (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">Svjetlina (HDR)</string>
     <string name="subtitle_style_outline">Obrub</string>
     <string name="subtitle_style_bottom_offset">Donji pomak</string>
     <string name="subtitle_style_defaults">Zadano</string>
@@ -2035,6 +2225,8 @@
     <string name="library_sort_provider_order">Redoslijed pružatelja</string>
     <string name="library_sort_added_desc">Dodano ↓</string>
     <string name="library_sort_added_asc">Dodano ↑</string>
+    <string name="library_sort_released_desc">Objavljeno ↓</string>
+    <string name="library_sort_released_asc">Objavljeno ↑</string>
     <string name="library_sort_title_asc">Naslov A-Ž</string>
     <string name="library_sort_title_desc">Naslov Ž-A</string>
     <string name="library_error_sort_failed">Nije moguće učitati redoslijed sortiranja. Prikazuje se redoslijed pružatelja.</string>
@@ -2067,6 +2259,10 @@
     <string name="library_status_dropped">Odustajem</string>
     <string name="library_syncing_library">Sinkronizacija biblioteke\u2026</string>
     <string name="library_type_all">Sve</string>
+    <string name="library_empty_title">Nema stavki za prikaz</string>
+    <string name="library_empty_local_hint">Promijeni filtre ili počni spremati favorite kako bi se prikazali ovdje</string>
+    <string name="library_empty_trakt_hint">Promijeni filtre ili koristi + u detaljima za dodavanje stavki na popis za gledanje ili popise</string>
+    <string name="library_empty_simkl_hint">Promijeni filtre ili koristi + u detaljima za dodavanje stavki u Simkl status</string>
     <string name="library_empty_trakt_not_auth_title">Trakt nije povezan</string>
     <string name="library_empty_trakt_not_auth_subtitle">Poveži svoj Trakt račun u Postavkama za prikaz Trakt biblioteke</string>
     <string name="library_empty_simkl_not_auth_title">Simkl nije povezan</string>
@@ -2283,6 +2479,7 @@
     <string name="cast_detail_error">Nešto je pošlo po zlu</string>
     <string name="cast_detail_retry">Pokušaj ponovno</string>
     <string name="cast_detail_filmography">Filmografija</string>
+    <string name="cast_detail_filter_all">Sve</string>
     <string name="cast_detail_born">Datum rođenja: %1$s</string>
     <string name="cast_detail_born_died">Datum rođenja: %1$s — †%2$s</string>
     <string name="cast_detail_age">dob %1$d</string>
@@ -2346,7 +2543,7 @@
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Početna</string>
     <string name="nav_discover">Otkrij</string>
-    <string name="nav_search">Pretraživanje</string>
+    <string name="nav_search">Pretraži</string>
     <string name="nav_library">Biblioteka</string>
     <string name="nav_addons">Dodaci</string>
     <string name="nav_movies">Filmovi</string>
@@ -2359,6 +2556,9 @@
     <string name="update_checking">Provjera ažuriranja…</string>
     <string name="update_waiting_for_stable">Dobit ćeš sljedeće stabilno izdanje kada postane dostupno</string>
     <string name="update_download_complete">Preuzimanje dovršeno. Spremno za instalaciju.</string>
+    <string name="update_ready_closes">Preuzimanje dovršeno. Aplikacija se zatvara dok se ažuriranje instalira, što može potrajati minutu. Nakon toga je ponovno otvori.</string>
+    <string name="update_ready_closes_and_reopens">Preuzimanje dovršeno. Aplikacija se zatvara dok se ažuriranje instalira i sama se ponovno otvara, što može potrajati minutu.</string>
+    <string name="update_installed_automatically">Automatski ažurirano dok je uređaj mirovao</string>
     <string name="update_up_to_date">Sustav je ažuran. Najnovije promjene:</string>
     <string name="update_close">Zatvori</string>
     <string name="update_open_settings">Otvori postavke</string>
@@ -2390,6 +2590,10 @@
     <string name="plugin_repo_added_with_providers">Dodano: %1$s (pružatelja: %2$d)</string>
     <string name="plugin_repo_removed">Repozitorij uklonjen</string>
     <string name="plugin_repo_refreshed">Repozitorij osvježen</string>
+    <string name="plugin_repo_delete_confirm_title">Izbrisati repozitorij?</string>
+    <string name="plugin_repo_delete_confirm_message">Jesi li siguran da ga želiš izbrisati?</string>
+    <string name="plugin_repo_delete_no">Ne</string>
+    <string name="plugin_repo_delete_yes">Da</string>
 
     <!-- Trakt pogreške -->
     <string name="trakt_error_code_expired">Kôd uređaja je istekao. Počni ispočetka.</string>
@@ -2438,6 +2642,10 @@
     <string name="cd_sources">Izvori</string>
     <string name="cd_switch_player_engine">Promijeni pogon playera</string>
     <string name="cd_episodes">Epizode</string>
+    <string name="player_chapter_number">Poglavlje %1$d</string>
+    <string name="player_chapters">Poglavlja</string>
+    <string name="player_chapters_title">Poglavlja (%1$d)</string>
+    <string name="player_chapter_remaining">Preostalo %1$s</string>
     <string name="cd_playback_speed">Brzina reprodukcije</string>
     <string name="cd_aspect_ratio">Omjer slike</string>
     <string name="cd_open_external_player">Otvori u vanjskom playeru</string>
@@ -2451,6 +2659,7 @@
     <string name="cd_loading_logo">Učitavanje logotipa</string>
     <string name="cd_move_up">Pomakni gore</string>
     <string name="cd_move_down">Pomakni dolje</string>
+    <string name="cd_reorder">Promijeni redoslijed</string>
     <string name="cd_edit">Uredi</string>
     <string name="cd_delete">Izbriši</string>
     <string name="cd_qr_code">QR kôd</string>
@@ -2459,6 +2668,12 @@
     <string name="cd_remove">Ukloni</string>
     <string name="cd_preview">Pretpregled</string>
     <string name="cd_test">Testiraj</string>
+    <string name="cd_enable_scraper">Omogući %1$s</string>
+    <string name="cd_enable_addon">Omogući %1$s</string>
+    <string name="cd_color_swatch">Boja %1$s</string>
+    <string name="cd_emoji_option">Emoji %1$s</string>
+    <string name="cd_trailer_controls">Kontrole trailera</string>
+    <string name="cd_seek_bar">Traka za premotavanje</string>
     <string name="cd_unlink">Odspoji</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Trakt logo</string>
@@ -2516,10 +2731,21 @@
     <string name="collections_valid_summary">Kolekcija: %1$d, mapa: %2$d</string>
     <string name="collections_confirm_import">Potvrdi uvoz</string>
     <string name="collections_folder_count">Mapa: %1$d</string>
+    <string name="collections_pinned">Prikvačeno</string>
 
     <!-- Uređivač kolekcija -->
     <string name="collections_editor_row_title">Naslov reda</string>
     <string name="collections_editor_save">Spremi</string>
+    <string name="collections_editor_unsaved_title">Spremiti promjene?</string>
+    <string name="collections_editor_unsaved_subtitle">Imaš nespremljene promjene u ovoj kolekciji.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Nespremljene promjene</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Unesi naslov i dodaj barem jednu mapu za spremanje ove kolekcije.</string>
+    <string name="collections_editor_unsaved_missing_title">Unesi naslov kolekcije za spremanje promjena.</string>
+    <string name="collections_editor_unsaved_missing_folder">Dodaj barem jednu mapu za spremanje ove kolekcije.</string>
+    <string name="collections_editor_folder_unsaved_title">Spremiti promjene mape?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Imaš nespremljene promjene u ovoj mapi.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Nespremljene promjene mape</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Dodaj barem jedan izvor za spremanje ove mape.</string>
     <string name="collections_editor_backdrop">Pozadinska slika</string>
     <string name="collections_editor_pin_above">Prikvači iznad kataloga</string>
     <string name="collections_editor_pin_above_desc">Prikaži ovu kolekciju iznad svih uobičajenih kataloga na početnom zaslonu. Više prikvačenih kolekcija prati redoslijed stvaranja.</string>
@@ -3266,6 +3492,13 @@
     <string name="stream_test_error_prefix">Pogreška: %1$s</string>
     <string name="stream_test_video_bitrate">Prosječni bitrate videa: %1$s</string>
     <string name="stream_test_error_connection">Povezivanje nije uspjelo. Poveznica zadnje reproduciranog streama možda je istekla ili nije dostupna. Ponovno reproduciraj video i pokušaj opet.</string>
+    <string name="player_finding_next_stream">Traženje sljedećeg streama…</string>
+    <string name="player_trying_next_stream">Pokušavam sljedeći stream (pokušaj %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">Nema više ispravnih streamova. Odaberi drugi izvor ili pokušaj ponovno.</string>
+    <string name="usenet_builtin_addon_title">Ugrađeni Usenet</string>
+    <string name="usenet_builtin_addon_desc">Rezultati s tvojih NNTP pružatelja i Newznab indeksera. Premjesti ga kako bi odabrao gdje se prikazuju.</string>
+    <string name="usenet_fallback">Automatska Usenet rezerva</string>
+    <string name="usenet_fallback_description">Ako Usenet stream ne uspije, isprobaj sljedeće Usenet izvore do konfiguriranog ograničenja pokušaja. Torrent i ostali streamovi nikada se ne prebacuju automatski.</string>
 
     <string name="random_episode_title">Nasumično</string>
     <string name="layout_random_episode_sub">Nasumično reproduciraj epizode bilo koje serije. Isključivanjem se pauzira nasumična reprodukcija.</string>
@@ -3288,4 +3521,32 @@
     <string name="shuffle_save_failed">Nije moguće ažurirati nasumičnu reprodukciju. Pokušaj ponovno.</string>
     <string name="shuffle_change_selection">Odaberi epizode</string>
     <string name="shuffle_badge">Nasumična reprodukcija epizoda uključena</string>
+    <string name="autosync_setting_title">Automatska sinkronizacija titlova</string>
+    <string name="autosync_setting_description">Uskladi vrijeme odabranih titlova iz dodatka s titlovima ugrađenima u video.</string>
+    <string name="autosync_tolerance_title">Tolerancija automatske sinkronizacije</string>
+    <string name="autosync_tolerance_description">Zadrži izvorno vrijeme kada je potrebna korekcija ovoliko mala ili manja.</string>
+    <string name="autosync_tolerance_off">Isključeno</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Temeljito traženje za automatsku sinkronizaciju</string>
+    <string name="autosync_thorough_description">Nastavi uspoređivati druge titlove i ugrađene zapise radi boljeg podudaranja prije sinkronizacije. Kada je isključeno, ranije se koristi prvo snažno podudaranje. Primjenjuju se samo pouzdana podudaranja.</string>
+    <string name="autosync_label_synced">Automatski sinkronizirano</string>
+    <string name="autosync_status_title">Stanje automatske sinkronizacije</string>
+    <string name="autosync_status_synced">Sinkronizirano</string>
+    <string name="autosync_status_not_needed">Nije potrebno</string>
+    <string name="autosync_status_in_progress">U tijeku</string>
+    <string name="autosync_status_no_fit">Možda se ne podudara</string>
+    <string name="autosync_status_no_reference">Nema ugrađenih titlova</string>
+    <string name="autosync_status_failed">Nije uspjelo</string>
+    <string name="stream_resume_from_time">Nastavi od %1$s</string>
+    <string name="stream_resume_from_percent">Nastavi od %1$d%%</string>
+    <string name="player_disc_titles">Naslovi na disku</string>
+    <string name="player_disc_title_feature">Glavni film · %1$d min</string>
+    <string name="player_disc_title_extra">Dodatak · %1$d min</string>
+    <string name="player_disc_title_subtitles">Titlovi %1$s</string>
+    <string name="player_disc_title_failed">Ovaj naslov nije moguće reproducirati</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d isječak</item>
+        <item quantity="few">%d isječka</item>
+        <item quantity="other">%d isječaka</item>
+    </plurals>
 </resources>
