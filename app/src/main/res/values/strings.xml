@@ -1919,6 +1919,8 @@
     <string name="settings_p2p_profile_fast_description">Uses more peer connections for difficult or high-bitrate torrents</string>
     <string name="settings_p2p_cache_size_title">Torrent cache size</string>
     <string name="settings_p2p_cache_size_description">Downloaded torrent data kept on this device for faster replays</string>
+    <string name="settings_p2p_cache_memory_only">Memory only</string>
+    <string name="settings_p2p_cache_memory_only_description">Torrent data stays in RAM and is never written to storage. Seeking back downloads it again.</string>
     <string name="settings_p2p_cache_none">No persistent cache</string>
     <string name="settings_p2p_cache_2_gb">2 GB</string>
     <string name="settings_p2p_cache_5_gb">5 GB</string>
