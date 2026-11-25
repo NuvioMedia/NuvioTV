@@ -66,7 +66,7 @@
     <string name="usenet_indexer_fallback_description">Désactivé&#160;: tous les indexeurs sont interrogés. Activé&#160;: les indexeurs de priorité plus basse ne sont interrogés que si les plus hauts ne trouvent rien, ce qui économise des appels API.</string>
     <string name="usenet_hide_duplicates">Masquer les releases répétées</string>
     <string name="usenet_show_release_names">Afficher les noms de release</string>
-    <string name="usenet_show_release_names_description">Affiche le nom de la release de chaque résultat au-dessus de sa taille, de son âge et de son indexeur.</string>
+    <string name="usenet_show_release_names_description">Affiche le nom de la release de chaque résultat au-dessus de ses détails. Lorsqu’il est masqué, le groupe de release est placé à la fin des détails.</string>
     <string name="usenet_hide_duplicates_description">Affiche une seule fois une release trouvée par plusieurs indexeurs, celle de l’indexeur de plus haute priorité.</string>
     <string name="usenet_provider_test">Tester le fournisseur</string>
     <string name="usenet_provider_test_running">Connexion au fournisseur…</string>
