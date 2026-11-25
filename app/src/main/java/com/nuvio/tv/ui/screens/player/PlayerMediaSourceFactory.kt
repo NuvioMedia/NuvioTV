@@ -1060,6 +1060,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 return@withContext null
             }
             val sanitizedHeaders = sanitizeHeaders(headers)
+            val probeClient = PlayerPlaybackNetworking.createHttpClient(defaultHeaders = sanitizedHeaders)
             val methods = listOf("HEAD", "GET")
             for (method in methods) {
                 runCatching {
@@ -1076,7 +1077,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                         requestBuilder.header("User-Agent", DEFAULT_USER_AGENT)
                     }
 
-                    PlayerPlaybackNetworking.playbackHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+                    probeClient.newCall(requestBuilder.build()).execute().use { response ->
                         if (!response.isSuccessful && response.code !in 200..308) {
                             return@use null
                         }
