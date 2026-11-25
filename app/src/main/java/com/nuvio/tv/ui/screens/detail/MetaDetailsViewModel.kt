@@ -42,6 +42,7 @@ import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.isSeriesLikeType
+import com.nuvio.tv.domain.model.isSeriesWithWatchableEpisodes
 import com.nuvio.tv.domain.model.isWatchedAsOneItem
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
@@ -1947,6 +1948,9 @@ class MetaDetailsViewModel @Inject constructor(
         if (updated != current) {
             watchedSeriesStateHolder.updateWithValidation(updated, allIds)
         }
+        _uiState.update { state ->
+            if (state.isMovieWatched == allWatched) state else state.copy(isMovieWatched = allWatched)
+        }
     }
 
     private fun calculateNextToWatch() {
@@ -2620,8 +2624,12 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun toggleMovieWatched() {
         val meta = _uiState.value.meta ?: return
-        if (!meta.isWatchedAsOneItem()) return
         if (_uiState.value.isMovieWatchedPending) return
+        if (meta.isSeriesWithWatchableEpisodes()) {
+            toggleSeriesWatched(meta)
+            return
+        }
+        if (!meta.isWatchedAsOneItem()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isMovieWatchedPending = true) }
@@ -2640,6 +2648,54 @@ class MetaDetailsViewModel @Inject constructor(
                 )
             }
             _uiState.update { it.copy(isMovieWatchedPending = false) }
+        }
+    }
+
+    private fun toggleSeriesWatched(meta: Meta) {
+        val markWatched = !_uiState.value.isMovieWatched
+        viewModelScope.launch {
+            _uiState.update { it.copy(isMovieWatchedPending = true) }
+            val targets = meta.watchableEpisodes().filter { video ->
+                val key = video.season!! to video.episode!!
+                val watched = _uiState.value.episodeProgressMap[key]?.isCompleted() == true ||
+                    key in _uiState.value.watchedEpisodes
+                watched != markWatched
+            }
+            val keys = targets.map { it.season!! to it.episode!! }.toSet()
+            if (markWatched) {
+                _optimisticUnmarks -= keys
+                _optimisticMarks += keys
+            } else {
+                _optimisticMarks -= keys
+                _optimisticUnmarks += keys
+            }
+            runCatching {
+                if (targets.isEmpty()) return@runCatching
+                if (markWatched) {
+                    watchProgressRepository.markAsCompletedBatch(
+                        targets.map { buildCompletedEpisodeProgress(meta, it) }
+                    )
+                } else {
+                    watchProgressRepository.removeFromHistoryBatch(
+                        contentId = _effectiveContentId.value,
+                        videoId = resolveFallbackVideoId(),
+                        episodes = targets.map { Triple(it.season!!, it.episode!!, it.id) }
+                    )
+                }
+            }.onSuccess {
+                showMessage(
+                    localizedContext.getString(
+                        if (markWatched) R.string.detail_movie_marked_watched else R.string.detail_movie_marked_unwatched
+                    )
+                )
+            }.onFailure { error ->
+                showMessage(
+                    message = error.message ?: context.getString(com.nuvio.tv.R.string.detail_error_update_watched_failed),
+                    isError = true
+                )
+            }
+            _uiState.update { it.copy(isMovieWatchedPending = false) }
+            reevaluateSeriesWatchedBadge()
         }
     }
 

@@ -70,6 +70,10 @@ data class Meta(
 fun Meta.isWatchedAsOneItem(): Boolean =
     apiType.equals("movie", ignoreCase = true) || (!isSeriesLikeType(apiType) && videos.isEmpty())
 
+fun Meta.isSeriesWithWatchableEpisodes(): Boolean =
+    (apiType.equals("series", ignoreCase = true) || apiType.equals("tv", ignoreCase = true)) &&
+        watchableEpisodes().isNotEmpty()
+
 fun List<Video>.watchableEpisodes(): List<Video> {
     val candidates = filter {
         it.season != null && it.episode != null && (it.season ?: 0) > 0
