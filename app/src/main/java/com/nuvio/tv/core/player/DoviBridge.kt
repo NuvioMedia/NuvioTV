@@ -243,8 +243,36 @@ object DoviBridge {
     }
 
     /**
+     * Zeroes non-zero Dolby Vision Level 5 (active area / letterbox) offsets in an RPU NAL
+     * into [rpuOutBuffer] without changing the DV profile or per-frame conversion counters.
+     *
+     * Returns the number of bytes written (> 0) when L5 was non-zero and rewritten, or 0
+     * when L5 was absent, already all-zero, or libdovi is unavailable.
+     */
+    fun zeroDoviLevel5NonAllocating(
+        sample: ByteArray,
+        offset: Int,
+        len: Int
+    ): Int {
+        if (!isAvailable() || len <= 0) return 0
+        var written = runCatching {
+            nativeZeroDoviLevel5NonAllocating(sample, offset, len, rpuOutBuffer)
+        }.onFailure { Log.w(TAG, "L5 zeroing failed: ${it.message}") }
+            .getOrDefault(0)
+        if (written < 0) {
+            val required = -written
+            rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
+            written = runCatching {
+                nativeZeroDoviLevel5NonAllocating(sample, offset, len, rpuOutBuffer)
+            }.onFailure { Log.w(TAG, "L5 zeroing retry failed: ${it.message}") }
+                .getOrDefault(0)
+        }
+        return written.coerceAtLeast(0)
+    }
+
+    /**
      * Processes an HEVC video sample in native C++ layer.
-     * Optionally converts or strips Dolby Vision RPUs, and strips HDR10+ SEIs.
+     * Optionally converts or strips Dolby Vision RPUs, zeroes non-zero L5 offsets, and strips HDR10+ SEIs.
      * Returns the size of the rewritten sample, or 0 if no changes were made.
      * If the output buffer was too small, grows the buffer and retries once.
      */
@@ -257,7 +285,8 @@ object DoviBridge {
         doviMode: Int,
         doviProfile: Int,
         stripDoviRpu: Boolean,
-        stripHdr10Plus: Boolean
+        stripHdr10Plus: Boolean,
+        zeroDoviLevel5: Boolean = false
     ): Int {
         if (!isAvailable() || sampleLen <= 0) return 0
 
@@ -272,7 +301,8 @@ object DoviBridge {
                 doviMode = doviMode,
                 doviProfile = doviProfile,
                 stripDoviRpu = stripDoviRpu,
-                stripHdr10Plus = stripHdr10Plus
+                stripHdr10Plus = stripHdr10Plus,
+                zeroDoviLevel5 = zeroDoviLevel5
             )
         }.onFailure { Log.w(TAG, "nativeProcessVideoSample failed: ${it.message}") }
             .getOrDefault(0L)
@@ -292,7 +322,8 @@ object DoviBridge {
                     doviMode = doviMode,
                     doviProfile = doviProfile,
                     stripDoviRpu = stripDoviRpu,
-                    stripHdr10Plus = stripHdr10Plus
+                    stripHdr10Plus = stripHdr10Plus,
+                    zeroDoviLevel5 = zeroDoviLevel5
                 )
             }.onFailure { Log.w(TAG, "nativeProcessVideoSample retry failed: ${it.message}") }
                 .getOrDefault(0L)
@@ -349,6 +380,14 @@ object DoviBridge {
     ): Int
 
     @JvmStatic
+    private external fun nativeZeroDoviLevel5NonAllocating(
+        sample: ByteArray,
+        offset: Int,
+        len: Int,
+        outBuffer: ByteArray
+    ): Int
+
+    @JvmStatic
     private external fun nativeProcessVideoSample(
         sample: ByteArray,
         sampleLen: Int,
@@ -359,7 +398,8 @@ object DoviBridge {
         doviMode: Int,
         doviProfile: Int,
         stripDoviRpu: Boolean,
-        stripHdr10Plus: Boolean
+        stripHdr10Plus: Boolean,
+        zeroDoviLevel5: Boolean
     ): Long
 }
 

@@ -47,7 +47,8 @@ internal class DolbyVisionExtractorsFactory(
     private val delegate: ExtractorsFactory,
     private val config: DolbyVisionConversionConfig,
     private val stripDvRpu: Boolean = false,
-    private val stripHdr10PlusSei: Boolean = false
+    private val stripHdr10PlusSei: Boolean = false,
+    private val zeroDoviLevel5: Boolean = DoviBridge.isAvailable()
 ) : ExtractorsFactory {
 
     override fun createExtractors(): Array<Extractor> =
@@ -73,12 +74,13 @@ internal class DolbyVisionExtractorsFactory(
                     config = if (config.active) config else DolbyVisionConversionConfig(active = false),
                     stripRpuOnly = stripDvRpu && !config.active,
                     stripHdr10PlusSei = stripHdr10PlusSei,
+                    zeroDoviLevel5 = zeroDoviLevel5,
                 )
             )
         }
-        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return extractor
+        if (!config.active && !stripDvRpu && !stripHdr10PlusSei && !zeroDoviLevel5) return extractor
         val nalFormat = nalFormatFor(extractor) ?: return extractor
-        return DolbyVisionExtractor(extractor, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
+        return DolbyVisionExtractor(extractor, config, nalFormat, stripDvRpu, stripHdr10PlusSei, zeroDoviLevel5)
     }
 
     private fun nalFormatFor(extractor: Extractor): NalFormat? {
@@ -188,11 +190,16 @@ private class DolbyVisionExtractor(
     private val config: DolbyVisionConversionConfig,
     private val nalFormat: NalFormat,
     private val stripDvRpu: Boolean = false,
-    private val stripHdr10PlusSei: Boolean = false
+    private val stripHdr10PlusSei: Boolean = false,
+    private val zeroDoviLevel5: Boolean = false
 ) : Extractor {
 
     override fun init(output: ExtractorOutput) {
-        delegate.init(DolbyVisionExtractorOutput(output, config, nalFormat, stripDvRpu, stripHdr10PlusSei))
+        delegate.init(
+            DolbyVisionExtractorOutput(
+                output, config, nalFormat, stripDvRpu, stripHdr10PlusSei, zeroDoviLevel5
+            )
+        )
     }
 
     @Throws(IOException::class)
@@ -216,7 +223,8 @@ private class DolbyVisionExtractorOutput(
     private val config: DolbyVisionConversionConfig,
     private val nalFormat: NalFormat,
     private val stripDvRpu: Boolean = false,
-    private val stripHdr10PlusSei: Boolean = false
+    private val stripHdr10PlusSei: Boolean = false,
+    private val zeroDoviLevel5: Boolean = false
 ) : ExtractorOutput {
 
     override fun track(id: Int, type: Int): TrackOutput {
@@ -227,7 +235,8 @@ private class DolbyVisionExtractorOutput(
                 config = config,
                 nalFormat = nalFormat,
                 stripDvRpu = stripDvRpu,
-                stripHdr10PlusSei = stripHdr10PlusSei
+                stripHdr10PlusSei = stripHdr10PlusSei,
+                zeroDoviLevel5 = zeroDoviLevel5
             )
         } else {
             track
@@ -245,7 +254,8 @@ private class NativeOptimizedVideoTrackOutput(
     private val config: DolbyVisionConversionConfig,
     private val nalFormat: NalFormat,
     private val stripDvRpu: Boolean = false,
-    private val stripHdr10PlusSei: Boolean = false
+    private val stripHdr10PlusSei: Boolean = false,
+    private val zeroDoviLevel5: Boolean = false
 ) : TrackOutput {
 
     private var pendingBuf = ByteArray(0)
@@ -254,6 +264,8 @@ private class NativeOptimizedVideoTrackOutput(
     private val scratch = ParsableByteArray()
 
     private var converting = false
+    private var rewriteSamples = false
+    private var shouldZeroL5 = false
     private var shouldProcess = false
     private var profile: Int? = null
     private var codecs: String? = null
@@ -301,10 +313,23 @@ private class NativeOptimizedVideoTrackOutput(
             outFormat = outFormat.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H265).build()
         }
 
-        val rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
+        val lowerCodecs = format.codecs?.trim()?.lowercase()
+        val isNonHevcDv = lowerCodecs != null && (
+            lowerCodecs.startsWith("dav1.") ||
+                lowerCodecs.startsWith("av01.") ||
+                lowerCodecs.startsWith("dvav.") ||
+                lowerCodecs.startsWith("dva1.")
+            )
+        val isHevcDv = !isNonHevcDv && (
+            lowerCodecs?.startsWith("dvhe.") == true ||
+                lowerCodecs?.startsWith("dvh1.") == true ||
+                format.sampleMimeType.equals(MimeTypes.VIDEO_DOLBY_VISION, ignoreCase = true)
+            )
+        rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
         val shouldStripDovi = stripDvRpu && strippedCodecs != null && strippedCodecs != format.codecs
-        
-        shouldProcess = rewriteSamples || shouldStripDovi || stripHdr10PlusSei
+        shouldZeroL5 = zeroDoviLevel5 && isHevcDv && !shouldStripDovi
+
+        shouldProcess = rewriteSamples || shouldStripDovi || stripHdr10PlusSei || shouldZeroL5
         codecs = outFormat.codecs
         delegate.format(outFormat)
     }
@@ -373,11 +398,12 @@ private class NativeOptimizedVideoTrackOutput(
             sampleLen = sampleEnd,
             nalFormat = formatVal,
             nalLengthFieldLength = nalLengthFieldLength,
-            convertDovi = converting,
+            convertDovi = rewriteSamples,
             doviMode = mode,
             doviProfile = profile ?: -1,
             stripDoviRpu = stripDvRpu,
-            stripHdr10Plus = stripHdr10PlusSei
+            stripHdr10Plus = stripHdr10PlusSei,
+            zeroDoviLevel5 = shouldZeroL5
         )
 
         val useRewritten = written > 0
