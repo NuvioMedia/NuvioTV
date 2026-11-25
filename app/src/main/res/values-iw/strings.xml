@@ -198,6 +198,8 @@
     <string name="episodes_dialog_subtitle">פעולות עבור הפרק הזה</string>
     <string name="episodes_mark_watched">סימון כנצפה</string>
     <string name="episodes_mark_unwatched">סימון כלא נצפה</string>
+    <string name="episodes_mark_rewatched">סימון כנצפה מחדש</string>
+    <string name="episodes_mark_not_rewatched">סימון כלא נצפה מחדש</string>
     <string name="episodes_mark_season_watched">סימון כל העונה כנצפתה</string>
     <string name="episodes_mark_season_unwatched">סימון כל העונה כלא נצפתה</string>
     <string name="episodes_mark_previous_watched">סימון פרקים קודמים בעונה זו כנצפו</string>
@@ -211,6 +213,10 @@
     <string name="detail_removed_from_library">הוסר מהספרייה</string>
     <string name="detail_episode_marked_watched">הפרק סומן כנצפה</string>
     <string name="detail_episode_marked_unwatched">הפרק סומן כלא נצפה</string>
+    <string name="detail_episode_marked_rewatched">הפרק סומן כנצפה מחדש</string>
+    <string name="detail_episode_marked_not_rewatched">הפרק סומן ככזה שלא נצפה שוב</string>
+    <string name="detail_rewatch_too_soon">Simkl לא תיעד צפייה חוזרת זו: הפרק נצפה לפני פחות מ-48 שעות.</string>
+    <string name="detail_rewatch_not_recorded">Simkl לא תיעד צפייה חוזרת זו.</string>
     <string name="detail_lists_updated">רשימות עודכנו</string>
     <string name="detail_movie_marked_watched">סומן כנצפה</string>
     <string name="detail_movie_marked_unwatched">סומן כלא נצפה</string>
