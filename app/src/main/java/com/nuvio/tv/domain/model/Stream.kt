@@ -43,7 +43,8 @@ data class Stream(
     val serverTarget: ServerPlaybackTarget? = null,
     val pluginSourceName: String? = null,
     /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
-    val debridResolved: Boolean = false
+    val debridResolved: Boolean = false,
+    val declaredType: String? = null
 ) {
     fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**

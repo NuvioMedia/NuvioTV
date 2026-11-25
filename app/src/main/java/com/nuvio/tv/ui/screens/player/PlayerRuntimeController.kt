@@ -252,7 +252,8 @@ class PlayerRuntimeController(
         currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
             url = initialPlaybackRequest.url,
             filename = currentFilename,
-            responseHeaders = currentStreamResponseHeaders
+            responseHeaders = currentStreamResponseHeaders,
+            declaredType = navigationArgs.streamType
         )
         currentHeaders = initialPlaybackRequest.headers
         streamSubtitles = StreamSidecarSubtitles.forUrl(initialStreamUrl)

@@ -354,6 +354,7 @@ fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model
         ),
         addonName = scraper.name,
         addonLogo = scraper.logo,
-        subtitles = subtitles
+        subtitles = subtitles,
+        declaredType = type
     )
 }
