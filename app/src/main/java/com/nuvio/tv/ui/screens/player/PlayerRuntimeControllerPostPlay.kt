@@ -2,6 +2,38 @@ package com.nuvio.tv.ui.screens.player
 
 import kotlinx.coroutines.flow.update
 
+internal fun PlayerRuntimeController.resetPostPlayStateAfterPlaybackEnded() {
+    if (!shouldResetPostPlayStateAfterPlaybackEnded(
+            state = _uiState.value,
+            hasInFlightNextEpisodeAutoPlay = nextEpisodeAutoPlayJob?.isActive == true
+        )
+    ) {
+        return
+    }
+
+    // If auto-play is enabled and the user dismissed the card earlier,
+    // still auto-play the next episode when playback ends naturally.
+    val state = _uiState.value
+    val autoPlayEligible = streamAutoPlayNextEpisodeEnabledSetting &&
+        state.nextEpisode?.hasAired == true &&
+        nextEpisodeVideo != null
+    if (autoPlayEligible && (state.postPlayDismissedForCurrentEpisode || state.postPlayMode == null)) {
+        playNextEpisode()
+        return
+    }
+
+    resetPostPlayOverlayState(clearEpisode = false)
+}
+
+internal fun shouldResetPostPlayStateAfterPlaybackEnded(
+    state: PlayerUiState,
+    hasInFlightNextEpisodeAutoPlay: Boolean
+): Boolean {
+    if (state.postPlayMode?.blocksNaturalCompletion() == true) return false
+    if (hasInFlightNextEpisodeAutoPlay) return false
+    return true
+}
+
 internal fun PlayerRuntimeController.resetPostPlayOverlayState(clearEpisode: Boolean = false) {
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
