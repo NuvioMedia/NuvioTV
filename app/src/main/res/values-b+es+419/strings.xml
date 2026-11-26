@@ -192,9 +192,12 @@
     <string name="episodes_specials">Especiales</string>
     <string name="episodes_episode">Episodio</string>
     <string name="episodes_cd_watched">Visto</string>
+    <string name="episodes_cd_rewatched">Vuelto a ver</string>
     <string name="episodes_dialog_subtitle">Acciones del episodio</string>
     <string name="episodes_mark_watched">Marcar como visto</string>
     <string name="episodes_mark_unwatched">Marcar como no visto</string>
+    <string name="episodes_mark_rewatched">Marcar como visto de nuevo</string>
+    <string name="episodes_mark_not_rewatched">Marcar como no visto de nuevo</string>
     <string name="episodes_mark_season_watched">Marcar temporada como vista</string>
     <string name="episodes_mark_season_unwatched">Marcar temporada como no vista</string>
     <string name="episodes_mark_previous_watched">Marcar anteriores de esta temporada como vistos</string>
@@ -208,6 +211,10 @@
     <string name="detail_removed_from_library">Eliminado de la biblioteca</string>
     <string name="detail_episode_marked_watched">Episodio marcado como visto</string>
     <string name="detail_episode_marked_unwatched">Episodio marcado como no visto</string>
+    <string name="detail_episode_marked_rewatched">Episodio marcado como visto de nuevo</string>
+    <string name="detail_episode_marked_not_rewatched">Episodio marcado como no visto de nuevo</string>
+    <string name="detail_rewatch_too_soon">Simkl no registró esta repetición: el episodio se vio hace menos de 48 horas.</string>
+    <string name="detail_rewatch_not_recorded">Simkl no registró esta repetición.</string>
     <string name="detail_lists_updated">Listas actualizadas</string>
     <string name="detail_movie_marked_watched">Marcado como visto</string>
     <string name="detail_movie_marked_unwatched">Marcado como no visto</string>
@@ -417,6 +424,8 @@
     <string name="about_update_auto_install_subtitle">Descarga nuevas versiones en segundo plano e instálalas cuando el dispositivo esté inactivo</string>
     <string name="about_update_auto_install_notice_title">Avisar después de las actualizaciones automáticas</string>
     <string name="about_update_auto_install_notice_subtitle">Muestra un aviso en el próximo inicio después de que la app se actualice automáticamente</string>
+    <string name="about_update_optimize_install_title">Optimizar actualizaciones durante la instalación</string>
+    <string name="about_update_optimize_install_subtitle">La app se inicia más rápido después de actualizarse, pero se cierra durante aproximadamente un minuto mientras se instala la actualización. Desactiva esta opción para usar la pantalla de instalación de Android.</string>
     <string name="about_update_channel_title">Canal de actualizaciones</string>
     <string name="about_update_channel_subtitle">Elige el tipo de actualizaciones de la aplicación que quieres recibir</string>
     <string name="about_check_updates">Buscar actualizaciones</string>
@@ -494,6 +503,27 @@
     <string name="tracking_simkl_anime_id_mal">Preferir MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Preferir Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Preferir TVDB</string>
+    <string name="settings_tracking_completion_title">Umbral para marcar como visto</string>
+    <string name="settings_tracking_completion_subtitle">Porcentaje de reproducción necesario para marcar un título como visto. Si hay marcadores de créditos finales, tienen prioridad.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">Registrar repeticiones</string>
+    <string name="settings_tracking_rewatch_subtitle">Registra como sesiones de repetición de Simkl las nuevas reproducciones de títulos que terminaste hace más de 2 días y muestra las sesiones activas en Continuar viendo.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Registrar repeticiones</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Las sesiones de repetición requieren Simkl PRO o VIP y solo se crean para títulos que ya terminaste.</string>
+    <string name="settings_tracking_rewatch_off">Desactivado</string>
+    <string name="settings_tracking_rewatch_off_subtitle">No registres repeticiones en Simkl ni muestres sesiones activas en Continuar viendo.</string>
+    <string name="settings_tracking_rewatch_semi">Semiautomático</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Pregunta una vez antes de iniciar una sesión de repetición. Después, registra automáticamente los episodios restantes de la serie.</string>
+    <string name="settings_tracking_rewatch_automatic">Automático</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Inicia automáticamente una sesión de repetición y registra cada reproducción de un título que ya terminaste.</string>
+    <string name="settings_tracking_rewatch_pro_title">El registro de repeticiones requiere Simkl PRO o VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl solo registra repeticiones en cuentas Pro o VIP. Las sesiones que ya están en tu cuenta de Simkl seguirán ahí si cambias de plan.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Mejorar plan</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Ahora no</string>
+    <string name="rewatch_prompt_title">Ya terminaste este título.</string>
+    <string name="rewatch_prompt_subtitle">¿Quieres iniciar una sesión de repetición en Simkl?</string>
+    <string name="rewatch_prompt_confirm">Sí</string>
+    <string name="rewatch_prompt_dismiss">No</string>
     <string name="tracking_status_connected">Conectado</string>
     <string name="tracking_status_disconnected">No conectado</string>
     <string name="tracking_status_waiting">Esperando aprobación</string>
@@ -625,6 +655,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Usa la animación y posicionamiento global personalizado de enfoque de Nuvio.</string>
     <string name="advanced_rgb565">Decodificación de imágenes RGB565</string>
     <string name="advanced_rgb565_subtitle">Usa colores de 16 bits que requieren menos memoria para las imágenes opacas compatibles. Cambiar esta opción reiniciará la aplicación.</string>
+    <string name="advanced_hardware_bitmaps">Decodificación de imágenes por hardware</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Mantiene las imágenes decodificadas solo en la memoria gráfica. Usa menos RAM, pero puede hacer que la carga de imágenes se entrecorte en GPU menos potentes.</string>
     <string name="advanced_memory_only_vertical_scroll">Desplazamiento vertical solo en memoria</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Omite solicitudes de imágenes desde disco y red al desplazarte verticalmente por las filas de inicio.</string>
     <string name="advanced_compose_highlighter">Resaltador de Compose</string>
@@ -652,6 +684,7 @@
     <string name="settings_animeskip_subtitle">Marcas de tiempo para omitir intros/outros de anime</string>
     <string name="settings_debrid_subtitle">Fuentes experimentales de cuentas en la nube</string>
 
+    <string name="settings_usenet_subtitle">Proveedores, indexadores, reproducción y diagnóstico</string>
     <string name="playback_title">Ajustes de Reproducción</string>
     <string name="playback_subtitle">Configurar reproducción de video y opciones de subtítulos</string>
     <string name="cd_decrease">Disminuir</string>
@@ -776,6 +809,16 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Cambiar automáticamente de motor en caso de error al iniciar</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si falla el inicio del stream, alterna automáticamente entre ExoPlayer y libmpv.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Desactiva el cambio a la siguiente fuente coincidente para usar esta opción.</string>
+    <string name="autoplay_fallback_next_source">Probar la siguiente fuente coincidente si hay un error</string>
+    <string name="autoplay_fallback_next_source_sub">Si la fuente seleccionada automáticamente falla o no inicia a tiempo, prueba en segundo plano las siguientes fuentes coincidentes.</string>
+    <string name="autoplay_fallback_max_sources">Fuentes que se probarán si hay un error</string>
+    <string name="autoplay_fallback_max_sources_sub">Cantidad de fuentes coincidentes adicionales que se probarán antes de mostrar el error.</string>
+    <string name="autoplay_fallback_startup_timeout">Tiempo para iniciar una fuente</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Tiempo de espera para que inicie una fuente antes de probar la siguiente.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$ds</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Desactiva el cambio automático de reproductor si hay un error al iniciar para usar esta opción.</string>
+    <string name="player_error_source_startup_timeout">La fuente no se inició en %1$d segundos.</string>
     <string name="playback_release_decoder_on_background">Liberar el decodificador en segundo plano</string>
     <string name="playback_release_decoder_on_background_sub">Libera el decodificador de video cuando Nuvio pasa a segundo plano. Activa esta opción si la reproducción falla con un error del decodificador al volver a la app. El reproductor se recarga al regresar, también después del protector de pantalla.</string>
     <string name="playback_external_forward_subtitles">Enviar subtítulos al reproductor externo</string>
@@ -812,6 +855,8 @@
     <string name="playback_true_black_letterbox_sub">Deja las barras alrededor de la imagen sin pintar para que el HDR mantenga el negro real. Mantén esta opción desactivada si aparece una línea brillante en las barras.</string>
     <string name="playback_exo_chapters_title">Mostrar capítulos</string>
     <string name="playback_exo_chapters_sub">Lee los capítulos de los archivos MKV para mostrarlos en la barra de progreso y permitir avanzar entre ellos.</string>
+    <string name="playback_chapter_title_title">Mostrar título del capítulo</string>
+    <string name="playback_chapter_title_sub">Muestra el nombre del capítulo actual sobre la barra de progreso.</string>
     <string name="audio_trailer_section">Tráiler</string>
     <string name="audio_autoplay_trailers">Auto-reproducir Tráileres</string>
     <string name="audio_autoplay_trailers_sub">Reproducir automáticamente los tráileres en la pantalla de detalles tras un periodo de inactividad</string>
@@ -924,12 +969,35 @@
     <string name="sub_outline">Contorno</string>
     <string name="sub_outline_sub">Agregar un contorno alrededor del texto del subtítulo para mejor visibilidad</string>
     <string name="sub_outline_color">Color del Contorno</string>
+    <string name="sub_outline_width">Ancho del contorno</string>
     <string name="sub_hdr_style">Estilo independiente para HDR y Dolby Vision</string>
     <string name="sub_hdr_style_sub">Usa otro color de texto y menos brillo para los subtítulos en videos HDR y Dolby Vision</string>
     <string name="sub_hdr_text_color">Color del texto HDR</string>
     <string name="sub_hdr_brightness">Brillo HDR</string>
     <string name="sub_hdr_dim_player_controls">Atenuar controles del reproductor en HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Aplica el brillo HDR a los controles y menús del reproductor que aparecen sobre videos HDR y Dolby Vision</string>
+    <string name="sub_appearance">Apariencia de los subtítulos</string>
+    <string name="sub_appearance_desc">Fuente, colores, fondo y sombra</string>
+    <string name="sub_appearance_hint">Se aplica a los subtítulos de texto. Los subtítulos de imagen y los ASS con estilo conservan su apariencia original.</string>
+    <string name="sub_preview">Vista previa</string>
+    <string name="sub_preview_text">Cada historia comienza con un poco de curiosidad.</string>
+    <string name="sub_font">Fuente</string>
+    <string name="sub_font_default">Por defecto</string>
+    <string name="sub_font_serif">Serif</string>
+    <string name="sub_font_mono">Monoespaciada</string>
+    <string name="sub_font_import">Importar desde el teléfono</string>
+    <string name="sub_font_import_desc">Agrega una fuente .ttf o .otf de hasta 10 MB. Las fuentes importadas se guardan en este televisor.</string>
+    <string name="sub_font_import_qr">Escanea el código con tu teléfono para agregar una fuente .ttf o .otf.</string>
+    <string name="sub_font_missing">La fuente no está disponible en este dispositivo. Se usará la fuente predeterminada.</string>
+    <string name="sub_font_remove">Quitar %1$s</string>
+    <string name="sub_background">Fondo</string>
+    <string name="sub_bg_opacity">Opacidad del fondo</string>
+    <string name="sub_bg_roundness">Redondez de las esquinas</string>
+    <string name="sub_shadow">Sombra paralela</string>
+    <string name="sub_shadow_desc">Separa el texto de las escenas brillantes.</string>
+    <string name="sub_shadow_opacity">Opacidad de la sombra</string>
+    <string name="sub_shadow_size">Tamaño de la sombra</string>
+    <string name="sub_reset_appearance">Restablecer apariencia</string>
     <string name="sub_advanced_section">Renderizado Avanzado de Subtítulos</string>
     <string name="sub_libass">Usar libass para subtítulos ASS/SSA</string>
     <string name="sub_libass_sub">Renderizado avanzado ASS/SSA (estilos, posicionamiento, animaciones)</string>
@@ -1081,6 +1149,8 @@
     <string name="layout_cw_enabled_sub">Mostrar la fila de Continuar viendo en la pantalla de inicio.</string>
     <string name="layout_use_episode_thumbnails_cw">Usar miniaturas de episodios en "Continuar viendo"</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Usa miniaturas de episodios como imagen predeterminada. Cuando está desactivado, se usa el fondo.</string>
+    <string name="layout_season_posters">Pósteres de temporada</string>
+    <string name="layout_season_posters_sub">Muestra las temporadas como pósteres en lugar de pestañas de texto, cuando estén disponibles.</string>
     <string name="layout_blur_unwatched">Desenfocar Episodios No Vistos</string>
     <string name="layout_blur_unwatched_sub">Desenfocar miniaturas de episodios hasta que sean vistos para evitar spoilers.</string>
     <string name="layout_episode_options_overlay">Superposición de opciones del episodio</string>
@@ -1108,6 +1178,14 @@
     <string name="layout_cw_sort_streaming_desc">Elementos estrenados primero, próximos estrenos al final</string>
     <string name="layout_cw_sort_split_upcoming">Separar fila de próximos</string>
     <string name="layout_cw_sort_split_upcoming_desc">Mueve los episodios que aún no se han emitido a una fila separada de Próximos</string>
+    <string name="layout_cw_click_action">Al seleccionar</string>
+    <string name="layout_cw_click_action_sub">Qué se abre al seleccionar un elemento de Continuar viendo</string>
+    <string name="layout_cw_click_stream">Abrir reproducción</string>
+    <string name="layout_cw_click_stream_desc">Elegir una fuente o reanudar la reproducción</string>
+    <string name="layout_cw_click_details">Abrir detalles</string>
+    <string name="layout_cw_click_details_desc">Abre la página de detalles del título.</string>
+    <string name="layout_cw_click_details_upcoming">Mostrar detalles solo de próximos episodios</string>
+    <string name="layout_cw_click_details_upcoming_desc">Abre los detalles de los episodios que aún no se han estrenado y la reproducción para los demás.</string>
     <string name="upcoming_section_title">Próximos</string>
     <string name="layout_trailer_button">Mostrar botón de tráiler</string>
     <string name="layout_trailer_button_sub">Mostrar el botón de tráiler en la página de detalles (solo si está disponible).</string>
@@ -1117,6 +1195,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Pausa el tráiler cuando te desplazas hacia abajo y reanúdalo cuando vuelves a la parte superior.</string>
     <string name="layout_trailer_4k">Tráileres en 4K</string>
     <string name="layout_trailer_4k_sub">Reproduce tráileres en resoluciones superiores a 1080p cuando estén disponibles. Usa mucha más memoria; está desactivado de forma predeterminada en dispositivos con 2 GB de RAM o menos.</string>
+    <string name="layout_trailer_subtitles">Subtítulos del tráiler</string>
+    <string name="layout_trailer_subtitles_sub">Muestra subtítulos en los tráileres en el idioma que prefieras, cuando estén disponibles.</string>
     <string name="layout_detail_group_episodes">Episodios</string>
     <string name="layout_detail_group_trailers">Tráileres</string>
     <string name="layout_detail_group_metadata">Metadatos</string>
@@ -1137,6 +1217,8 @@
     <string name="layout_trailer_muted">Reproducir Tráiler Silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silenciar el audio del tráiler durante la vista previa de auto-reproducción.</string>
     <string name="layout_trailer_muted_sub_expanded">Silenciar el audio del tráiler en tarjetas expandidas.</string>
+    <string name="layout_trailer_continue_in_details">Continuar el tráiler en detalles</string>
+    <string name="layout_trailer_continue_in_details_sub">Mantiene el tráiler en reproducción al abrir la página de detalles.</string>
     <string name="layout_section_card_style">Tarjeta de Póster</string>
     <string name="layout_section_card_style_desc">Ajustar el ancho de la tarjeta y el radio de las esquinas.</string>
     <string name="settings_card_depth_title">Efecto de profundidad de las tarjetas</string>
@@ -1172,6 +1254,7 @@
     <string name="layout_trailer_location_sub">Elige dónde se reproduce la vista previa del tráiler en el Inicio Moderno.</string>
     <string name="layout_trailer_expanded_card">Tarjeta Expandida</string>
     <string name="layout_trailer_hero_media">Medios Destacados</string>
+    <string name="layout_trailer_hero_media_no_expand">Contenido principal (sin expandir)</string>
     <string name="layout_preset_compact">Compacto</string>
     <string name="layout_preset_dense">Denso</string>
     <string name="layout_preset_standard">Estándar</string>
@@ -1230,6 +1313,13 @@
     <string name="web_custom_poster_placeholders_info">Marcadores: {id} incluye todos los ID de contenido. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} apuntan a un solo tipo de ID; si no está disponible, se conserva el póster original. {imdb_id|tmdb_id|kitsu_id} declara los tipos de ID compatibles; se utilizará el que corresponda o se conservará el póster original. Agrega ? para hacer que un marcador sea opcional, resolviéndolo como vacío en lugar de omitirlo: {imdb_id?}. Otros marcadores: {id_type}, {typed_id}, {type}, {shape}.</string>
 
 
+    <string name="web_subtitle_font_title">Fuentes de subtítulos</string>
+    <string name="web_subtitle_font_subtitle">Elige un archivo .ttf o .otf para usarlo en los subtítulos de tu televisor.</string>
+    <string name="web_subtitle_font_choose">Elegir archivo de fuente</string>
+    <string name="web_subtitle_font_uploading">Subiendo…</string>
+    <string name="web_subtitle_font_added">Agregada a tu televisor</string>
+    <string name="web_subtitle_font_error">No se pudo importar esta fuente. Elija un archivo .ttf o .otf válido de menos de 10 MB.</string>
+    <string name="web_subtitle_font_connection_error">Error de conexión</string>
     <string name="mdblist_name">MDBList</string>
     <string name="mdblist_tracking_description">Sincroniza el historial de reproducción y el progreso de reproducción entre dispositivos</string>
     <string name="mdblist_connected_as">Conectado como %1$s</string>
@@ -1251,6 +1341,7 @@
     <string name="mdblist_rate_limited">Se alcanzó el límite de solicitudes de MDBList. La sincronización se reanudará cuando se restablezca el límite.</string>
     <string name="mdblist_revoke_failed">Se desconectó en este dispositivo. Elimina esta app desde la configuración de tu cuenta de MDBList para revocar su acceso.</string>
     <string name="mdblist_title">Calificaciones de MDBList</string>
+    <string name="mdblist_subtitle">Configura las calificaciones externas que aparecen en la imagen principal de detalles.</string>
     <string name="mdblist_enable_title">Habilitar Calificaciones de MDBList</string>
     <string name="mdblist_enable_subtitle">Obtener calificaciones de proveedores externos en la pantalla de detalles</string>
     <string name="mdblist_api_key_title">Clave de API</string>
@@ -1277,6 +1368,7 @@
     <string name="mdblist_show_on_hero_title">Usar calificaciones en el hero</string>
     <string name="mdblist_show_on_hero_subtitle">Mostrar las calificaciones de MDBList en el carrusel del hero (moderno y clásico/cuadrícula)</string>
     <string name="mdblist_rating_order_title">Orden de calificaciones</string>
+    <string name="mdblist_rating_order_subtitle">En la imagen principal moderna se muestran las primeras 3 calificaciones habilitadas y disponibles. Usa el botón de reordenar para cambiar su orden.</string>
     <string name="mdblist_dialog_title">Clave API de MDBList</string>
     <string name="mdblist_dialog_subtitle">Ingresa tu clave API para obtener calificaciones externas</string>
     <string name="mdblist_dialog_placeholder">Ingresa la clave API de MDBList</string>
@@ -1493,6 +1585,8 @@
     <string name="tmdb_networks_subtitle">Cadenas con logos desde TMDB</string>
     <string name="tmdb_episodes_title">Episodios</string>
     <string name="tmdb_episodes_subtitle">Títulos de episodios, descripciones, miniaturas y duración desde TMDB</string>
+    <string name="tmdb_season_posters_title">Pósteres de temporada</string>
+    <string name="tmdb_season_posters_subtitle">Pósteres de temporada de TMDB para las pestañas de temporada en la página de detalles</string>
     <string name="tmdb_trailers_title">Tráilers</string>
     <string name="tmdb_trailers_subtitle">Candidatos de tráiler desde los videos de TMDB para la sección de tráiler en detalles</string>
     <string name="tmdb_more_like_this_title">Similares</string>
@@ -1736,6 +1830,13 @@
     <string name="addon_installing">Instalando</string>
     <string name="addon_install_btn">Instalar</string>
     <string name="addon_install_success">Se instaló %1$s</string>
+    <string name="addon_tracking_consent_title">Addon de seguimiento</string>
+    <string name="addon_tracking_consent_body">%1$s es un addon de seguimiento. Nuvio le enviará tu actividad: lo que reproduces, pausas o detienes, incluida la posición de reproducción; lo que agregas o quitas de tu biblioteca; y lo que marcas como visto o no visto. Estos datos salen de Nuvio y los gestionan el desarrollador del addon y el servicio al que se conecta.</string>
+    <string name="addon_tracking_consent_checkbox">Acepto compartir mi actividad de reproducción y mi biblioteca con este addon</string>
+    <string name="addon_tracking_consent_checked">Marcado</string>
+    <string name="addon_tracking_consent_unchecked">Sin marcar</string>
+    <string name="addon_tracking_consent_cancel">Cancelar</string>
+    <string name="addon_tracking_consent_install">Instalar</string>
     <string name="addon_error_invalid_url">Ingresa una URL de addon válida</string>
     <string name="addon_error_invalid_scheme">La URL del addon debe comenzar con http o https</string>
     <string name="addon_installed_section">Instalados</string>
@@ -1785,6 +1886,9 @@
     <string name="catalog_order_disable">Deshabilitar</string>
 
 
+    <string name="catalog_order_pinned">Fijado</string>
+    <string name="catalog_order_pinned_to_top">Fijado en la parte superior</string>
+    <string name="catalog_order_pin_to_move_toast">Quita la opción de fijar arriba de la colección para moverla.</string>
     <string name="stream_retry">Reintentar</string>
     <string name="stream_no_streams">No se encontraron enlaces</string>
     <string name="stream_no_streams_hint">Intenta instalar más addons para encontrar enlaces</string>
@@ -1999,6 +2103,7 @@
     <string name="subtitle_off">Desactivado</string>
     <string name="subtitle_style_title">Estilo de Subtítulos</string>
     <string name="subtitle_style_customize">Personalizar</string>
+    <string name="subtitle_style_customize_ass">Personalizar estilos ASS/SSA</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Restablecer</string>
     <string name="subtitle_style_font_size">Tamaño de Fuente</string>
@@ -2165,6 +2270,10 @@
     <string name="library_status_dropped">Abandonado</string>
     <string name="library_syncing_library">Sincronizando biblioteca…</string>
     <string name="library_type_all">Todo</string>
+    <string name="library_empty_title">No hay elementos para mostrar</string>
+    <string name="library_empty_local_hint">Cambia los filtros o guarda tus favoritos para verlos aquí.</string>
+    <string name="library_empty_trakt_hint">Cambia los filtros o usa + en los detalles para agregar títulos a tu lista de seguimiento o a tus listas.</string>
+    <string name="library_empty_simkl_hint">Cambia los filtros o usa + en los detalles para agregar títulos a un estado de Simkl.</string>
     <string name="library_empty_trakt_not_auth_title">Trakt no conectado</string>
     <string name="library_empty_trakt_not_auth_subtitle">Conecta tu cuenta de Trakt en Configuración para ver tu biblioteca de Trakt</string>
     <string name="library_empty_simkl_not_auth_title">Simkl no está conectado</string>
@@ -2381,6 +2490,7 @@
     <string name="cast_detail_error">Algo salió mal</string>
     <string name="cast_detail_retry">Reintentar</string>
     <string name="cast_detail_filmography">Filmografía</string>
+    <string name="cast_detail_filter_all">Todo</string>
     <string name="cast_detail_born">Nacimiento: %1$s</string>
     <string name="cast_detail_born_died">Nacimiento: %1$s — †%2$s</string>
     <string name="cast_detail_age">%1$d años</string>
@@ -2461,6 +2571,8 @@
     <string name="update_checking">Buscando actualizaciones…</string>
     <string name="update_waiting_for_stable">Recibirás la próxima versión estable cuando esté disponible</string>
     <string name="update_download_complete">Descarga completa. Listo para instalar.</string>
+    <string name="update_ready_closes">Descarga completa. La app se cerrará mientras se instala la actualización, lo que puede tardar un minuto. Ábrela de nuevo después.</string>
+    <string name="update_ready_closes_and_reopens">Descarga completa. La app se cerrará mientras se instala la actualización y se abrirá de nuevo automáticamente. Puede tardar un minuto.</string>
     <string name="update_installed_automatically">La actualización se instaló automáticamente mientras el dispositivo estaba inactivo</string>
     <string name="update_up_to_date">El sistema está actualizado. Últimos cambios:</string>
     <string name="update_close">Cerrar</string>
@@ -2502,6 +2614,10 @@
 
     <!-- Trakt errors -->
 
+    <string name="plugin_repo_delete_confirm_title">¿Eliminar repositorio?</string>
+    <string name="plugin_repo_delete_confirm_message">¿Estás seguro de que quieres eliminarlo?</string>
+    <string name="plugin_repo_delete_no">No</string>
+    <string name="plugin_repo_delete_yes">Sí</string>
     <string name="trakt_error_code_expired">El código del dispositivo expiró. Comienza nuevamente.</string>
     <string name="trakt_error_code_used">El código del dispositivo ya fue usado. Comienza nuevamente.</string>
     <string name="trakt_error_denied">Autorización denegada en Trakt.</string>
@@ -2569,6 +2685,7 @@
     <string name="cd_loading_logo">Cargando logo</string>
     <string name="cd_move_up">Mover arriba</string>
     <string name="cd_move_down">Mover abajo</string>
+    <string name="cd_reorder">Reordenar</string>
     <string name="cd_edit">Editar</string>
     <string name="cd_delete">Eliminar</string>
     <string name="cd_qr_code">Código QR</string>
@@ -2642,8 +2759,19 @@
     <string name="collections_folder_count">%1$d carpeta(s)</string>
 
     <!-- Collection Editor -->
+    <string name="collections_pinned">Pinned</string>
     <string name="collections_editor_row_title">Título de la fila</string>
     <string name="collections_editor_save">Guardar</string>
+    <string name="collections_editor_unsaved_title">¿Guardar cambios?</string>
+    <string name="collections_editor_unsaved_subtitle">Tienes cambios sin guardar en esta colección.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Cambios no guardados</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Escribe un título y agrega al menos una carpeta para guardar esta colección.</string>
+    <string name="collections_editor_unsaved_missing_title">Escribe el título de la colección para guardar los cambios.</string>
+    <string name="collections_editor_unsaved_missing_folder">Agrega al menos una carpeta para guardar esta colección.</string>
+    <string name="collections_editor_folder_unsaved_title">¿Guardar cambios de carpeta?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Tienes cambios sin guardar en esta carpeta.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Cambios de carpeta no guardados</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Agrega al menos una fuente para guardar esta carpeta.</string>
     <string name="collections_editor_backdrop">Imagen de fondo</string>
     <string name="collections_editor_pin_above">Fijar encima de los catálogos</string>
     <string name="collections_editor_pin_above_desc">Muestra esta colección encima de todos los catálogos normales de inicio. Las colecciones fijadas siguen el orden de creación.</string>
@@ -3390,6 +3518,13 @@
     <string name="stream_test_video_bitrate">Tasa de bits promedio del video: %1$s</string>
     <string name="stream_test_error_connection">La conexión falló. Es posible que el enlace de la última transmisión reproducida haya expirado o no esté disponible. Reproduce el video nuevamente e inténtalo otra vez.</string>
 
+    <string name="player_finding_next_stream">Buscando la siguiente transmisión...</string>
+    <string name="player_trying_next_stream">Probando la siguiente transmisión (intento %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">No quedan fuentes disponibles. Elige otra fuente o vuelve a intentarlo.</string>
+    <string name="usenet_builtin_addon_title">Usenet integrado</string>
+    <string name="usenet_builtin_addon_desc">Resultados de tus proveedores NNTP e indexadores Newznab. Muévelo para elegir dónde aparecen en la lista.</string>
+    <string name="usenet_fallback">Cambio automático a Usenet</string>
+    <string name="usenet_fallback_description">Si falla una fuente de Usenet, prueba las siguientes fuentes de Usenet hasta alcanzar el límite de intentos configurado. Las fuentes Torrent y de otros tipos no cambian automáticamente.</string>
     <string name="random_episode_title">Aleatorio</string>
     <string name="layout_random_episode_sub">Reproduce aleatoriamente episodios de cualquier serie. Desactivar esta opción pausa la reproducción aleatoria.</string>
     <string name="random_episode_unwatched">Episodios no vistos</string>
@@ -3422,6 +3557,22 @@
     <string name="autosync_thorough_title">Búsqueda exhaustiva de sincronización automática</string>
     <string name="autosync_thorough_description">Continúa comparando otros subtítulos y pistas integradas para encontrar una coincidencia más precisa antes de sincronizar. Cuando está desactivada, se utiliza antes la primera coincidencia sólida. Solo se aplican coincidencias confiables.</string>
     <string name="autosync_label_synced">Sincronizado automáticamente</string>
+    <string name="autosync_status_title">Estado de sincronización automática</string>
+    <string name="autosync_status_synced">Sincronizado</string>
+    <string name="autosync_status_not_needed">No es necesario</string>
+    <string name="autosync_status_in_progress">En progreso</string>
+    <string name="autosync_status_no_fit">Es posible que no coincidan</string>
+    <string name="autosync_status_no_reference">No hay subtítulos integrados</string>
+    <string name="autosync_status_failed">Fallido</string>
     <string name="stream_resume_from_time">Reanudar desde %1$s</string>
     <string name="stream_resume_from_percent">Reanudar desde el %1$d%%</string>
-    </resources>
+        <string name="player_disc_titles">Títulos de discos</string>
+    <string name="player_disc_title_feature">Título principal · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Subtítulos %1$s</string>
+    <string name="player_disc_title_failed">Este título no se pudo reproducir.</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">Clip %d</item>
+        <item quantity="other">Clips %d</item>
+    </plurals>
+</resources>

@@ -85,8 +85,20 @@ fun VideoDto.toDomain(episodeLabel: String = "Episode"): Video {
         runtime = parseEpisodeRuntimeMinutes(runtime),
         rating = rating?.trim()?.toDoubleOrNull()?.takeIf { it > 0.0 },
         available = available,
-        seasonPoster = (seasonPoster ?: seasonPosterPath)?.trim()?.takeIf { it.isNotBlank() }
+        seasonPoster = (seasonPoster ?: seasonPosterPath)?.trim()?.takeIf { it.isNotBlank() },
+        imdbId = (imdbId as? String)?.trim()?.takeIf { IMDB_ID.matches(it) },
+        imdbSeason = jsonInt(imdbSeason),
+        imdbEpisode = jsonInt(imdbEpisode)
     )
+}
+
+private val IMDB_ID = Regex("tt\\d+")
+
+/** A whole number sent as a number or as text; null otherwise. */
+private fun jsonInt(value: Any?): Int? = when (value) {
+    is Number -> value.toDouble().takeIf { it % 1.0 == 0.0 && it >= 0.0 && it <= Int.MAX_VALUE }?.toInt()
+    is String -> value.trim().toIntOrNull()?.takeIf { it >= 0 }
+    else -> null
 }
 
 fun MetaLinkDto.toDomain(): MetaLink? {

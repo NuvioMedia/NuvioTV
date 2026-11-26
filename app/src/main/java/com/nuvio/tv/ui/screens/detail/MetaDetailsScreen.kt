@@ -931,6 +931,7 @@ fun MetaDetailsScreen(
                     nextToWatch = uiState.nextToWatch,
                     episodeProgressMap = uiState.episodeProgressMap,
                     watchedEpisodes = uiState.watchedEpisodes,
+                    rewatchEpisodes = uiState.rewatchEpisodes,
                     episodeWatchedPendingKeys = uiState.episodeWatchedPendingKeys,
                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                     seasonPostersEnabled = uiState.seasonPostersEnabled,
@@ -1023,6 +1024,12 @@ fun MetaDetailsScreen(
                     onToggleMovieWatched = { viewModel.onEvent(MetaDetailsEvent.OnToggleMovieWatched) },
                     onToggleEpisodeWatched = { video ->
                         viewModel.onEvent(MetaDetailsEvent.OnToggleEpisodeWatched(video))
+                    },
+                    onMarkEpisodeRewatched = { video ->
+                        viewModel.onEvent(MetaDetailsEvent.OnMarkEpisodeRewatched(video))
+                    },
+                    onUnmarkEpisodeRewatched = { video ->
+                        viewModel.onEvent(MetaDetailsEvent.OnUnmarkEpisodeRewatched(video))
                     },
                     onMarkSeasonWatched = { season ->
                         viewModel.onEvent(MetaDetailsEvent.OnMarkSeasonWatched(season))
@@ -1276,6 +1283,7 @@ private fun MetaDetailsContent(
     nextToWatch: NextToWatch?,
     episodeProgressMap: Map<Pair<Int, Int>, WatchProgress>,
     watchedEpisodes: Set<Pair<Int, Int>>,
+    rewatchEpisodes: Set<Pair<Int, Int>> = emptySet(),
     episodeWatchedPendingKeys: Set<String>,
     blurUnwatchedEpisodes: Boolean,
     seasonPostersEnabled: Boolean,
@@ -1325,6 +1333,8 @@ private fun MetaDetailsContent(
     onLibraryLongPress: () -> Unit,
     onToggleMovieWatched: () -> Unit,
     onToggleEpisodeWatched: (Video) -> Unit,
+    onMarkEpisodeRewatched: (Video) -> Unit = {},
+    onUnmarkEpisodeRewatched: (Video) -> Unit = {},
     onMarkSeasonWatched: (Int) -> Unit,
     onMarkSeasonUnwatched: (Int) -> Unit,
     onMarkPreviousEpisodesWatched: (Video) -> Unit,
@@ -1515,10 +1525,14 @@ private fun MetaDetailsContent(
             }
         }
     }
+    var seasonTabsHeightPx by remember { mutableIntStateOf(0) }
+    var episodesRowHeightPx by remember { mutableIntStateOf(0) }
     val detailRowBringIntoViewResponder = remember(suppressDetailRowRelocation) {
         object : BringIntoViewResponder {
             override fun calculateRectForParent(localRect: Rect): Rect {
-                return if (suppressDetailRowRelocation) Rect.Zero else localRect
+                if (suppressDetailRowRelocation) return Rect.Zero
+                if (seasonTabsHeightPx <= 0 || episodesRowHeightPx <= 0) return localRect
+                return Rect(localRect.left, 0f, localRect.right, (seasonTabsHeightPx + episodesRowHeightPx).toFloat())
             }
 
             override suspend fun bringChildIntoView(localRect: () -> Rect?) { }
@@ -1532,10 +1546,15 @@ private fun MetaDetailsContent(
                 val stayVertical = pendingRestoreType == RestoreTarget.EPISODE ||
                     lastDetailDpadKey == KeyEvent.KEYCODE_DPAD_LEFT ||
                     lastDetailDpadKey == KeyEvent.KEYCODE_DPAD_RIGHT
-                return if (stayVertical) {
-                    Rect(localRect.left, 0f, localRect.right, 0f)
-                } else {
-                    localRect
+                return when {
+                    stayVertical -> Rect(localRect.left, 0f, localRect.right, 0f)
+                    seasonTabsHeightPx > 0 && episodesRowHeightPx > 0 -> Rect(
+                        localRect.left,
+                        -seasonTabsHeightPx.toFloat(),
+                        localRect.right,
+                        episodesRowHeightPx.toFloat()
+                    )
+                    else -> localRect
                 }
             }
 
@@ -2638,7 +2657,11 @@ private fun MetaDetailsContent(
             val showEpisodesRow = isSeries && seasons.isNotEmpty()
             if (showSeasonTabs) {
                 item(key = "season_tabs", contentType = "season_tabs") {
-                    Box(modifier = Modifier.bringIntoViewResponder(detailRowBringIntoViewResponder)) {
+                    Box(
+                        modifier = Modifier
+                            .onSizeChanged { seasonTabsHeightPx = it.height }
+                            .bringIntoViewResponder(detailRowBringIntoViewResponder)
+                    ) {
                         SeasonTabs(
                             seasons = seasons,
                             selectedSeason = selectedSeason,
@@ -2664,12 +2687,17 @@ private fun MetaDetailsContent(
                     } else {
                         null
                     }
-                    Box(modifier = Modifier.bringIntoViewResponder(episodeRowStayVerticalResponder)) {
+                    Box(
+                        modifier = Modifier
+                            .onSizeChanged { episodesRowHeightPx = it.height }
+                            .bringIntoViewResponder(episodeRowStayVerticalResponder)
+                    ) {
                         EpisodesRow(
                             episodes = episodesForSeason,
                             episodeProgressMap = episodeProgressMap,
                             episodeRatings = visibleEpisodeImdbRatings,
                             watchedEpisodes = watchedEpisodes,
+                            rewatchedEpisodes = rewatchEpisodes,
                             episodeWatchedPendingKeys = episodeWatchedPendingKeys,
                             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                             episodeOptionsOverlayStyle = episodeOptionsOverlayStyle,
@@ -2683,6 +2711,8 @@ private fun MetaDetailsContent(
                             },
                             showManualPlayOption = showManualPlayOption,
                             onToggleEpisodeWatched = onToggleEpisodeWatched,
+                            onMarkEpisodeRewatched = onMarkEpisodeRewatched,
+                            onUnmarkEpisodeRewatched = onUnmarkEpisodeRewatched,
                             onMarkSeasonWatched = onMarkSeasonWatched,
                             onMarkSeasonUnwatched = onMarkSeasonUnwatched,
                             isSeasonFullyWatched = isSeasonFullyWatched(selectedSeason),
@@ -2707,7 +2737,7 @@ private fun MetaDetailsContent(
                             },
                             onEpisodeFocused = { episodeId ->
                                 lastFocusedEpisodeIdBySeason[selectedSeason] = episodeId
-                                if (lastDetailDpadKey == KeyEvent.KEYCODE_DPAD_UP) {
+                                if (lastDetailDpadKey == KeyEvent.KEYCODE_DPAD_UP && !showSeasonTabs) {
                                     val episodeListItemIndex = 1 + if (showSeasonTabs) 1 else 0
                                     val episodeItem = listState.layoutInfo.visibleItemsInfo
                                         .firstOrNull { it.index == episodeListItemIndex }

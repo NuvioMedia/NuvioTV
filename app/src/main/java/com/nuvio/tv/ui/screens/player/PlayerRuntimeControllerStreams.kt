@@ -242,7 +242,8 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
             season = seasonArg,
             episode = episodeArg,
             forceRefresh = forceRefresh,
-            priorityBingeGroup = currentStreamBingeGroup
+            priorityBingeGroup = currentStreamBingeGroup,
+            contentId = contentId
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -645,7 +646,8 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
         url = playbackRequest.url,
         filename = currentFilename,
-        responseHeaders = currentStreamResponseHeaders
+        responseHeaders = currentStreamResponseHeaders,
+        declaredType = stream.declaredType
     )
     // A source switch mints a new debrid link for the same file, and without a file index a
     // multi-file torrent could hand one file's bytes to another, so that case keys on the url.
@@ -1405,7 +1407,8 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
             season = video.season,
             episode = video.episode,
             forceRefresh = forceRefresh,
-            priorityBingeGroup = currentStreamBingeGroup
+            priorityBingeGroup = currentStreamBingeGroup,
+            contentId = contentId
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -2045,7 +2048,8 @@ internal fun PlayerRuntimeController.preloadNextEpisodeSources() {
             episode = nextVideo.episode,
             priorityBingeGroup = currentStreamBingeGroup,
             preferredPluginOnly = continuingPlugin,
-            continuePluginOnly = continuingPlugin
+            continuePluginOnly = continuingPlugin,
+            contentId = contentId
         ).collect { /* results cached by StreamSearchSessionCache */ }
     }
 }
@@ -2269,7 +2273,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     episode = nextVideo.episode,
                     priorityBingeGroup = currentStreamBingeGroup,
                     preferredPluginOnly = continuingPlugin,
-                    continuePluginOnly = continuingPlugin
+                    continuePluginOnly = continuingPlugin,
+                    contentId = contentId
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {

@@ -3,12 +3,19 @@ package com.nuvio.tv.core.usenet
 import android.content.Context
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.plugin.absoluteAnimeEpisodeNumber
+import com.nuvio.tv.core.streams.StreamRankingProfile
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.util.parseRuntimeMinutes
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
+import com.nuvio.tv.data.repository.SimklIdResolver
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.domain.repository.MetaRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.security.MessageDigest
@@ -31,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -344,30 +352,54 @@ class BuiltInUsenetService @Inject constructor(
     /** Null in unit tests, which read the English wording. */
     @ApplicationContext private val context: Context? = null,
     /** Counts each indexer's searches and remembers which indexer listed each release. */
-    private val stats: UsenetSourceStats? = null
+    private val stats: UsenetSourceStats? = null,
+    /** The metas that give an anime catalog's ids their IMDb equivalent; null in unit tests without them. */
+    private val metas: MetaRepository? = null,
+    /** Maps an anime catalog's ids when their meta does not; null in unit tests without it. */
+    private val simkl: SimklIdResolver? = null,
+    /** Whether results show the size badge; null in unit tests, which keep the size in the details. */
+    private val badgeSettings: StreamBadgeSettingsDataStore? = null
 ) {
     /** A translated message; [english], the same wording, where there is no context. */
     private fun text(id: Int, english: String, vararg args: Any): String =
         context?.getString(id, *args) ?: english.format(Locale.ROOT, *args)
 
+    /** [contentId] is the title's own id, its meta's, when known. */
     fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
-        season: Int?, episode: Int?): Flow<BuiltInUsenetResult> = flow {
+        season: Int?, episode: Int?, contentId: String? = null): Flow<BuiltInUsenetResult> = flow {
         if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
         val series = type.lowercase() != "movie"
         val kind = if (series) ContentKind.SHOW else ContentKind.MOVIE
         val (idSeason, idEpisode) = episodeNumbers(videoId)
-        val resolvedSeason = season ?: idSeason
-        val resolvedEpisode = episode ?: idEpisode
         val baseImdb = videoId.substringBefore(':').takeIf { it.matches(Regex("tt\\d+")) }
         val baseTmdb = videoId.removePrefix("tmdb:").substringBefore(':')
             .takeIf { it.toIntOrNull() != null }
-        val request = UsenetSearchRequest(baseImdb, baseTmdb, season = resolvedSeason,
+        // Indexers do not know an anime catalog's ids: the title, its meta or Simkl give the IMDb id and numbering.
+        val equivalent = if (baseImdb == null && baseTmdb == null) {
+            catalogImdbEquivalent(type, videoId, series, season, episode, contentId)
+        } else null
+        val resolvedSeason = equivalent?.season ?: season ?: idSeason
+        val resolvedEpisode = equivalent?.episode ?: episode ?: idEpisode
+        // The episode as searched, which picks its file in a pack, when it differs from the player's.
+        val searched = if (equivalent?.season != null && equivalent.episode != null) equivalent.season to equivalent.episode else null
+        // TMDB finds the show by its IMDb id when the video id is a catalog's own.
+        val lookupId = equivalent?.imdbId ?: videoId
+        val request = UsenetSearchRequest(baseImdb ?: equivalent?.imdbId, baseTmdb, season = resolvedSeason,
             episode = resolvedEpisode, series = series)
         if (series && (resolvedSeason == null || resolvedSeason < 0 || resolvedEpisode == null || resolvedEpisode < 1)) return@flow
+        // Read once, when a result first has a size to give a bitrate for.
+        val runtime by lazy {
+            heldRuntime(type, listOfNotNull(contentId, baseImdb, baseTmdb?.let { "tmdb:$it" }), videoId,
+                season ?: idSeason, episode ?: idEpisode)
+        }
+        val profile = config.ranking.profile()
+        val sizeBadges = try { badgeSettings?.settings?.first()?.showFileSizeBadges == true }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { false }
         coroutineScope {
             // A failed child would cancel this scope; keep lookup failures per indexer.
             val metadata = async(start = CoroutineStart.LAZY) {
-                try { metadata(request, videoId, type) }
+                try { metadata(request, lookupId, type) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { null }
             }
@@ -385,7 +417,7 @@ class BuiltInUsenetService @Inject constructor(
                 val started = System.currentTimeMillis()
                 val counts = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
                     try {
-                        (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let { id ->
+                        (request.tmdbId ?: tmdb.ensureTmdbId(lookupId, type))?.toIntOrNull()?.let { id ->
                             tmdbApi.getTvDetails(id, BuildConfig.TMDB_API_KEY).body()?.seasons?.mapNotNull {
                                 val number = it.seasonNumber ?: return@mapNotNull null
                                 it.episodeCount?.takeIf { count -> count > 0 }?.let { count -> number to count }
@@ -450,7 +482,8 @@ class BuiltInUsenetService @Inject constructor(
                         arranged.map {
                             val outcome = outcomes.getValue(it.nzbUrl)
                             it.toStream(config, series, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
-                                seasonEpisodes = seasonCounts(), sibling = outcome.sibling)
+                                seasonEpisodes = seasonCounts(), sibling = outcome.sibling, searched = searched,
+                                runtimeMinutes = { runtime }, profile = profile, sizeBadge = sizeBadges)
                         })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
@@ -594,15 +627,22 @@ class BuiltInUsenetService @Inject constructor(
             otherTitles = others, year = (movie?.releaseDate ?: details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
+    /**
+     * [runtimeMinutes], the movie's or episode's, gives the bitrate; [profile], the ranking profile,
+     * the release's quality tier. With [sizeBadge], the size badge results show, a single video's
+     * size is left out of the details: the badge shows the same.
+     */
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, series: Boolean, failed: Boolean = false,
-        played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null): Stream {
+        played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null,
+        searched: Pair<Int, Int>? = null, runtimeMinutes: () -> Int? = { null }, profile: StreamRankingProfile? = null,
+        sizeBadge: Boolean = false): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
         // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
         // size badge shows an episode's share and the details keep the whole size.
         val episodeShare = episodeSize(seasonEpisodes).takeIf { pack && it != size }
         val season = packSeasons.size == 1
         val sizeLabel = if (size <= 0) null else when {
-            !pack -> gb(size)
+            !pack -> gb(size).takeUnless { sizeBadge }
             episodeShare != null && season -> text(R.string.usenet_size_season_share,
                 "%1\$s whole season (~%2\$s per episode)", gb(size), gb(episodeShare))
             episodeShare != null -> text(R.string.usenet_size_pack_share,
@@ -611,14 +651,33 @@ class BuiltInUsenetService @Inject constructor(
             else -> text(R.string.usenet_size_pack, "%1\$s (whole pack)", gb(size))
         }
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
-        val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
+        // A pack's bitrate is its episode share's, an estimate; unknown until its episodes are counted.
+        val bitrate = (if (pack) episodeShare else size)?.takeIf { it > 0 }?.let { bytes ->
+            val minutes = runtimeMinutes()?.takeIf { it > 0 } ?: return@let null
+            val mbps = bytes * 8.0 / (minutes * 60) / 1_000_000
+            // Whole megabits from 10 on: the details line has room for about 55 characters on a TV.
+            if (mbps < 0.1 || mbps > MAX_LISTED_MBPS) null
+            else (if (mbps < 10) "%s%.1f Mbps" else "%s%.0f Mbps").format(Locale.ROOT, if (pack) "~" else "", mbps)
+        }
+        val facts = rankingFacts
+        val pixels = facts.resolution.takeIf { it > 0 } ?: resolution
         val resolutionLabel = when {
-            resolution >= 2160 -> "4K"
-            resolution > 0 -> "${resolution}p"
+            pixels >= 2160 -> "4K"
+            pixels > 0 -> "${pixels}p"
             else -> null
         }
-        return Stream(name = listOfNotNull(resolutionLabel, "Usenet", indexerName).joinToString(" • "), title = title,
-            description = if (config.showReleaseNames) "$title\n$details" else details,
+        // The name describes the video; the details, its audio, languages and listing. The release
+        // group is part of the release name; when that is hidden, the group ends the details.
+        val video = listOfNotNull(resolutionLabel, labels.service, UsenetReleaseLabels.quality(facts.quality))
+            .joinToString(" ").ifEmpty { null }
+        val tier = profile?.tierOf(facts)?.takeIf { it >= 0 }?.let { "T${it + 1}" }
+        val name = listOfNotNull(video, UsenetReleaseLabels.visual(facts.visual), UsenetReleaseLabels.codec(facts.codec), tier)
+            .joinToString(" • ").ifEmpty { "Usenet" }
+        val details = listOfNotNull(labels.audio, UsenetReleaseLabels.languages(labels.languages), sizeLabel, bitrate, age,
+            indexerName.takeIf { it.isNotBlank() }, labels.group.takeIf { !config.showReleaseNames })
+            .joinToString(" • ")
+        return Stream(name = name, title = title,
+            description = listOfNotNull(title.takeIf { config.showReleaseNames }, details.ifEmpty { null }).joinToString("\n"),
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it, and the upload's binge group.
             behaviorHints = usenetHints(bingeGroup(title, series), (episodeShare ?: size).takeIf { it > 0 }),
@@ -633,7 +692,81 @@ class BuiltInUsenetService @Inject constructor(
                 }),
             nzbUrl = nzbUrl, servers = config.servers(),
             publishedAt = publishedAt.takeIf { it > 0 },
+            usenetSeason = searched?.first, usenetEpisode = searched?.second,
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
+    }
+
+    /**
+     * [videoId] on IMDb when it is an anime catalog's id, from the first that says:
+     * 1. the title's own IMDb id ([contentId]), with the episode's numbering;
+     * 2. the IMDb id and numbering its meta gives, from the meta the details page holds or, when it
+     *    is no longer held, from the catalog's addon;
+     * 3. Simkl's mapping: the IMDb id (the meta's first) and the episode's TVDB numbering.
+     * Null for any other id, or when none says: the catalog's own numbers would name another episode.
+     */
+    private suspend fun catalogImdbEquivalent(type: String, videoId: String, series: Boolean,
+        season: Int?, episode: Int?, contentId: String?): ImdbEquivalent? {
+        val metaId = animeMetaId(videoId, series) ?: return null
+        val held = contentId?.let { id -> cachedMeta(type, id) }
+        val equivalent = contentImdbEquivalent(contentId, held?.videos?.firstOrNull { it.id == videoId.trim() },
+            series, season, episode)
+            ?: run {
+                val meta = held ?: cachedMeta(type, metaId) ?: fetchedMeta(type, metaId)
+                meta?.let { imdbEquivalent(it, videoId, series) } ?: simklEquivalent(videoId, series,
+                    metaImdb = meta?.let { m -> m.videos.firstOrNull { it.id == videoId.trim() }?.imdbId ?: m.imdbId })
+            }
+        runCatching { android.util.Log.i("UsenetSearch", "$videoId on IMDb: ${equivalent ?: "unknown"}") }
+        return equivalent
+    }
+
+    private fun cachedMeta(type: String, id: String): com.nuvio.tv.domain.model.Meta? =
+        try { metas?.getCachedMeta(type, id) } catch (_: Exception) { null }
+
+    /**
+     * The movie's or episode's runtime in minutes, from the meta the details page holds under one of
+     * [ids]; null when none is held or it gives none. Nothing is fetched for it.
+     */
+    private fun heldRuntime(type: String, ids: List<String>, videoId: String, season: Int?, episode: Int?): Int? = try {
+        ids.distinct().firstNotNullOfOrNull { cachedMeta(type, it) }?.let { meta ->
+            val video = meta.videos.firstOrNull { it.id == videoId.trim() }
+                ?: meta.videos.firstOrNull { season != null && it.season == season && it.episode == episode }
+            video?.runtime?.takeIf { it > 0 } ?: parseRuntimeMinutes(meta.runtime)?.takeIf { it > 0 }
+        }
+    } catch (_: Exception) { null }
+
+    private suspend fun fetchedMeta(type: String, id: String): com.nuvio.tv.domain.model.Meta? {
+        val metas = metas ?: return null
+        return try {
+            withTimeoutOrNull(META_LOOKUP_TIMEOUT_MS) {
+                (metas.getMetaFromAllAddons(type, id).first { it !is NetworkResult.Loading } as? NetworkResult.Success)?.data
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+    }
+
+    /**
+     * [videoId] on IMDb as Simkl maps its anime catalog id: [metaImdb], or Simkl's IMDb id, and for an
+     * episode the TVDB season and episode Simkl gives the catalog's episode number. Null when Simkl
+     * is not set up, does not know the id, or does not map the episode.
+     */
+    private suspend fun simklEquivalent(videoId: String, series: Boolean, metaImdb: String?): ImdbEquivalent? {
+        val simkl = simkl ?: return null
+        val parts = videoId.trim().split(':')
+        val source = parts.getOrNull(0)?.lowercase(Locale.ROOT) ?: return null
+        val id = parts.getOrNull(1)?.takeIf { it.toLongOrNull() != null } ?: return null
+        return try {
+            withTimeoutOrNull(SIMKL_LOOKUP_TIMEOUT_MS) {
+                val ids = simkl.resolveIds(source, id) ?: return@withTimeoutOrNull null
+                val imdb = listOf(metaImdb, ids.imdb).firstNotNullOfOrNull { candidate ->
+                    candidate?.trim()?.takeIf { it.matches(Regex("tt\\d+")) }
+                } ?: return@withTimeoutOrNull null
+                if (!series) return@withTimeoutOrNull ImdbEquivalent(imdb, null, null)
+                val number = absoluteAnimeEpisodeNumber(videoId) ?: return@withTimeoutOrNull null
+                simkl.getEpisodeMapping(ids.simklId, ids.type).firstOrNull { it.animeEpisode == number }
+                    ?.let { ImdbEquivalent(imdb, it.tvdbSeason, it.tvdbEpisode) }
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
     }
 
     companion object {
@@ -642,11 +775,17 @@ class BuiltInUsenetService @Inject constructor(
         private val SEASON_COUNTED = Any()
         /** How long a search may use for a season's episode count; the list never waits for it. */
         private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
+        /** How long a search of an anime catalog's id waits for its meta when the details page no longer holds it. */
+        private const val META_LOOKUP_TIMEOUT_MS = 5_000L
+        /** How long a search of an anime catalog's id waits for Simkl's mapping when its meta gives none. */
+        private const val SIMKL_LOOKUP_TIMEOUT_MS = 5_000L
         /** How long a movie's ID results wait for its metadata before they are listed unchecked. */
         private const val ID_CHECK_WAIT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */
         const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"
+        /** Above a UHD disc's peak: such a bitrate comes from a runtime that is not this release's. */
+        private const val MAX_LISTED_MBPS = 150.0
         /**
          * One upload's episodes share a binge group, so the next episode plays from the same upload
          * when binge groups are preferred: its title without the episode's number and name. A

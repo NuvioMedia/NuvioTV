@@ -239,7 +239,7 @@ class SimklProjectionsTest {
     }
 
     @Test
-    fun `playback projection preserves session identity percentage and eighty percent completion`() {
+    fun `playback projection preserves session identity and stays a position to resume`() {
         val session = SimklPlaybackSession(
             id = 12345,
             progress = 80.0,
@@ -262,9 +262,37 @@ class SimklProjectionsTest {
         assertEquals(12345L, progress.simklPlaybackId)
         assertEquals(WatchProgress.SOURCE_SIMKL_PLAYBACK, progress.source)
         assertEquals("simkl:39687", progress.trackingProviderItemId)
-        assertTrue(progress.isCompleted())
-        assertFalse(progress.isInProgress())
+        // Where this playback ends is the credits marker of the release, and a row Simkl publishes
+        // does not carry it, so even its eighty percent is only a position to resume.
+        assertTrue(progress.isProviderPlaybackPosition)
+        assertFalse(progress.isCompleted())
+        assertTrue(progress.isInProgress())
         assertEquals(1_714_515_180_250L, progress.lastWatched)
+    }
+
+    @Test
+    fun `a playback row is a position to resume, whatever its percentage`() {
+        listOf(86.0, 90.0, 96.0).forEachIndexed { index, percent ->
+            val session = SimklPlaybackSession(
+                id = 12346L + index,
+                progress = percent,
+                pausedAt = "2024-04-30T22:13:00Z",
+                type = "episode",
+                episode = SimklPlaybackEpisode(season = 1, number = 3, title = "Chapter Three"),
+                show = media(39687, "tt4574334", runtime = 50)
+            )
+
+            val progress = SimklSyncSnapshot(playback = listOf(session))
+                .toSimklProgressEntries()
+                .single()
+
+            // The account keeps a playback row only for a stop it answered as a pause, so the row
+            // stays the position to resume even above the eighty percent of its source. A watch the
+            // account recorded arrives as history and replaces it.
+            assertTrue(progress.isProviderPlaybackPosition)
+            assertFalse(progress.isCompleted())
+            assertTrue(progress.isInProgress())
+        }
     }
 
     @Test

@@ -949,10 +949,18 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             }
         }
 
+        internal fun mimeTypeFromDeclaredType(type: String?): String? =
+            when (type?.trim()?.lowercase(Locale.US)) {
+                "hls", "m3u8" -> MimeTypes.APPLICATION_M3U8
+                "dash", "mpd" -> MimeTypes.APPLICATION_MPD
+                else -> null
+            }
+
         internal fun inferMimeType(
             url: String,
             filename: String?,
-            responseHeaders: Map<String, String>? = null
+            responseHeaders: Map<String, String>? = null,
+            declaredType: String? = null
         ): String? {
             val adaptiveMime = inferAdaptiveMimeTypeFromPath(filename)
                 ?: inferAdaptiveMimeTypeFromPath(url)
@@ -960,7 +968,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 return adaptiveMime
             }
 
-            return inferMimeTypeFromResponseHeaders(responseHeaders)
+            return mimeTypeFromDeclaredType(declaredType)
+                ?: inferMimeTypeFromResponseHeaders(responseHeaders)
                 ?: inferMimeTypeFromPath(filename)
                 ?: inferMimeTypeFromPath(url)
         }
@@ -1060,6 +1069,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 return@withContext null
             }
             val sanitizedHeaders = sanitizeHeaders(headers)
+            val probeClient = PlayerPlaybackNetworking.createHttpClient(defaultHeaders = sanitizedHeaders)
             val methods = listOf("HEAD", "GET")
             for (method in methods) {
                 runCatching {
@@ -1076,7 +1086,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                         requestBuilder.header("User-Agent", DEFAULT_USER_AGENT)
                     }
 
-                    PlayerPlaybackNetworking.playbackHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+                    probeClient.newCall(requestBuilder.build()).execute().use { response ->
                         if (!response.isSuccessful && response.code !in 200..308) {
                             return@use null
                         }

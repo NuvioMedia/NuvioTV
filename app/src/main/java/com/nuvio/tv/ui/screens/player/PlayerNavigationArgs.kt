@@ -41,7 +41,8 @@ internal data class PlayerNavigationArgs(
     val audioDelayLanguage: String? = null,
     val fromLinkCache: Boolean = false,
     /** The source was picked by auto source selection (or reused from the link cache). */
-    val autoPlayNav: Boolean = false
+    val autoPlayNav: Boolean = false,
+    val streamType: String? = null
 ) {
     val torrentTrackers: List<String>
         get() {
@@ -105,7 +106,8 @@ internal data class PlayerNavigationArgs(
                 audioDelayMs = savedStateHandle.get<String>("audioDelayMs")?.toIntOrNull(),
                 audioDelayLanguage = decodedOrNull("audioDelayLanguage"),
                 fromLinkCache = savedStateHandle.get<String>("fromLinkCache")?.toBooleanStrictOrNull() == true,
-                autoPlayNav = savedStateHandle.get<String>("autoPlayNav")?.toBooleanStrictOrNull() == true
+                autoPlayNav = savedStateHandle.get<String>("autoPlayNav")?.toBooleanStrictOrNull() == true,
+                streamType = decodedOrNull("streamType")
             )
         }
     }

@@ -179,4 +179,14 @@ interface WatchProgressRepository {
         videoId: String?,
         profileId: Int
     ): String = normalizeParentContentId(parentContentId, videoId)
+
+    /**
+     * The completion threshold a progress row past the app's own bar carries, as the fraction
+     * [WatchProgress] reads, when the progress source counts a watch only from a higher point.
+     * Null keeps the app's own bar.
+     *
+     * A player asks before it decides whether a stop finished the item, so an item the source keeps
+     * as a pause is not marked watched here, where only the source's data shows.
+     */
+    suspend fun sourceCompletionThreshold(contentEndPercent: Double?): Float? = null
 }

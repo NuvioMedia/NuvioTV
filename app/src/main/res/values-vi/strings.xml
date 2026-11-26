@@ -192,9 +192,12 @@
     <string name="episodes_specials">Tập đặc biệt</string>
     <string name="episodes_episode">Tập</string>
     <string name="episodes_cd_watched">Đã xem</string>
+    <string name="episodes_cd_rewatched">Đã xem lại</string>
     <string name="episodes_dialog_subtitle">Thao tác với tập phim</string>
     <string name="episodes_mark_watched">Đánh dấu đã xem</string>
     <string name="episodes_mark_unwatched">Đánh dấu chưa xem</string>
+    <string name="episodes_mark_rewatched">Đánh dấu đã xem lại</string>
+    <string name="episodes_mark_not_rewatched">Đánh dấu chưa xem lại</string>
     <string name="episodes_mark_season_watched">Đánh dấu đã xem mùa này</string>
     <string name="episodes_mark_season_unwatched">Đánh dấu chưa xem mùa này</string>
     <string name="episodes_mark_previous_watched">Đánh dấu đã xem các tập trước</string>
@@ -208,6 +211,10 @@
     <string name="detail_removed_from_library">Đã xóa khỏi thư viện</string>
     <string name="detail_episode_marked_watched">Đã đánh dấu đã xem tập này</string>
     <string name="detail_episode_marked_unwatched">Đã đánh dấu chưa xem tập này</string>
+    <string name="detail_episode_marked_rewatched">Đã đánh dấu tập phim đã xem lại</string>
+    <string name="detail_episode_marked_not_rewatched">Đã đánh dấu tập phim chưa xem lại</string>
+    <string name="detail_rewatch_too_soon">Simkl không ghi nhận lần xem lại này: tập phim đã được xem cách đây chưa đến 48 giờ.</string>
+    <string name="detail_rewatch_not_recorded">Simkl không ghi nhận lần xem lại này.</string>
     <string name="detail_lists_updated">Đã cập nhật danh sách</string>
     <string name="detail_movie_marked_watched">Đã đánh dấu đã xem</string>
     <string name="detail_movie_marked_unwatched">Đã đánh dấu chưa xem</string>
@@ -496,6 +503,27 @@
     <string name="tracking_simkl_anime_id_mal">Ưu tiên MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Ưu tiên Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Ưu tiên TVDB</string>
+    <string name="settings_tracking_completion_title">Ngưỡng đã xem</string>
+    <string name="settings_tracking_completion_subtitle">Phần trăm phát lại cần thiết để đánh dấu đã xem một nội dung. Ưu tiên điểm đánh dấu danh đề kết thúc khi có sẵn.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">Theo dõi xem lại</string>
+    <string name="settings_tracking_rewatch_subtitle">Ghi nhận các lần xem lại nội dung đã xong hơn 2 ngày trước thành các phiên xem lại riêng biệt trên Simkl, và theo dõi các lần xem đang diễn ra trong Tiếp tục xem.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Theo dõi xem lại</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Phiên xem lại yêu cầu Simkl PRO hoặc VIP và chỉ được tạo cho các nội dung bạn đã xem xong.</string>
+    <string name="settings_tracking_rewatch_off">Tắt</string>
+    <string name="settings_tracking_rewatch_off_subtitle">Không ghi nhận các lần xem lại vào Simkl hoặc hiển thị các phiên xem lại đang diễn ra trong Tiếp tục xem.</string>
+    <string name="settings_tracking_rewatch_semi">Bán tự động</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Hỏi một lần trước khi bắt đầu một phiên xem lại mới. Khi phiên đã hoạt động, các tập còn lại trong lần xem đó sẽ được ghi nhận tự động.</string>
+    <string name="settings_tracking_rewatch_automatic">Tự động</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Tự động bắt đầu một phiên xem lại và ghi nhận các lần xem lại mỗi khi bạn phát lại một nội dung đã xem xong.</string>
+    <string name="settings_tracking_rewatch_pro_title">Theo dõi xem lại yêu cầu Simkl PRO hoặc VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl chỉ ghi nhận các lần xem lại cho tài khoản Pro hoặc VIP. Các phiên đã có trên tài khoản Simkl vẫn được giữ lại nếu gói dịch vụ của bạn thay đổi.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Nâng cấp</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Không phải bây giờ</string>
+    <string name="rewatch_prompt_title">Bạn đã xem xong nội dung này.</string>
+    <string name="rewatch_prompt_subtitle">Bắt đầu một phiên xem lại trên Simkl?</string>
+    <string name="rewatch_prompt_confirm">Có</string>
+    <string name="rewatch_prompt_dismiss">Không</string>
     <string name="tracking_status_connected">Đã kết nối</string>
     <string name="tracking_status_disconnected">Chưa kết nối</string>
     <string name="tracking_status_waiting">Đang chờ phê duyệt</string>
@@ -655,6 +683,7 @@
     <string name="settings_mdblist_subtitle">Nhà cung cấp điểm đánh giá bên ngoài</string>
     <string name="settings_animeskip_subtitle">Mốc thời gian bỏ qua phần mở đầu/kết thúc anime</string>
     <string name="settings_debrid_subtitle">Nguồn tài khoản đám mây thử nghiệm</string>
+    <string name="settings_usenet_subtitle">Nhà cung cấp, trình chỉ mục, phát lại và chẩn đoán</string>
 
     <string name="playback_title">Cài đặt phát lại</string>
     <string name="playback_subtitle">Cấu hình phát lại video và tùy chọn phụ đề</string>
@@ -1222,7 +1251,7 @@
     <string name="layout_open">Mở</string>
     <string name="layout_closed">Đã đóng</string>
     <string name="layout_trailer_location">Vị trí phát trailer (Hiện đại)</string>
-    <string name="layout_trailer_location_sub">Chọn nơi phát bản xem trước trailer trong Trang chủ Hiện đại..</string>
+    <string name="layout_trailer_location_sub">Chọn nơi phát bản xem trước trailer trong Trang chủ Hiện đại.</string>
     <string name="layout_trailer_expanded_card">Thẻ mở rộng</string>
     <string name="layout_trailer_hero_media">Khu vực Nổi bật</string>
     <string name="layout_trailer_hero_media_no_expand">Khu vực Nổi bật (Không Mở rộng)</string>
@@ -2074,6 +2103,7 @@
     <string name="subtitle_off">Tắt</string>
     <string name="subtitle_style_title">Kiểu phụ đề</string>
     <string name="subtitle_style_customize">Tùy chỉnh</string>
+    <string name="subtitle_style_customize_ass">Tùy chỉnh kiểu ASS/SSA</string>
     <string name="subtitle_style_color">Màu sắc</string>
     <string name="subtitle_style_reset">Đặt lại</string>
     <string name="subtitle_style_font_size">Cỡ chữ</string>
@@ -3381,7 +3411,7 @@
     <string name="playback_buffer_allow_large_sub">Gỡ bỏ giới hạn bộ nhớ thiết bị trên thanh trượt dung lượng bộ đệm mục tiêu, cho phép các giá trị lên đến 2 GB. Có thể gây lỗi trên thiết bị có dưới 2 GB RAM.</string>
     <string name="playback_cache_header">Bộ nhớ đệm đĩa</string>
     <string name="playback_cache_vod">Bộ nhớ đệm VOD trên đĩa</string>
-    <string name="playback_cache_vod_sub">Lưu các bytes đã tải xuống vào đĩa cho luồng phát hiện tại. Tính năng này giúp mở rộng khả năng tua ngược tức thì vượt ra ngoài giới hạn của bộ nhớ đệm ngược trên RAM và giúp duy trì phát video khi mạng bị ngắt kết nối trong thời gian ngắn. Chỉ áp dụng cho các luồng lũy tiến (không áp dụng cho HLS/DASH).</string>
+    <string name="playback_cache_vod_sub">Lưu các byte đã tải xuống vào đĩa cho luồng phát hiện tại. Tính năng này giúp mở rộng khả năng tua ngược tức thì vượt ra ngoài giới hạn của bộ nhớ đệm ngược trên RAM và giúp duy trì phát video khi mạng bị ngắt kết nối trong thời gian ngắn. Chỉ áp dụng cho các luồng lũy tiến (không áp dụng cho HLS/DASH).</string>
     <string name="playback_cache_auto_size">Dung lượng tự động</string>
     <string name="playback_cache_auto_size_sub">Khi bật, dung lượng bộ nhớ đệm được tính dựa trên dung lượng đĩa trống. Tắt tùy chọn này để tự chọn dung lượng.</string>
     <string name="playback_cache_vod_size">Dung lượng bộ nhớ đệm VOD</string>
@@ -3488,6 +3518,14 @@
     <string name="stream_test_video_bitrate">Bitrate video trung bình: %1$s</string>
     <string name="stream_test_error_connection">Kết nối không thành công. Liên kết luồng đã phát gần nhất có thể đã hết hạn hoặc không thể truy cập. Vui lòng phát lại video rồi thử lại.</string>
 
+    <string name="player_finding_next_stream">Đang tìm luồng tiếp theo…</string>
+    <string name="player_trying_next_stream">Đang thử luồng tiếp theo (lần thử %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">Không còn luồng hoạt động. Vui lòng chọn nguồn khác hoặc thử lại.</string>
+    <string name="usenet_builtin_addon_title">Usenet tích hợp sẵn</string>
+    <string name="usenet_builtin_addon_desc">Kết quả từ các nhà cung cấp NNTP và trình chỉ mục Newznab của riêng bạn. Di chuyển mục này để chọn vị trí hiển thị trong danh sách.</string>
+    <string name="usenet_fallback">Tự động dự phòng Usenet</string>
+    <string name="usenet_fallback_description">Nếu một luồng Usenet gặp lỗi, tự động thử các nguồn Usenet tiếp theo trong giới hạn số lần đã thiết lập. Các luồng Torrent và nguồn khác sẽ không bao giờ tự động chuyển.</string>
+
     <string name="random_episode_title">Phát ngẫu nhiên</string>
     <string name="layout_random_episode_sub">Phát ngẫu nhiên các tập từ bất kỳ loạt phim nào. Tắt tùy chọn này sẽ tạm dừng phát ngẫu nhiên.</string>
     <string name="random_episode_unwatched">Tập chưa xem</string>
@@ -3529,4 +3567,13 @@
     <string name="autosync_status_failed">Không thành công</string>
     <string name="stream_resume_from_time">Xem tiếp từ %1$s</string>
     <string name="stream_resume_from_percent">Xem tiếp từ %1$d%%</string>
+    <string name="player_disc_titles">Nội dung đĩa</string>
+    <string name="player_disc_title_feature">Nội dung chính · %1$d phút</string>
+    <string name="player_disc_title_extra">Nội dung bổ sung · %1$d phút</string>
+    <string name="player_disc_title_subtitles">Phụ đề %1$s</string>
+    <string name="player_disc_title_failed">Không thể phát nội dung này</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clip</item>
+        <item quantity="other">%d clip</item>
+    </plurals>
 </resources>

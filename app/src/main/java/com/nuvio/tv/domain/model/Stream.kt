@@ -34,10 +34,17 @@ data class Stream(
     val fileMustInclude: String? = null,
     /** When a built-in Usenet release was posted, in epoch milliseconds, if its indexer said. */
     val publishedAt: Long? = null,
+    /**
+     * The season and episode a built-in Usenet release was searched by, when the episode's own
+     * numbering differs (an anime catalog's); its file in a pack is chosen by these.
+     */
+    val usenetSeason: Int? = null,
+    val usenetEpisode: Int? = null,
     val serverTarget: ServerPlaybackTarget? = null,
     val pluginSourceName: String? = null,
     /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
-    val debridResolved: Boolean = false
+    val debridResolved: Boolean = false,
+    val declaredType: String? = null
 ) {
     fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**

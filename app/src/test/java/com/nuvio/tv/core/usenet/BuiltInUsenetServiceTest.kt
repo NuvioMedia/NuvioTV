@@ -276,7 +276,7 @@ class BuiltInUsenetServiceTest {
         val service = BuiltInUsenetService(client, tmdb, tmdbApi)
         val stream = service.search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams.single()
         assertEquals(listOf(BuiltInUsenetService.SEASON_PACK_LABEL), stream.badges.map { it.name })
-        assertEquals("9.00 GB whole season (~1.00 GB per episode) • A", stream.description)
+        assertEquals("9.00 GB whole season (~1.00 GB per episode) • A • GRP", stream.description)
         // The size badge shows an episode's share once the season's episode count is known.
         assertEquals(1L shl 30, stream.behaviorHints?.videoSize)
         coVerify(exactly = 1) { tmdbApi.getTvDetails(42, any(), any()) }
@@ -296,7 +296,7 @@ class BuiltInUsenetServiceTest {
         coEvery { tmdbApi.getTvDetails(42, any(), any()) } returns Response.success(showSeasons(0 to 4, 1 to 10, 2 to 12, 3 to 12))
         val stream = BuiltInUsenetService(client, tmdb, tmdbApi)
             .search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams.single()
-        assertEquals("34.00 GB whole pack (~1.00 GB per episode) • A", stream.description)
+        assertEquals("34.00 GB whole pack (~1.00 GB per episode) • A • GRP", stream.description)
         assertEquals(1L shl 30, stream.behaviorHints?.videoSize)
     }
 
@@ -309,7 +309,7 @@ class BuiltInUsenetServiceTest {
             listOf(release(indexer, "Movie.2020.2160p-GRP"), release(indexer, "Movie.2020.720p-GRP"), release(indexer, "Movie.2020-GRP"))
         val names = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
             .search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.map { it.name }
-        assertEquals(listOf("4K • Usenet • A", "720p • Usenet • A", "Usenet • A"), names)
+        assertEquals(listOf("4K", "720p", "Usenet"), names)
     }
 
     @Test fun `results wait for every indexer, briefly, unless shown progressively`() = runTest {
@@ -391,7 +391,59 @@ class BuiltInUsenetServiceTest {
         suspend fun description(config: UsenetSourceConfiguration) =
             service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.single().description
         assertEquals("Movie.2020.1080p-GRP\n2.00 GB • A", description(config))
-        assertEquals("2.00 GB • A", description(config.copy(showReleaseNames = false)))
+        // Without the release name, its group ends the details.
+        assertEquals("2.00 GB • A • GRP", description(config.copy(showReleaseNames = false)))
+    }
+
+    @Test fun `results show what the release name says, the bitrate and the quality tier`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            ranking = com.nuvio.tv.core.streams.StreamRankingSettings(com.nuvio.tv.core.streams.StreamRankingPreset.BEST_QUALITY))
+        val title = "The.Movie.2026.2160p.UHD.BluRay.REMUX.DV.HDR10Plus.HEVC.TrueHD.Atmos.7.1-FraMeSToR"
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(UsenetRelease(title, "https://a.test/nzb/1",
+            size = 60L shl 30, publishedAt = System.currentTimeMillis() - 3 * 86_400_000L - 60_000, indexerId = "a", indexerName = "A"))
+        // The runtime comes from the meta the details page holds.
+        val meta = mockk<com.nuvio.tv.domain.model.Meta> {
+            every { videos } returns emptyList()
+            every { runtime } returns "120 min"
+        }
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta("movie", "tt1") } returns meta
+        val service = BuiltInUsenetService(client, mockk(), mockk(), metas = metas)
+        suspend fun stream(config: UsenetSourceConfiguration) =
+            service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.single()
+        val shown = stream(config)
+        assertEquals("4K Remux • DV HDR10+ • HEVC • T1", shown.name)
+        assertEquals("$title\nTrueHD 7.1 Atmos • 60.00 GB • 72 Mbps • 3d • A", shown.description)
+        assertEquals("TrueHD 7.1 Atmos • 60.00 GB • 72 Mbps • 3d • A • FraMeSToR",
+            stream(config.copy(showReleaseNames = false)).description)
+    }
+
+    @Test fun `with size badges shown, only a pack's details keep its size`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            showReleaseNames = false)
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Show.S01E02.1080p-GRP", "https://a.test/nzb/episode", size = 2L shl 30, indexerId = "a", indexerName = "A"),
+            UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
+        coEvery { tmdbApi.getTvDetails(42, any(), any()) } returns Response.success(showSeasons(1 to 9))
+        fun badges(sizes: Boolean) = mockk<com.nuvio.tv.data.local.StreamBadgeSettingsDataStore> {
+            every { settings } returns kotlinx.coroutines.flow.flowOf(
+                com.nuvio.tv.core.streams.StreamBadgeSettings(showFileSizeBadges = sizes))
+        }
+        suspend fun details(sizes: Boolean) = BuiltInUsenetService(client, tmdb, tmdbApi, badgeSettings = badges(sizes))
+            .search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams
+            .associate { it.title to it.description }
+        assertEquals(mapOf("Show.S01E02.1080p-GRP" to "A • GRP",
+            "Show.S01.1080p-GRP" to "9.00 GB whole season (~1.00 GB per episode) • A • GRP"), details(sizes = true))
+        assertEquals("2.00 GB • A • GRP", details(sizes = false)["Show.S01E02.1080p-GRP"])
     }
 
     @Test fun `with fallback on lower priority indexers are only searched when higher ones find nothing`() = runTest {
@@ -407,14 +459,14 @@ class BuiltInUsenetServiceTest {
         coEvery { client.search(backup, any(), any()) } returns listOf(release(backup))
         val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
         val streams = service.search(config, "movie", "tt1", null, null).toList().last().group!!.streams
-        assertEquals(listOf("1080p • Usenet • A"), streams.map { it.name })
+        assertEquals(listOf("Movie.2020.1080p\nA"), streams.map { it.description })
         coVerify { client.search(shared, any(), any()) }
         coVerify(exactly = 0) { client.capabilities(backup) }
 
         // A failed or empty higher priority falls through to the next one.
         coEvery { client.search(first, any(), any()) } throws IllegalStateException("down")
         val fallback = service.search(config, "movie", "tt1", null, null).toList()
-        assertEquals(listOf("1080p • Usenet • C"), fallback.mapNotNull { it.group }.last().streams.map { it.name })
+        assertEquals(listOf("Movie.2020.1080p\nC"), fallback.mapNotNull { it.group }.last().streams.map { it.description })
     }
 
     @Test fun `failed metadata lookup only fails indexers that need a title search`() = runTest {
@@ -429,7 +481,7 @@ class BuiltInUsenetServiceTest {
         coEvery { tmdb.ensureTmdbId(any(), any()) } throws IllegalStateException("tmdb down")
         val results = BuiltInUsenetService(client, tmdb, mockk<TmdbApi>()).search(config, "movie", "tt1", null, null).toList()
         assertEquals(listOf("Titles: indexer search failed. Check the API URL, key and limits."), results.mapNotNull { it.failure })
-        assertEquals(listOf("1080p • Usenet • Ids"), results.mapNotNull { it.group }.last().streams.map { it.name })
+        assertEquals(listOf("Movie.2020.1080p\nIds"), results.mapNotNull { it.group }.last().streams.map { it.description })
     }
 
     @Test fun `tvdb id is looked up for indexers that only search tv by tvdb`() = runTest {
@@ -445,7 +497,7 @@ class BuiltInUsenetServiceTest {
         coEvery { tmdbApi.getTvExternalIds(1399, any()) } returns
             retrofit2.Response.success(com.nuvio.tv.data.remote.api.TmdbExternalIdsResponse(1399, "tt0944947", 121361))
         val results = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt0944947:1:2", null, null).toList()
-        assertEquals(listOf("1080p • Usenet • Tvdb"), results.mapNotNull { it.group }.last().streams.map { it.name })
+        assertEquals(listOf("Show.S01E02.1080p\nTvdb"), results.mapNotNull { it.group }.last().streams.map { it.description })
         coVerify { client.search(tvdbOnly, match { it.tvdbId == "121361" && it.episode == 2 }, any()) }
     }
 
@@ -580,5 +632,145 @@ class BuiltInUsenetServiceTest {
         // A kept link opened again carries the same group.
         assertEquals(played.behaviorHints?.bingeGroup, BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "A",
             played.title, null, null, config, series = false)?.behaviorHints?.bingeGroup)
+    }
+
+    @Test fun `an anime catalog's episode is searched by the IMDb id and numbering its meta gives`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S02E01.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val meta = mockk<com.nuvio.tv.domain.model.Meta> {
+            every { imdbId } returns "tt22248376"
+            every { videos } returns listOf(com.nuvio.tv.domain.model.Video(id = "kitsu:49240:1", title = "1",
+                released = null, thumbnail = null, season = 1, episode = 1, overview = null, imdbSeason = 2, imdbEpisode = 1))
+        }
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta("series", "kitsu:49240") } returns meta
+        // The catalog numbers the second season's first episode S1E1; the player passes that.
+        val stream = BuiltInUsenetService(client, mockk(), mockk(), metas = metas)
+            .search(config, "series", "kitsu:49240:1", 1, 1).toList().mapNotNull { it.group }.last().streams.single()
+        coVerify { client.search(indexer, match { it.imdbId == "tt22248376" && it.season == 2 && it.episode == 1 }, any(), any()) }
+        coVerify(exactly = 0) { client.search(indexer, match { it.season == 1 }, any(), any()) }
+        // Its file in a pack is picked by the same numbering, whatever the player asks for.
+        assertEquals(2 to 1, engineEpisode(stream, 1, 1))
+    }
+
+    @Test fun `an IMDb id is searched as before, without looking at metas`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S01E03.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        val simkl = mockk<com.nuvio.tv.data.repository.SimklIdResolver>()
+        val stream = BuiltInUsenetService(client, mockk(), mockk(), metas = metas, simkl = simkl)
+            .search(config, "series", "tt123:1:3", 1, 3, contentId = "tt123").toList().mapNotNull { it.group }.last().streams.single()
+        coVerify { client.search(indexer, match { it.imdbId == "tt123" && it.season == 1 && it.episode == 3 }, any(), any()) }
+        coVerify(exactly = 0) { metas.getCachedMeta(any(), any()) }
+        coVerify(exactly = 0) { metas.getMetaFromAllAddons(any(), any(), any()) }
+        coVerify(exactly = 0) { simkl.resolveIds(any(), any(), any()) }
+        assertNull(stream.usenetSeason)
+        assertNull(stream.usenetEpisode)
+    }
+
+    @Test fun `a catalog episode of a title with its own IMDb id is searched by that id and the title's numbering`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S03E02.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta(any(), any()) } returns null
+        val simkl = mockk<com.nuvio.tv.data.repository.SimklIdResolver>()
+        BuiltInUsenetService(client, mockk(), mockk(), metas = metas, simkl = simkl)
+            .search(config, "series", "kitsu:9:40", 3, 2, contentId = "tt777").toList()
+        coVerify { client.search(indexer, match { it.imdbId == "tt777" && it.season == 3 && it.episode == 2 }, any(), any()) }
+        coVerify(exactly = 0) { metas.getMetaFromAllAddons(any(), any(), any()) }
+        coVerify(exactly = 0) { simkl.resolveIds(any(), any(), any()) }
+    }
+
+    @Test fun `without IMDb numbering in the meta, Simkl's TVDB numbering is searched with the meta's IMDb id`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S02E01.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val meta = mockk<com.nuvio.tv.domain.model.Meta> {
+            every { imdbId } returns "tt22248376"
+            every { videos } returns listOf(com.nuvio.tv.domain.model.Video(id = "mal:52991:1", title = "1",
+                released = null, thumbnail = null, season = 1, episode = 1, overview = null))
+        }
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta("series", "mal:52991") } returns meta
+        val simkl = mockk<com.nuvio.tv.data.repository.SimklIdResolver>()
+        coEvery { simkl.resolveIds("mal", "52991", any()) } returns
+            com.nuvio.tv.data.repository.SimklIdResolver.ResolvedIds(simklId = 7, type = "anime", imdb = "tt999")
+        coEvery { simkl.getEpisodeMapping(7, "anime") } returns listOf(
+            com.nuvio.tv.data.repository.SimklIdResolver.EpisodeMapping(animeEpisode = 1, tvdbSeason = 2, tvdbEpisode = 1))
+        val stream = BuiltInUsenetService(client, mockk(), mockk(), metas = metas, simkl = simkl)
+            .search(config, "series", "mal:52991:1", 1, 1, contentId = "mal:52991").toList()
+            .mapNotNull { it.group }.last().streams.single()
+        coVerify { client.search(indexer, match { it.imdbId == "tt22248376" && it.season == 2 && it.episode == 1 }, any(), any()) }
+        assertEquals(2 to 1, engineEpisode(stream, 1, 1))
+    }
+
+    @Test fun `a meta without a usable IMDb id takes Simkl's`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any(), any()) } returns listOf(
+            UsenetRelease("Show.S01E05.1080p", "https://geek.test/nzb/1", indexerId = indexer.id))
+        val meta = mockk<com.nuvio.tv.domain.model.Meta> {
+            every { imdbId } returns "not-an-id"
+            every { videos } returns emptyList()
+        }
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta("series", "kitsu:46474") } returns meta
+        val simkl = mockk<com.nuvio.tv.data.repository.SimklIdResolver>()
+        coEvery { simkl.resolveIds("kitsu", "46474", any()) } returns
+            com.nuvio.tv.data.repository.SimklIdResolver.ResolvedIds(simklId = 7, type = "anime", imdb = "tt999")
+        coEvery { simkl.getEpisodeMapping(7, "anime") } returns listOf(
+            com.nuvio.tv.data.repository.SimklIdResolver.EpisodeMapping(animeEpisode = 5, tvdbSeason = 1, tvdbEpisode = 5))
+        BuiltInUsenetService(client, mockk(), mockk(), metas = metas, simkl = simkl)
+            .search(config, "series", "kitsu:46474:5", 1, 5).toList()
+        coVerify { client.search(indexer, match { it.imdbId == "tt999" && it.season == 1 && it.episode == 5 }, any(), any()) }
+    }
+
+    @Test fun `a catalog episode nothing maps is not searched with the catalog's own numbers`() = runTest {
+        val indexer = UsenetIndexer(id = "geek", name = "Geek", apiUrl = "https://geek.test/api")
+        val config = UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        // The real client sends nothing for a request without an ID or a title.
+        coEvery { client.search(indexer, any(), any(), any()) } returns emptyList()
+        val tmdb = mockk<TmdbService>()
+        coEvery { tmdb.ensureTmdbId(any(), any(), any()) } returns null
+        val meta = mockk<com.nuvio.tv.domain.model.Meta> {
+            every { imdbId } returns "tt22248376"
+            every { videos } returns emptyList()
+        }
+        val metas = mockk<com.nuvio.tv.domain.repository.MetaRepository>()
+        every { metas.getCachedMeta("series", "kitsu:49240") } returns meta
+        val simkl = mockk<com.nuvio.tv.data.repository.SimklIdResolver>()
+        coEvery { simkl.resolveIds("kitsu", "49240", any()) } returns
+            com.nuvio.tv.data.repository.SimklIdResolver.ResolvedIds(simklId = 7, type = "anime", imdb = "tt22248376")
+        coEvery { simkl.getEpisodeMapping(7, "anime") } returns emptyList()
+        val results = BuiltInUsenetService(client, tmdb, mockk(), metas = metas, simkl = simkl)
+            .search(config, "series", "kitsu:49240:1", 1, 1, contentId = "kitsu:49240").toList()
+        assertTrue(results.mapNotNull { it.group }.isEmpty())
+        coVerify(exactly = 0) { client.search(any(), match { it.imdbId != null || it.tvdbId != null || it.tmdbId != null }, any(), any()) }
+        coVerify(exactly = 0) { client.search(any(), match { it.title != null }, any(), any()) }
     }
 }

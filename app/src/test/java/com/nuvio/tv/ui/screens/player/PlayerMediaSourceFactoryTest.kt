@@ -52,6 +52,29 @@ class PlayerMediaSourceFactoryTest {
     }
 
     @Test
+    fun `inferMimeType trusts declared hls type over a generic content type`() {
+        val mimeType = PlayerMediaSourceFactory.inferMimeType(
+            url = "https://example.com/m.php?v=abc",
+            filename = null,
+            responseHeaders = mapOf("Content-Type" to "text/html; charset=UTF-8"),
+            declaredType = "hls"
+        )
+
+        assertEquals(MimeTypes.APPLICATION_M3U8, mimeType)
+    }
+
+    @Test
+    fun `inferMimeType ignores declared types it does not know`() {
+        val mimeType = PlayerMediaSourceFactory.inferMimeType(
+            url = "https://example.com/video.mkv",
+            filename = null,
+            declaredType = "direct"
+        )
+
+        assertEquals(MimeTypes.VIDEO_MATROSKA, mimeType)
+    }
+
+    @Test
     fun `inferMimeType uses content disposition filename when content type is missing`() {
         val mimeType = PlayerMediaSourceFactory.inferMimeType(
             url = "https://example.com/download?id=42",
