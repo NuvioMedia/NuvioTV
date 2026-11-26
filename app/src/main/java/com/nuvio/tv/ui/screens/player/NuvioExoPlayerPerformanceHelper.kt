@@ -477,6 +477,7 @@ object NuvioExoPlayerPerformanceHelper {
                 .setDiscardBufferThrottleMs(NuvioEngineConfig.DEFAULT_DISCARD_BUFFER_THROTTLE_MS)
                 .setRendererTimeLimitMs(NuvioEngineConfig.DEFAULT_RENDERER_TIME_LIMIT_MS)
                 .setCircularReadAheadBufferBytes(NuvioEngineConfig.DEFAULT_CIRCULAR_READ_AHEAD_BYTES)
+                .setPassthroughAudioTrackReuseOnFlushEnabled(true)
         }
         NuvioEngineConfig.set(builder.build())
     }
