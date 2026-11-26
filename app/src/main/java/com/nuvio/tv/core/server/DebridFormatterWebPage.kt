@@ -300,6 +300,10 @@ object DebridFormatterWebPage {
       <span class="chip">{stream.audioTags::join(' | ')}</span>
       <span class="chip">{stream.rseMatched::join(' | ')}</span>
       <span class="chip">{stream.size::bytes}</span>
+      <span class="chip">{stream.bitrate}</span>
+      <span class="chip">{stream.age}</span>
+      <span class="chip">{stream.tier}</span>
+      <span class="chip">{stream.languageEmojis::join(' ')}</span>
       <span class="chip">{service.cached::istrue["Ready"||"Not Ready"]}</span>
     </div>
 
@@ -365,6 +369,7 @@ object DebridFormatterWebPage {
   </div>
 
   <div class="actions">
+    <button class="btn" id="detailed">${s(R.string.web_debrid_preset_detailed, "Detailed Preset").html()}</button>
     <button class="btn" id="defaults">${s(R.string.web_debrid_restore_default, "Restore Default").html()}</button>
     <button class="btn" id="save">${s(R.string.web_debrid_save_settings, "Save Settings").html()}</button>
   </div>
@@ -372,6 +377,7 @@ object DebridFormatterWebPage {
 </div>
 <script>
 let defaults = null;
+let presets = {};
 const nameBox = document.getElementById('nameTemplate');
 const descBox = document.getElementById('descriptionTemplate');
 const statusBox = document.getElementById('status');
@@ -481,6 +487,7 @@ async function load(){
   nameBox.value = body.settings.nameTemplate ?? defaults.nameTemplate;
   descBox.value = body.settings.descriptionTemplate ?? defaults.descriptionTemplate;
   applyPreferences(body.settings.streamPreferences || defaults.streamPreferences);
+  presets = body.presets || {};
 }
 async function save(){
   statusBox.textContent = '${s(R.string.web_status_saving, "Saving…").js()}';
@@ -504,6 +511,11 @@ document.getElementById('defaults').addEventListener('click',()=>{
   nameBox.value = defaults.nameTemplate;
   descBox.value = defaults.descriptionTemplate;
   applyPreferences(defaults.streamPreferences);
+});
+document.getElementById('detailed').addEventListener('click',()=>{
+  if(!presets.detailed)return;
+  nameBox.value = presets.detailed.nameTemplate;
+  descBox.value = presets.detailed.descriptionTemplate;
 });
 renderRules();
 load().catch(()=>{statusBox.textContent='${s(R.string.web_debrid_status_load_error, "Could not load Debrid settings").js()}';statusBox.className='status error';});
