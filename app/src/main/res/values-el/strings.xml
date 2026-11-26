@@ -2991,7 +2991,7 @@
   <string name="dv7_mode_auto">Αυτόματο (προτείνεται)</string>
   <string name="dv7_mode_auto_desc">Ανιχνεύει την οθόνη σας και επιλέγει την καλύτερη λειτουργία. Αν παρουσιαστούν προβλήματα, δοκιμάστε τη βασική στρώση HDR10.</string>
   <string name="dv7_mode_hdr10_base_layer">Βασική στρώση HDR10</string>
-  <string name="dv7_mode_hdr10_base_layer_desc">Αφαιρεί πάντα το Dolby Vision και αναπαράγει τη βασική στρώση HEVC HDR10.</string>
+  <string name="dv7_mode_hdr10_base_layer_desc">Αγνόηση των δεδομένων ενίσχυσης του Dolby Vision. Μπορεί να βοηθήσει σε συσκευές που υποστηρίζουν HDR αλλά αντιμετωπίζουν προβλήματα με το DV Profile 7.</string>
   <string name="dv7_mode_dv81_libdovi">Μετατροπή σε DV8.1</string>
   <string name="dv7_mode_dv81_libdovi_desc">Μετατρέπει DV7 σε μονής στρώσης DV8.1. Απαιτεί οθόνη με Dolby Vision.</string>
   <string name="dv7_mode_off">Απενεργοποιημένο (native)</string>
