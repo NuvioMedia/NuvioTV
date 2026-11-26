@@ -36,7 +36,7 @@
     <string name="usenet_ranking_tiers">Niveaux de qualité</string>
     <string name="usenet_ranking_tiers_hint">Le premier niveau correspondant l’emporte. Des résolutions ou des qualités vides correspondent à n’importe quelle valeur. Les releases sans correspondance ou inconnues restent éligibles sous les niveaux nommés.</string>
     <string name="usenet_ranking_rules">Règles</string>
-    <string name="usenet_ranking_rules_hint">Toutes les règles de score correspondantes ajoutent leurs points. «&#160;Exiger&#160;» et «&#160;Exclure&#160;» sont des filtres&#160;; définissez un nombre minimal de résultats restants pour n’appliquer un filtre que s’il reste assez d’alternatives. Les règles utilisent les noms de release et les métadonnées des indexeurs, pas l’analyse des médias.</string>
+    <string name="usenet_ranking_rules_hint">Toutes les règles de score correspondantes ajoutent leurs points. «&#160;Exiger les correspondances&#160;» et «&#160;Exclure les correspondances&#160;» sont des filtres&#160;; définissez un nombre minimal de résultats restants pour n’appliquer un filtre que s’il reste assez d’alternatives. Les règles utilisent les noms de release et les métadonnées des indexeurs, pas l’analyse des médias.</string>
     <string name="usenet_ranking_add_rule">Ajouter une règle</string>
     <string name="usenet_ranking_add_tier">Ajouter un niveau</string>
     <string name="usenet_ranking_add_priority">Ajouter une priorité</string>
