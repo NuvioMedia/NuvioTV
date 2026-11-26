@@ -645,4 +645,28 @@ class MdbListLibraryServiceTest {
         assertFalse(service.isRefreshing.first())
         assertEquals(mdbListLibrarySnapshot(h.http.now), h.repository.currentSnapshot()?.library)
     }
+
+    @Test
+    fun `membership observers follow library edits and hidden lists`() = runTest {
+        val h = MdbListSyncTestHarness(backgroundScope)
+        h.seedLibrary()
+        val service = h.libraryService(backgroundScope)
+        val movie = decodeMdbListLibraryPage(MDBLIST_LIBRARY_MOVIE_PAGE).items
+        val seen = mutableListOf<Set<String>>()
+        backgroundScope.launch { service.observeMembership("tt0111161", "movie").collect { seen += it } }
+        runCurrent()
+
+        h.repository.mutate(h.repository.currentScope()) { previous ->
+            val library = previous.library!!
+            previous.copy(library = library.copy(itemsByList = library.itemsByList + (MDBLIST_TEST_LIST_KEY to movie))) to Unit
+        }
+        runCurrent()
+        assertEquals(setOf(MDBLIST_TEST_LIST_KEY), service.observeMembership("tt0111161", "movie").first())
+        assertEquals(listOf("Shawshank"), service.items.first().map { it.name })
+
+        service.setListVisible(MDBLIST_TEST_LIST_KEY, false)
+        runCurrent()
+        assertEquals(listOf(emptySet(), setOf(MDBLIST_TEST_LIST_KEY), emptySet()), seen)
+        assertTrue(h.http.engine.requests.isEmpty())
+    }
 }

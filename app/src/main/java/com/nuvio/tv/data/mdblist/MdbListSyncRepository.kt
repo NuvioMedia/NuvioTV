@@ -66,7 +66,22 @@ class MdbListSyncRepository(
     internal fun currentProjection(): MdbListProgressProjection = mutableProjection.value
         .takeIf { matchesCurrent(it.scope) && auth.state.value.isAuthenticated }?.projection ?: MdbListProgressProjection.Empty
 
-    suspend fun ensureLoaded() = withContext(dispatcher) { mutex.withLock { loadCurrent() } }
+    /**
+     * Loads the persisted snapshot of the current account. Once it is in memory this returns at once:
+     * the mutex is also held for the whole network sync, and readers only need the loaded snapshot.
+     */
+    suspend fun ensureLoaded(): MdbListSyncSnapshot? =
+        loadedSnapshot() ?: withContext(dispatcher) { mutex.withLock { loadCurrent() } }
+
+    private fun loadedSnapshot(): MdbListSyncSnapshot? {
+        val authorization = auth.state.value
+        if (!authorization.isAuthenticated) return null
+        val accountId = authorization.user?.id ?: return null
+        val scope = auth.scope()
+        if (!matchesCurrent(scope)) return null
+        val current = mutableState.value
+        return current.snapshot?.takeIf { current.scope == scope && it.accountId == accountId }
+    }
 
     fun refreshAsync(intent: TrackingRefreshIntent) {
         coroutineScope.launch { refresh(intent) }
