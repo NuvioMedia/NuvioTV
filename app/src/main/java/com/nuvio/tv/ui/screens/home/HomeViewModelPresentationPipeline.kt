@@ -561,6 +561,16 @@ private suspend fun HomeViewModel.fetchExternalMetaOutcome(item: MetaPreview): E
         ExternalMetaOutcome.Failed
     }
 
+private fun HomeViewModel.prefetchDetailMeta(item: MetaPreview) {
+    if (!backgroundMetaPrefetchedIds.add(item.id)) return
+    viewModelScope.launch(Dispatchers.IO) {
+        metaRepository.getMetaFromAllAddons(
+            type = item.apiType,
+            id = item.id
+        ).first { it !is NetworkResult.Loading }
+    }
+}
+
 internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
     if (startupGracePeriodActive) {
         deferredEnrichItem = item
@@ -595,15 +605,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             }
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             // Still prefetch full meta in background for instant detail screen.
-            if (item.id !in backgroundMetaPrefetchedIds) {
-                backgroundMetaPrefetchedIds.add(item.id)
-                viewModelScope.launch {
-                    metaRepository.getMetaFromAllAddons(
-                        type = item.apiType,
-                        id = item.id
-                    ).first { it !is NetworkResult.Loading }
-                }
-            }
+            prefetchDetailMeta(item)
             return
         }
     }
@@ -626,6 +628,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             return@launch
         }
+        prefetchDetailMeta(item)
         // Don't hide the hero if we already have enriched data for this item.
         // The enrichment can proceed in the background without visual disruption.
         val alreadyEnriched = item.id in _enrichedPreviews.value
@@ -634,15 +637,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             if (!externalEnrichmentOutstanding(item.id)) {
                 if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
                 // Still prefetch full meta in background for instant detail screen.
-                if (item.id !in backgroundMetaPrefetchedIds) {
-                    backgroundMetaPrefetchedIds.add(item.id)
-                    launch {
-                        metaRepository.getMetaFromAllAddons(
-                            type = item.apiType,
-                            id = item.id
-                        ).first { it !is NetworkResult.Loading }
-                    }
-                }
+                prefetchDetailMeta(item)
                 return@launch
             }
         }
@@ -718,17 +713,6 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
                 if (_enrichedPreviews.value[item.id] != preview) addEnrichedPreview(item.id, preview)
             }
 
-            // Always prefetch full meta in background for instant detail screen loading.
-            if (item.id !in backgroundMetaPrefetchedIds) {
-                backgroundMetaPrefetchedIds.add(item.id)
-                viewModelScope.launch {
-                    metaRepository.getMetaFromAllAddons(
-                        type = item.apiType,
-                        id = item.id
-                    ).first { it !is NetworkResult.Loading }
-                }
-            }
-
             // Warm up watch progress pipeline so detail screen reads are fast.
             viewModelScope.launch {
                 watchProgressRepository.getAllEpisodeProgress(item.id.substringBefore(":")).first()
@@ -771,6 +755,7 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
 
         if (item.id in prefetchedTmdbIds || item.id in prefetchedExternalMetaIds) return@launch
 
+        prefetchDetailMeta(item)
         try {
             // Launch TMDB and external meta addon fetch in parallel (same as focused pipeline).
             val tmdbDeferred = if (tmdbEnabledForCurrentLayout) {
@@ -820,17 +805,6 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
 
             if (tmdbEnrichment == null && externalMeta == null) {
                 addEnrichedPreview(item.id, item)
-            }
-
-            // Background prefetch for detail screen cache.
-            if (item.id !in backgroundMetaPrefetchedIds) {
-                backgroundMetaPrefetchedIds.add(item.id)
-                viewModelScope.launch {
-                    metaRepository.getMetaFromAllAddons(
-                        type = item.apiType,
-                        id = item.id
-                    ).first { it !is NetworkResult.Loading }
-                }
             }
 
         } finally {

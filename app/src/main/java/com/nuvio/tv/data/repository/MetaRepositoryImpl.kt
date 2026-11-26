@@ -253,24 +253,6 @@ class MetaRepositoryImpl @Inject constructor(
             addonMetaCache.remove(cacheKey)
         }
 
-        inFlightAddonMeta[cacheKey]?.let { existingDeferred ->
-            when (val lookupResult = existingDeferred.await()) {
-                is MetaLookupResult.Found -> {
-                    emit(NetworkResult.Success(lookupResult.meta))
-                    return@flow
-                }
-                is MetaLookupResult.SourceSufficient -> {
-                    emit(NetworkResult.Error("Source addon sufficient", NetworkResult.SOURCE_SUFFICIENT_CODE))
-                    return@flow
-                }
-                is MetaLookupResult.NotFound -> {
-                    // Fall through — the in-flight request failed, try ourselves
-                }
-            }
-        }
-
-        emit(NetworkResult.Loading)
-
         val addons = installedAddonsOrEmpty()
 
         val requestedType = type.trim()
@@ -318,6 +300,34 @@ class MetaRepositoryImpl @Inject constructor(
                 }
             }
         }
+
+        val topCandidateAddon = prioritizedCandidates.firstOrNull()?.first
+        if (sourceAddonBaseUrl != null && topCandidateAddon != null &&
+            normalizedAddonKey(topCandidateAddon.baseUrl) == normalizedAddonKey(sourceAddonBaseUrl)
+        ) {
+            emit(NetworkResult.Error("Source addon sufficient", NetworkResult.SOURCE_SUFFICIENT_CODE))
+            return@flow
+        }
+
+        inFlightAddonMeta[cacheKey]?.let { existingDeferred ->
+            when (val lookupResult = existingDeferred.await()) {
+                is MetaLookupResult.Found -> {
+                    emit(NetworkResult.Success(lookupResult.meta))
+                    return@flow
+                }
+                is MetaLookupResult.SourceSufficient -> {
+                    if (sourceAddonBaseUrl != null) {
+                        emit(NetworkResult.Error("Source addon sufficient", NetworkResult.SOURCE_SUFFICIENT_CODE))
+                        return@flow
+                    }
+                }
+                is MetaLookupResult.NotFound -> {
+                    // Fall through — the in-flight request failed, try ourselves
+                }
+            }
+        }
+
+        emit(NetworkResult.Loading)
 
         if (prioritizedCandidates.isEmpty()) {
             // Last resort: try addons that declare the raw type (legacy behavior).
