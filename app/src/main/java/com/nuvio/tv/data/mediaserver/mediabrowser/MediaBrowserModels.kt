@@ -105,6 +105,8 @@ internal data class MediaSource(
     @SerialName("Path") val path: String? = null,
     @SerialName("Container") val container: String? = null,
     @SerialName("Size") val size: Long? = null,
+    /** Bits per second. */
+    @SerialName("Bitrate") val bitrate: Long? = null,
     @SerialName("ETag") val eTag: String? = null,
     @SerialName("SupportsDirectPlay") val supportsDirectPlay: Boolean = false,
     @SerialName("SupportsDirectStream") val supportsDirectStream: Boolean = false,

@@ -145,7 +145,8 @@ class StreamRepositoryImpl @Inject constructor(
                     serverSources = if (continuePluginOnly) {
                         emptyList()
                     } else {
-                        serverStreams.sources(type, videoId, season, episode, forceRefresh)
+                        serverStreams.sources(type, videoId, season, episode, forceRefresh,
+                            sourceConfiguration.debridSettings)
                     },
                     priorityBingeGroup = priorityBingeGroup,
                     preferredPluginOnly = preferredPluginOnly,

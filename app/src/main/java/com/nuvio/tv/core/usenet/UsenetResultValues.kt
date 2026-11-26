@@ -18,12 +18,14 @@ import java.util.Locale
 internal object UsenetResultValues {
     /**
      * [episodeSize] is an episode's share of a season pack, null for any other release. [bitrate] and
-     * [tier] are the result's, as its own text shows them ("72 Mbps", "T1"); null when unknown.
+     * [tier] are the result's, as its own text shows them ("72 Mbps", "T1"); null when unknown. [labels] are
+     * a source's own words for the formats, such as a media server's stream titles, read with the name's tags.
      */
     fun of(release: UsenetRelease, episodeSize: Long?, failed: Boolean, languageEmoji: (String) -> String,
-        now: Long = System.currentTimeMillis(), bitrate: String? = null, tier: String? = null): Map<String, Any?> {
+        now: Long = System.currentTimeMillis(), bitrate: String? = null, tier: String? = null,
+        labels: String = ""): Map<String, Any?> {
         val name = parse(release.title)
-        val tags = name.rest
+        val tags = if (labels.isBlank()) name.rest else "${name.rest} ${labels.take(2048)}"
         val facts = release.rankingFacts
         val episodes = name.episodes
         val season = name.season ?: release.packSeasons.singleOrNull()

@@ -2,6 +2,7 @@ package com.nuvio.tv.data.mediaserver.silo
 
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.data.mediaserver.ServerCandidate
+import com.nuvio.tv.data.mediaserver.ServerMediaFacts
 import com.nuvio.tv.data.mediaserver.ServerIndexEntry
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.mediaserver.ServerMediaKind
@@ -173,7 +174,14 @@ internal class SiloMapper(address: String, private val connectionId: String) {
                     version.container.takeIf { it.isNotBlank() }?.uppercase()?.let { if (it == "MATROSKA") "MKV" else it }
                 ).joinToString(" • ").ifBlank { null },
                 filename = version.fileName,
-                sizeBytes = version.fileSize?.takeIf { it > 0 }
+                sizeBytes = version.fileSize?.takeIf { it > 0 },
+                media = ServerMediaFacts(
+                    resolution = ServerMediaFacts.lines(version.resolution),
+                    videoCodec = ServerMediaFacts.codecLabel(version.codecVideo),
+                    labels = listOfNotNull(version.videoLabel()) +
+                        version.audioTracks.flatMap { listOfNotNull(it.label(), it.profile, it.title, it.language) },
+                    bitrateKbps = version.bitrate?.takeIf { it > 0 }
+                )
             )
         }
     }

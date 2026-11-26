@@ -439,7 +439,7 @@ class StreamRepositoryPluginIsolationTest {
                 serverStreams = mockk {
                     every { isNativeRequest(any()) } returns false
                     every { revision } returns 0
-                    every { sources(any(), any(), any(), any(), any()) } returns serverSources
+                    every { sources(any(), any(), any(), any(), any(), any()) } returns serverSources
                 }
             ),
             api = api,

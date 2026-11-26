@@ -2,6 +2,7 @@ package com.nuvio.tv.data.mediaserver.plex
 
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.data.mediaserver.ServerCandidate
+import com.nuvio.tv.data.mediaserver.ServerMediaFacts
 import com.nuvio.tv.data.mediaserver.ServerIndexEntry
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.mediaserver.ServerMediaKind
@@ -164,7 +165,17 @@ internal class PlexMapper(private val address: String, private val connectionId:
                     media.container?.uppercase()?.let { if (it == "MATROSKA") "MKV" else it }
                 ).joinToString(" • ").ifBlank { null },
                 filename = part.file?.substringAfterLast('/')?.substringAfterLast('\\'),
-                sizeBytes = part.size?.takeIf { it > 0 }
+                sizeBytes = part.size?.takeIf { it > 0 },
+                media = ServerMediaFacts(
+                    resolution = ServerMediaFacts.lines(media.videoResolution),
+                    videoCodec = ServerMediaFacts.codecLabel(media.videoCodec),
+                    labels = part.streams.filter { it.streamType == STREAM_VIDEO || it.streamType == STREAM_AUDIO }
+                        .flatMap { stream ->
+                            listOfNotNull(stream.displayTitle, stream.extendedDisplayTitle, stream.title, stream.languageCode,
+                                stream.codec?.takeIf { stream.streamType == STREAM_AUDIO }?.let(::audioCodecLabel))
+                        } + listOfNotNull(media.audioCodec?.let(::audioCodecLabel), media.audioChannels?.let(::channelLabel)),
+                    bitrateKbps = media.bitrate?.takeIf { it > 0 }
+                )
             )
         }
     }

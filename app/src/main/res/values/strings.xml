@@ -1511,6 +1511,8 @@
     <string name="debrid_formatter_configure">Open web editor</string>
     <string name="debrid_formatter_reset_title">Reset formatting</string>
     <string name="debrid_formatter_reset_subtitle">Restore default source formatting.</string>
+    <string name="debrid_format_server_results">Use for media servers</string>
+    <string name="debrid_format_server_results_description">Show media server results with these templates instead of their usual details.</string>
     <string name="debrid_formatter_qr_instruction">Scan this QR code on your phone to configure Debrid source settings.</string>
     <string name="settings_stream_badges_section">Fusion Style</string>
     <string name="settings_stream_size_badges_title">Size badges</string>

@@ -3,6 +3,7 @@ package com.nuvio.tv.data.mediaserver.mediabrowser
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.parseTrackingExternalIds
 import com.nuvio.tv.data.mediaserver.ServerCandidate
+import com.nuvio.tv.data.mediaserver.ServerMediaFacts
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.mediaserver.ServerMediaKind
 import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
@@ -141,7 +142,8 @@ internal class MediaBrowserMapper(
         val sources = item.mediaSources.filterNot { it.isPlaceholder }
         return sources.map { source ->
             val video = source.mediaStreams.firstOrNull { it.type.equals("Video", ignoreCase = true) }
-            val audio = source.mediaStreams.firstOrNull { it.type.equals("Audio", ignoreCase = true) }
+            val audios = source.mediaStreams.filter { it.type.equals("Audio", ignoreCase = true) }
+            val audio = audios.firstOrNull()
             ServerCandidate(
                 target = ServerPlaybackTarget(item = itemRef, mediaSourceId = source.id),
                 title = source.name?.takeIf { it.isNotBlank() && sources.size > 1 }
@@ -153,7 +155,14 @@ internal class MediaBrowserMapper(
                     source.container?.uppercase()
                 ).joinToString(" • ").ifBlank { null },
                 filename = source.path?.substringAfterLast('/')?.substringAfterLast('\\'),
-                sizeBytes = source.size
+                sizeBytes = source.size,
+                media = ServerMediaFacts(
+                    resolution = video?.let { ServerMediaFacts.lines(it.width, it.height) },
+                    videoCodec = ServerMediaFacts.codecLabel(video?.codec),
+                    labels = listOfNotNull(video?.displayTitle) +
+                        audios.flatMap { listOfNotNull(it.displayTitle, it.codec, it.language) },
+                    bitrateKbps = source.bitrate?.takeIf { it > 0 }?.div(1000)
+                )
             )
         }
     }

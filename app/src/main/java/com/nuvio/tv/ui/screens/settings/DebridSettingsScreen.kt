@@ -283,6 +283,15 @@ fun DebridSettingsContent(
                             )
                         }
 
+                        item(key = "debrid_format_server_results") {
+                            SettingsToggleRow(
+                                title = stringResource(R.string.debrid_format_server_results),
+                                subtitle = stringResource(R.string.debrid_format_server_results_description),
+                                checked = uiState.formatServerResults,
+                                onToggle = { viewModel.setFormatServerResults(!uiState.formatServerResults) }
+                            )
+                        }
+
                         item(key = "debrid_formatter_reset") {
                             SettingsActionRow(
                                 title = stringResource(R.string.debrid_formatter_reset_title),
