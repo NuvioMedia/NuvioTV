@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.torrent
 
+import android.app.ActivityManager
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
@@ -45,7 +46,7 @@ class TorrentService @Inject constructor(
     private data class EngineConfigurationKey(
         val uploadEnabled: Boolean,
         val torrentProfile: TorrentProfile,
-        val diskCacheCapacityBytes: Long
+        val cacheSize: TorrentCacheSize
     )
 
     private data class DetachedStream(
@@ -59,6 +60,14 @@ class TorrentService @Inject constructor(
     val cacheState: StateFlow<TorrentCacheState> = _cacheState.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        scope.launch {
+            if (engine == null) {
+                refreshCacheStateFromDisk()
+            }
+        }
+    }
     private val lifecycleLock = Any()
     private val startMutex = Mutex()
     private var statsJob: Job? = null
@@ -309,7 +318,7 @@ class TorrentService @Inject constructor(
         val configurationKey = EngineConfigurationKey(
             uploadEnabled = settings.enableUpload,
             torrentProfile = settings.torrentProfile,
-            diskCacheCapacityBytes = settings.cacheSize.bytes
+            cacheSize = settings.cacheSize
         )
         engine?.takeIf { engineConfigurationKey == configurationKey }?.let { return it }
 
@@ -330,7 +339,8 @@ class TorrentService @Inject constructor(
                 cacheDirectory = cacheDirectory,
                 uploadEnabled = configurationKey.uploadEnabled,
                 torrentProfile = configurationKey.torrentProfile,
-                diskCacheCapacityBytes = configurationKey.diskCacheCapacityBytes
+                cacheSize = configurationKey.cacheSize,
+                memoryStorageCapacityBytes = memoryStorageCapacityBytes()
             )
         ).also { created ->
             engine = created
@@ -338,6 +348,16 @@ class TorrentService @Inject constructor(
             observeEngineEvents(created)
             Log.i(TAG, "Using Nuvio Engine ${NuvioEngine.version} (${NuvioEngine.protocolBackendVersion})")
         }
+    }
+
+    private fun memoryStorageCapacityBytes(): Long {
+        val activityManager = context.getSystemService(ActivityManager::class.java)
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager?.getMemoryInfo(memoryInfo)
+        return torrentMemoryStorageCapacityBytes(
+            totalMemoryBytes = memoryInfo.totalMem,
+            lowRamDevice = activityManager?.isLowRamDevice ?: true
+        )
     }
 
     private suspend fun closeEngine(target: NuvioEngine?) {
@@ -355,6 +375,17 @@ class TorrentService @Inject constructor(
             } catch (error: Exception) {
                 Log.w(TAG, "Error shutting down Nuvio Engine", error)
             }
+            if (engine == null) {
+                refreshCacheStateFromDisk()
+            }
+        }
+    }
+
+    private fun refreshCacheStateFromDisk() {
+        try {
+            updateCacheState(measureTorrentPayloadBytes(File(context.cacheDir, "nuvio-engine")), 0L)
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not measure the torrent cache", error)
         }
     }
 
