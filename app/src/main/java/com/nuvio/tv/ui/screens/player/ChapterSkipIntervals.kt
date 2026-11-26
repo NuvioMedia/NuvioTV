@@ -109,6 +109,8 @@ internal object ChapterSkipIntervals {
     )
 }
 
+private const val ENDING_CATEGORY = "ending"
+
 internal fun mergeSkipIntervals(
     apiIntervals: List<SkipInterval>,
     chapterIntervals: List<SkipInterval>,
@@ -123,9 +125,18 @@ internal fun mergeSkipIntervals(
         val category = segmentCategory(interval.type) ?: continue
         chosen.putIfAbsent(category, interval)
     }
+    // A file's "Credits" chapter can start minutes before the real credits (seen on
+    // web releases), which shows the next-episode card and Skip Ending mid-scene.
+    // For the ending, API timing wins; chapters still fill it when the API has none.
+    var apiEndingChosen = false
     for (interval in apiIntervals) {
         val category = segmentCategory(interval.type) ?: continue
-        chosen.putIfAbsent(category, interval)
+        if (category == ENDING_CATEGORY && !apiEndingChosen) {
+            chosen[category] = interval
+            apiEndingChosen = true
+        } else {
+            chosen.putIfAbsent(category, interval)
+        }
     }
     val uncategorized = (chapterIntervals + apiIntervals)
         .filter { segmentCategory(it.type) == null }

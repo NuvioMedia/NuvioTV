@@ -112,11 +112,38 @@ class MergeSkipIntervalsTest {
         )
         val merged = mergeSkipIntervals(api, chapters)
         assertEquals(4, merged.size)
-        // All categorized come from chapters (priority)
+        // Opening and recap come from chapters; the ending comes from the API
         assertEquals("chapters", merged.find { it.type == "recap" }!!.provider)
         assertEquals("chapters", merged.find { it.type == "intro" }!!.provider)
-        assertEquals("chapters", merged.find { it.type == "outro" }!!.provider)
+        assertEquals("introdb", merged.find { it.type == "outro" }!!.provider)
         // post-credits only from API
         assertEquals("introdb", merged.find { it.type == "post-credits" }!!.provider)
+    }
+
+    @Test
+    fun `API ending wins over an early credits chapter`() {
+        // Love & Death S1E6: file chapter "Credits" at 42:09, real credits at 44:01
+        val api = listOf(interval("outro", 2641.0, 2708.0, "introdb"))
+        val chapters = listOf(
+            interval("intro", 0.0, 94.0, "chapters"),
+            interval("outro", 2529.0, 2704.0, "chapters")
+        )
+        val merged = mergeSkipIntervals(api, chapters)
+        assertEquals(2, merged.size)
+        val ending = merged.single { it.type == "outro" }
+        assertEquals("introdb", ending.provider)
+        assertEquals(2641.0, ending.startTime, 0.01)
+        assertEquals("chapters", merged.single { it.type == "intro" }.provider)
+    }
+
+    @Test
+    fun `first API ending is kept when the API has several`() {
+        val api = listOf(
+            interval("outro", 2641.0, 2708.0, "introdb"),
+            interval("credits", 2650.0, 2708.0, "aniskip")
+        )
+        val chapters = listOf(interval("outro", 2529.0, 2704.0, "chapters"))
+        val merged = mergeSkipIntervals(api, chapters)
+        assertEquals(listOf(api[0]), merged)
     }
 }
