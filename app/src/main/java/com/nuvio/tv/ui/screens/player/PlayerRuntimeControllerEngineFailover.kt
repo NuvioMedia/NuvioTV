@@ -12,7 +12,7 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     detailedError: String,
     allowEngineFailover: Boolean
 ): Boolean {
-    if (!allowEngineFailover) return false
+    if (!allowEngineFailover || currentClearKeys != null) return false
     if (!autoSwitchInternalPlayerOnErrorEnabled) return false
     if (startupEngineFailoverTriggered) return false
     if (!isStartupPhaseForEngineFailover()) return false
@@ -71,6 +71,10 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     reason: String = "manual-switch"
 ) {
     if (currentStreamUrl.isBlank()) return
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && currentClearKeys != null) {
+        Log.i(PlayerRuntimeController.TAG, "Engine switch to libmpv skipped: ClearKey stream")
+        return
+    }
 
     beginSwitchTraceSession(reason = reason, targetEngine = targetEngine)
     val targetEngineLabel = targetEngineLabel(targetEngine)

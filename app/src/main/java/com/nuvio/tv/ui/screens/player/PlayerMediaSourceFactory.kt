@@ -189,7 +189,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         audioDelayUsProvider: (() -> Long)? = null,
         mediaMetadata: androidx.media3.common.MediaMetadata? = null,
         cacheKey: String? = null,
-        bluray: BlurayPlaylistResolver.RemoteLayout? = null
+        bluray: BlurayPlaylistResolver.RemoteLayout? = null,
+        clearKeys: String? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
         // A Blu-ray folder plays its feature playlist, clip by clip.
@@ -250,6 +251,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
 
         val mediaItem = mediaItemBuilder.build()
+        val drmSessionManager = clearKeys?.let { keys ->
+            Log.i(LOG_TAG, "DRM: ClearKey with ${keys.count { it == ',' } + 1} key(s)")
+            ClearKeyDrmSessionManager(keys)
+        }
 
         // The native engine owns Usenet concurrency/read-ahead. A second Java
         // prefetch layer would duplicate memory and keep obsolete ranges alive.
@@ -363,6 +368,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             customSubtitleParserFactory?.let { parserFactory ->
                 setSubtitleParserFactory(parserFactory)
             }
+            drmSessionManager?.let { manager -> setDrmSessionManagerProvider { manager } }
         }
         val forceDefaultFactory = customExtractorsFactory != null || customSubtitleParserFactory != null
 
@@ -378,9 +384,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
                 .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+                .apply { drmSessionManager?.let { manager -> setDrmSessionManagerProvider { manager } } }
                 .createMediaSource(mediaItem)
             isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
                 .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+                .apply { drmSessionManager?.let { manager -> setDrmSessionManagerProvider { manager } } }
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }

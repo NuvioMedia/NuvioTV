@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.toStreamAudioDelayLanguage
 import com.nuvio.tv.domain.model.toStreamAudioDelayMs
+import com.nuvio.tv.domain.model.toStreamClearKeys
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
@@ -1449,7 +1450,8 @@ class PluginRuntime @Inject constructor() {
                     audioDelayMs = ((item["behaviorHints"] as? Map<*, *>)?.get("audioDelayMs") as? Number)
                         .toStreamAudioDelayMs(),
                     audioDelayLanguage = ((item["behaviorHints"] as? Map<*, *>)?.get("audioDelayLanguage") as? String)
-                        .toStreamAudioDelayLanguage()
+                        .toStreamAudioDelayLanguage(),
+                    clearKeys = (item["behaviorHints"] as? Map<*, *>)?.get("clearKeys").toStreamClearKeys()
                 )
             }?.filter { it.url.isNotBlank() } ?: emptyList()
         } catch (e: Exception) {

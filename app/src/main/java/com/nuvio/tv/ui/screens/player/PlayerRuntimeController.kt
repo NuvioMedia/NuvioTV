@@ -241,6 +241,8 @@ class PlayerRuntimeController(
     internal var currentStreamCacheKey: String? = null
     internal var currentStreamMimeType: String?
     internal var currentHeaders: Map<String, String>
+    // ClearKey DRM pairs of the current stream: decrypted by ExoPlayer only, libmpv has no DRM.
+    internal var currentClearKeys: String? = navigationArgs.clearKeys
     internal var streamSubtitles: List<Subtitle> = emptyList()
 
     init {
