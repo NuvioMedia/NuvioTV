@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +41,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -96,6 +100,12 @@ import kotlinx.coroutines.delay
 private val BadgeShape = RoundedCornerShape(NuvioTheme.radii.xs)
 private val CwNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val CwNewSeasonBadgeColor = Color(0xFFB45309)
+
+/**
+ * contentId → aired episodes not watched yet. Home provides it when the "Show Remaining
+ * Episodes" setting is on; cards without an entry show no count.
+ */
+val LocalContinueWatchingRemainingEpisodes = compositionLocalOf<Map<String, Int>> { emptyMap() }
 
 /** URLs that failed to load — skip them immediately on next recomposition. */
 internal val brokenImageUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
@@ -470,6 +480,9 @@ fun ContinueWatchingCard(
 
     val progress = remember(item) { (item as? ContinueWatchingItem.InProgress)?.progress }
     val nextUp = remember(item) { (item as? ContinueWatchingItem.NextUp)?.info }
+    val remainingEpisodes = LocalContinueWatchingRemainingEpisodes.current[
+        progress?.contentId ?: nextUp?.contentId
+    ]
     val cardContext = LocalContext.current
     val episodeStr = remember(progress, nextUp, cardContext) {
         val season = progress?.season ?: nextUp?.season
@@ -690,6 +703,7 @@ fun ContinueWatchingCard(
                 badgeBackground = badgeBackground,
                 showBadge = progress == null,
                 shufflePlayback = item.shufflePlayback,
+                remainingEpisodes = remainingEpisodes,
                 progressFraction = progressFraction,
                 hasProgress = progress != null,
                 onImageError = {
@@ -795,7 +809,11 @@ fun ContinueWatchingCard(
                     )
                 }
 
-                if (item.shufflePlayback) EpisodeShuffleBadge(Modifier.align(Alignment.TopStart))
+                ContinueWatchingTopStartBadges(
+                    shufflePlayback = item.shufflePlayback,
+                    remainingEpisodes = remainingEpisodes,
+                    modifier = Modifier.align(Alignment.TopStart)
+                )
 
                 // Content info at bottom
                 if (!textBelowArtwork) {
@@ -936,6 +954,7 @@ private fun WideCardContent(
     badgeBackground: Color,
     showBadge: Boolean,
     shufflePlayback: Boolean,
+    remainingEpisodes: Int?,
     progressFraction: Float,
     hasProgress: Boolean,
     onImageError: () -> Unit
@@ -974,7 +993,11 @@ private fun WideCardContent(
                     onError = { onImageError() }
                 )
             }
-            if (shufflePlayback) EpisodeShuffleBadge(Modifier.align(Alignment.TopStart))
+            ContinueWatchingTopStartBadges(
+                shufflePlayback = shufflePlayback,
+                remainingEpisodes = remainingEpisodes,
+                modifier = Modifier.align(Alignment.TopStart)
+            )
         }
 
         Column(
@@ -1071,6 +1094,49 @@ private fun WideCardContent(
                     color = NuvioTheme.extendedColors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+// Shuffle marker and remaining-episode count share the artwork's top-start corner.
+@Composable
+private fun ContinueWatchingTopStartBadges(
+    shufflePlayback: Boolean,
+    remainingEpisodes: Int?,
+    modifier: Modifier = Modifier
+) {
+    if (!shufflePlayback && remainingEpisodes == null) return
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (shufflePlayback) EpisodeShuffleBadge()
+        if (remainingEpisodes != null) {
+            val description = pluralStringResource(
+                R.plurals.cw_remaining_episodes,
+                remainingEpisodes,
+                remainingEpisodes
+            )
+            Box(
+                modifier = Modifier
+                    // The shuffle marker already pads its trailing edge.
+                    .padding(
+                        start = if (shufflePlayback) 0.dp else NuvioTheme.spacing.sm,
+                        top = NuvioTheme.spacing.sm,
+                        end = NuvioTheme.spacing.sm,
+                        bottom = NuvioTheme.spacing.sm
+                    )
+                    .clip(BadgeShape)
+                    .background(NuvioTheme.colors.Background.copy(alpha = 0.8f))
+                    .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
+                    .clearAndSetSemantics { contentDescription = description }
+            ) {
+                Text(
+                    text = remainingEpisodes.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NuvioTheme.colors.TextPrimary
                 )
             }
         }

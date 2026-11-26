@@ -3069,6 +3069,76 @@ private fun HomeViewModel.publishBadgeUpdate(
         }
     }
     fullyWatchedSeriesIds.updateWithValidation(merged, allValidatedIds, revalidateAt)
+    cwRemainingEpisodesRefresh.update { it + 1 }
+}
+
+/**
+ * Keeps [HomeUiState.continueWatchingRemainingEpisodes] in sync with the Continue Watching
+ * row while the setting is on. Counts are recomputed when the row's series change and after
+ * every badge pass, which is when watched episodes or aired lists may have changed.
+ */
+@OptIn(kotlinx.coroutines.FlowPreview::class)
+internal fun HomeViewModel.observeContinueWatchingRemainingEpisodes() {
+    viewModelScope.launch(Dispatchers.IO) {
+        combine(
+            layoutPreferenceDataStore.showContinueWatchingRemainingEpisodes.distinctUntilChanged(),
+            _uiState.map { it.continueWatchingRemainingEpisodeTargets() }.distinctUntilChanged(),
+            cwRemainingEpisodesRefresh
+        ) { enabled, contentIds, _ -> if (enabled) contentIds else null }
+            .debounce(REMAINING_EPISODES_DEBOUNCE_MS)
+            .collectLatest { contentIds ->
+                val counts = if (contentIds == null) {
+                    emptyMap()
+                } else {
+                    computeContinueWatchingRemainingEpisodes(contentIds)
+                }
+                _uiState.update { state ->
+                    if (state.continueWatchingRemainingEpisodes == counts) {
+                        state
+                    } else {
+                        state.copy(continueWatchingRemainingEpisodes = counts)
+                    }
+                }
+            }
+    }
+}
+
+private const val REMAINING_EPISODES_DEBOUNCE_MS = 300L
+
+/** Series shown in Continue Watching, the only cards that display a remaining-episode count. */
+private fun HomeUiState.continueWatchingRemainingEpisodeTargets(): Set<String> =
+    (continueWatchingItems + upcomingItems).mapNotNullTo(linkedSetOf()) { item ->
+        when (item) {
+            is ContinueWatchingItem.InProgress ->
+                item.progress.contentId.takeIf { isSeriesTypeCW(item.progress.contentType) }
+            is ContinueWatchingItem.NextUp -> item.info.contentId
+        }
+    }
+
+/**
+ * Aired-but-unwatched episode counts for [contentIds], reusing the aired lists the badge
+ * pipeline already resolved. A series that is not cached yet (for example after a restart,
+ * when the badge pass skips series that were already validated) is resolved with the same
+ * lightweight meta lookup the badge pass uses.
+ */
+private suspend fun HomeViewModel.computeContinueWatchingRemainingEpisodes(
+    contentIds: Set<String>
+): Map<String, Int> {
+    if (contentIds.isEmpty()) return emptyMap()
+    val watchedByContentId = watchProgressRepository.getWatchedShowEpisodes()
+    val metaSemaphore = Semaphore(2)
+    return coroutineScope {
+        contentIds.map { contentId ->
+            async {
+                val aired = synchronized(cwBadgeEpisodeCache) {
+                    cwBadgeEpisodeCache["series:$contentId"] ?: cwBadgeEpisodeCache["tv:$contentId"]
+                } ?: metaSemaphore.withPermit { resolveBadgeEpisodes(contentId, "series") }
+                    ?: return@async null
+                val remaining = remainingAiredEpisodeCount(aired, watchedByContentId[contentId].orEmpty())
+                if (remaining > 0) contentId to remaining else null
+            }
+        }.awaitAll().filterNotNull().toMap()
+    }
 }
 
 /**

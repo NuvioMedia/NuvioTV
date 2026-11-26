@@ -163,6 +163,10 @@
         <item quantity="one">In %d Day</item>
         <item quantity="other">In %d Days</item>
     </plurals>
+    <plurals name="cw_remaining_episodes">
+        <item quantity="one">%d unwatched episode</item>
+        <item quantity="other">%d unwatched episodes</item>
+    </plurals>
     <string name="cw_action_go_to_details">Go to details</string>
     <string name="cw_action_start_from_beginning">Start from beginning</string>
     <string name="cw_action_remove">Remove</string>
@@ -1165,6 +1169,8 @@
     <string name="layout_episode_options_overlay_blur_desc">Use the full-screen layout with blurred episode artwork.</string>
     <string name="layout_blur_cw_next_up">Blur Unwatched in Continue Watching</string>
     <string name="layout_blur_cw_next_up_sub">Blur unwatched episode thumbnails in Continue Watching to avoid spoilers.</string>
+    <string name="layout_cw_remaining_episodes">Show Remaining Episodes</string>
+    <string name="layout_cw_remaining_episodes_sub">Show how many aired episodes you have not watched yet on Continue Watching cards.</string>
     <string name="layout_next_up_furthest_episode">Up Next From Furthest Episode</string>
     <string name="layout_next_up_furthest_episode_sub">Show next episode based on the furthest watched episode. Disable for rewatches to use the most recently watched episode instead.</string>
     <string name="layout_show_unaired_next_up">Show Unaired Next Up Episodes</string>

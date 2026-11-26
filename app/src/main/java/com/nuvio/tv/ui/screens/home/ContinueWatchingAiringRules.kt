@@ -78,3 +78,19 @@ fun isFullyWatchedAgainstAiredList(
     if (airedEpisodes.isEmpty()) return false
     return airedEpisodes.all { it in watchedEpisodes }
 }
+
+/**
+ * Number of aired episodes the user has not watched yet, shown on Continue Watching cards.
+ *
+ * Mirrors the caught-up rule of the fully-watched badge: once the watched set is at least as
+ * large as the aired list the series counts as caught up, so a provider that numbers episodes
+ * differently from the addon (absolute anime numbering, for example) does not report almost
+ * the whole show as unwatched.
+ */
+fun remainingAiredEpisodeCount(
+    airedEpisodes: Set<Pair<Int, Int>>,
+    watchedEpisodes: Set<Pair<Int, Int>>,
+): Int {
+    if (airedEpisodes.isEmpty() || watchedEpisodes.size >= airedEpisodes.size) return 0
+    return airedEpisodes.count { it !in watchedEpisodes }
+}
