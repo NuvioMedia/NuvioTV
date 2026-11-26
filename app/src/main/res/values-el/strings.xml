@@ -815,17 +815,17 @@
   <string name="sub_hdr_dim_player_controls_sub">Εφαρμογή της φωτεινότητας HDR στα χειριστήρια και τα μενού του προγράμματος αναπαραγωγής που εμφανίζονται πάνω σε βίντεο HDR και Dolby Vision</string>
   <string name="sub_appearance">Εμφάνιση υποτίτλων</string>
   <string name="sub_appearance_desc">Γραμματοσειρά, χρώματα, φόντο και σκιά</string>
-  <string name="sub_appearance_hint">Ισχύει για υπότιτλους κειμένου. Οι υπότιτλοι ASS με στυλ και οι υπότιτλοι εικόνας διατηρούν την αρχική τους εμφάνιση.</string>
+  <string name="sub_appearance_hint">Ισχύει για υποτίτλους κειμένου. Οι υπότιτλοι ASS με δικό τους στυλ και οι υπότιτλοι εικόνας διατηρούν την αρχική τους εμφάνιση.</string>
   <string name="sub_preview">Προεπισκόπηση</string>
   <string name="sub_preview_text">Κάθε ιστορία ξεκινά με λίγη περιέργεια.</string>
   <string name="sub_font">Γραμματοσειρά</string>
-  <string name="sub_font_default">Προεπιλεγμένη</string>
-  <string name="sub_font_serif">Serif</string>
-  <string name="sub_font_mono">Monospace</string>
+  <string name="sub_font_default">Προεπιλογή</string>
+  <string name="sub_font_serif">Με πατούρες (Serif)</string>
+  <string name="sub_font_mono">Σταθερού πλάτους (Monospace)</string>
   <string name="sub_font_import">Εισαγωγή από κινητό</string>
   <string name="sub_font_import_desc">Προσθέστε γραμματοσειρά .ttf ή .otf έως 10 MB. Οι εισαγόμενες γραμματοσειρές παραμένουν σε αυτή την τηλεόραση.</string>
   <string name="sub_font_import_qr">Σαρώστε με το κινητό σας για να προσθέσετε γραμματοσειρά .ttf ή .otf</string>
-  <string name="sub_font_missing">Η γραμματοσειρά δεν είναι διαθέσιμη σε αυτή τη συσκευή. Χρήση της προεπιλεγμένης.</string>
+  <string name="sub_font_missing">Η γραμματοσειρά δεν είναι διαθέσιμη σε αυτή τη συσκευή. Χρήση της προεπιλεγμένης γραμματοσειράς.</string>
   <string name="sub_font_remove">Αφαίρεση %1$s</string>
   <string name="sub_background">Φόντο</string>
   <string name="sub_bg_opacity">Αδιαφάνεια φόντου</string>
@@ -1144,11 +1144,11 @@
   <string name="web_custom_poster_loading">Φόρτωση…</string>
   <string name="web_custom_poster_placeholders_info">Σύμβολα θέσης: το {id} περνά όλα τα ID περιεχομένου. Τα {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} στοχεύουν έναν μόνο τύπο ID - αν δεν είναι διαθέσιμος, διατηρείται η αρχική αφίσα. Το {imdb_id|tmdb_id|kitsu_id} δηλώνει τους υποστηριζόμενους τύπους ID - χρησιμοποιείται ο αντίστοιχος ή, αν δεν υπάρχει, διατηρείται η αρχική αφίσα. Προσθέστε ? για να γίνει ένα σύμβολο θέσης προαιρετικό, ώστε να επιλύεται σε κενό αντί να παραλείπεται: {imdb_id?}. Άλλα σύμβολα θέσης: {id_type}, {typed_id}, {type}, {shape}.</string>
   <string name="web_subtitle_font_title">Γραμματοσειρές υποτίτλων</string>
-  <string name="web_subtitle_font_subtitle">Επιλέξτε αρχείο .ttf ή .otf για χρήση στους υπότιτλους της τηλεόρασής σας.</string>
+  <string name="web_subtitle_font_subtitle">Επιλέξτε αρχείο .ttf ή .otf για χρήση στους υποτίτλους της τηλεόρασής σας.</string>
   <string name="web_subtitle_font_choose">Επιλογή αρχείου γραμματοσειράς</string>
   <string name="web_subtitle_font_uploading">Μεταφόρτωση…</string>
   <string name="web_subtitle_font_added">Προστέθηκε στην τηλεόρασή σας</string>
-  <string name="web_subtitle_font_error">Δεν ήταν δυνατή η εισαγωγή της γραμματοσειράς. Επιλέξτε έγκυρο αρχείο .ttf ή .otf έως 10 MB.</string>
+  <string name="web_subtitle_font_error">Δεν ήταν δυνατή η εισαγωγή αυτής της γραμματοσειράς. Επιλέξτε ένα έγκυρο αρχείο .ttf ή .otf έως 10 MB.</string>
   <string name="web_subtitle_font_connection_error">Σφάλμα σύνδεσης</string>
   <string name="mdblist_name">MDBList</string>
   <string name="mdblist_tracking_description">Συγχρονισμός ιστορικού παρακολούθησης και προόδου αναπαραγωγής σε όλες τις συσκευές</string>
@@ -1718,7 +1718,7 @@
   <!-- StreamScreen -->
   <string name="catalog_order_pinned">Καρφιτσωμένο</string>
   <string name="catalog_order_pinned_to_top">Καρφιτσωμένο στην κορυφή</string>
-  <string name="catalog_order_pin_to_move_toast">Αφαιρέστε το καρφίτσωμα στην κορυφή από τη συλλογή για να μετακινηθεί</string>
+  <string name="catalog_order_pin_to_move_toast">Αφαιρέστε την καρφίτσα στην κορυφή από τη συλλογή για μετακίνηση</string>
   <string name="stream_retry">Δοκιμάστε ξανά</string>
   <string name="stream_no_streams">Δεν βρέθηκαν ροές</string>
   <string name="stream_no_streams_hint">Δοκιμάστε να εγκαταστήσετε περισσότερα πρόσθετα για να βρείτε ροές</string>
@@ -3471,7 +3471,7 @@
   <string name="autosync_status_not_needed">Δεν χρειάζεται</string>
   <string name="autosync_status_in_progress">Σε εξέλιξη</string>
   <string name="autosync_status_no_fit">Ίσως δεν ταιριάζει</string>
-  <string name="autosync_status_no_reference">Χωρίς ενσωματωμένους υπότιτλους</string>
+  <string name="autosync_status_no_reference">Χωρίς ενσωματωμένους υποτίτλους</string>
   <string name="autosync_status_failed">Απέτυχε</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
   <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>

@@ -86,7 +86,7 @@
     <string name="servers_pin_title">PIN για %1$s</string>
     <string name="servers_pin_hint">PIN</string>
     <string name="servers_pin_wrong">Λάθος PIN. Δοκιμάστε ξανά.</string>
-    <string name="servers_signing_in">Σύνδεση…</string>
+    <string name="servers_signing_in">Γίνεται σύνδεση…</string>
     <string name="silo_add_description">Συνδεθείτε με κωδικό ή με τον λογαριασμό σας Silo.</string>
     <string name="silo_address_subtitle">Εισαγάγετε τη διεύθυνση με την οποία ανοίγετε το Silo σε ένα πρόγραμμα περιήγησης.</string>
     <string name="silo_address_hint">https://silo.example.com</string>
