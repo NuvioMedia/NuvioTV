@@ -38,7 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.Placeable
@@ -108,6 +110,8 @@ fun <T> TvReorderList(
 
     val rowHeightPx = remember { FloatArray(1) }
     val liveHeaderHeightPx = remember { FloatArray(1) }
+    val anchoredHeaderHeightPx = remember(scrollState) { IntArray(1) { -1 } }
+    val listHasFocus = remember { BooleanArray(1) }
     var headerHeightPx by remember { mutableFloatStateOf(0f) }
     val viewportHeightPx = remember { FloatArray(1) }
     val measuredRowHeights = rowHeightCache
@@ -198,12 +202,43 @@ fun <T> TvReorderList(
     var suppressStartMove by remember { mutableStateOf(false) }
     var pinnedScrollPx by remember { mutableIntStateOf(-1) }
     runtime.latestMovingKey = movingKey
+    val activeBringIntoViewSpec = remember(
+        inheritedBringIntoViewSpec,
+        headerAwareBringIntoView,
+        useHeaderAwareBringIntoView,
+        runtime,
+    ) {
+        val delegate = if (useHeaderAwareBringIntoView) {
+            headerAwareBringIntoView
+        } else {
+            inheritedBringIntoViewSpec
+        }
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec = delegate.scrollAnimationSpec
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
+                if (shouldSuppressSameRowBringIntoView(
+                        suppressCenteringForSameRow = runtime.suppressCenteringForSameRow,
+                        offset = offset,
+                        size = size,
+                        containerSize = containerSize,
+                    )
+                ) {
+                    return 0f
+                }
+                return delegate.calculateScrollDistance(offset, size, containerSize)
+            }
+        }
+    }
     val bringIntoViewSpec = if (movingKey != null || pinnedScrollPx >= 0) {
         freezeScrollBringIntoView
-    } else if (useHeaderAwareBringIntoView) {
-        headerAwareBringIntoView
     } else {
-        inheritedBringIntoViewSpec
+        activeBringIntoViewSpec
     }
 
     fun pinScroll() {
@@ -390,6 +425,7 @@ fun <T> TvReorderList(
         val activeKey = movingKey ?: return
         stopRepeat()
         pinScroll()
+        runtime.suppressCenteringForSameRow = true
         suppressStartMove = fromOkKey
         onConfirmMove(activeKey)
     }
@@ -483,6 +519,7 @@ fun <T> TvReorderList(
 
     BackHandler(enabled = movingKey != null) {
         stopRepeat()
+        runtime.suppressCenteringForSameRow = true
         val returnSlot = runtime.cancelReturnSlot
         val returnOrderKeys = runtime.cancelReturnOrderKeys ?: slotOrderKeys
         if (returnSlot != null && returnSlot in returnOrderKeys.indices) {
@@ -514,12 +551,64 @@ fun <T> TvReorderList(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .layout { measurable, constraints ->
+                        val preMeasureScroll = Snapshot.withoutReadObservation { scrollState.value }
+                        val placeable = measurable.measure(constraints)
+                        if (header != null) {
+                            val measuredHeaderPx = liveHeaderHeightPx[0].roundToInt()
+                            val previousHeaderPx = anchoredHeaderHeightPx[0]
+                            if (previousHeaderPx >= 0 &&
+                                measuredHeaderPx != previousHeaderPx &&
+                                listHasFocus[0]
+                            ) {
+                                val deltaPx = measuredHeaderPx - previousHeaderPx
+                                val maxAfterMeasure = Snapshot.withoutReadObservation { scrollState.maxValue }
+                                val currentScroll = Snapshot.withoutReadObservation { scrollState.value }
+                                val targetScroll = computeAnchoredHeaderScrollPx(
+                                    preMeasureScrollPx = preMeasureScroll,
+                                    headerDeltaPx = deltaPx,
+                                    maxScrollPx = maxAfterMeasure,
+                                )
+                                val adjustment = targetScroll - currentScroll
+                                if (adjustment != 0) {
+                                    scrollState.dispatchRawDelta(adjustment.toFloat())
+                                }
+                                if (pinnedScrollPx >= 0) {
+                                    pinnedScrollPx = computeAnchoredHeaderScrollPx(
+                                        preMeasureScrollPx = pinnedScrollPx,
+                                        headerDeltaPx = deltaPx,
+                                        maxScrollPx = maxAfterMeasure,
+                                    )
+                                }
+                            }
+                            anchoredHeaderHeightPx[0] = measuredHeaderPx
+                        } else {
+                            anchoredHeaderHeightPx[0] = -1
+                        }
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    }
                     .verticalScroll(scrollState)
                     .onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if (movingKey == null && native.action == KeyEvent.ACTION_DOWN) {
+                            when (native.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_UP,
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    runtime.suppressCenteringForSameRow = false
+                                }
+                                KeyEvent.KEYCODE_DPAD_LEFT,
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    if (runtime.focusedRowKey != null) {
+                                        runtime.suppressCenteringForSameRow = true
+                                    }
+                                }
+                            }
+                        }
                         if (movingKey == null && !suppressStartMove) {
                             return@onPreviewKeyEvent false
                         }
-                        val native = event.nativeKeyEvent
                         val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
                             native.keyCode == KeyEvent.KEYCODE_ENTER ||
                             native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
@@ -562,6 +651,12 @@ fun <T> TvReorderList(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (focusState.hasFocus) {
+                                        runtime.focusedRowKey = null
+                                        runtime.suppressCenteringForSameRow = false
+                                    }
+                                }
                                 .layout { measurable, constraints ->
                                     val placeable = measurable.measure(constraints)
                                     liveHeaderHeightPx[0] = placeable.height.toFloat()
@@ -582,7 +677,11 @@ fun <T> TvReorderList(
                     }
                     SubcomposeLayout(
                         state = subcomposeLayoutState,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                listHasFocus[0] = focusState.hasFocus
+                            },
                     ) { layoutConstraints ->
                         if (items.isEmpty()) {
                             val emptyWidth = if (layoutConstraints.hasBoundedWidth) {
@@ -615,6 +714,16 @@ fun <T> TvReorderList(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .onFocusChanged { focusState ->
+                                                if (focusState.hasFocus) {
+                                                    if (runtime.focusedRowKey == itemKey) {
+                                                        runtime.suppressCenteringForSameRow = true
+                                                    } else {
+                                                        runtime.focusedRowKey = itemKey
+                                                        runtime.suppressCenteringForSameRow = false
+                                                    }
+                                                }
+                                            }
                                             .offset {
                                                 val dragOffsetPx = dragOffsets[itemKey] ?: 0f
                                                 IntOffset(x = 0, y = dragOffsetPx.roundToInt())
@@ -713,7 +822,18 @@ fun <T> TvReorderList(
                         }
                     }
                     if (footer != null) {
-                        footer()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (focusState.hasFocus) {
+                                        runtime.focusedRowKey = null
+                                        runtime.suppressCenteringForSameRow = false
+                                    }
+                                },
+                        ) {
+                            footer()
+                        }
                     }
                 }
             }
@@ -735,6 +855,8 @@ private class TvReorderListRuntime(
     var cancelReturnOrderKeys: List<String>? = null
     var cancelReturnScrollPx: Int? = null
     var cancelScrollJob: Job? = null
+    var focusedRowKey: String? = null
+    var suppressCenteringForSameRow: Boolean = false
 }
 
 internal class TvReorderRowCache<T, C> {
@@ -787,6 +909,25 @@ internal class TvReorderRowCache<T, C> {
     fun retainKeys(validKeys: Set<String>) {
         entries.keys.retainAll(validKeys)
     }
+}
+
+internal fun shouldSuppressSameRowBringIntoView(
+    suppressCenteringForSameRow: Boolean,
+    offset: Float,
+    size: Float,
+    containerSize: Float,
+): Boolean {
+    if (!suppressCenteringForSameRow || containerSize <= 0f || size <= 0f) return false
+    return offset >= 0f && offset + size <= containerSize
+}
+
+internal fun computeAnchoredHeaderScrollPx(
+    preMeasureScrollPx: Int,
+    headerDeltaPx: Int,
+    maxScrollPx: Int,
+): Int {
+    val safeMax = maxScrollPx.coerceAtLeast(0)
+    return (preMeasureScrollPx + headerDeltaPx).coerceIn(0, safeMax)
 }
 
 internal fun computeCancelScrollTargetPx(
