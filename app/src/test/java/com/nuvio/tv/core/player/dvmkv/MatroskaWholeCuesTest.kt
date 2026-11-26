@@ -74,6 +74,29 @@ class MatroskaWholeCuesTest {
     }
 
     @Test
+    fun `deeply nested cue points are read element by element without exhausting the stack`() {
+        // Muxers put CuePoints in the Cues and CueTrackPositions in a CuePoint, nothing deeper, but
+        // a file can nest them as deep as it likes. The walk must hand those Cues to the reader,
+        // which keeps its nesting on the heap, instead of recursing once per level.
+        val inner = cuePoint(1_000, listOf(Triple(1, 4_096L, null)))
+        val headers = ArrayList<ByteArray>()
+        var size = inner.size.toLong()
+        repeat(100_000) {
+            val header = idBytes(ID_CUE_POINT) + sizeBytes(size, 0)
+            headers += header
+            size += header.size
+        }
+        val nested = ByteArrayOutputStream()
+        for (i in headers.indices.reversed()) nested.write(headers[i])
+        nested.write(inner)
+        val file = mkv(element(ID_CUES, nested.toByteArray()))
+        val whole = extract(file, whole = true)
+        val streamed = extract(file, whole = false)
+        assertEquals(streamed.summary, whole.summary)
+        assertEquals(streamed.seeks + 1, whole.seeks)
+    }
+
+    @Test
     fun `an I-O error while the cues are read is resumed where the input stopped`() {
         val cues = generatedCues(Random(11), cuePoints = 2_000)
         val file = mkv(cues)

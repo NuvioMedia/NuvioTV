@@ -261,9 +261,10 @@ public class MatroskaExtractor implements Extractor {
   private static final int MAX_EARLY_DTS_FRAME_BYTES = 256 * 1024;
   private static final int MAX_EBML_HEADER_SIZE = 12; // 4-byte id + 8-byte data size.
   private static final int MAX_SEEK_HEAD_FOLLOWS = 4;
-  // Cues up to this size are read in one go and walked in memory (see readWholeCues). Remuxes
-  // carry 1-2 MB of them; larger ones are read element by element as before.
-  private static final int MAX_WHOLE_CUES_BYTES = 16 * 1024 * 1024;
+  // Cues up to this size are read in one go and walked in memory (see readWholeCues), which holds
+  // them twice for a moment (the peek buffer and the copy). Remuxes carry 1-2 MB of them; larger
+  // ones are read element by element as before.
+  private static final int MAX_WHOLE_CUES_BYTES = 4 * 1024 * 1024;
   private static final int MAX_EBML_ID_BYTES = 4;
 
   private static final String DOC_TYPE_MATROSKA = "matroska";
@@ -3183,10 +3184,10 @@ public class MatroskaExtractor implements Extractor {
    * through the input took 0.3-1.4 s on TV boxes before playback could start.
    *
    * <p>Only Cues the in-memory walk handles exactly as the reader does are taken: well-formed
-   * elements that stay inside their parent, CuePoint and CueTrackPositions as masters, the four
-   * cue values as integers of up to 8 bytes, and elements this extractor does not know, which the
-   * reader skips too. For anything else the extractor seeks back to the element, and the reader
-   * reads it element by element as before.
+   * elements that stay inside their parent, CuePoints in the Cues and CueTrackPositions in a
+   * CuePoint as the only masters, the four cue values as integers of up to 8 bytes, and elements
+   * this extractor does not know, which the reader skips too. For anything else the extractor
+   * seeks back to the element, and the reader reads it element by element as before.
    */
   private boolean readWholeCues(
       long elementPosition, long contentPosition, long contentSize, ExtractorInput input)
@@ -3204,7 +3205,7 @@ public class MatroskaExtractor implements Extractor {
     // Cue element IDs are one byte, so their types are looked up once per Cues, not per element.
     int[] oneByteIdTypes = new int[0x80];
     Arrays.fill(oneByteIdTypes, -1);
-    if (!isWalkableCues(cues, 0, cues.length, oneByteIdTypes)) {
+    if (!isWalkableCues(cues, 0, cues.length, /* depth= */ 0, oneByteIdTypes)) {
       // The read position is still the content; the seek drops the peeked bytes with this input.
       input.resetPeekPosition();
       wholeCuesRejectedContentPosition = contentPosition;
@@ -3218,7 +3219,8 @@ public class MatroskaExtractor implements Extractor {
     return true;
   }
 
-  private boolean isWalkableCues(byte[] data, int start, int end, int[] oneByteIdTypes) {
+  private boolean isWalkableCues(
+      byte[] data, int start, int end, int depth, int[] oneByteIdTypes) {
     int position = start;
     while (position < end) {
       int idLength = varintLength(data[position]);
@@ -3242,8 +3244,12 @@ public class MatroskaExtractor implements Extractor {
       int contentEnd = position + (int) size;
       switch (elementType(id, idLength, oneByteIdTypes)) {
         case EbmlProcessor.ELEMENT_TYPE_MASTER:
-          if ((id != ID_CUE_POINT && id != ID_CUE_TRACK_POSITIONS)
-              || !isWalkableCues(data, position, contentEnd, oneByteIdTypes)) {
+          // Only the layout muxers write is taken, so the walk is never more than two levels deep
+          // however deep a file nests these; the reader keeps deeper nesting on the heap.
+          int expectedMaster = depth == 0 ? ID_CUE_POINT : ID_CUE_TRACK_POSITIONS;
+          if (depth > 1
+              || id != expectedMaster
+              || !isWalkableCues(data, position, contentEnd, depth + 1, oneByteIdTypes)) {
             return false;
           }
           break;
