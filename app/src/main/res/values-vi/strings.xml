@@ -911,6 +911,8 @@
     <string name="dv7_mode_strip_dv_desc">Loại bỏ lớp RPU của Dolby Vision khỏi tất cả các luồng.</string>
     <string name="audio_dv5_to_dv81_title">Chuyển đổi DV5 sang DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Giả lập Profile 8.1 cho luồng DV5 để xuất ra HDR10 tương thích. Hữu ích trên các thiết bị không hỗ trợ giải mã DV5 gốc.</string>
+    <string name="audio_zero_dovi_l5_title">Bỏ qua siêu dữ liệu viền đen Dolby Vision (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Đặt độ lệch vùng hiển thị của Dolby Vision L5 về 0 khi phát lại. Khắc phục hiện tượng xuất hiện các dải tối hơn hoặc mờ đục dọc viền đen trên tệp có siêu dữ liệu L5 bị lỗi.</string>
     <string name="audio_strip_hdr10plus_title">Loại bỏ siêu dữ liệu HDR10+</string>
     <string name="audio_strip_hdr10plus_sub">Loại bỏ siêu dữ liệu động HDR10+ khỏi các luồng. Khi Chuyển đổi sang DV8.1 được bật, việc loại bỏ sẽ được thực hiện sau khi chuyển đổi.</string>
     <string name="audio_dv7_preserve_mapping_title">Giữ nguyên dữ liệu ánh xạ DV (DV7 sang DV8.1)</string>
