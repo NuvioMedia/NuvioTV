@@ -128,6 +128,18 @@ private sealed interface AddonExperienceModeState {
     data class Loaded(val mode: ExperienceMode?) : AddonExperienceModeState
 }
 
+private sealed interface AddonRow {
+    val key: String
+
+    data class Installed(val addon: Addon) : AddonRow {
+        override val key: String get() = addon.baseUrl
+    }
+
+    data class BuiltInUsenet(val usenet: BuiltInUsenetRow) : AddonRow {
+        override val key: String get() = BUILT_IN_USENET_KEY
+    }
+}
+
 private enum class AddonManagerFocusTarget {
     CatalogOrder,
     Collections
@@ -477,6 +489,13 @@ fun AddonManagerScreen(
     val addonOrderScrollState = rememberScrollState()
     val addonOrderKeys = uiState.addonOrderKeys
     val addonsByUrl = remember(uiState.installedAddons) { uiState.installedAddons.associateBy { it.baseUrl } }
+    val addonRows = addonOrderKeys.mapNotNull { key ->
+        if (key == BUILT_IN_USENET_KEY) {
+            uiState.builtInUsenet?.let(AddonRow::BuiltInUsenet)
+        } else {
+            addonsByUrl[key]?.let(AddonRow::Installed)
+        }
+    }
     val addonOrderMovingIndex = uiState.movingAddonKey?.let(addonOrderKeys::indexOf) ?: -1
     val canReorderAddons = !viewModel.isReadOnly && !isEssential && addonOrderKeys.size > 1
 
@@ -486,8 +505,8 @@ fun AddonManagerScreen(
             .background(NuvioTheme.colors.Background)
     ) {
         TvReorderList(
-            items = addonOrderKeys,
-            key = { it },
+            items = addonRows,
+            key = { it.key },
             canMove = { canReorderAddons && uiState.movingAddonKey == null },
             movingKey = uiState.movingAddonKey,
             onStartMove = viewModel::enterAddonMoveMode,
@@ -741,30 +760,28 @@ fun AddonManagerScreen(
                     Spacer(modifier = Modifier.height(20.dp))
                 }
             },
-        ) { key, isMoving, onStartMove, onConfirmMove ->
+        ) { row, isMoving, onStartMove, onConfirmMove ->
+            val key = row.key
             val actionsEnabled = uiState.movingAddonKey == null || isMoving
             val toggleFocusRequester = if (viewModel.isReadOnly) null else toggleFocusRequesterFor(key)
-            if (key == BUILT_IN_USENET_KEY) {
-                val usenet = uiState.builtInUsenet ?: return@TvReorderList
-                BuiltInUsenetCard(
-                    enabled = usenet.enabled,
+            when (row) {
+                is AddonRow.BuiltInUsenet -> BuiltInUsenetCard(
+                    enabled = row.usenet.enabled,
                     isMoving = isMoving,
                     canMove = canReorderAddons,
                     actionsEnabled = actionsEnabled,
                     onStartMove = onStartMove,
                     onConfirmMove = onConfirmMove,
                     onEnabledChange = { enabled ->
-                        if (enabled && !usenet.firstUseAccepted) usenetNotice = true
+                        if (enabled && !row.usenet.firstUseAccepted) usenetNotice = true
                         else viewModel.setBuiltInUsenetEnabled(enabled)
                     },
                     isReadOnly = viewModel.isReadOnly,
                     showReorder = !isEssential,
                     toggleFocusRequester = toggleFocusRequester
                 )
-            } else {
-                val addon = addonsByUrl.getValue(key)
-                AddonCard(
-                    addon = addon,
+                is AddonRow.Installed -> AddonCard(
+                    addon = row.addon,
                     isMoving = isMoving,
                     canMove = canReorderAddons,
                     actionsEnabled = actionsEnabled,
