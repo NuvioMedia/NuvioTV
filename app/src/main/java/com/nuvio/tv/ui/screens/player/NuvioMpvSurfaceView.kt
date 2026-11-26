@@ -958,6 +958,21 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.observeProperty(MPV_SUB_TEXT_PROPERTY, MPV.mpvFormat.MPV_FORMAT_STRING)
     }
 
+    /**
+     * ClearKey pairs (`kid:key,kid:key`, hex) for FFmpeg's CENC decryption: the DASH demuxer
+     * (`cenc_decryption_keys`) and the MP4 one (`decryption_keys`) each read their own option.
+     * Global like the headers, so it is set again before every file.
+     */
+    fun applyClearKeys(clearKeys: String?) {
+        ensureInitialized()
+        val keys = clearKeys?.split(',')?.joinToString(":") { it.replace(':', '=') }
+        // %n% quoting keeps FFmpeg's own `=`/`:` separators inside one mpv key-value entry.
+        mpv.setPropertyString(
+            "demuxer-lavf-o",
+            keys?.let { "cenc_decryption_keys=%${it.length}%$it,decryption_keys=%${it.length}%$it" }.orEmpty()
+        )
+    }
+
     private fun applyHeaders(headers: Map<String, String>) {
         if (headers.isEmpty()) {
             mpv.setPropertyString("http-header-fields", "")

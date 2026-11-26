@@ -12,7 +12,7 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     detailedError: String,
     allowEngineFailover: Boolean
 ): Boolean {
-    if (!allowEngineFailover || currentClearKeys != null) return false
+    if (!allowEngineFailover) return false
     if (!autoSwitchInternalPlayerOnErrorEnabled) return false
     if (startupEngineFailoverTriggered) return false
     if (!isStartupPhaseForEngineFailover()) return false
@@ -22,6 +22,7 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
         InternalPlayerEngine.MVP_PLAYER -> InternalPlayerEngine.EXOPLAYER
         InternalPlayerEngine.AUTO -> if (mpvView != null) InternalPlayerEngine.EXOPLAYER else InternalPlayerEngine.MVP_PLAYER
     }
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && clearKeysNeedExoPlayer) return false
     beginSwitchTraceSession(reason = "startup-failover", targetEngine = targetEngine)
     logSwitchTrace(
         stage = "startup-failover-trigger",
@@ -71,8 +72,8 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     reason: String = "manual-switch"
 ) {
     if (currentStreamUrl.isBlank()) return
-    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && currentClearKeys != null) {
-        Log.i(PlayerRuntimeController.TAG, "Engine switch to libmpv skipped: ClearKey stream")
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && clearKeysNeedExoPlayer) {
+        Log.i(PlayerRuntimeController.TAG, "Engine switch to libmpv skipped: ClearKey HLS stream")
         return
     }
 

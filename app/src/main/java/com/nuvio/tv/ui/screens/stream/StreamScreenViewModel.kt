@@ -2542,7 +2542,7 @@ data class StreamPlaybackInfo(
     val contentLanguage: String? = null,
     val audioDelayMs: Int? = null,
     val audioDelayLanguage: String? = null,
-    /** ClearKey DRM pairs: only the internal ExoPlayer can play the stream. */
+    /** ClearKey DRM pairs: only the internal player can be handed them. */
     val clearKeys: String? = null,
     val isServerStream: Boolean = false,
     /** The link was taken from the reuse-last-link cache, not picked fresh from add-ons. */
