@@ -114,4 +114,24 @@ class PostPlayResetRulesTest {
     fun `ended playback does not auto play over the still watching prompt`() {
         assertFalse(autoPlayOnEnd(PlayerUiState(postPlayMode = PostPlayMode.StillWatching(nextEpisode = nextInfo))))
     }
+
+    @Test
+    fun `a rewind hides a card that is waiting for the auto play point`() {
+        val state = PlayerUiState(postPlayMode = PostPlayMode.AutoPlay(nextEpisode = nextInfo))
+        assertTrue(shouldHideWaitingNextEpisodeCard(state, awayFromEnd = true))
+        assertFalse(shouldHideWaitingNextEpisodeCard(state, awayFromEnd = false))
+    }
+
+    @Test
+    fun `a rewind does not hide a searching, counting down or still watching card`() {
+        val modes = listOf(
+            PostPlayMode.AutoPlay(nextEpisode = nextInfo, searching = true),
+            PostPlayMode.AutoPlay(nextEpisode = nextInfo, countdownSec = 3),
+            PostPlayMode.StillWatching(nextEpisode = nextInfo),
+            null,
+        )
+        for (mode in modes) {
+            assertFalse(shouldHideWaitingNextEpisodeCard(PlayerUiState(postPlayMode = mode), awayFromEnd = true))
+        }
+    }
 }

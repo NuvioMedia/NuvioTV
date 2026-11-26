@@ -50,6 +50,14 @@ internal fun shouldAutoPlayNextEpisodeOnPlaybackEnded(
         (mode is PostPlayMode.AutoPlay && !mode.blocksNaturalCompletion())
 }
 
+/** True for a shown card that is not yet searching or counting down. */
+internal fun isNextEpisodeCardWaitingForAutoPlay(state: PlayerUiState): Boolean =
+    (state.postPlayMode as? PostPlayMode.AutoPlay)?.takeIf { !it.blocksNaturalCompletion() } != null
+
+/** A rewind out of the next-episode window hides a card that is still waiting. */
+internal fun shouldHideWaitingNextEpisodeCard(state: PlayerUiState, awayFromEnd: Boolean): Boolean =
+    awayFromEnd && isNextEpisodeCardWaitingForAutoPlay(state)
+
 internal fun shouldResetPostPlayStateAfterPlaybackEnded(
     state: PlayerUiState,
     hasInFlightNextEpisodeAutoPlay: Boolean
@@ -110,11 +118,26 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (state.postPlayDismissedForCurrentEpisode) return
     // A card that is shown but not yet searching or counting down is still waiting for the
     // auto-play point, so keep evaluating it.
-    val cardWaitingForAutoPlay = (state.postPlayMode as? PostPlayMode.AutoPlay)
-        ?.takeIf { !it.blocksNaturalCompletion() } != null
+    val cardWaitingForAutoPlay = isNextEpisodeCardWaitingForAutoPlay(state)
     if (state.postPlayMode != null && !cardWaitingForAutoPlay) return
 
     val effectiveDuration = effectiveDurationEarly
+
+    if (shouldHideWaitingNextEpisodeCard(
+            state = state,
+            awayFromEnd = PlayerNextEpisodeRules.isAwayFromEnd(
+                positionMs = positionMs,
+                durationMs = effectiveDuration,
+                skipIntervals = skipIntervals,
+                thresholdMode = nextEpisodeThresholdModeSetting,
+                thresholdPercent = nextEpisodeThresholdPercentSetting,
+                thresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEndSetting
+            )
+        )
+    ) {
+        _uiState.update { it.copy(postPlayMode = null) }
+        return
+    }
 
     // Preload: start fetching sources for next episode before the button appears.
     if (preloadNextEpisodeSourcesSetting && !nextEpisodePreloadTriggered && state.nextEpisode != null) {

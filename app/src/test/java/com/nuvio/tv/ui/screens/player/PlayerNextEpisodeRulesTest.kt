@@ -289,6 +289,38 @@ class PlayerNextEpisodeRulesTest {
         }
     }
 
+    // The same episode's file carries its own "Credits" chapter from 42:09 to the end.
+    private val chapterOutro = listOf(
+        SkipInterval(startTime = 2_529.0, endTime = 2_704.0, type = "outro", provider = "chapters")
+    )
+
+    private fun awayFromEndWithOutro(positionMs: Long, intervals: List<SkipInterval>) =
+        PlayerNextEpisodeRules.isAwayFromEnd(
+            positionMs = positionMs,
+            durationMs = 2_704_000L,
+            skipIntervals = intervals,
+            thresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
+            thresholdPercent = 99f,
+            thresholdMinutesBeforeEnd = 2f
+        )
+
+    @Test
+    fun `a rewind before the outro start is away from the end`() {
+        assertTrue(awayFromEndWithOutro(30 * 60_000L, chapterOutro))
+        assertTrue(awayFromEndWithOutro(2_528_000L, chapterOutro))
+    }
+
+    @Test
+    fun `a position inside the outro is not away from the end`() {
+        assertFalse(awayFromEndWithOutro(2_529_000L, chapterOutro))
+        assertFalse(awayFromEndWithOutro(2_650_000L, chapterOutro))
+    }
+
+    @Test
+    fun `a position past the reported duration is not away from the end`() {
+        assertFalse(awayFromEndWithOutro(2_800_000L, chapterOutro))
+    }
+
     @Test
     fun `a post-credits scene still holds auto advance until the scene ends`() {
         val intervals = listOf(
