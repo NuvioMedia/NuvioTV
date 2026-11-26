@@ -95,7 +95,11 @@ internal fun P2pSettingsDialogs(
             title = stringResource(R.string.settings_p2p_cache_size_title),
             subtitle = stringResource(R.string.settings_p2p_cache_size_description),
             options = TorrentCacheSize.entries.map { size ->
-                SettingsPickerOption(value = size, title = stringResource(cacheSizeLabel(size)))
+                SettingsPickerOption(
+                    value = size,
+                    title = stringResource(cacheSizeLabel(size)),
+                    description = cacheSizeDescription(size)?.let { stringResource(it) }
+                )
             },
             selectedValue = p2p.cacheSize,
             onOptionSelected = { size ->
@@ -147,8 +151,14 @@ private fun profileDescription(profile: TorrentProfile): Int = when (profile) {
 }
 
 private fun cacheSizeLabel(size: TorrentCacheSize): Int = when (size) {
+    TorrentCacheSize.MEMORY_ONLY -> R.string.settings_p2p_cache_memory_only
     TorrentCacheSize.NONE -> R.string.settings_p2p_cache_none
     TorrentCacheSize.GB_2 -> R.string.settings_p2p_cache_2_gb
     TorrentCacheSize.GB_5 -> R.string.settings_p2p_cache_5_gb
     TorrentCacheSize.GB_10 -> R.string.settings_p2p_cache_10_gb
+}
+
+private fun cacheSizeDescription(size: TorrentCacheSize): Int? = when (size) {
+    TorrentCacheSize.MEMORY_ONLY -> R.string.settings_p2p_cache_memory_only_description
+    else -> null
 }
