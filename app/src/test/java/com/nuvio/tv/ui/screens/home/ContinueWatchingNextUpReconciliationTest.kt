@@ -71,6 +71,128 @@ class ContinueWatchingNextUpReconciliationTest {
     }
 
     @Test
+    fun `older seed resolution replaces stale unfinished episode`() {
+        val staleResume = inProgress("series", lastWatched = 100L)
+        val resolved = nextUp(
+            contentId = "series",
+            season = 1,
+            episode = 4,
+            seedSeason = 1,
+            seedEpisode = 3,
+            lastWatched = 200L,
+            sortTimestamp = 50L
+        )
+
+        val result = reconcileConclusiveNextUpItems(
+            currentItems = listOf(staleResume),
+            resolvedItems = listOf(resolved),
+            conclusivelyProcessedContentIds = setOf("series"),
+            dismissedNextUpKeys = emptySet()
+        )
+
+        assertEquals(listOf(resolved), result)
+    }
+
+    @Test
+    fun `older seed resolution preserves a newer unfinished episode`() {
+        val activeResume = inProgress("series", lastWatched = 300L)
+        val resolved = nextUp(
+            contentId = "series",
+            season = 1,
+            episode = 4,
+            seedSeason = 1,
+            seedEpisode = 3,
+            lastWatched = 200L
+        )
+
+        val result = reconcileConclusiveNextUpItems(
+            currentItems = listOf(activeResume),
+            resolvedItems = listOf(resolved),
+            conclusivelyProcessedContentIds = setOf("series"),
+            dismissedNextUpKeys = emptySet()
+        )
+
+        assertEquals(listOf(activeResume), result)
+    }
+
+    @Test
+    fun `dismissed older seed resolution still removes stale unfinished episode`() {
+        val staleResume = inProgress("series", lastWatched = 100L)
+        val resolved = nextUp(
+            contentId = "series",
+            season = 1,
+            episode = 4,
+            seedSeason = 1,
+            seedEpisode = 3,
+            lastWatched = 200L
+        )
+
+        val result = reconcileConclusiveNextUpItems(
+            currentItems = listOf(staleResume),
+            resolvedItems = listOf(resolved),
+            conclusivelyProcessedContentIds = setOf("series"),
+            dismissedNextUpKeys = setOf(nextUpDismissKey("series", 1, 3))
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `conclusive older seed without next up removes stale unfinished episode`() {
+        val staleResume = inProgress("series", lastWatched = 100L)
+
+        val result = reconcileConclusiveNextUpItems(
+            currentItems = listOf(staleResume),
+            resolvedItems = emptyList(),
+            conclusivelyProcessedContentIds = setOf("series"),
+            dismissedNextUpKeys = emptySet(),
+            latestCompletedAtByContent = mapOf("series" to 200L)
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `newer completed episode next up replaces older unfinished episode`() {
+        val staleResume = inProgress("series", lastWatched = 100L)
+        val next = nextUp(
+            contentId = "series",
+            season = 1,
+            episode = 4,
+            seedSeason = 1,
+            seedEpisode = 3,
+            lastWatched = 200L
+        )
+
+        val result = mergeContinueWatchingItems(
+            inProgressItems = listOf(staleResume),
+            nextUpItems = listOf(next)
+        )
+
+        assertEquals(listOf(next), result)
+    }
+
+    @Test
+    fun `newer unfinished episode continues to suppress older next up`() {
+        val activeResume = inProgress("series", lastWatched = 300L)
+        val next = nextUp(
+            contentId = "series",
+            season = 1,
+            episode = 4,
+            seedSeason = 1,
+            seedEpisode = 3,
+            lastWatched = 200L
+        )
+
+        val result = mergeContinueWatchingItems(
+            inProgressItems = listOf(activeResume),
+            nextUpItems = listOf(next)
+        )
+
+        assertEquals(listOf(activeResume), result)
+    }
+
+    @Test
     fun `dismissed resolved next up removes the existing card without adding another`() {
         val stale = nextUp("series", season = 1, episode = 2, seedSeason = 1, seedEpisode = 1)
         val resolved = nextUp("series", season = 1, episode = 3, seedSeason = 1, seedEpisode = 2)
@@ -195,7 +317,9 @@ class ContinueWatchingNextUpReconciliationTest {
         episode: Int,
         seedSeason: Int,
         seedEpisode: Int,
-        thumbnail: String? = null
+        thumbnail: String? = null,
+        lastWatched: Long = 100L,
+        sortTimestamp: Long = lastWatched
     ) = ContinueWatchingItem.NextUp(
         NextUpInfo(
             contentId = contentId,
@@ -209,14 +333,17 @@ class ContinueWatchingNextUpReconciliationTest {
             episode = episode,
             episodeTitle = null,
             thumbnail = thumbnail,
-            lastWatched = 100L,
-            sortTimestamp = 100L,
+            lastWatched = lastWatched,
+            sortTimestamp = sortTimestamp,
             seedSeason = seedSeason,
             seedEpisode = seedEpisode
         )
     )
 
-    private fun inProgress(contentId: String) = ContinueWatchingItem.InProgress(
+    private fun inProgress(
+        contentId: String,
+        lastWatched: Long = 100L
+    ) = ContinueWatchingItem.InProgress(
         WatchProgress(
             contentId = contentId,
             contentType = "series",
@@ -230,7 +357,7 @@ class ContinueWatchingNextUpReconciliationTest {
             episodeTitle = null,
             position = 40L,
             duration = 100L,
-            lastWatched = 100L
+            lastWatched = lastWatched
         )
     )
 }
