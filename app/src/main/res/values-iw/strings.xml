@@ -195,6 +195,7 @@
     <string name="episodes_specials">מיוחדים</string>
     <string name="episodes_episode">פרק</string>
     <string name="episodes_cd_watched">נצפה</string>
+    <string name="episodes_cd_rewatched">נצפה מחדש</string>
     <string name="episodes_dialog_subtitle">פעולות עבור הפרק הזה</string>
     <string name="episodes_mark_watched">סימון כנצפה</string>
     <string name="episodes_mark_unwatched">סימון כלא נצפה</string>
@@ -506,6 +507,27 @@
     <string name="tracking_simkl_anime_id_mal">העדפת MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">העדפת Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">העדפת TVDB</string>
+    <string name="settings_tracking_completion_title">סף צפייה</string>
+    <string name="settings_tracking_completion_subtitle">אחוז ההפעלה הנדרש כדי לסמן כותרת כנצפתה. סימוני סוף קרדיטים מקבלים עדיפות כשהם זמינים.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">מעקב אחר צפייה חוזרת</string>
+    <string name="settings_tracking_rewatch_subtitle">רישום צפיות חוזרות בכותרות שהסתיימו לפני יותר מיומיים כסשני צפייה חוזרת נפרדים ב-Simkl, ומעקב אחר ריצות פעילות ב-“המשך צפייה”.</string>
+    <string name="settings_tracking_rewatch_dialog_title">מעקב אחר צפייה חוזרת</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">סשני צפייה חוזרת דורשים Simkl PRO או VIP ונוצרים רק עבור כותרות שכבר הסתיימו.</string>
+    <string name="settings_tracking_rewatch_off">כבוי</string>
+    <string name="settings_tracking_rewatch_off_subtitle">אין לרשום צפיות חוזרות ב-Simkl ואין להציג סשני צפייה חוזרת פעילים ב-“המשך צפייה”.</string>
+    <string name="settings_tracking_rewatch_semi">חצי אוטומטי</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">שאלה פעם אחת לפני תחילת סשן צפייה חוזרת חדש. לאחר שהסשן פעיל, הפרקים הנותרים בריצה נרשמים אוטומטית.</string>
+    <string name="settings_tracking_rewatch_automatic">אוטומטי</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">התחלה אוטומטית של סשן צפייה חוזרת ורישום צפיות חוזרות בכל פעם שמפעילים שוב כותרת שהסתיימה.</string>
+    <string name="settings_tracking_rewatch_pro_title">מעקב אחר צפייה חוזרת דורש Simkl PRO או VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl רושמת צפיות חוזרות רק בחשבונות Pro או VIP. סשנים שכבר נמצאים בחשבון ה-Simkl שלך נשארים שם גם אם התוכנית משתנה.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">שדרוג</string>
+    <string name="settings_tracking_rewatch_pro_not_now">לא עכשיו</string>
+    <string name="rewatch_prompt_title">כותרת זו כבר נצפתה עד הסוף.</string>
+    <string name="rewatch_prompt_subtitle">להתחיל סשן צפייה חוזרת ב-Simkl?</string>
+    <string name="rewatch_prompt_confirm">כן</string>
+    <string name="rewatch_prompt_dismiss">לא</string>
     <string name="tracking_status_connected">מחובר</string>
     <string name="tracking_status_disconnected">לא מחובר</string>
     <string name="tracking_status_waiting">ממתין לאישור</string>
@@ -665,6 +687,7 @@
     <string name="settings_mdblist_subtitle">ספקי דירוג חיצוניים</string>
     <string name="settings_animeskip_subtitle">חותמות זמן לדילוג על פתיחים וסיומים באנימה</string>
     <string name="settings_debrid_subtitle">מקורות חשבון ענן ניסיוניים</string>
+    <string name="settings_usenet_subtitle">ספקים, אינדקסרים, הפעלה ואבחון</string>
 
     <string name="playback_title">הגדרות הפעלה</string>
     <string name="playback_subtitle">הגדרת אפשרויות הפעלת וידאו וכתוביות</string>
@@ -1962,7 +1985,7 @@
     <string name="parental_severity_moderate">בינוני</string>
     <string name="parental_severity_mild">קל</string>
     <string name="player_ends_at">מסתיים ב-%1$s</string>
-    <string name="player_live_watched">LIVE  %1$s</string>
+    <string name="player_live_watched">LIVE %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">עיכוב כתוביות</string>
@@ -2085,7 +2108,7 @@
     <string name="subtitle_off">כבוי</string>
     <string name="subtitle_style_title">סגנון כתוביות</string>
     <string name="subtitle_style_customize">התאמה אישית</string>
-    <string name="subtitle_style_customize_ass">התאמה אישית של עיצוב ASS/SSAg</string>
+    <string name="subtitle_style_customize_ass">התאמה אישית של עיצוב ASS/SSA</string>
     <string name="subtitle_style_color">צבע</string>
     <string name="subtitle_style_reset">איפוס</string>
     <string name="subtitle_style_font_size">גודל גופן</string>
@@ -3499,6 +3522,13 @@
     <string name="stream_test_error_prefix">שגיאה: %1$s</string>
     <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: ‎%1$s</string>
     <string name="stream_test_error_connection">החיבור נכשל. ייתכן שקישור הסטרים האחרון שהופעל פג תוקף או שאינו נגיש. כדאי להפעיל את הווידאו שוב ולנסות שוב.</string>
+    <string name="player_finding_next_stream">מאתר את הזרם הבא…</string>
+    <string name="player_trying_next_stream">מנסה את הזרם הבא (ניסיון %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">אין עוד זרמים תקינים. יש לבחור מקור אחר או לנסות שוב.</string>
+    <string name="usenet_builtin_addon_title">Usenet מובנה</string>
+    <string name="usenet_builtin_addon_desc">תוצאות מספקי ה-NNTP ומאינדקסרי ה-Newznab שלך. אפשר להזיז אותו כדי לבחור היכן הם מופיעים ברשימה.</string>
+    <string name="usenet_fallback">חלופה אוטומטית ב-Usenet</string>
+    <string name="usenet_fallback_description">אם זרם Usenet נכשל, ינוסו מקורות Usenet הבאים עד מגבלת הניסיונות שהוגדרה. זרמי טורנט וזרמים אחרים אינם מתחלפים אוטומטית.</string>
 
     <string name="random_episode_title">ערבוב</string>
     <string name="layout_random_episode_sub">ערבוב פרקים מכל סדרה. כיבוי האפשרות לא מאפשר ערבוב.</string>
@@ -3541,4 +3571,14 @@
     <string name="autosync_status_failed">נכשל</string>
     <string name="stream_resume_from_time">המשך מ-%1$s</string>
     <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>
+    <string name="player_disc_titles">כותרות הדיסק</string>
+    <string name="player_disc_title_feature">סרט ראשי · %1$d דק׳</string>
+    <string name="player_disc_title_extra">תוספת · %1$d דק׳</string>
+    <string name="player_disc_title_subtitles">כתוביות %1$s</string>
+    <string name="player_disc_title_failed">לא ניתן היה להפעיל את הכותרת הזו</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">קטע אחד</item>
+        <item quantity="two">שני קטעים</item>
+        <item quantity="other">%d קטעים</item>
+    </plurals>
 </resources>

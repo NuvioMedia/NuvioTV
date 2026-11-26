@@ -25,6 +25,12 @@ data class StreamRankingProfile(
     val topPerBucket: Int = 3,
     val rules: List<StreamRankingRule> = emptyList()
 ) {
+    /** The first tier [facts] belong to, by position; -1 when none. */
+    fun tierOf(facts: StreamRankingFacts): Int = tiers.indexOfFirst {
+        (it.resolutions.isEmpty() || facts.resolution in it.resolutions) &&
+            (it.qualities.isEmpty() || facts.quality in it.qualities)
+    }
+
     fun validate() {
         require(version == 1) { "Unsupported profile version" }
         require(name.isNotBlank() && name.length <= 80) { "Profile name must contain 1–80 characters" }
@@ -126,6 +132,8 @@ data class StreamRankingFacts(
     }
     companion object {
         fun parse(title: String): StreamRankingFacts = StreamReleaseParser.parse(title)
+        /** The languages [text] names, as codes such as en, ja or multi. */
+        fun languagesOf(text: String): Set<String> = StreamReleaseParser.languages(text)
     }
 }
 
@@ -293,10 +301,7 @@ class StreamRankingEngine(val profile: StreamRankingProfile) {
             val facts = candidate.facts
             val matching = scoring.filter { it.matches(facts, now) }
             val score = matching.sumOf { it.source.score }
-            val tier = profile.tiers.indexOfFirst {
-                (it.resolutions.isEmpty() || facts.resolution in it.resolutions) &&
-                    (it.qualities.isEmpty() || facts.quality in it.qualities)
-            }
+            val tier = profile.tierOf(facts)
             val language = profile.preferredLanguages.indexOfFirst { it in facts.languages }
             val preferredSize = if (facts.mediaType == "series") profile.preferredEpisodeSizeGb else profile.preferredMovieSizeGb
             val keys = mapOf(

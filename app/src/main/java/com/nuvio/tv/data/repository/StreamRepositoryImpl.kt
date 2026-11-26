@@ -696,7 +696,8 @@ class StreamRepositoryImpl @Inject constructor(
             externalUrl = null,
             quality = quality,
             qualityValue = parseQualityValue(quality),
-            subtitles = subtitles
+            subtitles = subtitles,
+            declaredType = type
         )
     }
 

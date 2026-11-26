@@ -21,7 +21,7 @@
     <string name="usenet_diag_first_bytes">Ouverture de la session jusqu’aux octets du média</string>
     <string name="usenet_diag_nzb_stages">Démarrage Usenet · Étapes NZB</string>
     <string name="usenet_diag_reused">Moteur déjà en cours d’exécution</string>
-    <string name="usenet_diag_nzb_notes">Les lectures du corps chevauchent le téléchargement et l’analyse. Le temps d’analyse exclut le temps de lecture du corps&#160;; le travail du système de fichiers est inclus dans l’indexation et l’écriture. Ces valeurs sont des mesures en temps réel.</string>
+    <string name="usenet_diag_nzb_notes">Les lectures du corps chevauchent le téléchargement et l’analyse. Le temps d’analyse exclut le temps de lecture du corps&#160;; le travail du système de fichiers est inclus dans l’indexation et l’écriture. Ces valeurs sont des durées réelles écoulées.</string>
     <string name="usenet_fallback_max_attempts">Nombre maximal de tentatives de repli</string>
     <string name="usenet_fallback_max_attempts_description">Essaie jusqu’à ce nombre de flux alternatifs lorsque le repli automatique est activé (1–50). Le délai de préparation de deux minutes continue de s’appliquer. Les modifications s’appliquent à la prochaine sélection de flux.</string>
     <string name="usenet_prefetch_results">Précharger le premier résultat Usenet</string>
@@ -73,7 +73,7 @@
     <string name="usenet_diag_memory">Tampons d’articles alloués</string>
     <string name="usenet_fast_mkv_description">Prépare ensemble le début de la vidéo et l’index de positionnement. Utilise un peu de bande passante et de mémoire supplémentaires. S’applique au flux suivant.</string>
     <string name="usenet_prewarm">Préchauffer le moteur Usenet</string>
-    <string name="usenet_prewarm_description">Garde le moteur prêt pendant la navigation. Utilise de la mémoire supplémentaire&#160;; ce réglage seul n’ouvre pas de connexions aux fournisseurs.</string>
+    <string name="usenet_prewarm_description">Garde le moteur prêt pendant la navigation. Utilise de la mémoire supplémentaire&#160;; ce paramètre seul n’ouvre pas de connexions aux fournisseurs.</string>
     <string name="usenet_profile">Profil de performance</string>
     <string name="usenet_profile_description">Préréglages de mémoire et de streaming. Les modifications s’appliquent au flux suivant.</string>
     <string name="usenet_read_ahead">Segments en lecture anticipée</string>

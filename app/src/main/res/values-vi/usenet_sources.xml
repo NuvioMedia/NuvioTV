@@ -66,7 +66,7 @@
     <string name="usenet_indexer_fallback_description">Tắt: mọi trình chỉ mục đều được tìm kiếm. Bật: các trình chỉ mục ưu tiên thấp hơn chỉ được tìm kiếm khi các trình chỉ mục ưu tiên cao hơn không tìm thấy kết quả, giúp tiết kiệm lượt gọi API.</string>
     <string name="usenet_hide_duplicates">Ẩn bản phát hành trùng lặp</string>
     <string name="usenet_show_release_names">Hiển thị tên bản phát hành</string>
-    <string name="usenet_show_release_names_description">Hiển thị tên bản phát hành của từng kết quả phía trên dung lượng, tuổi và trình chỉ mục của nó.</string>
+    <string name="usenet_show_release_names_description">Hiển thị tên bản phát hành của từng kết quả phía trên thông tin chi tiết. Khi ẩn, nhóm phát hành được hiển thị ở cuối thông tin chi tiết.</string>
     <string name="usenet_hide_duplicates_description">Hiển thị một bản phát hành được nhiều trình chỉ mục tìm thấy chỉ một lần, từ trình chỉ mục có mức ưu tiên cao nhất.</string>
     <string name="usenet_provider_test">Kiểm tra nhà cung cấp</string>
     <string name="usenet_provider_test_running">Đang kết nối với nhà cung cấp…</string>

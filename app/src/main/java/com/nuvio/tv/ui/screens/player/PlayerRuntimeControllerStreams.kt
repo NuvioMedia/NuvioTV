@@ -646,7 +646,8 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
         url = playbackRequest.url,
         filename = currentFilename,
-        responseHeaders = currentStreamResponseHeaders
+        responseHeaders = currentStreamResponseHeaders,
+        declaredType = stream.declaredType
     )
     // A source switch mints a new debrid link for the same file, and without a file index a
     // multi-file torrent could hand one file's bytes to another, so that case keys on the url.

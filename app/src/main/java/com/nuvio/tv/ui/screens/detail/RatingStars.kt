@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
@@ -48,6 +50,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min as minDp
 import androidx.tv.material3.Icon
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tracking.TrackingRatings
@@ -94,71 +97,79 @@ internal fun RatingStars(
         currentOnValueChange(clamped)
     }
 
-    Row(
-        modifier = modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged {
-                focused = it.isFocused
-                if (!it.isFocused) confirmArmed = false
-            }
-            .onKeyEvent { event ->
-                val native = event.nativeKeyEvent
-                val step = when (native.keyCode) {
-                    AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> if (rtl) -1 else 1
-                    AndroidKeyEvent.KEYCODE_DPAD_LEFT -> if (rtl) 1 else -1
-                    else -> 0
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val horizontalPadding = 18.dp
+        val fittedStarSize = if (maxWidth == Dp.Infinity) {
+            starSize
+        } else {
+            minDp(starSize, (maxWidth - horizontalPadding * 2 - NuvioTheme.spacing.xxs * 2) * 6 / (StarCount * 7 - 1))
+        }
+        Row(
+            modifier = modifier
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .onFocusChanged {
+                    focused = it.isFocused
+                    if (!it.isFocused) confirmArmed = false
                 }
-                when {
-                    step != 0 -> {
-                        if (native.action == AndroidKeyEvent.ACTION_DOWN) select(currentValue + step)
-                        true
+                .onKeyEvent { event ->
+                    val native = event.nativeKeyEvent
+                    val step = when (native.keyCode) {
+                        AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> if (rtl) -1 else 1
+                        AndroidKeyEvent.KEYCODE_DPAD_LEFT -> if (rtl) 1 else -1
+                        else -> 0
                     }
-                    native.keyCode in AndroidKeyEvent.KEYCODE_0..AndroidKeyEvent.KEYCODE_9 -> {
-                        if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0) {
-                            val digit = native.keyCode - AndroidKeyEvent.KEYCODE_0
-                            select(if (digit == 0) TrackingRatings.MAX else digit)
+                    when {
+                        step != 0 -> {
+                            if (native.action == AndroidKeyEvent.ACTION_DOWN) select(currentValue + step)
+                            true
                         }
-                        true
-                    }
-                    isRatingSelectKey(native.keyCode) -> {
-                        if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0) {
-                            confirmArmed = true
-                        } else if (native.action == AndroidKeyEvent.ACTION_UP && confirmArmed) {
-                            confirmArmed = false
-                            currentOnConfirm()
+                        native.keyCode in AndroidKeyEvent.KEYCODE_0..AndroidKeyEvent.KEYCODE_9 -> {
+                            if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0) {
+                                val digit = native.keyCode - AndroidKeyEvent.KEYCODE_0
+                                select(if (digit == 0) TrackingRatings.MAX else digit)
+                            }
+                            true
                         }
-                        true
+                        isRatingSelectKey(native.keyCode) -> {
+                            if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0) {
+                                confirmArmed = true
+                            } else if (native.action == AndroidKeyEvent.ACTION_UP && confirmArmed) {
+                                confirmArmed = false
+                                currentOnConfirm()
+                            }
+                            true
+                        }
+                        else -> false
                     }
-                    else -> false
                 }
-            }
-            .semantics(mergeDescendants = true) {
-                stateDescription = description
-                progressBarRangeInfo = ProgressBarRangeInfo(
-                    current = value.toFloat(),
-                    range = 0f..TrackingRatings.MAX.toFloat(),
-                    steps = TrackingRatings.MAX - 1
+                .semantics(mergeDescendants = true) {
+                    stateDescription = description
+                    progressBarRangeInfo = ProgressBarRangeInfo(
+                        current = value.toFloat(),
+                        range = 0f..TrackingRatings.MAX.toFloat(),
+                        steps = TrackingRatings.MAX - 1
+                    )
+                    setProgress { target ->
+                        select(target.roundToInt())
+                        true
+                    }
+                }
+                .focusable()
+                .background(container, shape)
+                .border(NuvioTheme.spacing.xxs, border, shape)
+                .padding(horizontal = horizontalPadding, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(fittedStarSize / 6)
+        ) {
+            repeat(StarCount) { index ->
+                Star(
+                    fraction = (value / 2f - index).coerceIn(0f, 1f),
+                    delayMillis = (index - cascadeFrom).coerceAtLeast(0) * 40L,
+                    size = fittedStarSize,
+                    rtl = rtl,
+                    filledColor = NuvioTheme.colors.Secondary,
+                    emptyColor = NuvioTheme.colors.TextPrimary.copy(alpha = 0.12f)
                 )
-                setProgress { target ->
-                    select(target.roundToInt())
-                    true
-                }
             }
-            .focusable()
-            .background(container, shape)
-            .border(NuvioTheme.spacing.xxs, border, shape)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(starSize / 6)
-    ) {
-        repeat(StarCount) { index ->
-            Star(
-                fraction = (value / 2f - index).coerceIn(0f, 1f),
-                delayMillis = (index - cascadeFrom).coerceAtLeast(0) * 40L,
-                size = starSize,
-                rtl = rtl,
-                filledColor = NuvioTheme.colors.Secondary,
-                emptyColor = NuvioTheme.colors.TextPrimary.copy(alpha = 0.12f)
-            )
         }
     }
 }

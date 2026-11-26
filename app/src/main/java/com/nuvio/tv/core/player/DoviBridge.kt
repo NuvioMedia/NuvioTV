@@ -138,7 +138,7 @@ object DoviBridge {
             0x7c, 0x01, 0x20, 0x40,
             0x21, 0x33, 0x55, 0x77, 0x11, 0x02, 0x06, 0x10
         )
-        val output = runCatching { nativeConvertDv7RpuToDv81(payload, 2) }
+        val output = runCatching { nativeConvertDv7RpuToDv81(payload, 2, false) }
             .onFailure { Log.w(TAG, "Self-test conversion failed: ${it.message}") }
             .getOrNull()
         val result = if (output != null && output.isNotEmpty()) {
@@ -188,10 +188,10 @@ object DoviBridge {
 
     fun getConversionSuccessCount(): Long = conversionSuccessCount.get()
 
-    fun convertDv7RpuToDv81(payload: ByteArray, mode: Int = 1): ByteArray? {
+    fun convertDv7RpuToDv81(payload: ByteArray, mode: Int = 1, zeroLevel5: Boolean = false): ByteArray? {
         if (!isAvailable() || payload.isEmpty()) return null
         conversionCallCount.incrementAndGet()
-        val converted = runCatching { nativeConvertDv7RpuToDv81(payload, mode) }
+        val converted = runCatching { nativeConvertDv7RpuToDv81(payload, mode, zeroLevel5) }
             .onFailure { Log.w(TAG, "Conversion failed: ${it.message}") }
             .getOrNull()
         if (converted != null && converted.isNotEmpty()) {
@@ -219,12 +219,13 @@ object DoviBridge {
         sample: ByteArray,
         offset: Int,
         len: Int,
-        mode: Int = 1
+        mode: Int = 1,
+        zeroLevel5: Boolean = false
     ): Int {
         if (!isAvailable() || len <= 0) return 0
         conversionCallCount.incrementAndGet()
         var written = runCatching {
-            nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode)
+            nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode, zeroLevel5)
         }.onFailure { Log.w(TAG, "Non-allocating conversion failed: ${it.message}") }
             .getOrDefault(0)
         if (written < 0) {
@@ -232,7 +233,7 @@ object DoviBridge {
             val required = -written
             rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
             written = runCatching {
-                nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode)
+                nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode, zeroLevel5)
             }.onFailure { Log.w(TAG, "Non-allocating retry failed: ${it.message}") }
                 .getOrDefault(0)
         }
@@ -243,8 +244,36 @@ object DoviBridge {
     }
 
     /**
+     * Zeroes non-zero Dolby Vision Level 5 (active area / letterbox) offsets in an RPU NAL
+     * into [rpuOutBuffer] without changing the DV profile or per-frame conversion counters.
+     *
+     * Returns the number of bytes written (> 0) when L5 was non-zero and rewritten, or 0
+     * when L5 was absent, already all-zero, or libdovi is unavailable.
+     */
+    fun zeroDoviLevel5NonAllocating(
+        sample: ByteArray,
+        offset: Int,
+        len: Int
+    ): Int {
+        if (!isAvailable() || len <= 0) return 0
+        var written = runCatching {
+            nativeZeroDoviLevel5NonAllocating(sample, offset, len, rpuOutBuffer)
+        }.onFailure { Log.w(TAG, "L5 zeroing failed: ${it.message}") }
+            .getOrDefault(0)
+        if (written < 0) {
+            val required = -written
+            rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
+            written = runCatching {
+                nativeZeroDoviLevel5NonAllocating(sample, offset, len, rpuOutBuffer)
+            }.onFailure { Log.w(TAG, "L5 zeroing retry failed: ${it.message}") }
+                .getOrDefault(0)
+        }
+        return written.coerceAtLeast(0)
+    }
+
+    /**
      * Processes an HEVC video sample in native C++ layer.
-     * Optionally converts or strips Dolby Vision RPUs, and strips HDR10+ SEIs.
+     * Optionally converts or strips Dolby Vision RPUs, zeroes non-zero L5 offsets, and strips HDR10+ SEIs.
      * Returns the size of the rewritten sample, or 0 if no changes were made.
      * If the output buffer was too small, grows the buffer and retries once.
      */
@@ -257,7 +286,8 @@ object DoviBridge {
         doviMode: Int,
         doviProfile: Int,
         stripDoviRpu: Boolean,
-        stripHdr10Plus: Boolean
+        stripHdr10Plus: Boolean,
+        zeroDoviLevel5: Boolean = false
     ): Int {
         if (!isAvailable() || sampleLen <= 0) return 0
 
@@ -272,7 +302,8 @@ object DoviBridge {
                 doviMode = doviMode,
                 doviProfile = doviProfile,
                 stripDoviRpu = stripDoviRpu,
-                stripHdr10Plus = stripHdr10Plus
+                stripHdr10Plus = stripHdr10Plus,
+                zeroDoviLevel5 = zeroDoviLevel5
             )
         }.onFailure { Log.w(TAG, "nativeProcessVideoSample failed: ${it.message}") }
             .getOrDefault(0L)
@@ -292,7 +323,8 @@ object DoviBridge {
                     doviMode = doviMode,
                     doviProfile = doviProfile,
                     stripDoviRpu = stripDoviRpu,
-                    stripHdr10Plus = stripHdr10Plus
+                    stripHdr10Plus = stripHdr10Plus,
+                    zeroDoviLevel5 = zeroDoviLevel5
                 )
             }.onFailure { Log.w(TAG, "nativeProcessVideoSample retry failed: ${it.message}") }
                 .getOrDefault(0L)
@@ -337,7 +369,11 @@ object DoviBridge {
     private external fun nativeIsConversionPathReady(): Boolean
 
     @JvmStatic
-    private external fun nativeConvertDv7RpuToDv81(payload: ByteArray, mode: Int): ByteArray?
+    private external fun nativeConvertDv7RpuToDv81(
+        payload: ByteArray,
+        mode: Int,
+        zeroLevel5: Boolean
+    ): ByteArray?
 
     @JvmStatic
     private external fun nativeConvertDv7RpuToDv81NonAllocating(
@@ -345,7 +381,16 @@ object DoviBridge {
         offset: Int,
         len: Int,
         outBuffer: ByteArray,
-        mode: Int
+        mode: Int,
+        zeroLevel5: Boolean
+    ): Int
+
+    @JvmStatic
+    private external fun nativeZeroDoviLevel5NonAllocating(
+        sample: ByteArray,
+        offset: Int,
+        len: Int,
+        outBuffer: ByteArray
     ): Int
 
     @JvmStatic
@@ -359,7 +404,8 @@ object DoviBridge {
         doviMode: Int,
         doviProfile: Int,
         stripDoviRpu: Boolean,
-        stripHdr10Plus: Boolean
+        stripHdr10Plus: Boolean,
+        zeroDoviLevel5: Boolean
     ): Long
 }
 

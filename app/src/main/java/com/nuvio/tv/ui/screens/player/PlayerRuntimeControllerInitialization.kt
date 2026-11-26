@@ -997,6 +997,10 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (stripHdr10PlusSei) {
                 Log.i(PlayerRuntimeController.TAG, "HDR10PLUS_STRIP: enabled — will remove HDR10+ SEI NALs")
             }
+            val zeroDoviLevel5 = deviceLocalPlayerPreferences.zeroDoviLevel5.first() && DoviBridge.isAvailable()
+            if (zeroDoviLevel5) {
+                Log.i(PlayerRuntimeController.TAG, "DV_L5_ZERO: enabled — will zero non-zero DV Level 5 offsets")
+            }
 
             // Always use DolbyVisionExtractorsFactory: when no DV feature is active it
             // still swaps stock Matroska for the vendored extractor (DTS-HD MA / DTS:X
@@ -1018,7 +1022,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                             manualDv81 = manualDv81Selected && !dv7Mode1Forced
                         ),
                         stripDvRpu = stripDvRpuEnabled,
-                        stripHdr10PlusSei = stripHdr10PlusSei
+                        stripHdr10PlusSei = stripHdr10PlusSei,
+                        zeroDoviLevel5 = zeroDoviLevel5
                     ).let { autoSyncExtractorsFactory(it, url, headers) } // AutoSync hook
             configureBdavAutoSync() // AutoSync hook for Blu-ray clips
 
