@@ -1,6 +1,5 @@
 package com.nuvio.tv.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -10,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
@@ -62,55 +60,37 @@ private fun RatingBadge(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        when (provider) {
-            "audience" -> {
-                Image(
-                    painter = painterResource(
-                        id = when (ratings.audienceStatus) {
-                            RottenTomatoesStatus.VERIFIED_HOT -> R.drawable.mdblist_audience_verified_hot
-                            RottenTomatoesStatus.STALE -> R.drawable.mdblist_audience_stale
-                            else -> R.drawable.mdblist_audience
-                        }
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(squareIconSize)
-                )
+        val iconRes = when (provider) {
+            "audience" -> when (ratings.audienceStatus) {
+                RottenTomatoesStatus.VERIFIED_HOT -> R.drawable.mdblist_audience_verified_hot
+                RottenTomatoesStatus.STALE -> R.drawable.mdblist_audience_stale
+                else -> R.drawable.mdblist_audience
             }
-            "metacritic" -> {
-                Image(
-                    painter = painterResource(id = R.drawable.mdblist_metacritic),
-                    contentDescription = null,
-                    modifier = Modifier.size(squareIconSize)
-                )
+            "metacritic" -> R.drawable.mdblist_metacritic
+            "trakt" -> R.raw.mdblist_trakt
+            "imdb" -> R.raw.imdb_logo_2016
+            "tmdb" -> R.raw.mdblist_tmdb
+            "letterboxd" -> R.raw.mdblist_letterboxd
+            "mal" -> R.raw.mdblist_mal
+            "tomatoes" -> when (ratings.tomatoesStatus) {
+                RottenTomatoesStatus.CERTIFIED_FRESH -> R.raw.mdblist_tomatoes_certified
+                RottenTomatoesStatus.ROTTEN -> R.raw.mdblist_tomatoes_rotten
+                else -> R.raw.mdblist_tomatoes
             }
-            else -> {
-                val isImdb = provider == "imdb"
-                val rawRes = when (provider) {
-                    "trakt" -> R.raw.mdblist_trakt
-                    "imdb" -> R.raw.imdb_logo_2016
-                    "tmdb" -> R.raw.mdblist_tmdb
-                    "letterboxd" -> R.raw.mdblist_letterboxd
-                    "mal" -> R.raw.mdblist_mal
-                    "tomatoes" -> when (ratings.tomatoesStatus) {
-                        RottenTomatoesStatus.CERTIFIED_FRESH -> R.raw.mdblist_tomatoes_certified
-                        RottenTomatoesStatus.ROTTEN -> R.raw.mdblist_tomatoes_rotten
-                        else -> R.raw.mdblist_tomatoes
-                    }
-                    else -> return
-                }
-                val model = remember(context, rawRes) {
-                    ImageRequest.Builder(context)
-                        .data(rawRes)
-                        .build()
-                }
-                AsyncImage(
-                    model = model,
-                    contentDescription = null,
-                    modifier = Modifier.size(if (isImdb) iconSize else squareIconSize),
-                    contentScale = ContentScale.Fit
-                )
-            }
+            else -> return
         }
+        // Every badge goes through Coil, which decodes off the main thread and keeps the icon in memory.
+        val model = remember(context, iconRes) {
+            ImageRequest.Builder(context)
+                .data(iconRes)
+                .build()
+        }
+        AsyncImage(
+            model = model,
+            contentDescription = null,
+            modifier = Modifier.size(if (provider == "imdb") iconSize else squareIconSize),
+            contentScale = ContentScale.Fit
+        )
         Text(
             text = formatMDBListRating(provider, rating),
             style = MaterialTheme.typography.labelMedium,

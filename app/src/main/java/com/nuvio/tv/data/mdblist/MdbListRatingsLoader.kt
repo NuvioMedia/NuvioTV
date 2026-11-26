@@ -73,6 +73,22 @@ internal class MdbListRatingsLoader(
         return ratings
     }
 
+    /** Ratings already held in memory, without waiting or starting a request; null when they still have to load. */
+    fun cachedRatings(
+        mediaProvider: String,
+        mediaType: String,
+        mediaId: String,
+        credential: MdbListRatingsCredential
+    ): MDBListRatings? {
+        try {
+            client.checkCredential(credential)
+        } catch (_: CancellationException) {
+            return null
+        }
+        val key = RequestKey(mediaProvider, mediaType, mediaId, credential)
+        return synchronized(lock) { cache[key]?.takeIf { it.expiresAtMs > now() }?.ratings }
+    }
+
     suspend fun getRatings(
         mediaType: String,
         imdbId: String,

@@ -34,6 +34,8 @@ import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.data.simkl.rewatchedCatalogueEpisodesOf
 import com.nuvio.tv.data.simkl.simklHistoryRewatchWasRecorded
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
+import com.nuvio.tv.domain.model.MDBListRatings
+import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.NextToWatch
@@ -166,6 +168,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var commentsJob: Job? = null
     private var commentsLoadMoreJob: Job? = null
     private var pendingDefaultLibraryToggle: LibraryEntryInput? = null
+    private var mdbListSettingsAtLoad: MDBListSettings? = null
 
     private var trailerDelayMs = 7000L
     private var trailerAutoplayEnabled = false
@@ -826,6 +829,7 @@ class MetaDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             cancelCommentsRequests()
             val mdbListSettings = mdbListSettingsDataStore.settings.first()
+            mdbListSettingsAtLoad = mdbListSettings
             val isMdbListActive = mdbListRepository.isAvailable(mdbListSettings)
             _uiState.update {
                 it.copy(
@@ -1023,7 +1027,8 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun applyMeta(
         meta: Meta,
-        initialNextToWatch: NextToWatch?
+        initialNextToWatch: NextToWatch?,
+        cachedMdbListRatings: CachedMdbListRatings?
     ) {
         // Update the effective content ID so watch-progress observers pick up
         // the canonical ID (e.g. IMDB "tt0396375") instead of the navigation ID
@@ -1079,7 +1084,9 @@ class MetaDetailsViewModel @Inject constructor(
                 nextToWatch = effectiveNextToWatch,
                 error = null,
                 commentsEpisodeTarget = null,
-                shouldShowCommentsSection = traktCommentsEnabled && traktAuthenticated && supportsComments(meta)
+                shouldShowCommentsSection = traktCommentsEnabled && traktAuthenticated && supportsComments(meta),
+                mdbListRatings = cachedMdbListRatings?.ratings ?: it.mdbListRatings,
+                mdbListRatingOrder = cachedMdbListRatings?.order ?: it.mdbListRatingOrder
             )
         }
 
@@ -1106,9 +1113,13 @@ class MetaDetailsViewModel @Inject constructor(
             contentType = enriched.apiType
         )?.resolveForMeta(enriched)
 
+        // Home rows usually fetched this title's ratings already. Showing them with the meta avoids a second
+        // layout and draw of the hero when they would land a moment later, which froze a playing trailer.
+        val cachedMdbListRatings = if (isServerItem) null else cachedMdbListRatings(enriched)
         applyMeta(
             meta = withHandoffTrailer(enriched),
-            initialNextToWatch = cachedNextToWatch
+            initialNextToWatch = cachedNextToWatch,
+            cachedMdbListRatings = cachedMdbListRatings
         )
 
         val contentId = _effectiveContentId.value
@@ -1117,7 +1128,7 @@ class MetaDetailsViewModel @Inject constructor(
         // progress wait below, which can take long or never finish if the sync keeps failing.
         if (!isServerItem) {
             loadEpisodeRatingsAsync(enriched)
-            viewModelScope.launch { loadMDBListRatings(enriched) }
+            if (cachedMdbListRatings == null) viewModelScope.launch { loadMDBListRatings(enriched) }
         }
 
         // Wait for remote progress provider (Simkl/Trakt) to finish initial load.
@@ -1506,6 +1517,19 @@ class MetaDetailsViewModel @Inject constructor(
             }
         }
     }
+
+    private fun cachedMdbListRatings(meta: Meta): CachedMdbListRatings? {
+        val settings = mdbListSettingsAtLoad ?: return null
+        val result = mdbListRepository.cachedRatingsForMeta(
+            meta = meta,
+            fallbackItemId = itemId,
+            fallbackItemType = itemType,
+            settings = settings
+        ) ?: return null
+        return CachedMdbListRatings(result.ratings, settings.enabledRatingOrder())
+    }
+
+    private class CachedMdbListRatings(val ratings: MDBListRatings, val order: List<String>)
 
     private suspend fun loadMDBListRatings(meta: Meta) {
         val settings = mdbListSettingsDataStore.settings.first()
