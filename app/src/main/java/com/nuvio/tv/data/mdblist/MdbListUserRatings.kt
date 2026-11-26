@@ -28,7 +28,13 @@ class MdbListUserRatings internal constructor(
 
     override fun supports(media: TrackingMediaReference): Boolean = media.ids.toMdbListIds() != null
 
-    override fun rating(media: TrackingMediaReference): Double? = sync.currentSnapshot()?.userRating(media)
+    override fun rating(media: TrackingMediaReference): Double? {
+        val snapshot = sync.currentSnapshot() ?: return null
+        // Reuse the media index the sync keeps per snapshot. Lookups run on the main thread (details page,
+        // again on every sync state change), and building an index walks the whole watch history.
+        val projection = sync.currentProjection().takeIf { it !== MdbListProgressProjection.Empty }
+        return snapshot.userRating(media, projection)
+    }
 
     override suspend fun rate(profileId: Int, media: TrackingMediaReference, rating: Int?): TrackingMutationResult {
         val scope = sync.currentScope()
@@ -59,9 +65,12 @@ class MdbListUserRatings internal constructor(
     }
 }
 
-internal fun MdbListSyncSnapshot.userRating(reference: TrackingMediaReference): Double? {
+internal fun MdbListSyncSnapshot.userRating(
+    reference: TrackingMediaReference,
+    projection: MdbListProgressProjection? = null
+): Double? {
     val ratings = ratings ?: return null
-    val target = mutationTarget(reference) ?: return null
+    val target = mutationTarget(reference, projection) ?: return null
     return ratings.firstOrNull { it.matches(target) }?.rating
 }
 
