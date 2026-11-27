@@ -288,12 +288,8 @@ private fun ThemeColorSlot(
             contentDescription = "$label, ${formatHexColor(color)}"
         },
         shape = CardDefaults.shape(shape),
-        colors = CardDefaults.colors(
-            containerColor = NuvioTheme.colors.Background,
-            focusedContainerColor = NuvioTheme.colors.Background
-        ),
+        colors = settingsOptionCardColors(selected),
         border = CardDefaults.border(
-            border = if (selected) Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)), shape = shape) else Border.None,
             focusedBorder = Border(BorderStroke(2.dp, Color.White), shape = shape)
         ),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)

@@ -523,20 +523,8 @@ private fun SettingsStyleOptionCard(
                 role = Role.RadioButton
                 this.selected = isSelected
             },
-        colors = CardDefaults.colors(
-            containerColor = NuvioTheme.colors.Background,
-            focusedContainerColor = NuvioTheme.colors.Background
-        ),
-        border = CardDefaults.border(
-            border = if (isSelected) Border(
-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
-                shape = cardShape
-            ) else Border.None,
-            focusedBorder = Border(
-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                shape = cardShape
-            )
-        ),
+        colors = settingsOptionCardColors(isSelected),
+        border = settingsOptionCardBorder(cardShape),
         shape = CardDefaults.shape(cardShape),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
@@ -570,7 +558,7 @@ private fun SettingsStyleOptionCard(
             Text(
                 text = style.localizedDescription(),
                 style = MaterialTheme.typography.bodySmall,
-                color = NuvioTheme.colors.TextTertiary,
+                color = if (isSelected) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary,
                 maxLines = 2
             )
         }
