@@ -37,6 +37,7 @@ private data class CoreLayoutPrefs(
     val heroCatalogKeys: List<String>,
     val heroSectionEnabled: Boolean,
     val posterLabelsEnabled: Boolean,
+    val modernPosterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
     val classicFocusGradientEnabled: Boolean,
@@ -57,6 +58,7 @@ private data class LayoutUiPrefs(
     val heroCatalogKeys: List<String>,
     val heroSectionEnabled: Boolean,
     val posterLabelsEnabled: Boolean,
+    val modernPosterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
     val classicFocusGradientEnabled: Boolean,
@@ -93,14 +95,19 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             layoutPreferenceDataStore.selectedLayout,
             layoutPreferenceDataStore.heroCatalogSelections,
             layoutPreferenceDataStore.heroSectionEnabled,
-            layoutPreferenceDataStore.posterLabelsEnabled,
+            combine(
+                layoutPreferenceDataStore.posterLabelsEnabled,
+                layoutPreferenceDataStore.modernPosterLabelsEnabled,
+                ::Pair
+            ),
             layoutPreferenceDataStore.catalogAddonNameEnabled
-        ) { layout, heroCatalogKeys, heroSectionEnabled, posterLabelsEnabled, catalogAddonNameEnabled ->
+        ) { layout, heroCatalogKeys, heroSectionEnabled, (posterLabelsEnabled, modernPosterLabelsEnabled), catalogAddonNameEnabled ->
             CoreLayoutPrefs(
                 layout = layout,
                 heroCatalogKeys = heroCatalogKeys,
                 heroSectionEnabled = heroSectionEnabled,
                 posterLabelsEnabled = posterLabelsEnabled,
+                modernPosterLabelsEnabled = modernPosterLabelsEnabled,
                 catalogAddonNameEnabled = catalogAddonNameEnabled,
                 catalogTypeSuffixEnabled = true,
                 classicFocusGradientEnabled = false,
@@ -165,6 +172,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             heroCatalogKeys = corePrefs.heroCatalogKeys,
             heroSectionEnabled = corePrefs.heroSectionEnabled,
             posterLabelsEnabled = corePrefs.posterLabelsEnabled,
+            modernPosterLabelsEnabled = corePrefs.modernPosterLabelsEnabled,
             catalogAddonNameEnabled = corePrefs.catalogAddonNameEnabled,
             catalogTypeSuffixEnabled = corePrefs.catalogTypeSuffixEnabled,
             classicFocusGradientEnabled = corePrefs.classicFocusGradientEnabled,
@@ -204,7 +212,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             .debounce(300)
             .collectLatest { prefs ->
                 val effectivePosterLabelsEnabled = if (prefs.layout == HomeLayout.MODERN) {
-                    false
+                    prefs.modernPosterLabelsEnabled
                 } else {
                     prefs.posterLabelsEnabled
                 }

@@ -445,6 +445,7 @@
     <string name="layout_show_discover_sub">Pokaż sekcję przeglądania gdy wyszukiwarka jest pusta.</string>
     <string name="layout_poster_labels">Pokaż etykiety plakatów</string>
     <string name="layout_poster_labels_sub">Pokaż tytuły pod plakatami w wierszach, siatce i widoku wszystkich.</string>
+    <string name="layout_modern_poster_labels_sub">Pokaż tytuł i rok pod plakatami w wierszach ekranu głównego.</string>
     <string name="layout_addon_name">Pokaż nazwę dodatku</string>
     <string name="layout_addon_name_sub">Pokaż nazwę źródła pod tytułami katalogów.</string>
     <string name="layout_catalog_type">Pokaż typ katalogu</string>

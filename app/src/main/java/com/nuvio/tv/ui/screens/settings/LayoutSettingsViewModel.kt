@@ -56,6 +56,7 @@ data class LayoutSettingsUiState(
     val discoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val lastNonOffDiscoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val posterLabelsEnabled: Boolean = true,
+    val modernPosterLabelsEnabled: Boolean = false,
     val catalogAddonNameEnabled: Boolean = true,
     val catalogTypeSuffixEnabled: Boolean = true,
     val classicFocusGradientEnabled: Boolean = false,
@@ -118,6 +119,7 @@ sealed class LayoutSettingsEvent {
     data class SetHeroSectionEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDiscoverLocation(val location: DiscoverLocation) : LayoutSettingsEvent()
     data class SetPosterLabelsEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetModernPosterLabelsEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetCatalogAddonNameEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetCatalogTypeSuffixEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetClassicFocusGradientEnabled(val enabled: Boolean) : LayoutSettingsEvent()
@@ -268,6 +270,11 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.posterLabelsEnabled.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(posterLabelsEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.modernPosterLabelsEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(modernPosterLabelsEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -490,6 +497,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetHeroSectionEnabled -> setHeroSectionEnabled(event.enabled)
             is LayoutSettingsEvent.SetDiscoverLocation -> setDiscoverLocation(event.location)
             is LayoutSettingsEvent.SetPosterLabelsEnabled -> setPosterLabelsEnabled(event.enabled)
+            is LayoutSettingsEvent.SetModernPosterLabelsEnabled -> setModernPosterLabelsEnabled(event.enabled)
             is LayoutSettingsEvent.SetCatalogAddonNameEnabled -> setCatalogAddonNameEnabled(event.enabled)
             is LayoutSettingsEvent.SetCatalogTypeSuffixEnabled -> setCatalogTypeSuffixEnabled(event.enabled)
             is LayoutSettingsEvent.SetClassicFocusGradientEnabled -> setClassicFocusGradientEnabled(event.enabled)
@@ -682,6 +690,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.posterLabelsEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setPosterLabelsEnabled(enabled)
+        }
+    }
+
+    private fun setModernPosterLabelsEnabled(enabled: Boolean) {
+        if (_uiState.value.modernPosterLabelsEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setModernPosterLabelsEnabled(enabled)
         }
     }
 
