@@ -175,6 +175,66 @@ class StreamBadgeRulesTest {
         assertEquals(listOf("Dolby Vision", "Atmos"), badges.map { it.name })
     }
 
+    @Test
+    fun `matches resolution and source badges from bingeGroup`() {
+        fun stream(bingeGroup: String?, filename: String = "Video.mkv") = Stream(
+            name = "Video.mkv",
+            title = "Video.mkv",
+            description = "Video.mkv",
+            url = "https://example.com/Video.mkv",
+            ytId = null,
+            infoHash = null,
+            fileIdx = null,
+            externalUrl = null,
+            behaviorHints = StreamBehaviorHints(
+                notWebReady = null,
+                bingeGroup = bingeGroup,
+                countryWhitelist = null,
+                proxyHeaders = null,
+                filename = filename
+            ),
+            addonName = "Addon",
+            addonLogo = null
+        )
+        val filters = StreamBadgeMatcher.compile(
+            StreamBadgeRules(
+                imports = listOf(
+                    StreamBadgeImport(
+                        sourceUrl = "https://example.com/badges.json",
+                        filters = listOf(
+                            StreamBadgeFilter(name = "1080p", pattern = "\\b1080p\\b"),
+                            StreamBadgeFilter(name = "WEBRip", pattern = "\\bWEBRip\\b")
+                        )
+                    )
+                )
+            )
+        )
+
+        assertEquals(
+            listOf("1080p", "WEBRip"),
+            StreamBadgeMatcher.matchedBadges(
+                stream("aiostreams.viren070.com|1080p|WEBRip"),
+                filters
+            ).map { it.name }
+        )
+        assertEquals(emptyList<String>(), StreamBadgeMatcher.matchedBadges(stream(null), filters).map { it.name })
+        assertEquals(emptyList<String>(), StreamBadgeMatcher.matchedBadges(stream(" "), filters).map { it.name })
+        assertEquals(
+            listOf("1080p"),
+            StreamBadgeMatcher.matchedBadges(
+                stream(bingeGroup = null, filename = "Video.1080p.mkv"),
+                filters
+            ).map { it.name }
+        )
+        assertEquals(
+            listOf("1080p"),
+            StreamBadgeMatcher.matchedBadges(
+                stream(bingeGroup = "WEBRip".padEnd(1025), filename = "Video.1080p.mkv"),
+                filters
+            ).map { it.name }
+        )
+    }
+
     private fun badgeImport(
         sourceUrl: String,
         active: Boolean,
