@@ -250,6 +250,7 @@ private class NuvioAssTrackOutput(
             val boundedLimit = limit.coerceIn(offset, size)
             copyOfRange(offset, boundedLimit)
         }
+        if (SubtitleCharsetDetector.isFastValidUtf8(raw, 0, raw.size)) return raw
         return SubtitleCharsetDetector.normalizeToUtf8(raw)
     }
 
