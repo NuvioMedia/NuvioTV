@@ -1127,6 +1127,7 @@
     <string name="layout_discover_location_in_sidebar_desc">Khám phá có mục riêng trong bảng bên.</string>
     <string name="layout_poster_labels">Hiển thị nhãn Poster</string>
     <string name="layout_poster_labels_sub">Hiển thị tiêu đề bên dưới poster trong hàng, lưới và xem tất cả.</string>
+    <string name="layout_modern_poster_labels_sub">Hiển thị tiêu đề và năm dưới poster trong các hàng Trang chủ.</string>
     <string name="layout_addon_name">Hiển thị tên tiện ích</string>
     <string name="layout_addon_name_sub">Hiển thị tên nguồn bên dưới tiêu đề danh mục.</string>
     <string name="layout_catalog_type">Hiển thị loại danh mục</string>
@@ -1921,6 +1922,8 @@
     <string name="settings_p2p_profile_fast_description">Sử dụng nhiều kết nối người dùng ngang hàng hơn cho torrent khó tải hoặc có bitrate cao</string>
     <string name="settings_p2p_cache_size_title">Dung lượng bộ nhớ đệm torrent</string>
     <string name="settings_p2p_cache_size_description">Dữ liệu torrent đã tải xuống được lưu trên thiết bị này để xem lại nhanh hơn.</string>
+    <string name="settings_p2p_cache_memory_only">Chỉ bộ nhớ</string>
+    <string name="settings_p2p_cache_memory_only_description">Dữ liệu torrent chỉ giữ trên RAM và không bao giờ ghi vào bộ nhớ lưu trữ. Tua ngược sẽ phải tải xuống lại.</string>
     <string name="settings_p2p_cache_none">Không có bộ nhớ đệm vĩnh viễn</string>
     <string name="settings_p2p_cache_2_gb">2 GB</string>
     <string name="settings_p2p_cache_5_gb">5 GB</string>
