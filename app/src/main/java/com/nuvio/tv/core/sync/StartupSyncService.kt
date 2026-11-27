@@ -104,6 +104,10 @@ class StartupSyncService @Inject constructor(
 
     init {
         scope.launch {
+            profileManager.activeProfileReady.first { ready -> ready }
+            pluginManager.refreshAllRepositories()
+        }
+        scope.launch {
             authManager.authState.collect { state ->
                 when (state) {
                     is AuthState.FullAccount -> {
