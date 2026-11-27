@@ -43,6 +43,8 @@ class PluginManager {
     suspend fun refreshRepository(repoId: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("Plugins are not available in this build."))
 
+    suspend fun refreshAllRepositories() = Unit
+
     suspend fun toggleScraper(scraperId: String, enabled: Boolean) = Unit
 
     suspend fun toggleAllScrapersForRepo(repoId: String, enabled: Boolean) = Unit

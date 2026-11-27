@@ -305,7 +305,10 @@ class PluginManager @Inject constructor(
      * Add a new repository from manifest URL.
      * Auto-detects format: tries NuvioTV manifest first, then external repo format.
      */
-    suspend fun addRepository(manifestUrl: String): Result<PluginRepository> = withContext(Dispatchers.IO) {
+    suspend fun addRepository(manifestUrl: String): Result<PluginRepository> =
+        reconcileMutex.withLock { addRepositoryLocked(manifestUrl) }
+
+    private suspend fun addRepositoryLocked(manifestUrl: String): Result<PluginRepository> = withContext(Dispatchers.IO) {
         try {
             // Resolve short codes (e.g. "cspr", "0094") via cutt.ly redirect
             val resolvedUrl = if (isShortCode(manifestUrl)) {
@@ -398,7 +401,7 @@ class PluginManager @Inject constructor(
             }
 
             // Fall back to full auto-detection
-            addRepository(sanitizedUrl)
+            addRepositoryLocked(sanitizedUrl)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to add repository with hint: ${e.message}", e)
             Result.failure(e)
@@ -461,7 +464,10 @@ class PluginManager @Inject constructor(
     /**
      * Remove a repository and its scrapers
      */
-    suspend fun removeRepository(repoId: String) {
+    suspend fun removeRepository(repoId: String) =
+        reconcileMutex.withLock { removeRepositoryLocked(repoId) }
+
+    private suspend fun removeRepositoryLocked(repoId: String) {
         val scraperList = dataStore.scrapers.first()
         val repo = dataStore.repositories.first().find { it.id == repoId }
 
@@ -524,7 +530,7 @@ class PluginManager @Inject constructor(
                 .filter { normalizeUrl(it.url) !in remoteUrlSet }
                 .forEach { repo ->
                     Log.d(TAG, "reconcile: removing local repo not in remote: ${repo.name} (${repo.url})")
-                    removeRepository(repo.id)
+                    removeRepositoryLocked(repo.id)
                 }
         }
 
@@ -568,7 +574,24 @@ class PluginManager @Inject constructor(
     /**
      * Refresh a repository - re-download manifest and scrapers
      */
-    suspend fun refreshRepository(repoId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun refreshRepository(repoId: String): Result<Unit> =
+        reconcileMutex.withLock { refreshRepositoryLocked(repoId) }
+
+    /**
+     * Refresh every installed repository once per process, like addon manifests are
+     * refreshed on startup. Runs sequentially because scraper writes replace the
+     * whole list and concurrent repository downloads would drop each other's rows.
+     */
+    suspend fun refreshAllRepositories() {
+        val repos = dataStore.repositories.first()
+        Log.d(TAG, "Startup plugin refresh: ${repos.size} repositories")
+        repos.forEach { repo ->
+            // Lock per repository so a long sweep does not block add/remove/toggle for minutes.
+            reconcileMutex.withLock { refreshRepositoryLocked(repo.id) }
+        }
+    }
+
+    private suspend fun refreshRepositoryLocked(repoId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val repo = dataStore.repositories.first().find { it.id == repoId }
                 ?: return@withContext Result.failure(Exception("Repository not found"))
@@ -621,24 +644,26 @@ class PluginManager @Inject constructor(
     /**
      * Toggle scraper enabled state
      */
-    suspend fun toggleScraper(scraperId: String, enabled: Boolean) {
-        val scraperList = dataStore.scrapers.first()
-        val updatedScrapers = scraperList.map { scraper ->
-            if (scraper.id == scraperId) scraper.copy(enabled = enabled) else scraper
+    suspend fun toggleScraper(scraperId: String, enabled: Boolean) =
+        reconcileMutex.withLock {
+            val scraperList = dataStore.scrapers.first()
+            val updatedScrapers = scraperList.map { scraper ->
+                if (scraper.id == scraperId) scraper.copy(enabled = enabled) else scraper
+            }
+            dataStore.saveScrapers(updatedScrapers)
         }
-        dataStore.saveScrapers(updatedScrapers)
-    }
 
     /**
      * Toggle all scrapers belonging to a repository
      */
-    suspend fun toggleAllScrapersForRepo(repoId: String, enabled: Boolean) {
-        val scraperList = dataStore.scrapers.first()
-        val updatedScrapers = scraperList.map { scraper ->
-            if (scraper.repositoryId == repoId) scraper.copy(enabled = enabled) else scraper
+    suspend fun toggleAllScrapersForRepo(repoId: String, enabled: Boolean) =
+        reconcileMutex.withLock {
+            val scraperList = dataStore.scrapers.first()
+            val updatedScrapers = scraperList.map { scraper ->
+                if (scraper.repositoryId == repoId) scraper.copy(enabled = enabled) else scraper
+            }
+            dataStore.saveScrapers(updatedScrapers)
         }
-        dataStore.saveScrapers(updatedScrapers)
-    }
 
     /**
      * Toggle plugins globally enabled
@@ -1035,6 +1060,7 @@ class PluginManager @Inject constructor(
             val request = Request.Builder()
                 .url(url)
                 .header("User-Agent", "NuvioTV/1.0")
+                .header("Cache-Control", "no-cache")
                 .build()
             
             httpClient.newCall(request).execute().use { response ->
@@ -1073,6 +1099,7 @@ class PluginManager @Inject constructor(
                 val headRequest = Request.Builder()
                     .url(codeUrl)
                     .head()
+                    .header("Cache-Control", "no-cache")
                     .build()
                 
                 val contentLength = httpClient.newCall(headRequest).execute().use { headResponse ->
@@ -1088,6 +1115,7 @@ class PluginManager @Inject constructor(
                 val codeRequest = Request.Builder()
                     .url(codeUrl)
                     .header("User-Agent", "NuvioTV/1.0")
+                    .header("Cache-Control", "no-cache")
                     .build()
                 
                 val code = httpClient.newCall(codeRequest).execute().use { codeResponse ->
