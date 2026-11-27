@@ -197,9 +197,12 @@
     <string name="episodes_specials">الحلقات الخاصة</string>
     <string name="episodes_episode">الحلقة</string>
     <string name="episodes_cd_watched">تمت المشاهدة</string>
+    <string name="episodes_cd_rewatched">أُعيدت مشاهدته</string>
     <string name="episodes_dialog_subtitle">إجراءات الحلقة</string>
     <string name="episodes_mark_watched">تعليم كمشاهَد</string>
     <string name="episodes_mark_unwatched">تعليم كغير مشاهَد</string>
+    <string name="episodes_mark_rewatched">تعليم كمُعاد مشاهدته</string>
+    <string name="episodes_mark_not_rewatched">تعليم كغير مُعاد مشاهدته</string>
     <string name="episodes_mark_season_watched">تعليم الموسم كمشاهَد</string>
     <string name="episodes_mark_season_unwatched">تعليم الموسم كغير مشاهَد</string>
     <string name="episodes_mark_previous_watched">تعليم الحلقات السابقة في هذا الموسم كمشاهَدة</string>
@@ -214,6 +217,10 @@
     <string name="detail_removed_from_library">تمت الإزالة من المكتبة</string>
     <string name="detail_episode_marked_watched">تم تعليم الحلقة كمشاهَدة</string>
     <string name="detail_episode_marked_unwatched">تم تعليم الحلقة كغير مشاهَدة</string>
+    <string name="detail_episode_marked_rewatched">تم تعليم الحلقة كمُعاد مشاهدتها</string>
+    <string name="detail_episode_marked_not_rewatched">تم تعليم الحلقة كغير مُعاد مشاهدتها</string>
+    <string name="detail_rewatch_too_soon">لم يسجّل Simkl إعادة المشاهدة هذه: شُوهِدت الحلقة قبل أقل من 48 ساعة.</string>
+    <string name="detail_rewatch_not_recorded">لم يسجّل Simkl إعادة المشاهدة هذه.</string>
     <string name="detail_lists_updated">تم تحديث القوائم</string>
     <string name="detail_movie_marked_watched">تم التعليم كمشاهَد</string>
     <string name="detail_movie_marked_unwatched">تم التعليم كغير مشاهَد</string>
@@ -546,6 +553,7 @@
     <string name="settings_mdblist_subtitle">مزوّدو التقييمات الخارجية</string>
     <string name="settings_animeskip_subtitle">أوقات تخطي مقدمة الأنمي والخاتمة</string>
     <string name="settings_debrid_subtitle">مصادر الحسابات السحابية التجريبية</string>
+    <string name="settings_usenet_subtitle">المزوّدون والمفهرسون والتشغيل والتشخيص</string>
 
     <string name="playback_title">إعدادات التشغيل</string>
     <string name="playback_subtitle">ضبط خيارات تشغيل الفيديو والترجمة</string>
@@ -755,6 +763,8 @@
     <string name="dv7_mode_off_desc">يمرّر DV7 دون تعديل. قد يحدث خلل على العتاد الذي لا يدعم Dolby Vision Profile 7.</string>
     <string name="audio_dv5_to_dv81_title">تحويل DV5 إلى DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">يقدّم تدفقات Profile 5 على أنها Profile 8.1 لإخراج متوافق مع HDR10. يساعد الأجهزة التي لا تملك وحدة فك ترميز DV5 أصلية.</string>
+    <string name="audio_zero_dovi_l5_title">تجاهل بيانات Dolby Vision للشريط السينمائي (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">يصفّر إزاحات منطقة العرض النشطة في Dolby Vision L5 أثناء التشغيل. يصلح الأشرطة الداكنة أو شبه الشفافة على حواف الأشرطة السوداء في الملفات ذات بيانات L5 المعطوبة.</string>
     <string name="audio_dv7_preserve_mapping_title">الحفاظ على تعيين DV (DV7 إلى DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">يحافظ على تعيين الدرجات اللونية الأصلي كما قصده المنشئ، على حساب معالجة أكبر قليلًا لكل إطار.</string>
     <string name="dv7_libdovi_mode_caption" translatable="false">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
@@ -965,6 +975,7 @@
     <string name="layout_discover_location_in_sidebar_desc">يحصل استكشاف على عنصر مستقل في القائمة الجانبية.</string>
     <string name="layout_poster_labels">إظهار عناوين البطاقات</string>
     <string name="layout_poster_labels_sub">إظهار العناوين تحت البطاقات في الصفوف والشبكة وعرض الكل.</string>
+    <string name="layout_modern_poster_labels_sub">إظهار العنوان والسنة أسفل الملصقات في صفوف الرئيسية.</string>
     <string name="layout_addon_name">إظهار اسم الإضافة</string>
     <string name="layout_addon_name_sub">إظهار اسم المصدر تحت عناوين القوائم.</string>
     <string name="layout_catalog_type">إظهار نوع القوائم</string>
@@ -1676,6 +1687,8 @@
     <string name="settings_p2p_profile_fast_description">يستخدم عددًا أكبر من الاتصالات للتورنتات التي يصعب تنزيلها أو ذات معدل البت العالي</string>
     <string name="settings_p2p_cache_size_title">حجم ذاكرة التورنت المؤقتة</string>
     <string name="settings_p2p_cache_size_description">بيانات التورنت المنزّلة المحفوظة على هذا الجهاز لإعادة تشغيل أسرع</string>
+    <string name="settings_p2p_cache_memory_only">الذاكرة فقط</string>
+    <string name="settings_p2p_cache_memory_only_description">تبقى بيانات التورنت في الذاكرة ولا تُكتب على التخزين أبدًا. والرجوع للخلف يعيد تنزيلها.</string>
     <string name="settings_p2p_cache_none">لا توجد ذاكرة مؤقتة دائمة</string>
     <string name="settings_p2p_cache_2_gb">2 GB</string>
     <string name="settings_p2p_cache_5_gb">5 GB</string>
@@ -1854,6 +1867,7 @@
     <string name="subtitle_off">معطّل</string>
     <string name="subtitle_style_title">نمط الترجمة</string>
     <string name="subtitle_style_customize">تخصيص</string>
+    <string name="subtitle_style_customize_ass">تخصيص تنسيق ASS/SSA</string>
     <string name="subtitle_style_color">اللون</string>
     <string name="subtitle_style_reset">إعادة ضبط</string>
     <string name="subtitle_style_font_size">حجم الخط</string>
@@ -3400,6 +3414,13 @@
     <string name="stream_test_btn_start">بدء الاختبار</string>
     <string name="stream_test_card_title">اختبار سرعة آخر بث تم تشغيله</string>
     <string name="stream_test_error_connection">فشل الاتصال. قد تكون انتهت صلاحية رابط آخر بث تم تشغيله، أو أصبح غير قابل للوصول. شغّل الفيديو من جديد وأعد المحاولة.</string>
+    <string name="player_finding_next_stream">جارٍ البحث عن البث التالي…</string>
+    <string name="player_trying_next_stream">جارٍ تجربة البث التالي (المحاولة %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">لا توجد بثوث أخرى تعمل. اختر مصدرًا آخر أو أعد المحاولة.</string>
+    <string name="usenet_builtin_addon_title">Usenet المدمج</string>
+    <string name="usenet_builtin_addon_desc">نتائج من مزوّدي NNTP ومفهرسي Newznab الخاصين بك. انقله لتحديد موضع عرضه في القائمة.</string>
+    <string name="usenet_fallback">الرجوع التلقائي إلى Usenet</string>
+    <string name="usenet_fallback_description">إذا فشل بث Usenet، جرّب مصادر Usenet التالية حتى حد المحاولات الذي ضبطته. بثوث التورنت وغيرها لا تتبدل تلقائيًا أبدًا.</string>
     <string name="random_episode_title">تشغيل عشوائي</string>
     <string name="layout_random_episode_sub">تشغيل حلقات عشوائية من أي مسلسل. إيقاف هذا الخيار يوقف التشغيل العشوائي مؤقتًا.</string>
     <string name="random_episode_unwatched">حلقات غير مشاهدة</string>
@@ -3439,6 +3460,15 @@
     <string name="autosync_status_title">حالة المزامنة التلقائية</string>
     <string name="stream_resume_from_time">استئناف من %1$s</string>
     <string name="stream_resume_from_percent">استئناف من %1$d%%</string>
+    <string name="player_disc_titles">عناوين القرص</string>
+    <string name="player_disc_title_feature">الفيلم · %1$d دقيقة</string>
+    <string name="player_disc_title_extra">إضافي · %1$d دقيقة</string>
+    <string name="player_disc_title_subtitles">ترجمة %1$s</string>
+    <string name="player_disc_title_failed">تعذّر تشغيل هذا العنوان</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d مقطع</item>
+        <item quantity="other">%d مقاطع</item>
+    </plurals>
     <string name="stream_test_error_prefix">خطأ: %1$s</string>
     <string name="stream_test_label_baseline">اتصال مفرد قياسي (خط الأساس)</string>
     <string name="stream_test_label_parallel1">اتصال متوازٍ (الاتصالات: ‎1)</string>
@@ -3479,6 +3509,27 @@
     <string name="tracking_simkl_anime_id_imdb">تفضيل IMDB</string>
     <string name="tracking_simkl_anime_id_kitsu">تفضيل Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">تفضيل TVDB</string>
+    <string name="settings_tracking_completion_title">حد المشاهدة</string>
+    <string name="settings_tracking_completion_subtitle">النسبة المئوية من التشغيل المطلوبة لتعليم العنوان كمُشاهَد. علامات شارة النهاية لها الأولوية عند توفرها.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">تتبّع إعادة المشاهدة</string>
+    <string name="settings_tracking_rewatch_subtitle">سجّل المشاهدات المتكررة للعناوين المنتهية منذ أكثر من يومين كجلسات إعادة مشاهدة منفصلة على Simkl، وتتبّع الجلسات النشطة في متابعة المشاهدة.</string>
+    <string name="settings_tracking_rewatch_dialog_title">تتبّع إعادة المشاهدة</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">جلسات إعادة المشاهدة تتطلب Simkl PRO أو VIP، وتُنشأ فقط للعناوين التي أنهيتها بالفعل.</string>
+    <string name="settings_tracking_rewatch_off">معطّل</string>
+    <string name="settings_tracking_rewatch_off_subtitle">لا تسجّل المشاهدات المتكررة على Simkl ولا تعرض جلسات إعادة المشاهدة النشطة في متابعة المشاهدة.</string>
+    <string name="settings_tracking_rewatch_semi">شبه تلقائي</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">اسأل مرة واحدة قبل بدء جلسة إعادة مشاهدة جديدة. وبمجرد تفعيلها، تُسجَّل باقي حلقات الجولة تلقائيًا.</string>
+    <string name="settings_tracking_rewatch_automatic">تلقائي</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">ابدأ جلسة إعادة مشاهدة تلقائيًا وسجّل المشاهدات المتكررة كلما أعدت تشغيل عنوان مكتمل.</string>
+    <string name="settings_tracking_rewatch_pro_title">تتبّع إعادة المشاهدة يتطلب Simkl PRO أو VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">يسجّل Simkl إعادة المشاهدة لحسابات Pro أو VIP فقط. والجلسات الموجودة على حسابك في Simkl تبقى حتى لو تغيّرت خطتك.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">ترقية</string>
+    <string name="settings_tracking_rewatch_pro_not_now">ليس الآن</string>
+    <string name="rewatch_prompt_title">سبق أن أنهيت هذا العنوان.</string>
+    <string name="rewatch_prompt_subtitle">بدء جلسة إعادة مشاهدة على Simkl؟</string>
+    <string name="rewatch_prompt_confirm">نعم</string>
+    <string name="rewatch_prompt_dismiss">لا</string>
     <string name="tracking_simkl_anime_id_mal">تفضيل MyAnimeList</string>
     <string name="tracking_simkl_anime_id_subtitle">يتحكم في طريقة تعريف مسلسلات الأنمي. فاختيار MAL أو Kitsu يجعل لكل موسم سجلًا مستقلًا بدل دمجه مع غيره تحت مُعرِّف IMDB واحد.</string>
     <string name="tracking_simkl_anime_id_title">تفضيل مُعرِّف الأنمي</string>
