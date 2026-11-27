@@ -47,7 +47,8 @@ data class Meta(
     val hasLandscapePoster: Boolean? = null,
     val hasLogo: Boolean? = null,
     val hasLinks: Boolean? = null,
-    val hasVideos: Boolean? = null
+    val hasVideos: Boolean? = null,
+    val seasonPosters: Map<Int, String> = emptyMap()
 ) {
     val apiType: String
         get() = type.toApiString(rawType)
@@ -70,6 +71,10 @@ data class Meta(
  */
 fun Meta.isWatchedAsOneItem(): Boolean =
     apiType.equals("movie", ignoreCase = true) || (!isSeriesLikeType(apiType) && videos.isEmpty())
+
+fun Meta.isSeriesWithWatchableEpisodes(): Boolean =
+    (apiType.equals("series", ignoreCase = true) || apiType.equals("tv", ignoreCase = true)) &&
+        watchableEpisodes().isNotEmpty()
 
 fun List<Video>.watchableEpisodes(): List<Video> {
     val candidates = filter {
@@ -208,7 +213,15 @@ data class Video(
     val runtime: Int? = null, // episode runtime in minutes
     /** Per-episode rating supplied by the addon, when it provides one. */
     val rating: Double? = null,
-    val available: Boolean? = null
+    val available: Boolean? = null,
+    val seasonPoster: String? = null,
+    /**
+     * The episode on IMDb, when the addon numbers it its own way (anime catalogs restart each
+     * season or count on past a thousand): its IMDb id, season and episode.
+     */
+    val imdbId: String? = null,
+    val imdbSeason: Int? = null,
+    val imdbEpisode: Int? = null
 )
 
 @Immutable

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rating_rate">Oceń</string>
+    <string name="rating_your_rating">Twoja ocena</string>
+    <string name="rating_rate_episode">Oceń odcinek</string>
+    <string name="rating_rated">Oceniono na %1$s/10</string>
+    <string name="rating_value">%1$s na 10</string>
+    <string name="rating_syncs_to">Synchronizuje się z %1$s</string>
+    <string name="rating_saved">Ocena zapisana</string>
+    <string name="rating_removed">Ocena usunięta</string>
+    <string name="rating_failed">Nie udało się zaktualizować Twojej oceny w %1$s</string>
+    <string name="rating_remove">Usuń</string>
+    <string name="tracking_ratings_title">Oceny</string>
+    <string name="tracking_ratings_subtitle">Gdzie zapisywane są Twoje oceny i skąd są wyświetlane</string>
+    <string name="tracking_ratings_dialog_subtitle">Oceniaj tytuły na ich stronie szczegółów. Twoje oceny są zapisywane i wyświetlane z wybranej usługi.</string>
+    <string name="tracking_ratings_off_description">Ukryj przycisk oceniania.</string>
+    <string name="tracking_ratings_simkl_description">Oceniaj filmy i seriale. Ocenienie tytułu, którego nie ma na Twoich listach Simkl, doda go do nich.</string>
+    <string name="tracking_ratings_mdblist_description">Oceniaj filmy, seriale i odcinki.</string>
+</resources>

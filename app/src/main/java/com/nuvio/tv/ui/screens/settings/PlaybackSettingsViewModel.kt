@@ -52,11 +52,13 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
     private val torrentSettings: TorrentSettings,
-    private val torrentService: TorrentService
+    private val torrentService: TorrentService,
+    private val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val transparentLetterbox: Flow<Boolean> = deviceLocalPlayerPreferences.transparentLetterbox
+    val zeroDoviLevel5: Flow<Boolean> = deviceLocalPlayerPreferences.zeroDoviLevel5
     val releaseDecoderOnBackground: Flow<Boolean> = deviceLocalPlayerPreferences.releaseDecoderOnBackground
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
@@ -79,6 +81,9 @@ class PlaybackSettingsViewModel @Inject constructor(
                 }
             }
             .map { it.displayName }
+            // Auto-play counts built-in Usenet among the addons, so it can be allowed like one.
+            .plus(listOfNotNull(com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME
+                .takeIf { runCatching { usenetSourceSettings.read().enabled }.getOrDefault(false) }))
             .distinct()
             .sorted()
     }
@@ -253,6 +258,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setStripHdr10PlusSei(enabled: Boolean) {
         playerSettingsDataStore.setStripHdr10PlusSei(enabled)
+    }
+
+    suspend fun setZeroDoviLevel5(enabled: Boolean) {
+        deviceLocalPlayerPreferences.setZeroDoviLevel5(enabled)
     }
 
     suspend fun setExoChaptersEnabled(enabled: Boolean) {

@@ -4,8 +4,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.nuvio.tv.TestPreferencesStore
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import java.io.IOException
 import io.mockk.every
 import io.mockk.mockk
@@ -26,6 +28,23 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 class SimklSyncRepositoryStorageTest {
+
+    /**
+     * The projection reads the watched threshold and the rewatch mode, so the store has to answer.
+     * A real store over in-memory preferences gives the documented defaults, the same as the
+     * scrobbler test's fixture.
+     */
+    private fun settingsStore(): TraktSettingsDataStore {
+        val preferences = TestPreferencesStore()
+        return TraktSettingsDataStore(
+            mockk<ProfileDataStoreFactory>().also { factory ->
+                every { factory.get(any(), any()) } returns preferences
+            },
+            mockk<ProfileManager>().also { manager ->
+                every { manager.activeProfileId } returns MutableStateFlow(1)
+            }
+        )
+    }
 
     private class FakeSimklSyncStorage : SimklSyncStorage {
         val snapshots = mutableMapOf<Int, String>()
@@ -94,7 +113,8 @@ class SimklSyncRepositoryStorageTest {
             storage = storage,
             authRepository = authRepo,
             authStorage = authStorage,
-            profileManager = profileManager
+            profileManager = profileManager,
+            settingsDataStore = settingsStore()
         )
         repository.ensureLoaded()
 
@@ -167,7 +187,8 @@ class SimklSyncRepositoryStorageTest {
             storage = storage,
             authRepository = authRepo,
             authStorage = authStorage,
-            profileManager = profileManager
+            profileManager = profileManager,
+            settingsDataStore = settingsStore()
         )
         repository.ensureLoaded()
 
@@ -214,7 +235,8 @@ class SimklSyncRepositoryStorageTest {
             storage = storage,
             authRepository = authRepo,
             authStorage = authStorage,
-            profileManager = profileManager
+            profileManager = profileManager,
+            settingsDataStore = settingsStore()
         )
         repository.ensureLoaded()
 

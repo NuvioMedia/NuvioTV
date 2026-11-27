@@ -15,21 +15,7 @@
 #endif
 
 #if DOVI_REAL_LINKED
-extern "C" {
-typedef struct DoviRpuOpaque DoviRpuOpaque;
-typedef struct DoviData {
-    const uint8_t* data;
-    size_t len;
-} DoviData;
-
-DoviRpuOpaque* dovi_parse_unspec62_nalu(const uint8_t* buf, size_t len);
-DoviRpuOpaque* dovi_parse_rpu(const uint8_t* buf, size_t len);
-const char* dovi_rpu_get_error(const DoviRpuOpaque* ptr);
-void dovi_rpu_free(DoviRpuOpaque* ptr);
-int32_t dovi_convert_rpu_with_mode(DoviRpuOpaque* ptr, uint8_t mode);
-const DoviData* dovi_write_unspec62_nalu(DoviRpuOpaque* ptr);
-void dovi_data_free(const DoviData* data);
-}
+#include <libdovi/rpu_parser.h>
 
 static inline bool dovi_has_error(const DoviRpuOpaque* rpu, std::string* out_error) {
     if (rpu == nullptr) {
@@ -50,35 +36,107 @@ static inline bool dovi_has_error(const DoviRpuOpaque* rpu, std::string* out_err
     return true;
 }
 
-static inline DoviRpuOpaque* dovi_parse_any_rpu(const std::vector<uint8_t>& payload, std::string* out_error) {
-    if (payload.empty()) {
+static inline bool dovi_is_unspec62_header(const uint8_t* data, size_t len) {
+    return len >= 2U && (((data[0] >> 1) & 0x3F) == 62);
+}
+
+static inline DoviRpuOpaque* dovi_parse_nal_bytes(
+    const uint8_t* data,
+    size_t len,
+    std::string* out_error
+) {
+    if (data == nullptr || len == 0U) {
         if (out_error != nullptr) {
             *out_error = "empty-input";
         }
         return nullptr;
     }
 
+    const bool has_unspec62_header = dovi_is_unspec62_header(data, len);
     std::string parse_error;
-    DoviRpuOpaque* parsed = dovi_parse_unspec62_nalu(payload.data(), payload.size());
-    if (parsed != nullptr && !dovi_has_error(parsed, &parse_error)) {
-        return parsed;
-    }
-    if (parsed != nullptr) {
-        dovi_rpu_free(parsed);
-    }
+    std::string* err_ptr = (out_error != nullptr) ? &parse_error : nullptr;
 
-    parsed = dovi_parse_rpu(payload.data(), payload.size());
-    if (parsed != nullptr && !dovi_has_error(parsed, &parse_error)) {
-        return parsed;
-    }
-    if (parsed != nullptr) {
-        dovi_rpu_free(parsed);
+    if (!has_unspec62_header) {
+        DoviRpuOpaque* parsed = dovi_parse_rpu(data, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
+
+        parsed = dovi_parse_unspec62_nalu(data, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
+    } else {
+        // If an UNSPEC 62 NAL carries a non-zero nuh_layer_id (common on dual-layer DV7),
+        // normalize a temporary copy's 2-byte HEVC NAL header to layer 0 so libdovi's
+        // unspec62 parser accepts it without mutating the caller's buffer.
+        const uint8_t* parse_ptr = data;
+        thread_local std::vector<uint8_t> normalized_input;
+        if ((data[0] & 0x01U) != 0U || (data[1] & 0xF8U) != 0U) {
+            normalized_input.assign(data, data + len);
+            normalized_input[0] &= 0xFE;
+            normalized_input[1] &= 0x07;
+            parse_ptr = normalized_input.data();
+        }
+
+        DoviRpuOpaque* parsed = dovi_parse_unspec62_nalu(parse_ptr, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
+
+        parsed = dovi_parse_rpu(data, len);
+        if (parsed != nullptr && !dovi_has_error(parsed, err_ptr)) {
+            return parsed;
+        }
+        if (parsed != nullptr) {
+            dovi_rpu_free(parsed);
+        }
     }
 
     if (out_error != nullptr) {
         *out_error = parse_error.empty() ? "failed-parse-rpu" : parse_error;
     }
     return nullptr;
+}
+
+static inline bool dovi_has_nonzero_l5(const DoviRpuOpaque* rpu) {
+    const DoviVdrDmData* dm = dovi_rpu_get_vdr_dm_data(rpu);
+    if (dm == nullptr) {
+        return false;
+    }
+    const DoviExtMetadataBlockLevel5* l5 = dm->dm_data.level5;
+    const bool nonzero = (l5 != nullptr) && (
+        l5->active_area_left_offset != 0U ||
+        l5->active_area_right_offset != 0U ||
+        l5->active_area_top_offset != 0U ||
+        l5->active_area_bottom_offset != 0U
+    );
+    dovi_rpu_free_vdr_dm_data(dm);
+    return nonzero;
+}
+
+// Zero non-zero Dolby Vision Level 5 (active area / letterbox) offsets.
+// When L5 offsets extend past the actual matte or remain non-zero on cropped streams,
+// TV Dolby Vision pipelines exclude the top/bottom edge of the active picture from
+// dynamic tone mapping, producing a translucent darker horizontal band at the border.
+static inline bool dovi_zero_l5_if_needed(DoviRpuOpaque* rpu) {
+    if (!dovi_has_nonzero_l5(rpu)) {
+        return false;
+    }
+    return dovi_rpu_set_active_area_offsets(rpu, 0U, 0U, 0U, 0U) == 0;
+}
+
+static inline DoviRpuOpaque* dovi_parse_any_rpu(const std::vector<uint8_t>& payload, std::string* out_error) {
+    return dovi_parse_nal_bytes(payload.data(), payload.size(), out_error);
 }
 
 static inline uint8_t map_conversion_mode(jint mode) {
@@ -125,7 +183,8 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81(
     JNIEnv* env,
     jclass /* clazz */,
     jbyteArray payload,
-    jint mode
+    jint mode,
+    jboolean zeroLevel5
 ) {
 #if DOVI_REAL_LINKED
     if (payload == nullptr) return nullptr;
@@ -153,6 +212,9 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81(
         );
         dovi_rpu_free(rpu);
         return nullptr;
+    }
+    if (zeroLevel5) {
+        dovi_zero_l5_if_needed(rpu);
     }
 
     const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
@@ -205,7 +267,8 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
     jint offset,
     jint len,
     jbyteArray outBuffer,
-    jint mode
+    jint mode,
+    jboolean zeroLevel5
 ) {
 #if DOVI_REAL_LINKED
     if (sample == nullptr || outBuffer == nullptr || len <= 0 || offset < 0) return 0;
@@ -233,35 +296,18 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
         env->ReleasePrimitiveArrayCritical(sample, dataPtr, JNI_ABORT);
     }
 
-    // 2. Parse. Remember which parser succeeded so steady-state streams skip the wasted
-    //    first attempt on every frame.
-    static int preferredParser = 0; // 0 unknown, 1 unspec62, 2 raw rpu
-    DoviRpuOpaque* rpu = nullptr;
-    if (preferredParser != 2) {
-        rpu = dovi_parse_unspec62_nalu(input.data(), input.size());
-        if (rpu != nullptr && !dovi_has_error(rpu, nullptr)) {
-            preferredParser = 1;
-        } else if (rpu != nullptr) {
-            dovi_rpu_free(rpu);
-            rpu = nullptr;
-        }
-    }
-    if (rpu == nullptr) {
-        rpu = dovi_parse_rpu(input.data(), input.size());
-        if (rpu != nullptr && !dovi_has_error(rpu, nullptr)) {
-            preferredParser = 2;
-        } else if (rpu != nullptr) {
-            dovi_rpu_free(rpu);
-            rpu = nullptr;
-        }
-    }
+    // 2. Parse RPU (normalizes non-zero nuh_layer_id on a scratch copy if present)
+    DoviRpuOpaque* rpu = dovi_parse_nal_bytes(input.data(), input.size(), nullptr);
     if (rpu == nullptr) return 0;
 
-    // 3. Convert RPU
+    // 3. Convert RPU and optionally clear non-zero L5 active area offsets
     const uint8_t conversion_mode = map_conversion_mode(mode);
     if (dovi_convert_rpu_with_mode(rpu, conversion_mode) < 0) {
         dovi_rpu_free(rpu);
         return 0;
+    }
+    if (zeroLevel5) {
+        dovi_zero_l5_if_needed(rpu);
     }
 
     // 4. Write converted RPU
@@ -304,6 +350,87 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
     (void)len;
     (void)outBuffer;
     (void)mode;
+    (void)zeroLevel5;
+    return 0;
+#endif
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nuvio_tv_core_player_DoviBridge_nativeZeroDoviLevel5NonAllocating(
+    JNIEnv* env,
+    jclass /* clazz */,
+    jbyteArray sample,
+    jint offset,
+    jint len,
+    jbyteArray outBuffer
+) {
+#if DOVI_REAL_LINKED
+    if (sample == nullptr || outBuffer == nullptr || len <= 0 || offset < 0) return 0;
+
+    thread_local std::vector<uint8_t> input;
+    input.resize(static_cast<size_t>(len));
+    {
+        void* dataPtr = env->GetPrimitiveArrayCritical(sample, nullptr);
+        if (dataPtr == nullptr) return 0;
+        const jsize sampleLen = env->GetArrayLength(sample);
+        if (static_cast<jsize>(offset) + static_cast<jsize>(len) > sampleLen) {
+            env->ReleasePrimitiveArrayCritical(sample, dataPtr, JNI_ABORT);
+            return 0;
+        }
+        std::memcpy(
+            input.data(),
+            reinterpret_cast<const uint8_t*>(dataPtr) + offset,
+            static_cast<size_t>(len)
+        );
+        env->ReleasePrimitiveArrayCritical(sample, dataPtr, JNI_ABORT);
+    }
+
+    const bool hasOriginalHeader = dovi_is_unspec62_header(input.data(), input.size());
+    const uint8_t origHdr0 = hasOriginalHeader ? input[0] : 0U;
+    const uint8_t origHdr1 = hasOriginalHeader ? input[1] : 0U;
+
+    DoviRpuOpaque* rpu = dovi_parse_nal_bytes(input.data(), input.size(), nullptr);
+    if (rpu == nullptr) return 0;
+
+    // Leave RPUs with absent or already-zero L5 untouched.
+    if (!dovi_zero_l5_if_needed(rpu)) {
+        dovi_rpu_free(rpu);
+        return 0;
+    }
+
+    const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
+    if (out_data == nullptr || out_data->data == nullptr || out_data->len == 0U) {
+        if (out_data != nullptr) dovi_data_free(out_data);
+        dovi_rpu_free(rpu);
+        return 0;
+    }
+
+    const jsize maxOutLen = env->GetArrayLength(outBuffer);
+    const jsize outLen = static_cast<jsize>(out_data->len);
+    if (outLen > maxOutLen) {
+        dovi_data_free(out_data);
+        dovi_rpu_free(rpu);
+        return -outLen;
+    }
+
+    env->SetByteArrayRegion(outBuffer, 0, outLen, reinterpret_cast<const jbyte*>(out_data->data));
+    if (hasOriginalHeader && outLen >= 2) {
+        jbyte hdr[2] = {
+            static_cast<jbyte>(origHdr0),
+            static_cast<jbyte>(origHdr1)
+        };
+        env->SetByteArrayRegion(outBuffer, 0, 2, hdr);
+    }
+
+    dovi_data_free(out_data);
+    dovi_rpu_free(rpu);
+    return outLen;
+#else
+    (void)env;
+    (void)sample;
+    (void)offset;
+    (void)len;
+    (void)outBuffer;
     return 0;
 #endif
 }
@@ -455,7 +582,14 @@ static int startCodeLength(const uint8_t* data, int offset, int limit) {
     return 3;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+static inline jlong packProcessResult(jint written, uint16_t rpuCalls, uint16_t rpuSuccesses) {
+    const uint64_t w = static_cast<uint32_t>(written);
+    const uint64_t c = static_cast<uint64_t>(rpuCalls) << 32;
+    const uint64_t s = static_cast<uint64_t>(rpuSuccesses) << 48;
+    return static_cast<jlong>(w | c | s);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     JNIEnv* env,
     jclass /* clazz */,
@@ -468,9 +602,10 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     jint doviMode,
     jint doviProfile,
     jboolean stripDoviRpu,
-    jboolean stripHdr10Plus
+    jboolean stripHdr10Plus,
+    jboolean zeroDoviLevel5
 ) {
-    if (sample == nullptr || outBuffer == nullptr || sampleLen <= 0) return 0;
+    if (sample == nullptr || outBuffer == nullptr || sampleLen <= 0) return 0LL;
 
     thread_local std::vector<uint8_t> sampleBuffer;
     thread_local std::vector<uint8_t> outputBuffer;
@@ -478,12 +613,14 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     sampleBuffer.resize(sampleLen);
     {
         void* samplePtr = env->GetPrimitiveArrayCritical(sample, nullptr);
-        if (samplePtr == nullptr) return 0;
+        if (samplePtr == nullptr) return 0LL;
         std::memcpy(sampleBuffer.data(), samplePtr, sampleLen);
         env->ReleasePrimitiveArrayCritical(sample, samplePtr, JNI_ABORT);
     }
 
     bool changed = false;
+    uint16_t rpuCalls = 0;
+    uint16_t rpuSuccesses = 0;
     outputBuffer.clear();
 
     if (nalFormat == 1) { // Length-Delimited
@@ -495,7 +632,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
             }
             int nalStart = pos + nalLengthFieldLength;
             if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
-                return 0; // abort processing, format malformed
+                return 0LL; // abort processing, format malformed
             }
 
             uint8_t nalHeader = sampleBuffer[nalStart];
@@ -509,30 +646,28 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
             bool processed = false;
             std::vector<uint8_t> processedNal;
 
-            if (convertDovi || stripDoviRpu) {
+            if (convertDovi || stripDoviRpu || zeroDoviLevel5) {
                 bool isRpu = (nalType == 62);
                 // Type 63 = P7 EL on single-track remuxes (layer 0).
-                bool isEl = (layerId > 0) || (nalType == 63);
+                // Only drop EL when converting to DV8.1 or stripping DV — never during L5-only sanitization.
+                bool isEl = (convertDovi || stripDoviRpu) && ((layerId > 0) || (nalType == 63));
                 if (isRpu) {
                     if (stripDoviRpu) {
                         shouldDrop = true;
                     } else if (convertDovi) {
+                        if (rpuCalls < 0xFFFFU) ++rpuCalls;
 #if DOVI_REAL_LINKED
-                        DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(sampleBuffer.data() + nalStart, nalSize);
-                        if (rpu == nullptr || dovi_has_error(rpu, nullptr)) {
-                            if (rpu != nullptr) dovi_rpu_free(rpu);
-                            rpu = dovi_parse_rpu(sampleBuffer.data() + nalStart, nalSize);
-                            if (rpu != nullptr && dovi_has_error(rpu, nullptr)) {
-                                dovi_rpu_free(rpu);
-                                rpu = nullptr;
-                            }
-                        }
+                        DoviRpuOpaque* rpu = dovi_parse_nal_bytes(sampleBuffer.data() + nalStart, nalSize, nullptr);
                         if (rpu != nullptr) {
                             uint8_t conversion_mode = map_conversion_mode(doviMode);
                             if (dovi_convert_rpu_with_mode(rpu, conversion_mode) >= 0) {
+                                if (zeroDoviLevel5) {
+                                    dovi_zero_l5_if_needed(rpu);
+                                }
                                 const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
                                 if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
                                     processed = true;
+                                    if (rpuSuccesses < 0xFFFFU) ++rpuSuccesses;
                                     processedNal.resize(out_data->len);
                                     std::memcpy(processedNal.data(), out_data->data, out_data->len);
                                     if (processedNal.size() >= 2) {
@@ -554,6 +689,26 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                                 processedNal[1] &= 0x07;
                             }
                         }
+                    } else if (zeroDoviLevel5) {
+#if DOVI_REAL_LINKED
+                        DoviRpuOpaque* rpu = dovi_parse_nal_bytes(sampleBuffer.data() + nalStart, nalSize, nullptr);
+                        if (rpu != nullptr) {
+                            if (dovi_zero_l5_if_needed(rpu)) {
+                                const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
+                                if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
+                                    processed = true;
+                                    processedNal.resize(out_data->len);
+                                    std::memcpy(processedNal.data(), out_data->data, out_data->len);
+                                    if (nalSize >= 2 && processedNal.size() >= 2) {
+                                        processedNal[0] = sampleBuffer[nalStart];
+                                        processedNal[1] = sampleBuffer[nalStart + 1];
+                                    }
+                                    dovi_data_free(out_data);
+                                }
+                            }
+                            dovi_rpu_free(rpu);
+                        }
+#endif
                     }
                 } else if (isEl) {
                     shouldDrop = true;
@@ -620,30 +775,28 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                 bool processed = false;
                 std::vector<uint8_t> processedNal;
 
-                if (convertDovi || stripDoviRpu) {
+                if (convertDovi || stripDoviRpu || zeroDoviLevel5) {
                     bool isRpu = (nalType == 62);
                     // Type 63 = P7 EL on single-track remuxes (layer 0).
-                    bool isEl = (layerId > 0) || (nalType == 63);
+                    // Only drop EL when converting to DV8.1 or stripping DV — never during L5-only sanitization.
+                    bool isEl = (convertDovi || stripDoviRpu) && ((layerId > 0) || (nalType == 63));
                     if (isRpu) {
                         if (stripDoviRpu) {
                             shouldDrop = true;
                         } else if (convertDovi) {
+                            if (rpuCalls < 0xFFFFU) ++rpuCalls;
 #if DOVI_REAL_LINKED
-                            DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(sampleBuffer.data() + nalBegin, nalSize);
-                            if (rpu == nullptr || dovi_has_error(rpu, nullptr)) {
-                                if (rpu != nullptr) dovi_rpu_free(rpu);
-                                rpu = dovi_parse_rpu(sampleBuffer.data() + nalBegin, nalSize);
-                                if (rpu != nullptr && dovi_has_error(rpu, nullptr)) {
-                                    dovi_rpu_free(rpu);
-                                    rpu = nullptr;
-                                }
-                            }
+                            DoviRpuOpaque* rpu = dovi_parse_nal_bytes(sampleBuffer.data() + nalBegin, nalSize, nullptr);
                             if (rpu != nullptr) {
                                 uint8_t conversion_mode = map_conversion_mode(doviMode);
                                 if (dovi_convert_rpu_with_mode(rpu, conversion_mode) >= 0) {
+                                    if (zeroDoviLevel5) {
+                                        dovi_zero_l5_if_needed(rpu);
+                                    }
                                     const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
                                     if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
                                         processed = true;
+                                        if (rpuSuccesses < 0xFFFFU) ++rpuSuccesses;
                                         processedNal.resize(out_data->len);
                                         std::memcpy(processedNal.data(), out_data->data, out_data->len);
                                         if (processedNal.size() >= 2) {
@@ -665,6 +818,26 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                                     processedNal[1] &= 0x07;
                                 }
                             }
+                        } else if (zeroDoviLevel5) {
+#if DOVI_REAL_LINKED
+                            DoviRpuOpaque* rpu = dovi_parse_nal_bytes(sampleBuffer.data() + nalBegin, nalSize, nullptr);
+                            if (rpu != nullptr) {
+                                if (dovi_zero_l5_if_needed(rpu)) {
+                                    const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
+                                    if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
+                                        processed = true;
+                                        processedNal.resize(out_data->len);
+                                        std::memcpy(processedNal.data(), out_data->data, out_data->len);
+                                        if (nalSize >= 2 && processedNal.size() >= 2) {
+                                            processedNal[0] = sampleBuffer[nalBegin];
+                                            processedNal[1] = sampleBuffer[nalBegin + 1];
+                                        }
+                                        dovi_data_free(out_data);
+                                    }
+                                }
+                                dovi_rpu_free(rpu);
+                            }
+#endif
                         }
                     } else if (isEl) {
                         shouldDrop = true;
@@ -698,15 +871,16 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
         }
     }
 
-    if (!changed) return 0;
+    if (!changed) return packProcessResult(0, rpuCalls, rpuSuccesses);
 
     jsize maxOutLen = env->GetArrayLength(outBuffer);
     jsize outLen = static_cast<jsize>(outputBuffer.size());
     if (outLen > maxOutLen) {
-        return -outLen;
+        // Do not report counters here; the caller will grow the buffer and retry once.
+        return packProcessResult(-outLen, 0, 0);
     }
 
     env->SetByteArrayRegion(outBuffer, 0, outLen, reinterpret_cast<const jbyte*>(outputBuffer.data()));
-    return outLen;
+    return packProcessResult(outLen, rpuCalls, rpuSuccesses);
 }
 

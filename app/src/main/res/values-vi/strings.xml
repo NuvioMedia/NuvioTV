@@ -192,9 +192,12 @@
     <string name="episodes_specials">Tập đặc biệt</string>
     <string name="episodes_episode">Tập</string>
     <string name="episodes_cd_watched">Đã xem</string>
+    <string name="episodes_cd_rewatched">Đã xem lại</string>
     <string name="episodes_dialog_subtitle">Thao tác với tập phim</string>
     <string name="episodes_mark_watched">Đánh dấu đã xem</string>
     <string name="episodes_mark_unwatched">Đánh dấu chưa xem</string>
+    <string name="episodes_mark_rewatched">Đánh dấu đã xem lại</string>
+    <string name="episodes_mark_not_rewatched">Đánh dấu chưa xem lại</string>
     <string name="episodes_mark_season_watched">Đánh dấu đã xem mùa này</string>
     <string name="episodes_mark_season_unwatched">Đánh dấu chưa xem mùa này</string>
     <string name="episodes_mark_previous_watched">Đánh dấu đã xem các tập trước</string>
@@ -208,6 +211,10 @@
     <string name="detail_removed_from_library">Đã xóa khỏi thư viện</string>
     <string name="detail_episode_marked_watched">Đã đánh dấu đã xem tập này</string>
     <string name="detail_episode_marked_unwatched">Đã đánh dấu chưa xem tập này</string>
+    <string name="detail_episode_marked_rewatched">Đã đánh dấu tập phim đã xem lại</string>
+    <string name="detail_episode_marked_not_rewatched">Đã đánh dấu tập phim chưa xem lại</string>
+    <string name="detail_rewatch_too_soon">Simkl không ghi nhận lần xem lại này: tập phim đã được xem cách đây chưa đến 48 giờ.</string>
+    <string name="detail_rewatch_not_recorded">Simkl không ghi nhận lần xem lại này.</string>
     <string name="detail_lists_updated">Đã cập nhật danh sách</string>
     <string name="detail_movie_marked_watched">Đã đánh dấu đã xem</string>
     <string name="detail_movie_marked_unwatched">Đã đánh dấu chưa xem</string>
@@ -417,6 +424,8 @@
     <string name="about_update_auto_install_subtitle">Tải xuống phiên bản mới trong nền và cài đặt khi thiết bị ở trạng thái chờ.</string>
     <string name="about_update_auto_install_notice_title">Thông báo sau khi tự động cập nhật</string>
     <string name="about_update_auto_install_notice_subtitle">Hiển thị bảng thông báo vào lần khởi chạy tiếp theo sau khi ứng dụng tự cập nhật</string>
+    <string name="about_update_optimize_install_title">Tối ưu hóa bản cập nhật khi cài đặt</string>
+    <string name="about_update_optimize_install_subtitle">Khởi chạy lần đầu nhanh hơn sau khi cập nhật, nhưng ứng dụng sẽ đóng trong khoảng một phút khi cài đặt. Tắt tùy chọn này để sử dụng màn hình cài đặt của Android.</string>
     <string name="about_update_channel_title">Kênh cập nhật</string>
     <string name="about_update_channel_subtitle">Chọn loại cập nhật ứng dụng bạn muốn nhận</string>
     <string name="about_check_updates">Kiểm tra cập nhật</string>
@@ -494,6 +503,27 @@
     <string name="tracking_simkl_anime_id_mal">Ưu tiên MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Ưu tiên Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Ưu tiên TVDB</string>
+    <string name="settings_tracking_completion_title">Ngưỡng đã xem</string>
+    <string name="settings_tracking_completion_subtitle">Phần trăm phát lại cần thiết để đánh dấu đã xem một nội dung. Ưu tiên điểm đánh dấu danh đề kết thúc khi có sẵn.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">Theo dõi xem lại</string>
+    <string name="settings_tracking_rewatch_subtitle">Ghi nhận các lần xem lại nội dung đã xong hơn 2 ngày trước thành các phiên xem lại riêng biệt trên Simkl, và theo dõi các lần xem đang diễn ra trong Tiếp tục xem.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Theo dõi xem lại</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Phiên xem lại yêu cầu Simkl PRO hoặc VIP và chỉ được tạo cho các nội dung bạn đã xem xong.</string>
+    <string name="settings_tracking_rewatch_off">Tắt</string>
+    <string name="settings_tracking_rewatch_off_subtitle">Không ghi nhận các lần xem lại vào Simkl hoặc hiển thị các phiên xem lại đang diễn ra trong Tiếp tục xem.</string>
+    <string name="settings_tracking_rewatch_semi">Bán tự động</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Hỏi một lần trước khi bắt đầu một phiên xem lại mới. Khi phiên đã hoạt động, các tập còn lại trong lần xem đó sẽ được ghi nhận tự động.</string>
+    <string name="settings_tracking_rewatch_automatic">Tự động</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Tự động bắt đầu một phiên xem lại và ghi nhận các lần xem lại mỗi khi bạn phát lại một nội dung đã xem xong.</string>
+    <string name="settings_tracking_rewatch_pro_title">Theo dõi xem lại yêu cầu Simkl PRO hoặc VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl chỉ ghi nhận các lần xem lại cho tài khoản Pro hoặc VIP. Các phiên đã có trên tài khoản Simkl vẫn được giữ lại nếu gói dịch vụ của bạn thay đổi.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Nâng cấp</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Không phải bây giờ</string>
+    <string name="rewatch_prompt_title">Bạn đã xem xong nội dung này.</string>
+    <string name="rewatch_prompt_subtitle">Bắt đầu một phiên xem lại trên Simkl?</string>
+    <string name="rewatch_prompt_confirm">Có</string>
+    <string name="rewatch_prompt_dismiss">Không</string>
     <string name="tracking_status_connected">Đã kết nối</string>
     <string name="tracking_status_disconnected">Chưa kết nối</string>
     <string name="tracking_status_waiting">Đang chờ phê duyệt</string>
@@ -625,6 +655,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Sử dụng hiệu ứng chuyển động cuộn và định vị theo tiêu điểm toàn cục tùy chỉnh của Nuvio.</string>
     <string name="advanced_rgb565">Giải mã hình ảnh RGB565</string>
     <string name="advanced_rgb565_subtitle">Dùng màu 16 bit để tiết kiệm bộ nhớ cho các hình ảnh không trong suốt. Thay đổi tùy chọn này sẽ khởi động lại ứng dụng.</string>
+    <string name="advanced_hardware_bitmaps">Giải mã hình ảnh bằng phần cứng</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Chỉ giữ hình ảnh đã giải mã trong bộ nhớ đồ họa. Giảm dung lượng RAM sử dụng, nhưng việc tải hình ảnh mới có thể bị giật trên GPU yếu.</string>
     <string name="advanced_memory_only_vertical_scroll">Cuộn dọc chỉ trong bộ nhớ:</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Bỏ qua các yêu cầu tải ảnh từ đĩa và mạng trong khi cuộn dọc qua các hàng trên trang chủ.</string>
     <string name="advanced_compose_highlighter">Bộ tô sáng Compose</string>
@@ -651,12 +683,13 @@
     <string name="settings_mdblist_subtitle">Nhà cung cấp điểm đánh giá bên ngoài</string>
     <string name="settings_animeskip_subtitle">Mốc thời gian bỏ qua phần mở đầu/kết thúc anime</string>
     <string name="settings_debrid_subtitle">Nguồn tài khoản đám mây thử nghiệm</string>
+    <string name="settings_usenet_subtitle">Nhà cung cấp, trình chỉ mục, phát lại và chẩn đoán</string>
 
     <string name="playback_title">Cài đặt phát lại</string>
     <string name="playback_subtitle">Cấu hình phát lại video và tùy chọn phụ đề</string>
     <string name="cd_decrease">Giảm</string>
     <string name="cd_increase">Tăng</string>
-    <string name="action_cancel">Huỷ</string>
+    <string name="action_cancel">Hủy</string>
     <string name="action_switch">Chuyển</string>
     <string name="action_apply">Áp dụng</string>
     <string name="sub_opacity">Độ mờ</string>
@@ -878,6 +911,8 @@
     <string name="dv7_mode_strip_dv_desc">Loại bỏ lớp RPU của Dolby Vision khỏi tất cả các luồng.</string>
     <string name="audio_dv5_to_dv81_title">Chuyển đổi DV5 sang DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Giả lập Profile 8.1 cho luồng DV5 để xuất ra HDR10 tương thích. Hữu ích trên các thiết bị không hỗ trợ giải mã DV5 gốc.</string>
+    <string name="audio_zero_dovi_l5_title">Bỏ qua siêu dữ liệu viền đen Dolby Vision (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Đặt độ lệch vùng hiển thị của Dolby Vision L5 về 0 khi phát lại. Khắc phục hiện tượng xuất hiện các dải tối hơn hoặc mờ đục dọc viền đen trên tệp có siêu dữ liệu L5 bị lỗi.</string>
     <string name="audio_strip_hdr10plus_title">Loại bỏ siêu dữ liệu HDR10+</string>
     <string name="audio_strip_hdr10plus_sub">Loại bỏ siêu dữ liệu động HDR10+ khỏi các luồng. Khi Chuyển đổi sang DV8.1 được bật, việc loại bỏ sẽ được thực hiện sau khi chuyển đổi.</string>
     <string name="audio_dv7_preserve_mapping_title">Giữ nguyên dữ liệu ánh xạ DV (DV7 sang DV8.1)</string>
@@ -936,6 +971,7 @@
     <string name="sub_outline">Viền chữ</string>
     <string name="sub_outline_sub">Thêm viền chữ quanh phụ đề để dễ đọc hơn</string>
     <string name="sub_outline_color">Màu viền</string>
+    <string name="sub_outline_width">Độ rộng viền</string>
     <string name="sub_hdr_style">Kiểu riêng cho HDR / Dolby Vision</string>
     <string name="sub_hdr_style_sub">Sử dụng một màu chữ khác và độ sáng thấp hơn cho phụ đề trên video HDR và Dolby Vision</string>
     <string name="sub_hdr_text_color">Màu chữ HDR</string>
@@ -949,8 +985,8 @@
     <string name="sub_preview_text">Mọi câu chuyện đều bắt đầu từ một chút tò mò.</string>
     <string name="sub_font">Phông chữ</string>
     <string name="sub_font_default">Mặc định</string>
-    <string name="sub_font_serif">Kiểu chữ có chân</string>
-    <string name="sub_font_mono">Kiểu chữ đơn cách</string>
+    <string name="sub_font_serif">Có chân</string>
+    <string name="sub_font_mono">Đơn cách</string>
     <string name="sub_font_import">Nhập từ điện thoại</string>
     <string name="sub_font_import_desc">Thêm phông chữ .ttf hoặc .otf có dung lượng tối đa 10 MB. Phông chữ đã nhập sẽ được lưu trên TV này.</string>
     <string name="sub_font_import_qr">Quét bằng điện thoại để thêm phông chữ .ttf hoặc .otf</string>
@@ -1091,6 +1127,7 @@
     <string name="layout_discover_location_in_sidebar_desc">Khám phá có mục riêng trong bảng bên.</string>
     <string name="layout_poster_labels">Hiển thị nhãn Poster</string>
     <string name="layout_poster_labels_sub">Hiển thị tiêu đề bên dưới poster trong hàng, lưới và xem tất cả.</string>
+    <string name="layout_modern_poster_labels_sub">Hiển thị tiêu đề và năm dưới poster trong các hàng Trang chủ.</string>
     <string name="layout_addon_name">Hiển thị tên tiện ích</string>
     <string name="layout_addon_name_sub">Hiển thị tên nguồn bên dưới tiêu đề danh mục.</string>
     <string name="layout_catalog_type">Hiển thị loại danh mục</string>
@@ -1113,8 +1150,10 @@
     <string name="layout_section_continue_watching_desc">Cài đặt cho mục Tiếp tục xem</string>
     <string name="layout_cw_enabled">Hiển thị mục Tiếp tục xem</string>
     <string name="layout_cw_enabled_sub">Hiển thị hàng Tiếp tục xem trên màn hình chính.</string>
-    <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ của tập phim trong Tiếp tục xem.</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ của tập phim làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
+    <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ tập phim trong Tiếp tục xem</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ tập phim làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
+    <string name="layout_season_posters">Poster từng mùa</string>
+    <string name="layout_season_posters_sub">Hiển thị poster riêng cho từng mùa khi có sẵn thay vì thẻ văn bản.</string>
     <string name="layout_blur_unwatched">Làm mờ tập phim chưa xem.</string>
     <string name="layout_blur_unwatched_sub">Làm mờ ảnh thu nhỏ các tập phim chưa xem để tránh tiết lộ nội dung.</string>
     <string name="layout_episode_options_overlay">Lớp phủ tùy chọn tập phim</string>
@@ -1143,7 +1182,7 @@
     <string name="layout_cw_sort_split_upcoming">Tách hàng Sắp phát sóng</string>
     <string name="layout_cw_sort_split_upcoming_desc">Chuyển các tập chưa phát sóng vào hàng Sắp phát sóng riêng biệt.</string>
     <string name="layout_cw_click_action">Khi chọn</string>
-    <string name="layout_cw_click_action_sub">Mở gì khi bạn chọn một mục trong danh sách Tiếp tục xem</string>
+    <string name="layout_cw_click_action_sub">Mở gì khi bạn chọn một mục trong Tiếp tục xem</string>
     <string name="layout_cw_click_stream">Mở luồng phát</string>
     <string name="layout_cw_click_stream_desc">Chọn một nguồn hoặc tiếp tục phát</string>
     <string name="layout_cw_click_details">Mở Chi tiết</string>
@@ -1159,6 +1198,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Tạm dừng trailer khi cuộn xuống và tiếp tục phát khi quay lại đầu trang.</string>
     <string name="layout_trailer_4k">Trailer 4K</string>
     <string name="layout_trailer_4k_sub">Phát trailer trên 1080p khi có thể. Tùy chọn này sử dụng nhiều bộ nhớ hơn; mặc định tắt trên các thiết bị có 2 GB RAM trở xuống.</string>
+    <string name="layout_trailer_subtitles">Phụ đề trailer</string>
+    <string name="layout_trailer_subtitles_sub">Hiển thị phụ đề trên trailer bằng ngôn ngữ ưu tiên của bạn khi có sẵn.</string>
     <string name="layout_detail_group_episodes">Tập phim</string>
     <string name="layout_detail_group_trailers">Trailer</string>
     <string name="layout_detail_group_metadata">Siêu dữ liệu</string>
@@ -1179,6 +1220,8 @@
     <string name="layout_trailer_muted">Phát trailer đã tắt tiếng</string>
     <string name="layout_trailer_muted_sub_preview">Tắt âm thanh trailer khi tự động phát bản xem trước.</string>
     <string name="layout_trailer_muted_sub_expanded">Tắt âm thanh trailer trong thẻ mở rộng.</string>
+    <string name="layout_trailer_continue_in_details">Tiếp tục trailer trong Chi tiết</string>
+    <string name="layout_trailer_continue_in_details_sub">Tiếp tục phát trailer khi bạn mở trang chi tiết.</string>
     <string name="layout_section_card_style">Thẻ poster</string>
     <string name="layout_section_card_style_desc">Điều chỉnh độ rộng và bo tròn góc của thẻ.</string>
     <string name="settings_card_depth_title">Hiệu ứng chiều sâu thẻ</string>
@@ -1211,9 +1254,10 @@
     <string name="layout_open">Mở</string>
     <string name="layout_closed">Đã đóng</string>
     <string name="layout_trailer_location">Vị trí phát trailer (Hiện đại)</string>
-    <string name="layout_trailer_location_sub">Chọn nơi phát bản xem trước trailer trong Trang chủ Hiện đại..</string>
+    <string name="layout_trailer_location_sub">Chọn nơi phát bản xem trước trailer trong Trang chủ Hiện đại.</string>
     <string name="layout_trailer_expanded_card">Thẻ mở rộng</string>
-    <string name="layout_trailer_hero_media">Phương tiện Khu vực Nổi bật</string>
+    <string name="layout_trailer_hero_media">Khu vực Nổi bật</string>
+    <string name="layout_trailer_hero_media_no_expand">Khu vực Nổi bật (Không Mở rộng)</string>
     <string name="layout_preset_compact">Thu gọn</string>
     <string name="layout_preset_dense">Dày đặc</string>
     <string name="layout_preset_standard">Tiêu chuẩn</string>
@@ -1300,7 +1344,7 @@
     <string name="mdblist_rate_limited">Đã đạt giới hạn yêu cầu của MDBList. Quá trình đồng bộ sẽ tiếp tục sau khi giới hạn được đặt lại.</string>
     <string name="mdblist_revoke_failed">Đã ngắt kết nối trên thiết bị này. Vui lòng xóa ứng dụng trong phần cài đặt tài khoản MDBList để thu hồi quyền truy cập.</string>
     <string name="mdblist_title">Điểm đánh giá MDBList</string>
-    <string name="mdblist_subtitle">Cấu hình các điểm đánh giá bên ngoài hiển thị trong chi tiết của Khu vực Nổi bật</string>
+    <string name="mdblist_subtitle">Cấu hình điểm đánh giá bên ngoài hiển thị ở khu vực nổi bật</string>
     <string name="mdblist_enable_title">Bật điểm đánh giá MDBList</string>
     <string name="mdblist_enable_subtitle">Lấy điểm đánh giá từ các nhà cung cấp bên ngoài trên màn hình chi tiết siêu dữ liệu</string>
     <string name="mdblist_api_key_title">Mã khóa API</string>
@@ -1327,7 +1371,7 @@
     <string name="mdblist_show_on_hero_title">Sử dụng điểm đánh giá trên Khu vực nổi bật</string>
     <string name="mdblist_show_on_hero_subtitle">Hiển thị điểm đánh giá MDBList trên vòng quay khu vực nổi bật (hiện đại và cổ điển/lưới)</string>
     <string name="mdblist_rating_order_title">Thứ tự điểm đánh giá</string>
-    <string name="mdblist_rating_order_subtitle">Chọn 3 điểm đánh giá được bật và có sẵn đầu tiên sẽ hiển thị trên khu vực nổi bật hiện đại. Dùng mũi tên để sắp xếp lại.</string>
+    <string name="mdblist_rating_order_subtitle">3 điểm đánh giá đầu tiên được bật và có sẵn sẽ hiển thị ở khu vực nổi bật hiện đại. Sử dụng nút sắp xếp lại để thay đổi thứ tự.</string>
     <string name="mdblist_dialog_title">Mã khóa API của MDBList</string>
     <string name="mdblist_dialog_subtitle">Nhập mã khóa API để lấy điểm đánh giá bên ngoài</string>
     <string name="mdblist_dialog_placeholder">Nhập mã khóa API của MDBList</string>
@@ -1544,6 +1588,8 @@
     <string name="tmdb_networks_subtitle">Đơn vị phát sóng kèm logo từ TMDB</string>
     <string name="tmdb_episodes_title">Tập phim</string>
     <string name="tmdb_episodes_subtitle">Tiêu đề, mô tả, ảnh thu nhỏ và thời lượng tập phim từ TMDB</string>
+    <string name="tmdb_season_posters_title">Poster từng mùa</string>
+    <string name="tmdb_season_posters_subtitle">Poster từng mùa từ TMDB cho các thẻ mùa trên trang chi tiết.</string>
     <string name="tmdb_trailers_title">Trailer</string>
     <string name="tmdb_trailers_subtitle">Đề xuất trailer từ TMDB cho mục trailer chi tiết</string>
     <string name="tmdb_more_like_this_title">Nội dung tương tự</string>
@@ -1787,6 +1833,13 @@
     <string name="addon_installing">Đang cài đặt</string>
     <string name="addon_install_btn">Cài đặt</string>
     <string name="addon_install_success">Đã cài đặt %1$s</string>
+    <string name="addon_tracking_consent_title">Tiện ích theo dõi</string>
+    <string name="addon_tracking_consent_body">%1$s là một tiện ích theo dõi. Nuvio sẽ gửi cho tiện ích này hoạt động của bạn: những gì bạn phát, tạm dừng và dừng kèm vị trí phát lại, nội dung bạn thêm vào hoặc xóa khỏi thư viện và nội dung bạn đánh dấu đã xem hoặc chưa xem. Dữ liệu này sẽ rời khỏi Nuvio và được xử lý bởi nhà phát triển tiện ích cùng dịch vụ mà nó kết nối tới.</string>
+    <string name="addon_tracking_consent_checkbox">Tôi đồng ý chia sẻ hoạt động xem và thư viện với tiện ích này</string>
+    <string name="addon_tracking_consent_checked">Đã chọn</string>
+    <string name="addon_tracking_consent_unchecked">Chưa chọn</string>
+    <string name="addon_tracking_consent_cancel">Hủy</string>
+    <string name="addon_tracking_consent_install">Cài đặt</string>
     <string name="addon_error_invalid_url">Nhập URL tiện ích hợp lệ</string>
     <string name="addon_error_invalid_scheme">URL tiện ích phải bắt đầu bằng http hoặc https</string>
     <string name="addon_installed_section">Đã cài đặt</string>
@@ -1834,6 +1887,9 @@
     <string name="catalog_order_disabled_on_home">Đã tắt trên Trang chủ</string>
     <string name="catalog_order_enable">Bật</string>
     <string name="catalog_order_disable">Tắt</string>
+    <string name="catalog_order_pinned">Đã ghim</string>
+    <string name="catalog_order_pinned_to_top">Đã ghim lên đầu</string>
+    <string name="catalog_order_pin_to_move_toast">Bỏ ghim lên đầu khỏi bộ sưu tập để di chuyển</string>
 
 
     <string name="stream_retry">Thử lại</string>
@@ -1866,6 +1922,8 @@
     <string name="settings_p2p_profile_fast_description">Sử dụng nhiều kết nối người dùng ngang hàng hơn cho torrent khó tải hoặc có bitrate cao</string>
     <string name="settings_p2p_cache_size_title">Dung lượng bộ nhớ đệm torrent</string>
     <string name="settings_p2p_cache_size_description">Dữ liệu torrent đã tải xuống được lưu trên thiết bị này để xem lại nhanh hơn.</string>
+    <string name="settings_p2p_cache_memory_only">Chỉ bộ nhớ</string>
+    <string name="settings_p2p_cache_memory_only_description">Dữ liệu torrent chỉ giữ trên RAM và không bao giờ ghi vào bộ nhớ lưu trữ. Tua ngược sẽ phải tải xuống lại.</string>
     <string name="settings_p2p_cache_none">Không có bộ nhớ đệm vĩnh viễn</string>
     <string name="settings_p2p_cache_2_gb">2 GB</string>
     <string name="settings_p2p_cache_5_gb">5 GB</string>
@@ -2050,6 +2108,7 @@
     <string name="subtitle_off">Tắt</string>
     <string name="subtitle_style_title">Kiểu phụ đề</string>
     <string name="subtitle_style_customize">Tùy chỉnh</string>
+    <string name="subtitle_style_customize_ass">Tùy chỉnh kiểu ASS/SSA</string>
     <string name="subtitle_style_color">Màu sắc</string>
     <string name="subtitle_style_reset">Đặt lại</string>
     <string name="subtitle_style_font_size">Cỡ chữ</string>
@@ -2216,15 +2275,12 @@
     <string name="library_status_dropped">Đã bỏ</string>
     <string name="library_syncing_library">Đang đồng bộ thư viện\u2026</string>
     <string name="library_type_all">Tất cả</string>
-    <string name="library_type_items">mục</string>
-    <string name="library_empty_local_title">Chưa có %1$s</string>
-    <string name="library_empty_trakt_title">Chưa có %1$s trong danh sách này</string>
-    <string name="library_empty_local_subtitle">Bắt đầu lưu mục yêu thích để xem ở đây</string>
-    <string name="library_empty_trakt_subtitle">Sử dụng + trong chi tiết để thêm vào danh sách theo dõi hoặc danh sách</string>
+    <string name="library_empty_title">Không có mục nào để hiển thị</string>
+    <string name="library_empty_local_hint">Thay đổi bộ lọc hoặc bắt đầu lưu các mục yêu thích để xem tại đây</string>
+    <string name="library_empty_trakt_hint">Thay đổi bộ lọc hoặc sử dụng dấu + trong chi tiết để thêm các mục vào danh sách theo dõi hoặc danh sách khác</string>
+    <string name="library_empty_simkl_hint">Thay đổi bộ lọc hoặc sử dụng dấu + trong chi tiết để thêm các mục vào trạng thái Simkl</string>
     <string name="library_empty_trakt_not_auth_title">Trakt chưa được kết nối</string>
     <string name="library_empty_trakt_not_auth_subtitle">Kết nối tài khoản Trakt trong Cài đặt để xem thư viện Trakt của bạn</string>
-    <string name="library_empty_simkl_title">Không có %1$s trong trạng thái này</string>
-    <string name="library_empty_simkl_subtitle">Sử dụng + trong chi tiết để thêm mục vào trạng thái Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl chưa được kết nối</string>
     <string name="library_empty_simkl_not_auth_subtitle">Kết nối tài khoản Simkl trong Cài đặt để xem thư viện Simkl của bạn</string>
     <string name="library_list_create_dialog_title">Tạo danh sách</string>
@@ -2439,6 +2495,7 @@
     <string name="cast_detail_error">Đã xảy ra lỗi</string>
     <string name="cast_detail_retry">Thử lại</string>
     <string name="cast_detail_filmography">Sự nghiệp</string>
+    <string name="cast_detail_filter_all">Tất cả</string>
     <string name="cast_detail_born">Sinh: %1$s</string>
     <string name="cast_detail_born_died">Sinh: %1$s — †%2$s</string>
     <string name="cast_detail_age">%1$d tuổi</string>
@@ -2469,7 +2526,7 @@
     <string name="account_sync_code_description">Đồng bộ giữa các thiết bị mà không cần tạo tài khoản.</string>
     <string name="account_linked_devices">Thiết bị đã liên kết (%1$d)</string>
     <string name="account_no_linked_devices">Không có thiết bị đã liên kết</string>
-    <string name="account_unlink">Huỷ liên kết</string>
+    <string name="account_unlink">Hủy liên kết</string>
 
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Đang tải điểm đánh giá các tập phim...</string>
@@ -2519,6 +2576,8 @@
     <string name="update_checking">Đang kiểm tra bản cập nhật…</string>
     <string name="update_waiting_for_stable">Bạn sẽ nhận bản phát hành ổn định tiếp theo khi có sẵn</string>
     <string name="update_download_complete">Tải xuống hoàn tất. Sẵn sàng cài đặt.</string>
+    <string name="update_ready_closes">Tải xuống hoàn tất. Ứng dụng sẽ đóng trong khi cài đặt bản cập nhật, quá trình này có thể mất một phút. Vui lòng mở lại ứng dụng sau đó.</string>
+    <string name="update_ready_closes_and_reopens">Tải xuống hoàn tất. Ứng dụng sẽ đóng trong khi cài đặt bản cập nhật và tự mở lại, quá trình này có thể mất một phút.</string>
     <string name="update_installed_automatically">Đã tự động cập nhật khi thiết bị ở trạng thái chờ.</string>
     <string name="update_up_to_date">Hệ thống đã được cập nhật. Những thay đổi mới nhất:</string>
     <string name="update_close">Đóng</string>
@@ -2557,6 +2616,10 @@
     <string name="plugin_repo_added_with_providers">Đã thêm %1$s với %2$d nhà cung cấp</string>
     <string name="plugin_repo_removed">Kho lưu trữ đã bị xóa</string>
     <string name="plugin_repo_refreshed">Kho lưu trữ đã làm mới</string>
+    <string name="plugin_repo_delete_confirm_title">Xóa kho lưu trữ?</string>
+    <string name="plugin_repo_delete_confirm_message">Bạn có chắc chắn muốn xóa không?</string>
+    <string name="plugin_repo_delete_no">Không</string>
+    <string name="plugin_repo_delete_yes">Có</string>
 
     <!-- Trakt errors -->
 
@@ -2627,6 +2690,7 @@
     <string name="cd_loading_logo">Logo đang tải</string>
     <string name="cd_move_up">Chuyển lên</string>
     <string name="cd_move_down">Chuyển xuống</string>
+    <string name="cd_reorder">Sắp xếp lại</string>
     <string name="cd_edit">Sửa</string>
     <string name="cd_delete">Xóa</string>
     <string name="cd_qr_code">Mã QR</string>
@@ -2698,10 +2762,21 @@
     <string name="collections_valid_summary">%1$d bộ sưu tập, %2$d thư mục</string>
     <string name="collections_confirm_import">Xác nhận nhập</string>
     <string name="collections_folder_count">%1$d thư mục</string>
+    <string name="collections_pinned">Đã ghim</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Tiêu đề hàng</string>
     <string name="collections_editor_save">Lưu</string>
+    <string name="collections_editor_unsaved_title">Lưu thay đổi?</string>
+    <string name="collections_editor_unsaved_subtitle">Bạn có thay đổi chưa được lưu trong bộ sưu tập này.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Thay đổi chưa lưu</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Nhập tiêu đề và thêm ít nhất một thư mục để lưu bộ sưu tập này.</string>
+    <string name="collections_editor_unsaved_missing_title">Nhập tiêu đề bộ sưu tập để lưu thay đổi của bạn.</string>
+    <string name="collections_editor_unsaved_missing_folder">Thêm ít nhất một thư mục để lưu bộ sưu tập này.</string>
+    <string name="collections_editor_folder_unsaved_title">Lưu thay đổi thư mục?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Bạn có thay đổi chưa được lưu trong thư mục này.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Thay đổi thư mục chưa lưu</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Thêm ít nhất một nguồn để lưu thư mục này.</string>
     <string name="collections_editor_backdrop">Ảnh phông nền</string>
     <string name="collections_editor_pin_above">Ghim phía trên các danh mục</string>
     <string name="collections_editor_pin_above_desc">Hiển thị bộ sưu tập này phía trên tất cả danh mục trang chủ thông thường. Các bộ sưu tập được ghim sẽ theo thứ tự tạo bộ sưu tập.</string>
@@ -3341,7 +3416,7 @@
     <string name="playback_buffer_allow_large_sub">Gỡ bỏ giới hạn bộ nhớ thiết bị trên thanh trượt dung lượng bộ đệm mục tiêu, cho phép các giá trị lên đến 2 GB. Có thể gây lỗi trên thiết bị có dưới 2 GB RAM.</string>
     <string name="playback_cache_header">Bộ nhớ đệm đĩa</string>
     <string name="playback_cache_vod">Bộ nhớ đệm VOD trên đĩa</string>
-    <string name="playback_cache_vod_sub">Lưu các bytes đã tải xuống vào đĩa cho luồng phát hiện tại. Tính năng này giúp mở rộng khả năng tua ngược tức thì vượt ra ngoài giới hạn của bộ nhớ đệm ngược trên RAM và giúp duy trì phát video khi mạng bị ngắt kết nối trong thời gian ngắn. Chỉ áp dụng cho các luồng lũy tiến (không áp dụng cho HLS/DASH).</string>
+    <string name="playback_cache_vod_sub">Lưu các byte đã tải xuống vào đĩa cho luồng phát hiện tại. Tính năng này giúp mở rộng khả năng tua ngược tức thì vượt ra ngoài giới hạn của bộ nhớ đệm ngược trên RAM và giúp duy trì phát video khi mạng bị ngắt kết nối trong thời gian ngắn. Chỉ áp dụng cho các luồng lũy tiến (không áp dụng cho HLS/DASH).</string>
     <string name="playback_cache_auto_size">Dung lượng tự động</string>
     <string name="playback_cache_auto_size_sub">Khi bật, dung lượng bộ nhớ đệm được tính dựa trên dung lượng đĩa trống. Tắt tùy chọn này để tự chọn dung lượng.</string>
     <string name="playback_cache_vod_size">Dung lượng bộ nhớ đệm VOD</string>
@@ -3433,20 +3508,28 @@
     <string name="stream_test_no_stream">Chưa ghi nhận phát lại nào. Vui lòng phát một video để chạy các bài kiểm tra chẩn đoán trên máy chủ lưu trữ video đó.</string>
     <string name="stream_test_btn_start">Bắt đầu kiểm tra</string>
     <string name="stream_test_btn_measuring_baseline">Đang đo mức tham chiếu...</string>
-    <string name="stream_test_btn_measuring_parallel1">Đang đo kết nối đồng thời (1MB)...</string>
-    <string name="stream_test_btn_measuring_parallel4">Đang đo kết nối đồng thời (4MB)...</string>
-    <string name="stream_test_btn_measuring_parallel8">Đang đo kết nối đồng thời (8MB)...</string>
-    <string name="stream_test_btn_measuring_parallel16">Đang đo kết nối đồng thời (16MB)...</string>
+    <string name="stream_test_btn_measuring_parallel1">Đang đo kết nối đồng thời (1 kết nối)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Đang đo kết nối đồng thời (4 kết nối)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Đang đo kết nối đồng thời (8 kết nối)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Đang đo kết nối đồng thời (16 kết nối)...</string>
     <string name="stream_test_btn_run_again">Chạy lại</string>
     <string name="stream_test_btn_running">Đang chạy...</string>
     <string name="stream_test_label_baseline">Kết nối đơn tiêu chuẩn (tham chiếu)</string>
-    <string name="stream_test_label_parallel1">Kết nối đồng thời (phân đoạn 1 MB)</string>
-    <string name="stream_test_label_parallel4">Kết nối đồng thời (phân đoạn 4 MB)</string>
-    <string name="stream_test_label_parallel8">Kết nối đồng thời (phân đoạn 8 MB)</string>
-    <string name="stream_test_label_parallel16">Kết nối đồng thời (phân đoạn 16 MB)</string>
+    <string name="stream_test_label_parallel1">Kết nối đồng thời (1 kết nối)</string>
+    <string name="stream_test_label_parallel4">Kết nối đồng thời (4 kết nối)</string>
+    <string name="stream_test_label_parallel8">Kết nối đồng thời (8 kết nối)</string>
+    <string name="stream_test_label_parallel16">Kết nối đồng thời (16 kết nối)</string>
     <string name="stream_test_error_prefix">Lỗi: %1$s</string>
     <string name="stream_test_video_bitrate">Bitrate video trung bình: %1$s</string>
     <string name="stream_test_error_connection">Kết nối không thành công. Liên kết luồng đã phát gần nhất có thể đã hết hạn hoặc không thể truy cập. Vui lòng phát lại video rồi thử lại.</string>
+
+    <string name="player_finding_next_stream">Đang tìm luồng tiếp theo…</string>
+    <string name="player_trying_next_stream">Đang thử luồng tiếp theo (lần thử %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">Không còn luồng hoạt động. Vui lòng chọn nguồn khác hoặc thử lại.</string>
+    <string name="usenet_builtin_addon_title">Usenet tích hợp sẵn</string>
+    <string name="usenet_builtin_addon_desc">Kết quả từ các nhà cung cấp NNTP và trình chỉ mục Newznab của riêng bạn. Di chuyển mục này để chọn vị trí hiển thị trong danh sách.</string>
+    <string name="usenet_fallback">Tự động dự phòng Usenet</string>
+    <string name="usenet_fallback_description">Nếu một luồng Usenet gặp lỗi, tự động thử các nguồn Usenet tiếp theo trong giới hạn số lần đã thiết lập. Các luồng Torrent và nguồn khác sẽ không bao giờ tự động chuyển.</string>
 
     <string name="random_episode_title">Phát ngẫu nhiên</string>
     <string name="layout_random_episode_sub">Phát ngẫu nhiên các tập từ bất kỳ loạt phim nào. Tắt tùy chọn này sẽ tạm dừng phát ngẫu nhiên.</string>
@@ -3479,8 +3562,23 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Tìm kiếm tự động đồng bộ chính xác</string>
     <string name="autosync_thorough_description">Tiếp tục so sánh các phụ đề khác với bản nhúng sẵn để tìm bản khớp hơn trước khi đồng bộ. Khi tắt, bản khớp đầu tiên sẽ được dùng ngay. Chỉ bản khớp có độ tin cậy cao mới được áp dụng</string>
-    <string name="autosync_toast_no_fit">Đồng bộ thất bại: Phụ đề không khớp với bản video này.</string>
     <string name="autosync_label_synced">Đã tự động đồng bộ</string>
+    <string name="autosync_status_title">Trạng thái tự động đồng bộ</string>
+    <string name="autosync_status_synced">Đã đồng bộ</string>
+    <string name="autosync_status_not_needed">Không cần thiết</string>
+    <string name="autosync_status_in_progress">Đang tiến hành</string>
+    <string name="autosync_status_no_fit">Có thể không khớp</string>
+    <string name="autosync_status_no_reference">Không có phụ đề nhúng</string>
+    <string name="autosync_status_failed">Không thành công</string>
     <string name="stream_resume_from_time">Xem tiếp từ %1$s</string>
     <string name="stream_resume_from_percent">Xem tiếp từ %1$d%%</string>
+    <string name="player_disc_titles">Nội dung đĩa</string>
+    <string name="player_disc_title_feature">Nội dung chính · %1$d phút</string>
+    <string name="player_disc_title_extra">Nội dung bổ sung · %1$d phút</string>
+    <string name="player_disc_title_subtitles">Phụ đề %1$s</string>
+    <string name="player_disc_title_failed">Không thể phát nội dung này</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clip</item>
+        <item quantity="other">%d clip</item>
+    </plurals>
 </resources>

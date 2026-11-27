@@ -151,6 +151,7 @@ internal fun PlayerRuntimeController.currentPartyStream(): PartyStream? {
         filename = currentFilename,
         videoSize = currentVideoSize,
         bingeGroup = currentStreamBingeGroup,
+        clearKeys = currentClearKeys,
     )
 }
 

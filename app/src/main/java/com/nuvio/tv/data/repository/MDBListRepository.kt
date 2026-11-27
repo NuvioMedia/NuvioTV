@@ -85,28 +85,46 @@ class MDBListRepository internal constructor(
         val mediaType = normalizeMediaType(meta.apiType.ifBlank { fallbackItemType })
         val ref = resolveMediaRef(meta, fallbackItemId, fallbackItemType, mediaType) ?: return null
 
-        val ratings = ratingsLoader.getRatings(ref.provider, ref.mediaType, ref.id, credential)?.let { allRatings ->
-            MDBListRatings(
-                trakt = allRatings.trakt.takeIf { settings.showTrakt },
-                imdb = allRatings.imdb.takeIf { settings.showImdb },
-                tmdb = allRatings.tmdb.takeIf { settings.showTmdb },
-                letterboxd = allRatings.letterboxd.takeIf { settings.showLetterboxd },
-                tomatoes = allRatings.tomatoes.takeIf { settings.showTomatoes },
-                audience = allRatings.audience.takeIf { settings.showAudience },
-                metacritic = allRatings.metacritic.takeIf { settings.showMetacritic },
-                mal = allRatings.mal.takeIf { settings.showMal },
-                tomatoesCertified = settings.showTomatoes && allRatings.tomatoesCertified,
-                audienceCertified = settings.showAudience && allRatings.audienceCertified
-            )
-        }?.takeUnless { it.isEmpty() } ?: return null
+        return ratingsLoader.getRatings(ref.provider, ref.mediaType, ref.id, credential)?.let { settings.visibleRatings(it) }
+    }
 
-        return MDBListRatingsResult(ratings, hasImdbRating = ratings.imdb != null)
+    /**
+     * Ratings of this title that are already in memory (home rows usually fetched them), without a request.
+     * Null when they still have to be loaded with [getRatingsForMeta].
+     */
+    fun cachedRatingsForMeta(
+        meta: Meta,
+        fallbackItemId: String,
+        fallbackItemType: String,
+        settings: MDBListSettings
+    ): MDBListRatingsResult? {
+        if (!settings.enabled || !settings.hasEnabledProviders()) return null
+        val credential = api.credential(settings.apiKey) ?: return null
+        val mediaType = normalizeMediaType(meta.apiType.ifBlank { fallbackItemType })
+        val ref = resolveMediaRef(meta, fallbackItemId, fallbackItemType, mediaType) ?: return null
+        return ratingsLoader.cachedRatings(ref.provider, ref.mediaType, ref.id, credential)?.let { settings.visibleRatings(it) }
     }
 
     private fun MDBListSettings.hasEnabledProviders(): Boolean =
         showTrakt || showImdb || showTmdb || showLetterboxd || showTomatoes || showAudience || showMetacritic || showMal
 
-    private suspend fun resolveMediaRef(
+    private fun MDBListSettings.visibleRatings(allRatings: MDBListRatings): MDBListRatingsResult? {
+        val ratings = MDBListRatings(
+            trakt = allRatings.trakt.takeIf { showTrakt },
+            imdb = allRatings.imdb.takeIf { showImdb },
+            tmdb = allRatings.tmdb.takeIf { showTmdb },
+            letterboxd = allRatings.letterboxd.takeIf { showLetterboxd },
+            tomatoes = allRatings.tomatoes.takeIf { showTomatoes },
+            audience = allRatings.audience.takeIf { showAudience },
+            metacritic = allRatings.metacritic.takeIf { showMetacritic },
+            mal = allRatings.mal.takeIf { showMal },
+            tomatoesCertified = showTomatoes && allRatings.tomatoesCertified,
+            audienceCertified = showAudience && allRatings.audienceCertified
+        ).takeUnless { it.isEmpty() } ?: return null
+        return MDBListRatingsResult(ratings, hasImdbRating = ratings.imdb != null)
+    }
+
+    private fun resolveMediaRef(
         meta: Meta,
         fallbackItemId: String,
         fallbackItemType: String,

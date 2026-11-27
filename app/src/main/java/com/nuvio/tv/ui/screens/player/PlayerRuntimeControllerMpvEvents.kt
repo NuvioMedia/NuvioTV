@@ -102,6 +102,7 @@ internal class MpvEventRelay(
         if (!active.get() || epoch != controller.mpvEventRelayEpoch) return
         when (property) {
             MPV_TRACK_LIST_PROPERTY -> controller.markMpvTracksStale()
+            MPV_CHAPTER_LIST_PROPERTY -> controller.markMpvChaptersStale()
             MPV_SID_PROPERTY, MPV_SUB_TEXT_PROPERTY -> syncStyledSubtitles()
         }
     }
@@ -135,6 +136,7 @@ internal fun PlayerRuntimeController.registerMpvEventRelay(view: NuvioMpvSurface
     resetMpvStartupWatchdog()
     // Changes that happened before the relay was attached are not replayed.
     markMpvTracksStale()
+    markMpvChaptersStale()
     val relay = MpvEventRelay(this, mpvEventRelayEpoch)
     mpvEventRelay = relay
     runCatching { view.mpv.addObserver(relay) }
@@ -295,6 +297,7 @@ internal fun PlayerRuntimeController.handleMpvPlaybackError(
         }
         val retryCanHelp = httpCode == null || !isPermanentHttpStatus(httpCode)
         if (retryCanHelp && attemptMpvAutoRetry(detailedError = detailedError, savedPosition = savedPosition)) return
+        if (tryNextStream(detailedError)) return
 
         finishLoadingDiagnostics("mpv_error")
         cancelNextEpisodeAutoPlayOnFatalError()
@@ -379,6 +382,10 @@ internal fun PlayerRuntimeController.maybeRunMpvStartupWatchdog(view: NuvioMpvSu
                 idleTicks = mpvIdleActiveTicks,
                 stallTicks = mpvStartupStallTicks,
                 absoluteTicks = mpvStartupAbsoluteTicks
+            ),
+            limits = MpvStartupWatchdogPolicy.limitsFor(
+                currentStreamUrl,
+                com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(currentStreamUrl)
             )
         )
     )

@@ -1,0 +1,1002 @@
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalTvMaterial3Api::class)
+
+package com.nuvio.tv.ui.components
+
+import android.os.Looper
+import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.SubcomposeLayoutState
+import androidx.compose.ui.layout.SubcomposeSlotReusePolicy
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.tv.material3.Border
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.theme.NuvioTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+private const val MOVE_REPEAT_INITIAL_DELAY_MS = 280L
+private const val MOVE_REPEAT_INTERVAL_MS = 140L
+
+private const val RETAINED_ROW_SLOTS = 24
+
+private val ReorderTravelSpec = tween<Float>(
+    durationMillis = NuvioMotion.tokens.durations.medium,
+    easing = NuvioMotion.tokens.easings.emphasized,
+)
+
+@Composable
+fun <T> TvReorderList(
+    items: List<T>,
+    key: (T) -> String,
+    canMove: (T) -> Boolean,
+    movingKey: String?,
+    onStartMove: (String) -> Unit,
+    onMoveBy: (String, direction: Int) -> Int?,
+    onConfirmMove: (String) -> Unit,
+    onCancelMove: () -> Unit,
+    modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
+    rowSpacing: Dp = NuvioTheme.spacing.lg,
+    contentPadding: PaddingValues = PaddingValues(bottom = NuvioTheme.spacing.xl),
+    header: @Composable (() -> Unit)? = null,
+    footer: @Composable (() -> Unit)? = null,
+    useHeaderAwareBringIntoView: Boolean = false,
+    scrollToTopOnEdgeItem: Boolean = false,
+    ensureComposedKey: String? = null,
+    rowHeightCache: MutableMap<String, Float> = remember { mutableMapOf() },
+    itemContent: @Composable (
+        item: T,
+        isMoving: Boolean,
+        onStartMove: () -> Unit,
+        onConfirmMove: () -> Unit,
+    ) -> Unit,
+) {
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val rowSpacingPx = with(density) { rowSpacing.toPx() }
+    val contentTopPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
+
+    val rowHeightPx = remember { FloatArray(1) }
+    val liveHeaderHeightPx = remember { FloatArray(1) }
+    val anchoredHeaderHeightPx = remember(scrollState) { IntArray(1) { -1 } }
+    val listHasFocus = remember { BooleanArray(1) }
+    var headerHeightPx by remember { mutableFloatStateOf(0f) }
+    val viewportHeightPx = remember { FloatArray(1) }
+    val measuredRowHeights = rowHeightCache
+
+    fun currentHeaderHeightPx(): Float {
+        val stateHeight = headerHeightPx
+        val liveHeight = liveHeaderHeightPx[0]
+        return if (liveHeight > 0f) liveHeight else stateHeight
+    }
+
+    fun listOriginPx(): Float = contentTopPaddingPx + currentHeaderHeightPx()
+
+    fun defaultRowHeightPx(): Float {
+        if (measuredRowHeights.isNotEmpty()) {
+            return measuredRowHeights.values.average().toFloat()
+        }
+        return if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
+    }
+
+    fun heightForItemKey(itemKey: String): Float {
+        return measuredRowHeights[itemKey] ?: defaultRowHeightPx()
+    }
+
+    fun slotTopsFor(orderKeys: List<String>): FloatArray {
+        return computeSlotTops(
+            slotCount = orderKeys.size,
+            heightAt = { index -> heightForItemKey(orderKeys[index]) },
+            spacingPx = rowSpacingPx,
+        )
+    }
+
+    fun indicesFrom(source: List<T>): Map<String, Int> {
+        return source.mapIndexed { index, item -> key(item) to index }.toMap()
+    }
+
+    val animatedIndices = remember {
+        mutableStateMapOf<String, Int>().apply { putAll(indicesFrom(items)) }
+    }
+    var slotOrderKeys by remember { mutableStateOf(items.map(key)) }
+    val dragOffsets = remember { mutableStateMapOf<String, Float>() }
+    val offsetJobs = remember { mutableMapOf<String, Job>() }
+    val rowContentCache = remember(movingKey) {
+        TvReorderRowCache<T, @Composable () -> Unit>()
+    }
+    val subcomposeLayoutState = remember {
+        SubcomposeLayoutState(SubcomposeSlotReusePolicy(RETAINED_ROW_SLOTS))
+    }
+    val inheritedBringIntoViewSpec = LocalBringIntoViewSpec.current
+    val freezeScrollBringIntoView = remember {
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float = 0f
+        }
+    }
+    val headerAwareBringIntoView = remember(inheritedBringIntoViewSpec, scrollState) {
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec = inheritedBringIntoViewSpec.scrollAnimationSpec
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
+                if (containerSize <= 0f || size <= 0f) return 0f
+                val measuredHeaderHeight = currentHeaderHeightPx()
+                if (measuredHeaderHeight <= 0f || rowHeightPx[0] <= 0f) {
+                    return inheritedBringIntoViewSpec.calculateScrollDistance(
+                        offset, size, containerSize,
+                    )
+                }
+                val listOrigin = listOriginPx()
+                val itemTopInContent = scrollState.value + offset
+                val firstRowBottom = listOrigin + if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
+                if (measuredHeaderHeight > 0f && itemTopInContent < firstRowBottom) {
+                    return -scrollState.value.toFloat()
+                }
+                return inheritedBringIntoViewSpec.calculateScrollDistance(offset, size, containerSize)
+            }
+        }
+    }
+
+    val runtime = remember { TvReorderListRuntime(items.map(key), movingKey) }
+    val latestItems by rememberUpdatedState(items)
+    var suppressStartMove by remember { mutableStateOf(false) }
+    var pinnedScrollPx by remember { mutableIntStateOf(-1) }
+    runtime.latestMovingKey = movingKey
+    val activeBringIntoViewSpec = remember(
+        inheritedBringIntoViewSpec,
+        headerAwareBringIntoView,
+        useHeaderAwareBringIntoView,
+        runtime,
+    ) {
+        val delegate = if (useHeaderAwareBringIntoView) {
+            headerAwareBringIntoView
+        } else {
+            inheritedBringIntoViewSpec
+        }
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec = delegate.scrollAnimationSpec
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
+                if (shouldSuppressSameRowBringIntoView(
+                        suppressCenteringForSameRow = runtime.suppressCenteringForSameRow,
+                        offset = offset,
+                        size = size,
+                        containerSize = containerSize,
+                    )
+                ) {
+                    return 0f
+                }
+                return delegate.calculateScrollDistance(offset, size, containerSize)
+            }
+        }
+    }
+    val bringIntoViewSpec = if (movingKey != null || pinnedScrollPx >= 0) {
+        freezeScrollBringIntoView
+    } else {
+        activeBringIntoViewSpec
+    }
+
+    fun pinScroll() {
+        val movingIndex = movingKey?.let { animatedIndices[it] }
+        pinnedScrollPx = if (scrollToTopOnEdgeItem && movingIndex == 0) {
+            0
+        } else {
+            scrollState.value
+        }
+    }
+
+    suspend fun restorePinnedScroll() {
+        val pin = pinnedScrollPx
+        if (pin < 0 || scrollState.value == pin) return
+        scrollState.scrollTo(pin)
+    }
+
+    fun clearOffsets() {
+        offsetJobs.values.forEach { it.cancel() }
+        offsetJobs.clear()
+        dragOffsets.clear()
+    }
+
+    val itemKeys = remember(items) { items.map(key) }
+    val itemIndexByKey = remember(itemKeys) {
+        items.mapIndexed { index, item -> key(item) to index }.toMap()
+    }
+
+    SideEffect {
+        val movingChanged = runtime.previousMovingKey != movingKey
+        val itemsChanged = runtime.previousItemKeys != itemKeys
+        if (itemsChanged && movingKey == null) {
+            clearOffsets()
+            val nextIndices = indicesFrom(items)
+            if (nextIndices != animatedIndices) {
+                animatedIndices.clear()
+                animatedIndices.putAll(nextIndices)
+            }
+            slotOrderKeys = itemKeys
+            val validKeys = itemKeys.toSet()
+            measuredRowHeights.keys.retainAll(validKeys)
+            rowContentCache.retainKeys(validKeys)
+        } else if (itemsChanged) {
+            val validKeys = itemKeys.toSet()
+            val kept = slotOrderKeys.filter { it in validKeys }
+            val keptSet = kept.toSet()
+            slotOrderKeys = kept + itemKeys.filter { it !in keptSet }
+            animatedIndices.keys.retainAll(validKeys)
+            slotOrderKeys.forEachIndexed { index, itemKey ->
+                animatedIndices[itemKey] = index
+            }
+            dragOffsets.keys.retainAll(validKeys)
+            measuredRowHeights.keys.retainAll(validKeys)
+            rowContentCache.retainKeys(validKeys)
+        }
+        if (movingChanged || itemsChanged) {
+            runtime.previousMovingKey = movingKey
+            runtime.previousItemKeys = itemKeys
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            runtime.repeatJob?.cancel()
+            runtime.neighborScrollJob?.cancel()
+            offsetJobs.values.forEach { it.cancel() }
+        }
+    }
+
+    fun stopRepeat() {
+        runtime.repeatJob?.cancel()
+        runtime.repeatJob = null
+    }
+
+    fun animateOffsetToZero(itemKey: String) {
+        offsetJobs[itemKey]?.cancel()
+        val start = dragOffsets[itemKey] ?: 0f
+        if (start == 0f) return
+        val job = scope.launch {
+            animate(
+                initialValue = start,
+                targetValue = 0f,
+                animationSpec = ReorderTravelSpec,
+            ) { value, _ ->
+                if (isActive) {
+                    dragOffsets[itemKey] = value
+                }
+            }
+        }
+        offsetJobs[itemKey] = job
+        job.invokeOnCompletion {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                offsetJobs.remove(itemKey, job)
+            }
+        }
+    }
+
+    fun animateMove(movedKey: String, oldIndex: Int, newIndex: Int) {
+        val oldOrderKeys = slotOrderKeys
+        if (oldOrderKeys.isEmpty() || movedKey !in oldOrderKeys) return
+        val clampedOld = oldIndex.coerceIn(0, oldOrderKeys.lastIndex)
+        val clampedNew = newIndex.coerceIn(0, oldOrderKeys.lastIndex)
+        if (clampedOld == clampedNew) return
+        val newOrderKeys = oldOrderKeys.toMutableList().apply {
+            remove(movedKey)
+            add(clampedNew, movedKey)
+        }
+        val oldTops = slotTopsFor(oldOrderKeys)
+        val newTops = slotTopsFor(newOrderKeys)
+        val newSlotByKey = newOrderKeys.mapIndexed { index, itemKey -> itemKey to index }.toMap()
+
+        val entries = animatedIndices.entries.toList()
+        val changedKeys = ArrayList<String>(entries.size)
+        for ((itemKey, oldSlot) in entries) {
+            val newSlot = newSlotByKey[itemKey] ?: continue
+            if (newSlot == oldSlot) continue
+            offsetJobs[itemKey]?.cancel()
+            dragOffsets[itemKey] =
+                (oldTops[oldSlot.coerceIn(0, oldTops.lastIndex)] -
+                    newTops[newSlot.coerceIn(0, newTops.lastIndex)]) +
+                    (dragOffsets[itemKey] ?: 0f)
+            animatedIndices[itemKey] = newSlot
+            changedKeys.add(itemKey)
+        }
+        slotOrderKeys = newOrderKeys
+        for (itemKey in changedKeys) {
+            animateOffsetToZero(itemKey)
+        }
+    }
+
+    fun keepNeighborVisible(newIndex: Int, direction: Int) {
+        val viewport = viewportHeightPx[0]
+        if (viewport <= 0f) return
+        val orderKeys = slotOrderKeys
+        if (orderKeys.isEmpty()) return
+        val clampedIndex = newIndex.coerceIn(0, orderKeys.lastIndex)
+        val tops = slotTopsFor(orderKeys)
+        val listOrigin = listOriginPx()
+        val movingTop = listOrigin + tops[clampedIndex]
+        val movingHeight = heightForItemKey(orderKeys[clampedIndex])
+        val peek = movingHeight
+        if (movingHeight <= 0f) return
+        if (newIndex <= 0 &&
+            (scrollToTopOnEdgeItem ||
+                listOrigin + movingHeight * 2f <= viewport)
+        ) {
+            runtime.neighborScrollJob?.cancel()
+            runtime.neighborScrollJob = scope.launch {
+                scrollState.animateScrollTo(0, ReorderTravelSpec)
+            }
+            return
+        }
+        val movingBottom = movingTop + movingHeight
+        val desiredTop = if (direction < 0) (movingTop - peek).coerceAtLeast(0f) else movingTop
+        val desiredBottom = if (direction > 0) movingBottom + peek else movingBottom
+        val current = scrollState.value.toFloat()
+        val target = when {
+            desiredTop < current -> desiredTop
+            desiredBottom > current + viewport -> desiredBottom - viewport
+            else -> return
+        }.coerceIn(0f, scrollState.maxValue.toFloat())
+        runtime.neighborScrollJob?.cancel()
+        runtime.neighborScrollJob = scope.launch {
+            scrollState.animateScrollTo(
+                value = target.roundToInt(),
+                animationSpec = ReorderTravelSpec,
+            )
+        }
+    }
+
+    fun performMove(direction: Int): Boolean {
+        val activeKey = movingKey ?: return false
+        val oldIndex = animatedIndices[activeKey]
+            ?: items.indexOfFirst { key(it) == activeKey }.takeIf { it >= 0 }
+            ?: return false
+        val newIndex = onMoveBy(activeKey, direction)
+        if (newIndex == null || newIndex == oldIndex) return false
+        animateMove(activeKey, oldIndex, newIndex)
+        keepNeighborVisible(newIndex, direction)
+        return true
+    }
+
+    fun confirmFromUi(fromOkKey: Boolean) {
+        val activeKey = movingKey ?: return
+        stopRepeat()
+        pinScroll()
+        runtime.suppressCenteringForSameRow = true
+        suppressStartMove = fromOkKey
+        onConfirmMove(activeKey)
+    }
+
+    fun handleMoveKey(nativeKeyCode: Int, action: Int, repeatCount: Int): Boolean {
+        if (movingKey == null) return false
+        if (nativeKeyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+            nativeKeyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+        ) {
+            return action == KeyEvent.ACTION_DOWN || action == KeyEvent.ACTION_UP
+        }
+        val direction = when (nativeKeyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> -1
+            KeyEvent.KEYCODE_DPAD_DOWN -> 1
+            else -> return false
+        }
+        if (action == KeyEvent.ACTION_UP) {
+            stopRepeat()
+            return true
+        }
+        if (action != KeyEvent.ACTION_DOWN) return false
+
+        if (repeatCount == 0) {
+            performMove(direction)
+            stopRepeat()
+            runtime.repeatJob = scope.launch {
+                delay(MOVE_REPEAT_INITIAL_DELAY_MS)
+                while (isActive) {
+                    if (!performMove(direction)) break
+                    delay(MOVE_REPEAT_INTERVAL_MS)
+                }
+            }
+        }
+        return true
+    }
+
+    LaunchedEffect(suppressStartMove) {
+        if (!suppressStartMove) return@LaunchedEffect
+        delay(400)
+        if (suppressStartMove) {
+            suppressStartMove = false
+        }
+    }
+
+    LaunchedEffect(movingKey) {
+        if (movingKey != null) {
+            runtime.hadMoveSession = true
+            runtime.cancelScrollJob?.cancel()
+            runtime.cancelScrollJob = null
+            runtime.cancelReturnSlot = animatedIndices[movingKey]
+            runtime.cancelReturnOrderKeys = slotOrderKeys
+            runtime.cancelReturnScrollPx = scrollState.value
+            val movingIndex = animatedIndices[movingKey]
+            if (scrollToTopOnEdgeItem &&
+                movingIndex == 0 &&
+                scrollState.value != 0
+            ) {
+                runtime.neighborScrollJob?.cancel()
+                scrollState.animateScrollTo(0, ReorderTravelSpec)
+            }
+            return@LaunchedEffect
+        }
+        if (!runtime.hadMoveSession) {
+            stopRepeat()
+            return@LaunchedEffect
+        }
+        delay(1)
+        if (runtime.latestMovingKey != null) {
+            return@LaunchedEffect
+        }
+        runtime.neighborScrollJob?.cancel()
+        stopRepeat()
+        restorePinnedScroll()
+        val exitItemKeys = latestItems.map(key)
+        val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
+        if (exitItemKeys != animatedOrder) {
+            clearOffsets()
+            animatedIndices.clear()
+            animatedIndices.putAll(latestItems.mapIndexed { index, item -> key(item) to index }.toMap())
+            slotOrderKeys = exitItemKeys
+        } else {
+            slotOrderKeys = exitItemKeys
+        }
+        restorePinnedScroll()
+        delay(32)
+        restorePinnedScroll()
+        if (runtime.latestMovingKey == null) {
+            pinnedScrollPx = -1
+        }
+    }
+
+    BackHandler(enabled = movingKey != null) {
+        stopRepeat()
+        runtime.suppressCenteringForSameRow = true
+        val returnSlot = runtime.cancelReturnSlot
+        val returnOrderKeys = runtime.cancelReturnOrderKeys ?: slotOrderKeys
+        if (returnSlot != null && returnSlot in returnOrderKeys.indices) {
+            val tops = slotTopsFor(returnOrderKeys)
+            val target = computeCancelScrollTargetPx(
+                slotTopPx = tops[returnSlot],
+                slotHeightPx = heightForItemKey(returnOrderKeys[returnSlot]),
+                headerOffsetPx = listOriginPx(),
+                viewportHeightPx = viewportHeightPx[0],
+                initialScrollPx = runtime.cancelReturnScrollPx,
+                maxScrollPx = scrollState.maxValue,
+            )
+            runtime.neighborScrollJob?.cancel()
+            runtime.cancelScrollJob = scope.launch {
+                scrollState.animateScrollTo(target, ReorderTravelSpec)
+            }
+        }
+        onCancelMove()
+    }
+
+    CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
+        BoxWithConstraints(modifier = modifier) {
+            val viewportPx = if (constraints.hasBoundedHeight) {
+                constraints.maxHeight.toFloat()
+            } else {
+                0f
+            }
+            viewportHeightPx[0] = viewportPx
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .layout { measurable, constraints ->
+                        val preMeasureScroll = Snapshot.withoutReadObservation { scrollState.value }
+                        val placeable = measurable.measure(constraints)
+                        if (header != null) {
+                            val measuredHeaderPx = liveHeaderHeightPx[0].roundToInt()
+                            val previousHeaderPx = anchoredHeaderHeightPx[0]
+                            if (previousHeaderPx >= 0 &&
+                                measuredHeaderPx != previousHeaderPx &&
+                                listHasFocus[0]
+                            ) {
+                                val deltaPx = measuredHeaderPx - previousHeaderPx
+                                val maxAfterMeasure = Snapshot.withoutReadObservation { scrollState.maxValue }
+                                val currentScroll = Snapshot.withoutReadObservation { scrollState.value }
+                                val targetScroll = computeAnchoredHeaderScrollPx(
+                                    preMeasureScrollPx = preMeasureScroll,
+                                    headerDeltaPx = deltaPx,
+                                    maxScrollPx = maxAfterMeasure,
+                                )
+                                val adjustment = targetScroll - currentScroll
+                                if (adjustment != 0) {
+                                    scrollState.dispatchRawDelta(adjustment.toFloat())
+                                }
+                                if (pinnedScrollPx >= 0) {
+                                    pinnedScrollPx = computeAnchoredHeaderScrollPx(
+                                        preMeasureScrollPx = pinnedScrollPx,
+                                        headerDeltaPx = deltaPx,
+                                        maxScrollPx = maxAfterMeasure,
+                                    )
+                                }
+                            }
+                            anchoredHeaderHeightPx[0] = measuredHeaderPx
+                        } else {
+                            anchoredHeaderHeightPx[0] = -1
+                        }
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    }
+                    .verticalScroll(scrollState)
+                    .onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if (movingKey == null && native.action == KeyEvent.ACTION_DOWN) {
+                            when (native.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_UP,
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    runtime.suppressCenteringForSameRow = false
+                                }
+                                KeyEvent.KEYCODE_DPAD_LEFT,
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    if (runtime.focusedRowKey != null) {
+                                        runtime.suppressCenteringForSameRow = true
+                                    }
+                                }
+                            }
+                        }
+                        if (movingKey == null && !suppressStartMove) {
+                            return@onPreviewKeyEvent false
+                        }
+                        val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_ENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_SPACE ||
+                            native.keyCode == KeyEvent.KEYCODE_BUTTON_A
+                        when {
+                            isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
+                                if (suppressStartMove) {
+                                    suppressStartMove = false
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+
+                            movingKey != null && isConfirmKey &&
+                                native.action == KeyEvent.ACTION_DOWN -> {
+                                if (native.repeatCount == 0) {
+                                    confirmFromUi(fromOkKey = true)
+                                }
+                                true
+                            }
+
+                            movingKey != null &&
+                                native.keyCode == KeyEvent.KEYCODE_TAB -> {
+                                true
+                            }
+
+                            else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
+                        }
+                    }
+                    .focusGroup(),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(contentPadding),
+                ) {
+                    if (header != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (focusState.hasFocus) {
+                                        runtime.focusedRowKey = null
+                                        runtime.suppressCenteringForSameRow = false
+                                    }
+                                }
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    liveHeaderHeightPx[0] = placeable.height.toFloat()
+                                    layout(placeable.width, placeable.height) {
+                                        placeable.place(0, 0)
+                                    }
+                                }
+                                .onSizeChanged { size ->
+                                    val measured = size.height.toFloat()
+                                    liveHeaderHeightPx[0] = measured
+                                    if (headerHeightPx != measured) {
+                                        headerHeightPx = measured
+                                    }
+                                },
+                        ) {
+                            header()
+                        }
+                    }
+                    SubcomposeLayout(
+                        state = subcomposeLayoutState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                listHasFocus[0] = focusState.hasFocus
+                            },
+                    ) { layoutConstraints ->
+                        if (items.isEmpty()) {
+                            val emptyWidth = if (layoutConstraints.hasBoundedWidth) {
+                                layoutConstraints.maxWidth
+                            } else {
+                                0
+                            }
+                            return@SubcomposeLayout layout(emptyWidth, 0) {}
+                        }
+                        val itemConstraints = layoutConstraints.copy(
+                            minHeight = 0,
+                            maxHeight = Constraints.Infinity,
+                        )
+                        val placeables = mutableMapOf<Int, Placeable>()
+                        fun measureSlot(index: Int): Placeable {
+                            placeables[index]?.let { return it }
+                            val item = items[index]
+                            val itemKey = key(item)
+                            val isMoving = movingKey == itemKey
+                            val content = rowContentCache.getOrPut(
+                                key = itemKey,
+                                item = item,
+                                isMoving = isMoving,
+                                itemContent = itemContent,
+                                canMove = canMove,
+                                onStartMove = onStartMove,
+                                onConfirmMove = onConfirmMove,
+                            ) {
+                                {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .onFocusChanged { focusState ->
+                                                if (focusState.hasFocus) {
+                                                    if (runtime.focusedRowKey == itemKey) {
+                                                        runtime.suppressCenteringForSameRow = true
+                                                    } else {
+                                                        runtime.focusedRowKey = itemKey
+                                                        runtime.suppressCenteringForSameRow = false
+                                                    }
+                                                }
+                                            }
+                                            .offset {
+                                                val dragOffsetPx = dragOffsets[itemKey] ?: 0f
+                                                IntOffset(x = 0, y = dragOffsetPx.roundToInt())
+                                            }
+                                            .zIndex(if (isMoving) 1f else 0f),
+                                    ) {
+                                        itemContent(
+                                            item,
+                                            isMoving,
+                                            {
+                                                if (!suppressStartMove && canMove(item)) {
+                                                    onStartMove(itemKey)
+                                                }
+                                            },
+                                            { confirmFromUi(fromOkKey = false) },
+                                        )
+                                    }
+                                }
+                            }
+                            val placeable = subcompose(itemKey, content).first().measure(itemConstraints)
+                            placeables[index] = placeable
+                            val measuredHeight = placeable.height.toFloat()
+                            if (measuredRowHeights[itemKey] != measuredHeight) {
+                                measuredRowHeights[itemKey] = measuredHeight
+                            }
+                            if (rowHeightPx[0] == 0f && !isMoving && measuredHeight > 0f) {
+                                rowHeightPx[0] = measuredHeight
+                            }
+                            return placeable
+                        }
+
+                        val orderKeys = slotOrderKeys.ifEmpty { itemKeys }
+                        if (orderKeys.isEmpty()) {
+                            return@SubcomposeLayout layout(0, 0) {}
+                        }
+                        if (rowHeightPx[0] <= 0f) {
+                            itemIndexByKey[orderKeys[0]]?.let { measureSlot(it) }
+                        }
+                        val cachedTops = slotTopsFor(orderKeys)
+                        val listOrigin = listOriginPx()
+                        val topEdge = scrollState.value - listOrigin - viewportPx
+                        val bottomEdge = scrollState.value + viewportPx -
+                            listOrigin + viewportPx
+                        val visibleSlots = if (viewportPx <= 0f) {
+                            0 until orderKeys.size
+                        } else {
+                            visibleSlotRangeFromTops(cachedTops, topEdge, bottomEdge)
+                        }
+                        val activeMovingKey = movingKey
+                        val movingSlot = activeMovingKey?.let { animatedIndices[it] }
+                        val extraItemIndex = if (
+                            activeMovingKey != null && movingSlot != null && movingSlot !in visibleSlots
+                        ) {
+                            itemIndexByKey[activeMovingKey]
+                        } else {
+                            null
+                        }
+                        val measuredIndices = LinkedHashSet<Int>()
+                        itemIndexByKey[orderKeys[0]]?.let { measuredIndices.add(it) }
+                        for (slot in visibleSlots) {
+                            itemIndexByKey[orderKeys[slot]]?.let { measuredIndices.add(it) }
+                        }
+                        if (extraItemIndex != null) {
+                            measuredIndices.add(extraItemIndex)
+                        }
+                        if (ensureComposedKey != null) {
+                            itemIndexByKey[ensureComposedKey]?.let { measuredIndices.add(it) }
+                        }
+                        for (index in measuredIndices) {
+                            measureSlot(index)
+                        }
+                        val slotTops = slotTopsFor(orderKeys)
+                        val lastSlot = orderKeys.lastIndex
+                        val totalHeight = (
+                            slotTops[lastSlot] + heightForItemKey(orderKeys[lastSlot])
+                            ).roundToInt()
+                        val layoutWidth = if (layoutConstraints.hasBoundedWidth) {
+                            layoutConstraints.maxWidth
+                        } else {
+                            placeables.values.maxOfOrNull { it.width } ?: 0
+                        }
+                        layout(layoutWidth, totalHeight) {
+                            fun placeRow(index: Int) {
+                                val placeable = placeables[index] ?: return
+                                val itemKey = key(items[index])
+                                val slotIndex = animatedIndices[itemKey] ?: index
+                                placeable.place(
+                                    x = 0,
+                                    y = slotTops[slotIndex.coerceIn(0, lastSlot)].roundToInt(),
+                                    zIndex = if (itemKey == movingKey) 1f else 0f,
+                                )
+                            }
+                            for (index in measuredIndices) {
+                                placeRow(index)
+                            }
+                        }
+                    }
+                    if (footer != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (focusState.hasFocus) {
+                                        runtime.focusedRowKey = null
+                                        runtime.suppressCenteringForSameRow = false
+                                    }
+                                },
+                        ) {
+                            footer()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private class TvReorderListRuntime(
+    initialItemKeys: List<String>,
+    initialMovingKey: String?,
+) {
+    var repeatJob: Job? = null
+    var neighborScrollJob: Job? = null
+    var previousItemKeys: List<String> = initialItemKeys
+    var previousMovingKey: String? = initialMovingKey
+    var hadMoveSession: Boolean = false
+    var latestMovingKey: String? = initialMovingKey
+    var cancelReturnSlot: Int? = null
+    var cancelReturnOrderKeys: List<String>? = null
+    var cancelReturnScrollPx: Int? = null
+    var cancelScrollJob: Job? = null
+    var focusedRowKey: String? = null
+    var suppressCenteringForSameRow: Boolean = false
+}
+
+internal class TvReorderRowCache<T, C> {
+    private class Entry<T, C>(
+        val item: T,
+        val isMoving: Boolean,
+        val itemContent: Any,
+        val canMove: Any,
+        val onStartMove: Any,
+        val onConfirmMove: Any,
+        val content: C,
+    )
+
+    private val entries = mutableMapOf<String, Entry<T, C>>()
+
+    fun getOrPut(
+        key: String,
+        item: T,
+        isMoving: Boolean,
+        itemContent: Any,
+        canMove: Any,
+        onStartMove: Any,
+        onConfirmMove: Any,
+        factory: () -> C,
+    ): C {
+        val cached = entries[key]
+        if (cached != null &&
+            cached.item == item &&
+            cached.isMoving == isMoving &&
+            cached.itemContent == itemContent &&
+            cached.canMove == canMove &&
+            cached.onStartMove == onStartMove &&
+            cached.onConfirmMove == onConfirmMove
+        ) {
+            return cached.content
+        }
+        val created = factory()
+        entries[key] = Entry(
+            item = item,
+            isMoving = isMoving,
+            itemContent = itemContent,
+            canMove = canMove,
+            onStartMove = onStartMove,
+            onConfirmMove = onConfirmMove,
+            content = created,
+        )
+        return created
+    }
+
+    fun retainKeys(validKeys: Set<String>) {
+        entries.keys.retainAll(validKeys)
+    }
+}
+
+internal fun shouldSuppressSameRowBringIntoView(
+    suppressCenteringForSameRow: Boolean,
+    offset: Float,
+    size: Float,
+    containerSize: Float,
+): Boolean {
+    if (!suppressCenteringForSameRow || containerSize <= 0f || size <= 0f) return false
+    return offset >= 0f && offset + size <= containerSize
+}
+
+internal fun computeAnchoredHeaderScrollPx(
+    preMeasureScrollPx: Int,
+    headerDeltaPx: Int,
+    maxScrollPx: Int,
+): Int {
+    val safeMax = maxScrollPx.coerceAtLeast(0)
+    return (preMeasureScrollPx + headerDeltaPx).coerceIn(0, safeMax)
+}
+
+internal fun computeCancelScrollTargetPx(
+    slotTopPx: Float,
+    slotHeightPx: Float,
+    headerOffsetPx: Float,
+    viewportHeightPx: Float,
+    initialScrollPx: Int?,
+    maxScrollPx: Int,
+): Int {
+    val safeMax = maxScrollPx.coerceAtLeast(0)
+    val safeSlotHeight = slotHeightPx.coerceAtLeast(0f)
+    val absoluteTop = headerOffsetPx + slotTopPx
+    val absoluteBottom = absoluteTop + safeSlotHeight
+    if (initialScrollPx != null && viewportHeightPx > 0f) {
+        val clampedInitial = initialScrollPx.coerceIn(0, safeMax)
+        if (absoluteTop >= clampedInitial && absoluteBottom <= clampedInitial + viewportHeightPx) {
+            return clampedInitial
+        }
+    }
+    if (viewportHeightPx > 0f && absoluteBottom <= viewportHeightPx) {
+        return 0
+    }
+    return (absoluteTop - safeSlotHeight)
+        .coerceAtLeast(0f)
+        .roundToInt()
+        .coerceIn(0, safeMax)
+}
+
+internal fun computeSlotTops(
+    slotCount: Int,
+    heightAt: (Int) -> Float,
+    spacingPx: Float,
+): FloatArray {
+    val tops = FloatArray(slotCount)
+    var acc = 0f
+    for (i in 0 until slotCount) {
+        tops[i] = acc
+        acc += heightAt(i).coerceAtLeast(0f) + spacingPx
+    }
+    return tops
+}
+
+internal fun visibleSlotRangeFromTops(
+    tops: FloatArray,
+    topEdgePx: Float,
+    bottomEdgePx: Float,
+): IntRange {
+    val lastSlot = tops.size - 1
+    if (lastSlot < 0) return IntRange.EMPTY
+    fun upperBound(value: Float): Int {
+        var lo = 0
+        var hi = tops.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (tops[mid] <= value) lo = mid + 1 else hi = mid
+        }
+        return lo
+    }
+    val first = (upperBound(topEdgePx) - 1).coerceIn(0, lastSlot)
+    val last = (upperBound(bottomEdgePx) - 1)
+        .coerceIn(0, lastSlot)
+        .coerceAtLeast(first)
+    return first..last
+}
+
+@Composable
+@ReadOnlyComposable
+fun tvReorderDisabledFocusBorder(shape: Shape): Border = Border(
+    border = BorderStroke(2.dp, MaterialTheme.colorScheme.border.copy(alpha = 0.2f)),
+    shape = shape
+)

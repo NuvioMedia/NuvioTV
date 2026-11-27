@@ -56,6 +56,7 @@ data class LayoutSettingsUiState(
     val discoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val lastNonOffDiscoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val posterLabelsEnabled: Boolean = true,
+    val modernPosterLabelsEnabled: Boolean = false,
     val catalogAddonNameEnabled: Boolean = true,
     val catalogTypeSuffixEnabled: Boolean = true,
     val classicFocusGradientEnabled: Boolean = false,
@@ -63,6 +64,7 @@ data class LayoutSettingsUiState(
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
     val focusedPosterBackdropTrailerMuted: Boolean = true,
+    val focusedPosterTrailerContinueInDetails: Boolean = false,
     val focusedPosterBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget =
         FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
     val posterCardWidthDp: Int = 126,
@@ -70,6 +72,7 @@ data class LayoutSettingsUiState(
     val posterCardCornerRadiusDp: Int = 12,
     val cardDepthStyle: CardDepthStyle = CardDepthStyle(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val detailSeasonPostersEnabled: Boolean = false,
     val randomEpisodeEnabled: Boolean = false,
     val episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.BLUR,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
@@ -82,6 +85,7 @@ data class LayoutSettingsUiState(
     val detailPageTrailerPlayInBackground: Boolean = false,
     val detailPageTrailerPauseOnScroll: Boolean = true,
     val trailer4kEnabled: Boolean = true,
+    val trailerSubtitlesEnabled: Boolean = false,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
@@ -115,6 +119,7 @@ sealed class LayoutSettingsEvent {
     data class SetHeroSectionEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDiscoverLocation(val location: DiscoverLocation) : LayoutSettingsEvent()
     data class SetPosterLabelsEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetModernPosterLabelsEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetCatalogAddonNameEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetCatalogTypeSuffixEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetClassicFocusGradientEnabled(val enabled: Boolean) : LayoutSettingsEvent()
@@ -122,6 +127,7 @@ sealed class LayoutSettingsEvent {
     data class SetFocusedPosterBackdropExpandDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerMuted(val muted: Boolean) : LayoutSettingsEvent()
+    data class SetFocusedPosterTrailerContinueInDetails(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerPlaybackTarget(
         val target: FocusedPosterTrailerPlaybackTarget
     ) : LayoutSettingsEvent()
@@ -136,6 +142,7 @@ sealed class LayoutSettingsEvent {
         val enabled: Boolean
     ) : LayoutSettingsEvent()
     data class SetBlurUnwatchedEpisodes(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailSeasonPostersEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetRandomEpisodeEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetEpisodeOptionsOverlayStyle(val style: EpisodeOptionsOverlayStyle) : LayoutSettingsEvent()
     data class SetHomeImdbRatingsVisibility(val visibility: HomeImdbRatingsVisibility) : LayoutSettingsEvent()
@@ -148,6 +155,7 @@ sealed class LayoutSettingsEvent {
     data class SetDetailPageTrailerPlayInBackground(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerPauseOnScroll(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetTrailer4kEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetTrailerSubtitlesEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
@@ -265,6 +273,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.modernPosterLabelsEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(modernPosterLabelsEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.catalogAddonNameEnabled.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(catalogAddonNameEnabled = enabled) }
             }
@@ -300,6 +313,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.focusedPosterTrailerContinueInDetails.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(focusedPosterTrailerContinueInDetails = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.distinctUntilChanged().collectLatest { target ->
                 updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerPlaybackTarget = target) }
             }
@@ -327,6 +345,11 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.blurUnwatchedEpisodes.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(blurUnwatchedEpisodes = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.detailSeasonPostersEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(detailSeasonPostersEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -372,7 +395,8 @@ class LayoutSettingsViewModel @Inject constructor(
                         detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds,
                         detailPageTrailerPlayInBackground = settings.playInBackground,
                         detailPageTrailerPauseOnScroll = settings.pauseOnScroll,
-                        trailer4kEnabled = settings.allow4k
+                        trailer4kEnabled = settings.allow4k,
+                        trailerSubtitlesEnabled = settings.subtitlesEnabled
                     )
                 }
             }
@@ -473,6 +497,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetHeroSectionEnabled -> setHeroSectionEnabled(event.enabled)
             is LayoutSettingsEvent.SetDiscoverLocation -> setDiscoverLocation(event.location)
             is LayoutSettingsEvent.SetPosterLabelsEnabled -> setPosterLabelsEnabled(event.enabled)
+            is LayoutSettingsEvent.SetModernPosterLabelsEnabled -> setModernPosterLabelsEnabled(event.enabled)
             is LayoutSettingsEvent.SetCatalogAddonNameEnabled -> setCatalogAddonNameEnabled(event.enabled)
             is LayoutSettingsEvent.SetCatalogTypeSuffixEnabled -> setCatalogTypeSuffixEnabled(event.enabled)
             is LayoutSettingsEvent.SetClassicFocusGradientEnabled -> setClassicFocusGradientEnabled(event.enabled)
@@ -480,6 +505,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds -> setFocusedPosterBackdropExpandDelaySeconds(event.seconds)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled -> setFocusedPosterBackdropTrailerEnabled(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted -> setFocusedPosterBackdropTrailerMuted(event.muted)
+            is LayoutSettingsEvent.SetFocusedPosterTrailerContinueInDetails -> setFocusedPosterTrailerContinueInDetails(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerPlaybackTarget ->
                 setFocusedPosterBackdropTrailerPlaybackTarget(event.target)
             is LayoutSettingsEvent.SetPosterCardWidth -> setPosterCardWidth(event.widthDp)
@@ -491,6 +517,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetCardDepthSurfaceEnabled ->
                 setCardDepthSurfaceEnabled(event.surface, event.enabled)
             is LayoutSettingsEvent.SetBlurUnwatchedEpisodes -> setBlurUnwatchedEpisodes(event.enabled)
+            is LayoutSettingsEvent.SetDetailSeasonPostersEnabled -> setDetailSeasonPostersEnabled(event.enabled)
             is LayoutSettingsEvent.SetRandomEpisodeEnabled -> setRandomEpisodeEnabled(event.enabled)
             is LayoutSettingsEvent.SetEpisodeOptionsOverlayStyle -> setEpisodeOptionsOverlayStyle(event.style)
             is LayoutSettingsEvent.SetHomeImdbRatingsVisibility -> setHomeImdbRatingsVisibility(event.visibility)
@@ -503,6 +530,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground -> setDetailPageTrailerPlayInBackground(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll -> setDetailPageTrailerPauseOnScroll(event.enabled)
             is LayoutSettingsEvent.SetTrailer4kEnabled -> setTrailer4kEnabled(event.enabled)
+            is LayoutSettingsEvent.SetTrailerSubtitlesEnabled -> setTrailerSubtitlesEnabled(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
@@ -665,6 +693,13 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setModernPosterLabelsEnabled(enabled: Boolean) {
+        if (_uiState.value.modernPosterLabelsEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setModernPosterLabelsEnabled(enabled)
+        }
+    }
+
     private fun setCatalogAddonNameEnabled(enabled: Boolean) {
         if (_uiState.value.catalogAddonNameEnabled == enabled) return
         viewModelScope.launch {
@@ -711,6 +746,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.focusedPosterBackdropTrailerMuted == muted) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setFocusedPosterBackdropTrailerMuted(muted)
+        }
+    }
+
+    private fun setFocusedPosterTrailerContinueInDetails(enabled: Boolean) {
+        if (_uiState.value.focusedPosterTrailerContinueInDetails == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setFocusedPosterTrailerContinueInDetails(enabled)
         }
     }
 
@@ -806,6 +848,13 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setTrailerSubtitlesEnabled(enabled: Boolean) {
+        if (_uiState.value.trailerSubtitlesEnabled == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setSubtitlesEnabled(enabled)
+        }
+    }
+
     private fun setTrailer4kEnabled(enabled: Boolean) {
         if (_uiState.value.trailer4kEnabled == enabled) return
         viewModelScope.launch {
@@ -817,6 +866,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.blurUnwatchedEpisodes == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setBlurUnwatchedEpisodes(enabled)
+        }
+    }
+
+    private fun setDetailSeasonPostersEnabled(enabled: Boolean) {
+        if (_uiState.value.detailSeasonPostersEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setDetailSeasonPostersEnabled(enabled)
         }
     }
 

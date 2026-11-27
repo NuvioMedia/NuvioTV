@@ -63,8 +63,14 @@ data class MetaDetailsUiState(
     val isMovieWatched: Boolean = false,
     val isMovieWatchedPending: Boolean = false,
     val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
+    /**
+     * The episodes the running rewatch of this item has covered, empty when no run is open. The
+     * episode list marks them apart from the ones watched before the run.
+     */
+    val rewatchEpisodes: Set<Pair<Int, Int>> = emptySet(),
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val seasonPostersEnabled: Boolean = false,
     val randomEpisodeEnabled: Boolean = false,
     val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffleSettings = com.nuvio.tv.domain.model.EpisodeShuffleSettings(),
     val shufflePoolEmpty: Boolean = false,
@@ -123,6 +129,8 @@ sealed class MetaDetailsEvent {
     data object OnRetrySharedTrailer : MetaDetailsEvent()
     data object OnToggleMovieWatched : MetaDetailsEvent()
     data class OnToggleEpisodeWatched(val video: Video) : MetaDetailsEvent()
+    data class OnMarkEpisodeRewatched(val video: Video) : MetaDetailsEvent()
+    data class OnUnmarkEpisodeRewatched(val video: Video) : MetaDetailsEvent()
     data class OnMarkSeasonWatched(val season: Int) : MetaDetailsEvent()
     data class OnMarkSeasonUnwatched(val season: Int) : MetaDetailsEvent()
     data class OnMarkPreviousEpisodesWatched(val video: Video) : MetaDetailsEvent()
@@ -133,6 +141,7 @@ sealed class MetaDetailsEvent {
     data object OnPickerDismiss : MetaDetailsEvent()
     data object OnRemovalConfirmed : MetaDetailsEvent()
     data object OnRemovalCancelled : MetaDetailsEvent()
+    data class OnShowMessage(val message: String, val isError: Boolean) : MetaDetailsEvent()
     data object OnClearMessage : MetaDetailsEvent()
     data object OnLifecyclePause : MetaDetailsEvent()
 }

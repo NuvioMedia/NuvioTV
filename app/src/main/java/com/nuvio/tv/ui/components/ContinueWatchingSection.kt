@@ -109,6 +109,11 @@ private const val POSTER_TITLE_SCALE = 0.85f
 // Line height multiplier for the poster title, kept near 1 so the row below the artwork stays compact.
 private const val POSTER_TITLE_LINE_HEIGHT = 1.1f
 
+internal fun TextStyle.posterTitleStyle(): TextStyle {
+    val scaled = fontSize * POSTER_TITLE_SCALE
+    return copy(fontSize = scaled, lineHeight = scaled * POSTER_TITLE_LINE_HEIGHT)
+}
+
 // Fixed height of the poster title row, sized for the two lines the mobile card allows.
 private val POSTER_TITLE_BLOCK_HEIGHT = 30.dp
 
@@ -567,8 +572,7 @@ fun ContinueWatchingCard(
             posterTitleOverride
         } else if (isPosterStyle) {
             // Tight line height keeps the title row short so the poster can stay catalog sized.
-            val scaled = baseTitleStyle.fontSize * POSTER_TITLE_SCALE
-            baseTitleStyle.copy(fontSize = scaled, lineHeight = scaled * POSTER_TITLE_LINE_HEIGHT)
+            baseTitleStyle.posterTitleStyle()
         } else {
             baseTitleStyle
         }

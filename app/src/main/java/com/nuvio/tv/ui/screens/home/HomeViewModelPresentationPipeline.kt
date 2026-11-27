@@ -37,6 +37,7 @@ private data class CoreLayoutPrefs(
     val heroCatalogKeys: List<String>,
     val heroSectionEnabled: Boolean,
     val posterLabelsEnabled: Boolean,
+    val modernPosterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
     val classicFocusGradientEnabled: Boolean,
@@ -57,6 +58,7 @@ private data class LayoutUiPrefs(
     val heroCatalogKeys: List<String>,
     val heroSectionEnabled: Boolean,
     val posterLabelsEnabled: Boolean,
+    val modernPosterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
     val classicFocusGradientEnabled: Boolean,
@@ -93,14 +95,19 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             layoutPreferenceDataStore.selectedLayout,
             layoutPreferenceDataStore.heroCatalogSelections,
             layoutPreferenceDataStore.heroSectionEnabled,
-            layoutPreferenceDataStore.posterLabelsEnabled,
+            combine(
+                layoutPreferenceDataStore.posterLabelsEnabled,
+                layoutPreferenceDataStore.modernPosterLabelsEnabled,
+                ::Pair
+            ),
             layoutPreferenceDataStore.catalogAddonNameEnabled
-        ) { layout, heroCatalogKeys, heroSectionEnabled, posterLabelsEnabled, catalogAddonNameEnabled ->
+        ) { layout, heroCatalogKeys, heroSectionEnabled, (posterLabelsEnabled, modernPosterLabelsEnabled), catalogAddonNameEnabled ->
             CoreLayoutPrefs(
                 layout = layout,
                 heroCatalogKeys = heroCatalogKeys,
                 heroSectionEnabled = heroSectionEnabled,
                 posterLabelsEnabled = posterLabelsEnabled,
+                modernPosterLabelsEnabled = modernPosterLabelsEnabled,
                 catalogAddonNameEnabled = catalogAddonNameEnabled,
                 catalogTypeSuffixEnabled = true,
                 classicFocusGradientEnabled = false,
@@ -165,6 +172,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             heroCatalogKeys = corePrefs.heroCatalogKeys,
             heroSectionEnabled = corePrefs.heroSectionEnabled,
             posterLabelsEnabled = corePrefs.posterLabelsEnabled,
+            modernPosterLabelsEnabled = corePrefs.modernPosterLabelsEnabled,
             catalogAddonNameEnabled = corePrefs.catalogAddonNameEnabled,
             catalogTypeSuffixEnabled = corePrefs.catalogTypeSuffixEnabled,
             classicFocusGradientEnabled = corePrefs.classicFocusGradientEnabled,
@@ -204,7 +212,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             .debounce(300)
             .collectLatest { prefs ->
                 val effectivePosterLabelsEnabled = if (prefs.layout == HomeLayout.MODERN) {
-                    false
+                    prefs.modernPosterLabelsEnabled
                 } else {
                     prefs.posterLabelsEnabled
                 }
@@ -474,6 +482,8 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                         if (trailerPreviewUrlsState[itemId] != fallbackSource.videoUrl) {
                             trailerPreviewUrlsState[itemId] = fallbackSource.videoUrl
                         }
+                        fallbackSource.youtubeKey?.let { trailerPreviewYoutubeKeys[itemId] = it }
+                            ?: trailerPreviewYoutubeKeys.remove(itemId)
                         val fallbackAudio = fallbackSource.audioUrl
                         if (fallbackAudio.isNullOrBlank()) {
                             trailerPreviewAudioUrlsState.remove(itemId)
@@ -488,12 +498,15 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                         }
                         trailerPreviewUrlsState.remove(itemId)
                         trailerPreviewAudioUrlsState.remove(itemId)
+                        trailerPreviewYoutubeKeys.remove(itemId)
                     }
                 } else {
                     val videoUrl = trailerSource.videoUrl
                     if (trailerPreviewUrlsState[itemId] != videoUrl) {
                         trailerPreviewUrlsState[itemId] = videoUrl
                     }
+                    trailerSource.youtubeKey?.let { trailerPreviewYoutubeKeys[itemId] = it }
+                        ?: trailerPreviewYoutubeKeys.remove(itemId)
                     val audioUrl = trailerSource.audioUrl
                     if (audioUrl.isNullOrBlank()) {
                         trailerPreviewAudioUrlsState.remove(itemId)
@@ -556,6 +569,16 @@ private suspend fun HomeViewModel.fetchExternalMetaOutcome(item: MetaPreview): E
         ExternalMetaOutcome.Failed
     }
 
+private fun HomeViewModel.prefetchDetailMeta(item: MetaPreview) {
+    if (!backgroundMetaPrefetchedIds.add(item.id)) return
+    viewModelScope.launch(Dispatchers.IO) {
+        metaRepository.getMetaFromAllAddons(
+            type = item.apiType,
+            id = item.id
+        ).first { it !is NetworkResult.Loading }
+    }
+}
+
 internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
     if (startupGracePeriodActive) {
         deferredEnrichItem = item
@@ -590,15 +613,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             }
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             // Still prefetch full meta in background for instant detail screen.
-            if (item.id !in backgroundMetaPrefetchedIds) {
-                backgroundMetaPrefetchedIds.add(item.id)
-                viewModelScope.launch {
-                    metaRepository.getMetaFromAllAddons(
-                        type = item.apiType,
-                        id = item.id
-                    ).first { it !is NetworkResult.Loading }
-                }
-            }
+            prefetchDetailMeta(item)
             return
         }
     }
@@ -621,6 +636,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             return@launch
         }
+        prefetchDetailMeta(item)
         // Don't hide the hero if we already have enriched data for this item.
         // The enrichment can proceed in the background without visual disruption.
         val alreadyEnriched = item.id in _enrichedPreviews.value
@@ -629,15 +645,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             if (!externalEnrichmentOutstanding(item.id)) {
                 if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
                 // Still prefetch full meta in background for instant detail screen.
-                if (item.id !in backgroundMetaPrefetchedIds) {
-                    backgroundMetaPrefetchedIds.add(item.id)
-                    launch {
-                        metaRepository.getMetaFromAllAddons(
-                            type = item.apiType,
-                            id = item.id
-                        ).first { it !is NetworkResult.Loading }
-                    }
-                }
+                prefetchDetailMeta(item)
                 return@launch
             }
         }
@@ -713,17 +721,6 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
                 if (_enrichedPreviews.value[item.id] != preview) addEnrichedPreview(item.id, preview)
             }
 
-            // Always prefetch full meta in background for instant detail screen loading.
-            if (item.id !in backgroundMetaPrefetchedIds) {
-                backgroundMetaPrefetchedIds.add(item.id)
-                viewModelScope.launch {
-                    metaRepository.getMetaFromAllAddons(
-                        type = item.apiType,
-                        id = item.id
-                    ).first { it !is NetworkResult.Loading }
-                }
-            }
-
             // Warm up watch progress pipeline so detail screen reads are fast.
             viewModelScope.launch {
                 watchProgressRepository.getAllEpisodeProgress(item.id.substringBefore(":")).first()
@@ -766,6 +763,7 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
 
         if (item.id in prefetchedTmdbIds || item.id in prefetchedExternalMetaIds) return@launch
 
+        prefetchDetailMeta(item)
         try {
             // Launch TMDB and external meta addon fetch in parallel (same as focused pipeline).
             val tmdbDeferred = if (tmdbEnabledForCurrentLayout) {
@@ -815,17 +813,6 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
 
             if (tmdbEnrichment == null && externalMeta == null) {
                 addEnrichedPreview(item.id, item)
-            }
-
-            // Background prefetch for detail screen cache.
-            if (item.id !in backgroundMetaPrefetchedIds) {
-                backgroundMetaPrefetchedIds.add(item.id)
-                viewModelScope.launch {
-                    metaRepository.getMetaFromAllAddons(
-                        type = item.apiType,
-                        id = item.id
-                    ).first { it !is NetworkResult.Loading }
-                }
             }
 
         } finally {

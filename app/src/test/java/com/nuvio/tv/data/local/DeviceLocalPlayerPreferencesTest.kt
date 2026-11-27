@@ -40,6 +40,7 @@ class DeviceLocalPlayerPreferencesTest {
         assertFalse(preferences.playerStatsHudButtonEnabled.first())
         assertFalse(preferences.playerStatsHudActive.first())
         assertFalse(preferences.transparentLetterbox.first())
+        assertFalse(preferences.zeroDoviLevel5.first())
     }
 
     @Test
@@ -49,6 +50,15 @@ class DeviceLocalPlayerPreferencesTest {
 
         preferences.setTransparentLetterbox(false)
         assertFalse(preferences.transparentLetterbox.first())
+    }
+
+    @Test
+    fun zeroDoviLevel5PersistsOnDevice() = runTest {
+        preferences.setZeroDoviLevel5(true)
+        assertTrue(preferences.zeroDoviLevel5.first())
+
+        preferences.setZeroDoviLevel5(false)
+        assertFalse(preferences.zeroDoviLevel5.first())
     }
 
     @Test

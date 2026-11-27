@@ -192,9 +192,12 @@
     <string name="episodes_specials">Specials</string>
     <string name="episodes_episode">Episode</string>
     <string name="episodes_cd_watched">Watched</string>
+    <string name="episodes_cd_rewatched">Rewatched</string>
     <string name="episodes_dialog_subtitle">Episode actions</string>
     <string name="episodes_mark_watched">Mark as watched</string>
     <string name="episodes_mark_unwatched">Mark as unwatched</string>
+    <string name="episodes_mark_rewatched">Mark as rewatched</string>
+    <string name="episodes_mark_not_rewatched">Mark as not rewatched</string>
     <string name="episodes_mark_season_watched">Mark season as watched</string>
     <string name="episodes_mark_season_unwatched">Mark season as unwatched</string>
     <string name="episodes_mark_previous_watched">Mark previous in this season as watched</string>
@@ -208,6 +211,10 @@
     <string name="detail_removed_from_library">Removed from library</string>
     <string name="detail_episode_marked_watched">Episode marked as watched</string>
     <string name="detail_episode_marked_unwatched">Episode marked as unwatched</string>
+    <string name="detail_episode_marked_rewatched">Episode marked as rewatched</string>
+    <string name="detail_episode_marked_not_rewatched">Episode marked as not rewatched</string>
+    <string name="detail_rewatch_too_soon">Simkl did not record this rewatch: the episode was watched less than 48 hours ago.</string>
+    <string name="detail_rewatch_not_recorded">Simkl did not record this rewatch.</string>
     <string name="detail_lists_updated">Lists updated</string>
     <string name="detail_movie_marked_watched">Marked as watched</string>
     <string name="detail_movie_marked_unwatched">Marked as unwatched</string>
@@ -496,6 +503,27 @@
     <string name="tracking_simkl_anime_id_mal">Prefer MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Prefer Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Prefer TVDB</string>
+    <string name="settings_tracking_completion_title">Watched threshold</string>
+    <string name="settings_tracking_completion_subtitle">Playback percentage required to mark a title as watched. End-credits markers take priority when available.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">Track Rewatches</string>
+    <string name="settings_tracking_rewatch_subtitle">Log repeat viewings of titles finished over 2 days ago as separate Simkl rewatch sessions, and track active runs in Continue Watching.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Track Rewatches</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Rewatch sessions require Simkl PRO or VIP and are only created for titles you already finished.</string>
+    <string name="settings_tracking_rewatch_off">Off</string>
+    <string name="settings_tracking_rewatch_off_subtitle">Don\'t log repeat viewings to Simkl or display active rewatch sessions in Continue Watching.</string>
+    <string name="settings_tracking_rewatch_semi">Semi-automatic</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Ask once before starting a new rewatch session. Once active, remaining episodes in the run log automatically.</string>
+    <string name="settings_tracking_rewatch_automatic">Automatic</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Automatically start a rewatch session and log repeat viewings whenever you replay a completed title.</string>
+    <string name="settings_tracking_rewatch_pro_title">Rewatch tracking requires Simkl PRO or VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl records rewatches only for Pro or VIP accounts. Sessions already on your Simkl account stay there if your plan changes.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Upgrade</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Not now</string>
+    <string name="rewatch_prompt_title">You already finished this title.</string>
+    <string name="rewatch_prompt_subtitle">Start a rewatch session on Simkl?</string>
+    <string name="rewatch_prompt_confirm">Yes</string>
+    <string name="rewatch_prompt_dismiss">No</string>
     <string name="tracking_status_connected">Connected</string>
     <string name="tracking_status_disconnected">Not connected</string>
     <string name="tracking_status_waiting">Waiting for approval</string>
@@ -627,6 +655,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Use Nuvio\'s custom global focus scroll animation and positioning.</string>
     <string name="advanced_rgb565">RGB565 image decoding</string>
     <string name="advanced_rgb565_subtitle">Use lower-memory 16-bit color for eligible opaque images. Changing this restarts the app.</string>
+    <string name="advanced_hardware_bitmaps">Hardware image decoding</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Keep decoded images only in graphics memory. Uses less RAM, but loading new images can stutter on weaker GPUs.</string>
     <string name="advanced_memory_only_vertical_scroll">Memory-only Vertical Scrolling</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Skip disk and network image requests while vertically scrolling home rows.</string>
     <string name="advanced_compose_highlighter">Compose Highlighter</string>
@@ -653,6 +683,7 @@
     <string name="settings_mdblist_subtitle">External ratings providers</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro skip timestamps</string>
     <string name="settings_debrid_subtitle">Experimental cloud account sources</string>
+    <string name="settings_usenet_subtitle">Providers, indexers, playback and diagnostics</string>
 
     <string name="playback_title">Playback Settings</string>
     <string name="playback_subtitle">Configure video playback and subtitle options</string>
@@ -880,6 +911,8 @@
     <string name="dv7_mode_strip_dv_desc">Removes the Dolby Vision RPU layer from all streams.</string>
     <string name="audio_dv5_to_dv81_title">Convert DV5 to DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Signal Profile 5 streams as Profile 8.1 for HDR10-compatible output. Helps on devices that do not have a native DV5 decoder.</string>
+    <string name="audio_zero_dovi_l5_title">Ignore Dolby Vision Letterbox Metadata (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Zeroes out Dolby Vision L5 active-area offsets during playback. Fixes darker or translucent bands along letterbox edges on files with broken L5 metadata.</string>
     <string name="audio_strip_hdr10plus_title">Strip HDR10+ Metadata</string>
     <string name="audio_strip_hdr10plus_sub">Remove HDR10+ dynamic metadata from streams. When Convert to DV8.1 is also enabled, stripping runs after conversion.</string>
     <string name="audio_dv7_preserve_mapping_title">Preserve DV mapping (DV7 to DV8.1)</string>
@@ -938,6 +971,7 @@
     <string name="sub_outline">Outline</string>
     <string name="sub_outline_sub">Add outline around subtitle text for better visibility</string>
     <string name="sub_outline_color">Outline Color</string>
+    <string name="sub_outline_width">Outline Width</string>
     <string name="sub_hdr_style">Separate HDR / Dolby Vision style</string>
     <string name="sub_hdr_style_sub">Use a different text color and a dimmer brightness for subtitles on HDR and Dolby Vision video</string>
     <string name="sub_hdr_text_color">HDR Text Color</string>
@@ -1093,6 +1127,7 @@
     <string name="layout_discover_location_in_sidebar_desc">Discover gets its own item in the side panel.</string>
     <string name="layout_poster_labels">Show Poster Labels</string>
     <string name="layout_poster_labels_sub">Show titles under posters in rows, grid, and see-all.</string>
+    <string name="layout_modern_poster_labels_sub">Show the title and year under posters in Home rows.</string>
     <string name="layout_addon_name">Show Addon Name</string>
     <string name="layout_addon_name_sub">Show source name under catalog titles.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>
@@ -1117,6 +1152,8 @@
     <string name="layout_cw_enabled_sub">Show the Continue Watching row on the home screen.</string>
     <string name="layout_use_episode_thumbnails_cw">Use Episode Thumbnails in Continue Watching</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Use episode thumbnails as default image. When disabled, uses backdrop.</string>
+    <string name="layout_season_posters">Season Posters</string>
+    <string name="layout_season_posters_sub">Show seasons as posters instead of text tabs when available.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>
     <string name="layout_blur_unwatched_sub">Blur episode thumbnails until watched to avoid spoilers.</string>
     <string name="layout_episode_options_overlay">Episode Options Overlay</string>
@@ -1161,6 +1198,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Pause the trailer when you scroll down and resume it when you return to the top.</string>
     <string name="layout_trailer_4k">4K Trailers</string>
     <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
+    <string name="layout_trailer_subtitles">Trailer Subtitles</string>
+    <string name="layout_trailer_subtitles_sub">Show captions on trailers in your preferred subtitle language, when available.</string>
     <string name="layout_detail_group_episodes">Episodes</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>
@@ -1181,6 +1220,8 @@
     <string name="layout_trailer_muted">Play Trailer Muted</string>
     <string name="layout_trailer_muted_sub_preview">Mute trailer audio during autoplay preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Mute trailer audio in expanded cards.</string>
+    <string name="layout_trailer_continue_in_details">Continue Trailer in Details</string>
+    <string name="layout_trailer_continue_in_details_sub">Keep the trailer playing when you open the details page.</string>
     <string name="layout_section_card_style">Poster Card</string>
     <string name="layout_section_card_style_desc">Tune card width and corner radius.</string>
     <string name="settings_card_depth_title">Card Depth Effect</string>
@@ -1216,6 +1257,7 @@
     <string name="layout_trailer_location_sub">Choose where trailer preview plays in Modern Home.</string>
     <string name="layout_trailer_expanded_card">Expanded Card</string>
     <string name="layout_trailer_hero_media">Hero Media</string>
+    <string name="layout_trailer_hero_media_no_expand">Hero Media (No Expand)</string>
     <string name="layout_preset_compact">Compact</string>
     <string name="layout_preset_dense">Dense</string>
     <string name="layout_preset_standard">Standard</string>
@@ -1329,7 +1371,7 @@
     <string name="mdblist_show_on_hero_title">Use Ratings on Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Show MDBList ratings on hero carousel (modern and classic/grid)</string>
     <string name="mdblist_rating_order_title">Rating Order</string>
-    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use arrows to reorder.</string>
+    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use the reorder button to change their order.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
@@ -1546,6 +1588,8 @@
     <string name="tmdb_networks_subtitle">Networks with logos from TMDB</string>
     <string name="tmdb_episodes_title">Episodes</string>
     <string name="tmdb_episodes_subtitle">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
+    <string name="tmdb_season_posters_title">Season Posters</string>
+    <string name="tmdb_season_posters_subtitle">Season posters from TMDB for the season tabs on the details page</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="tmdb_more_like_this_title">More Like This</string>
@@ -1789,6 +1833,13 @@
     <string name="addon_installing">Installing</string>
     <string name="addon_install_btn">Install</string>
     <string name="addon_install_success">Installed %1$s</string>
+    <string name="addon_tracking_consent_title">Tracking addon</string>
+    <string name="addon_tracking_consent_body">%1$s is a tracking addon. Nuvio will send it your activity: what you play, pause and stop with the playback position, what you add to or remove from your library, and what you mark as watched or unwatched. This data leaves Nuvio and is handled by the addon\'s developer and the service it connects to.</string>
+    <string name="addon_tracking_consent_checkbox">I agree to share my watch activity and library with this addon</string>
+    <string name="addon_tracking_consent_checked">Checked</string>
+    <string name="addon_tracking_consent_unchecked">Not checked</string>
+    <string name="addon_tracking_consent_cancel">Cancel</string>
+    <string name="addon_tracking_consent_install">Install</string>
     <string name="addon_error_invalid_url">Enter a valid addon URL</string>
     <string name="addon_error_invalid_scheme">Addon URL must start with http or https</string>
     <string name="addon_installed_section">Installed</string>
@@ -1836,6 +1887,9 @@
     <string name="catalog_order_disabled_on_home">Disabled on Home</string>
     <string name="catalog_order_enable">Enable</string>
     <string name="catalog_order_disable">Disable</string>
+    <string name="catalog_order_pinned">Pinned</string>
+    <string name="catalog_order_pinned_to_top">Pinned to top</string>
+    <string name="catalog_order_pin_to_move_toast">Remove pin to top from collection to move</string>
 
 
     <string name="stream_retry">Retry</string>
@@ -1868,6 +1922,8 @@
     <string name="settings_p2p_profile_fast_description">Uses more peer connections for difficult or high-bitrate torrents</string>
     <string name="settings_p2p_cache_size_title">Torrent cache size</string>
     <string name="settings_p2p_cache_size_description">Downloaded torrent data kept on this device for faster replays</string>
+    <string name="settings_p2p_cache_memory_only">Memory only</string>
+    <string name="settings_p2p_cache_memory_only_description">Torrent data stays in RAM and is never written to storage. Seeking back downloads it again.</string>
     <string name="settings_p2p_cache_none">No persistent cache</string>
     <string name="settings_p2p_cache_2_gb">2 GB</string>
     <string name="settings_p2p_cache_5_gb">5 GB</string>
@@ -2052,6 +2108,7 @@
     <string name="subtitle_off">Off</string>
     <string name="subtitle_style_title">Subtitle Style</string>
     <string name="subtitle_style_customize">Customize</string>
+    <string name="subtitle_style_customize_ass">Customize ASS/SSA styling</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Reset</string>
     <string name="subtitle_style_font_size">Font Size</string>
@@ -2218,15 +2275,12 @@
     <string name="library_status_dropped">Dropped</string>
     <string name="library_syncing_library">Syncing library\u2026</string>
     <string name="library_type_all">All</string>
-    <string name="library_type_items">items</string>
-    <string name="library_empty_local_title">No %1$s yet</string>
-    <string name="library_empty_trakt_title">No %1$s in this list</string>
-    <string name="library_empty_local_subtitle">Start saving your favorites to see them here</string>
-    <string name="library_empty_trakt_subtitle">Use + in details to add items to watchlist or lists</string>
+    <string name="library_empty_title">No items to display</string>
+    <string name="library_empty_local_hint">Change your filters or start saving your favorites to see them here</string>
+    <string name="library_empty_trakt_hint">Change your filters or use + in details to add items to watchlist or lists</string>
+    <string name="library_empty_simkl_hint">Change your filters or use + in details to add items to a Simkl status</string>
     <string name="library_empty_trakt_not_auth_title">Trakt not connected</string>
     <string name="library_empty_trakt_not_auth_subtitle">Connect your Trakt account in Settings to view your Trakt library</string>
-    <string name="library_empty_simkl_title">No %1$s in this status</string>
-    <string name="library_empty_simkl_subtitle">Use + in details to add items to a Simkl status</string>
     <string name="library_empty_simkl_not_auth_title">Simkl not connected</string>
     <string name="library_empty_simkl_not_auth_subtitle">Connect your Simkl account in Settings to view your Simkl library</string>
     <string name="library_list_create_dialog_title">Create List</string>
@@ -2441,6 +2495,7 @@
     <string name="cast_detail_error">Something went wrong</string>
     <string name="cast_detail_retry">Retry</string>
     <string name="cast_detail_filmography">Filmography</string>
+    <string name="cast_detail_filter_all">All</string>
     <string name="cast_detail_born">Born: %1$s</string>
     <string name="cast_detail_born_died">Born: %1$s — †%2$s</string>
     <string name="cast_detail_age">age %1$d</string>
@@ -2561,6 +2616,10 @@
     <string name="plugin_repo_added_with_providers">Added %1$s with %2$d providers</string>
     <string name="plugin_repo_removed">Repository removed</string>
     <string name="plugin_repo_refreshed">Repository refreshed</string>
+    <string name="plugin_repo_delete_confirm_title">Delete repository?</string>
+    <string name="plugin_repo_delete_confirm_message">Are you sure you want to delete it?</string>
+    <string name="plugin_repo_delete_no">No</string>
+    <string name="plugin_repo_delete_yes">Yes</string>
 
     <!-- Trakt errors -->
 
@@ -2631,6 +2690,7 @@
     <string name="cd_loading_logo">Loading logo</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
+    <string name="cd_reorder">Reorder</string>
     <string name="cd_edit">Edit</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_qr_code">QR Code</string>
@@ -2702,10 +2762,21 @@
     <string name="collections_valid_summary">%1$d collection(s), %2$d folder(s)</string>
     <string name="collections_confirm_import">Confirm Import</string>
     <string name="collections_folder_count">%1$d folder(s)</string>
+    <string name="collections_pinned">Pinned</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Row Title</string>
     <string name="collections_editor_save">Save</string>
+    <string name="collections_editor_unsaved_title">Save changes?</string>
+    <string name="collections_editor_unsaved_subtitle">You have unsaved changes to this collection.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Unsaved changes</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Enter a title and add at least one folder to save this collection.</string>
+    <string name="collections_editor_unsaved_missing_title">Enter a collection title to save your changes.</string>
+    <string name="collections_editor_unsaved_missing_folder">Add at least one folder to save this collection.</string>
+    <string name="collections_editor_folder_unsaved_title">Save folder changes?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">You have unsaved changes to this folder.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Unsaved folder changes</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Add at least one source to save this folder.</string>
     <string name="collections_editor_backdrop">Backdrop Image</string>
     <string name="collections_editor_pin_above">Pin Above Catalogs</string>
     <string name="collections_editor_pin_above_desc">Show this collection above all regular home catalogs. Multiple pinned collections follow collection creation order.</string>
@@ -3437,20 +3508,28 @@
     <string name="stream_test_no_stream">No playback recorded. Play a video to run diagnostic tests on its host.</string>
     <string name="stream_test_btn_start">Start Test</string>
     <string name="stream_test_btn_measuring_baseline">Measuring Baseline...</string>
-    <string name="stream_test_btn_measuring_parallel1">Measuring Parallel (1MB)...</string>
-    <string name="stream_test_btn_measuring_parallel4">Measuring Parallel (4MB)...</string>
-    <string name="stream_test_btn_measuring_parallel8">Measuring Parallel (8MB)...</string>
-    <string name="stream_test_btn_measuring_parallel16">Measuring Parallel (16MB)...</string>
+    <string name="stream_test_btn_measuring_parallel1">Measuring Parallel (1 connection)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Measuring Parallel (4 connections)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Measuring Parallel (8 connections)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Measuring Parallel (16 connections)...</string>
     <string name="stream_test_btn_run_again">Run Again</string>
     <string name="stream_test_btn_running">Running...</string>
     <string name="stream_test_label_baseline">Standard Single Connection (Baseline)</string>
-    <string name="stream_test_label_parallel1">Parallel Connect (1 MB Chunks)</string>
-    <string name="stream_test_label_parallel4">Parallel Connect (4 MB Chunks)</string>
-    <string name="stream_test_label_parallel8">Parallel Connect (8 MB Chunks)</string>
-    <string name="stream_test_label_parallel16">Parallel Connect (16 MB Chunks)</string>
+    <string name="stream_test_label_parallel1">Parallel Connect (1 connection)</string>
+    <string name="stream_test_label_parallel4">Parallel Connect (4 connections)</string>
+    <string name="stream_test_label_parallel8">Parallel Connect (8 connections)</string>
+    <string name="stream_test_label_parallel16">Parallel Connect (16 connections)</string>
     <string name="stream_test_error_prefix">Error: %1$s</string>
     <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
+
+    <string name="player_finding_next_stream">Finding the next stream…</string>
+    <string name="player_trying_next_stream">Trying next stream (attempt %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">No more working streams. Choose another source or retry.</string>
+    <string name="usenet_builtin_addon_title">Built-in Usenet</string>
+    <string name="usenet_builtin_addon_desc">Results from your own NNTP providers and Newznab indexers. Move it to choose where they are listed.</string>
+    <string name="usenet_fallback">Automatic Usenet fallback</string>
+    <string name="usenet_fallback_description">If a Usenet stream fails, try following Usenet sources up to your configured attempt limit. Torrent and other streams never switch automatically.</string>
 
     <string name="random_episode_title">Shuffle</string>
     <string name="layout_random_episode_sub">Shuffle episodes from any series. Turning this off pauses shuffle.</string>
@@ -3483,8 +3562,23 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Thorough Auto Sync Search</string>
     <string name="autosync_thorough_description">Keep comparing other subtitles and embedded tracks for a closer match before syncing. When off, the first strong match is used sooner. Only confident matches are ever applied.</string>
-    <string name="autosync_toast_no_fit">Sync failed: these subtitles don\'t match this version of the video.</string>
     <string name="autosync_label_synced">Auto synced</string>
+    <string name="autosync_status_title">Auto Sync Status</string>
+    <string name="autosync_status_synced">Synced</string>
+    <string name="autosync_status_not_needed">Not needed</string>
+    <string name="autosync_status_in_progress">In progress</string>
+    <string name="autosync_status_no_fit">May not match</string>
+    <string name="autosync_status_no_reference">No embedded subtitles</string>
+    <string name="autosync_status_failed">Failed</string>
     <string name="stream_resume_from_time">Resume from %1$s</string>
     <string name="stream_resume_from_percent">Resume from %1$d%%</string>
+    <string name="player_disc_titles">Disc titles</string>
+    <string name="player_disc_title_feature">Feature · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Subtitles %1$s</string>
+    <string name="player_disc_title_failed">This title could not be played</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clip</item>
+        <item quantity="other">%d clips</item>
+    </plurals>
 </resources>

@@ -1,0 +1,18 @@
+<resources>
+    <string name="rating_rate">Puan ver</string>
+    <string name="rating_your_rating">Puanınız</string>
+    <string name="rating_rate_episode">Bölüme puan ver</string>
+    <string name="rating_rated">Puanlandı %1$s/10</string>
+    <string name="rating_value">10 üzerinden %1$s</string>
+    <string name="rating_syncs_to">%1$s ile eşitlenir</string>
+    <string name="rating_saved">Puan kaydedildi</string>
+    <string name="rating_removed">Puan kaldırıldı</string>
+    <string name="rating_failed">%1$s puanınız güncellenemedi</string>
+    <string name="rating_remove">Kaldır</string>
+    <string name="tracking_ratings_title">Puanlar</string>
+    <string name="tracking_ratings_subtitle">Puanlarınızın nerede kaydedileceği ve gösterileceği</string>
+    <string name="tracking_ratings_dialog_subtitle">Başlıkların detay sayfasından puan verin. Puanlarınız seçtiğiniz hizmete kaydedilir ve oradan gösterilir.</string>
+    <string name="tracking_ratings_off_description">Puan ver düğmesini gizle.</string>
+    <string name="tracking_ratings_simkl_description">Film ve dizilere puan verin. Simkl listelerinizde olmayan bir başlığa puan vermek onu listelere ekler.</string>
+    <string name="tracking_ratings_mdblist_description">Film, dizi ve bölümlere puan verin.</string>
+</resources>

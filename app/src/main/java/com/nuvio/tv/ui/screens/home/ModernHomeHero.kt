@@ -6,9 +6,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,12 +57,20 @@ import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
-import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.TrailerPlayer
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.toSize
+import com.nuvio.tv.core.player.BackgroundTrailerRequest
+import com.nuvio.tv.core.player.LocalBackgroundTrailerController
+import com.nuvio.tv.ui.components.BackgroundTrailerRequestEffect
 import com.nuvio.tv.ui.components.AutoScrollingText
-import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.ui.components.HeroAgeRatingStatusBadges
+import com.nuvio.tv.ui.components.heroAgeRatingBadgeText
+import com.nuvio.tv.ui.components.rememberHeroStatusBadgeText
 
 private data class ModernHeroSecondaryMeta(
     val highlightText: String?,
@@ -93,20 +99,16 @@ internal fun ModernHeroScene(
         heroTrailerAudioUrl = { state().trailerAudioUrl },
         heroTrailerPlaybackKey = { state().trailerPlaybackKey },
         muted = { state().trailerMuted },
+        isFullScreen = isFullScreen,
         onTrailerEnded = onTrailerEnded,
         onFirstFrameRendered = onFirstFrameRendered,
         modifier = modifier,
         requestWidthPx = requestWidthPx,
         requestHeightPx = requestHeightPx
     )
-    val isTrailerPlayingFullScreen = {
-        val s = state()
-        s.fullScreenBackdrop && s.shouldPlayTrailer && s.trailerFirstFrameRendered
-    }
     ModernHeroGradientLayer(
         bgColor = bgColor,
         isFullScreen = isFullScreen,
-        isTrailerPlayingFullScreen = isTrailerPlayingFullScreen,
         modifier = modifier
     )
 }
@@ -121,6 +123,7 @@ internal fun ModernHeroMediaLayer(
     heroTrailerAudioUrl: () -> String?,
     heroTrailerPlaybackKey: () -> String?,
     muted: () -> Boolean,
+    isFullScreen: () -> Boolean,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
     modifier: Modifier,
@@ -162,7 +165,13 @@ internal fun ModernHeroMediaLayer(
         displayedBackdrop?.let { HeroBackdropState.update(it) }
     }
 
-    Box(modifier = modifier) {
+    var heroMediaRect by remember { mutableStateOf<Rect?>(null) }
+    Box(
+        modifier = modifier.onGloballyPositioned { coordinates ->
+            val rect = Rect(coordinates.positionInWindow(), coordinates.size.toSize())
+            if (heroMediaRect != rect) heroMediaRect = rect
+        }
+    ) {
         androidx.compose.animation.Crossfade(
             targetState = imageModel,
             animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.overlay),
@@ -181,7 +190,36 @@ internal fun ModernHeroMediaLayer(
                 alignment = Alignment.TopEnd
             )
         }
-        if (shouldPlay) {
+        val backgroundTrailerController = LocalBackgroundTrailerController.current
+        if (backgroundTrailerController != null) {
+            val fullScreenVal = isFullScreen()
+            val mediaRect = heroMediaRect
+            val trailerUrlVal = if (shouldPlay && (fullScreenVal || mediaRect != null)) heroTrailerUrl() else null
+            val audioUrlVal = heroTrailerAudioUrl()
+            val mutedVal = muted()
+            val latestOnTrailerEnded by rememberUpdatedState(onTrailerEnded)
+            val latestOnFirstFrameRendered by rememberUpdatedState(onFirstFrameRendered)
+            val request = remember(trailerUrlVal, audioUrlVal, mutedVal, fullScreenVal, mediaRect) {
+                trailerUrlVal?.let { url ->
+                    BackgroundTrailerRequest(
+                        videoUrl = url,
+                        audioUrl = audioUrlVal,
+                        muted = mutedVal,
+                        autoCropLetterbox = fullScreenVal,
+                        bounds = if (fullScreenVal) null else mediaRect,
+                        overscanZoom = if (fullScreenVal) 1f else MODERN_TRAILER_OVERSCAN_ZOOM,
+                        alpha = { transitionProgressState.value },
+                        onEnded = { latestOnTrailerEnded() },
+                        onFirstFrameRendered = { latestOnFirstFrameRendered() }
+                    )
+                }
+            }
+            BackgroundTrailerRequestEffect(
+                controller = backgroundTrailerController,
+                owner = HOME_HERO_TRAILER_OWNER,
+                request = request
+            )
+        } else if (shouldPlay) {
             val trailerUrlVal = heroTrailerUrl()
             val playbackKeyVal = heroTrailerPlaybackKey()
             val audioUrlVal = heroTrailerAudioUrl()
@@ -211,7 +249,6 @@ internal fun ModernHeroMediaLayer(
 internal fun ModernHeroGradientLayer(
     bgColor: Color,
     isFullScreen: () -> Boolean,
-    isTrailerPlayingFullScreen: () -> Boolean = { false },
     modifier: Modifier
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -219,7 +256,6 @@ internal fun ModernHeroGradientLayer(
         modifier = modifier
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
-                alpha = if (isTrailerPlayingFullScreen()) 0f else 1f
             }
             .drawWithCache {
                 val fullScreen = isFullScreen()
@@ -434,36 +470,17 @@ private fun HeroTitleContent(
             )
         }
 
-        val strStatusEnded = stringResource(if (preview.isSeries) R.string.series_status_ended else R.string.movie_status_ended)
-        val strStatusContinuing = stringResource(if (preview.isSeries) R.string.series_status_continuing else R.string.movie_status_continuing)
-        val strStatusCurrent = stringResource(if (preview.isSeries) R.string.series_status_current else R.string.movie_status_current)
-        val strStatusCancelled = stringResource(if (preview.isSeries) R.string.series_status_cancelled else R.string.movie_status_cancelled)
-        val strStatusReleased = stringResource(if (preview.isSeries) R.string.series_status_released else R.string.movie_status_released)
-        val strStatusPlanned = stringResource(if (preview.isSeries) R.string.series_status_planned else R.string.movie_status_planned)
-        val strStatusRumored = stringResource(if (preview.isSeries) R.string.series_status_rumored else R.string.movie_status_rumored)
-        val strStatusInProduction = stringResource(if (preview.isSeries) R.string.series_status_in_production else R.string.movie_status_in_production)
-        val strStatusPostProduction = stringResource(if (preview.isSeries) R.string.series_status_post_production else R.string.movie_status_post_production)
+        val localizedStatus = rememberHeroStatusBadgeText(preview.statusText, preview.isSeries)
         val secondaryMeta = remember(
             preview.secondaryHighlightText,
             preview.ageRatingText,
-            preview.statusText,
+            localizedStatus,
             preview.languageText
         ) {
             ModernHeroSecondaryMeta(
                 highlightText = preview.secondaryHighlightText?.trim()?.takeIf { it.isNotBlank() },
-                ageRating = preview.ageRatingText?.trim()?.takeIf { it.isNotBlank() },
-                status = when (preview.statusText?.trim()?.lowercase()) {
-                    "ended" -> strStatusEnded.uppercase()
-                    "continuing", "returning series" -> strStatusContinuing.uppercase()
-                    "current" -> strStatusCurrent.uppercase()
-                    "cancelled", "canceled" -> strStatusCancelled.uppercase()
-                    "released" -> strStatusReleased.uppercase()
-                    "planned" -> strStatusPlanned.uppercase()
-                    "rumored" -> strStatusRumored.uppercase()
-                    "in production" -> strStatusInProduction.uppercase()
-                    "post production" -> strStatusPostProduction.uppercase()
-                    else -> preview.statusText?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
-                },
+                ageRating = heroAgeRatingBadgeText(preview.ageRatingText),
+                status = localizedStatus,
                 details = buildList {
                     preview.languageText?.trim()?.takeIf { it.isNotBlank() }?.let(::add)
                 }
@@ -588,29 +605,12 @@ private fun HeroTitleContent(
                         visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
                     )
                 }
-                if (ageRatingBadge != null && statusBadge != null) {
-                    HeroCombinedMetaBadge(
-                        leftText = ageRatingBadge,
-                        rightText = statusBadge,
-                        textStyle = labelMedium,
-                        contentColor = NuvioTheme.colors.TextPrimary
-                    )
-                } else {
-                    ageRatingBadge?.let { badge ->
-                        HeroMetaBadge(
-                            text = badge,
-                            textStyle = labelMedium,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    }
-                    statusBadge?.let { badge ->
-                        HeroMetaBadge(
-                            text = badge,
-                            textStyle = labelMedium,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    }
-                }
+                HeroAgeRatingStatusBadges(
+                    ageRatingBadge = ageRatingBadge,
+                    statusBadge = statusBadge,
+                    textStyle = labelMedium,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
                 if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
                     HeroMetaDivider(
                         scale = metaScale,
@@ -708,75 +708,6 @@ private fun HeroImdbMeta(
 }
 
 @Composable
-private fun HeroCombinedMetaBadge(
-    leftText: String,
-    rightText: String,
-    textStyle: androidx.compose.ui.text.TextStyle,
-    contentColor: Color
-) {
-    val dividerColor = contentColor.copy(alpha = 0.55f)
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, dividerColor),
-                shape = RoundedCornerShape(6.dp)
-            )
-            .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-    ) {
-        val semiBoldStyle = remember(textStyle) { textStyle.copy(fontWeight = FontWeight.SemiBold) }
-        Text(
-            text = leftText,
-            style = semiBoldStyle,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Box(
-            modifier = Modifier
-                .width(NuvioTheme.spacing.hairline)
-                .height(NuvioTheme.spacing.md)
-                .background(dividerColor)
-        )
-        Text(
-            text = rightText,
-            style = semiBoldStyle,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun HeroMetaBadge(
-    text: String,
-    textStyle: androidx.compose.ui.text.TextStyle,
-    contentColor: Color
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, contentColor.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(6.dp)
-            )
-            .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = remember(textStyle) { textStyle.copy(fontWeight = FontWeight.SemiBold) },
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
 private fun HeroMetaDivider(
     scale: Float,
     visible: Boolean = true
@@ -789,3 +720,5 @@ private fun HeroMetaDivider(
             .background(NuvioTheme.colors.TextTertiary.copy(alpha = 0.78f))
     )
 }
+
+internal const val HOME_HERO_TRAILER_OWNER = "home_hero"

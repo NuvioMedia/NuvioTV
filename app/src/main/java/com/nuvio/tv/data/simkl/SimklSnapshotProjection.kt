@@ -37,7 +37,7 @@ internal class SimklSnapshotProjection private constructor(
             library = library,
             watched = watched,
             progress = newProgress,
-            watchedMovieIds = baseWatchedMovieIds.filterInProgressMovies(newProgress),
+            watchedMovieIds = baseWatchedMovieIds,
             watchedShowEpisodes = watchedShowEpisodes,
             showIdSiblings = showIdSiblings,
             recentNextUp = recentNextUp,
@@ -83,15 +83,19 @@ internal class SimklSnapshotProjection private constructor(
         episode: Int?
     ): Boolean {
         val directKey = SimklProjectionItemKey(contentId.simklLookupKey(), season, episode)
-        val playback = playbackByEpisode[directKey]
-        if (playback != null && playback.progressPercentage > 0f && !playback.isCompleted()) return false
+        // A watch the account recorded is a watch, whatever playback position it kept beside it: a
+        // paused playback of an item already watched is where the user stopped the repeat viewing,
+        // not evidence that the item is unwatched.
         if (directKey in watchedKeys) return true
         val resolvedId = canonicalIdByAlias[directKey.contentId]
         if (resolvedId != null) {
             val resolvedKey = SimklProjectionItemKey(resolvedId.simklLookupKey(), season, episode)
             if (resolvedKey in watchedKeys) return true
         }
-        return videoId != null && episode != null && isWatchedByVideoId(videoId, episode)
+        if (videoId != null && episode != null && isWatchedByVideoId(videoId, episode)) return true
+        // No watch was recorded here, so the item is unwatched. A provider playback row below the
+        // history is only a resume position; it cannot make a watched item read as unwatched.
+        return false
     }
 
     fun isHidden(contentId: String): Boolean = contentId.simklLookupKey() in hiddenContentIds
@@ -184,7 +188,7 @@ internal class SimklSnapshotProjection private constructor(
                 library = library,
                 watched = watched,
                 progress = progress,
-                watchedMovieIds = baseWatchedMovieIds.filterInProgressMovies(progress),
+                watchedMovieIds = baseWatchedMovieIds,
                 watchedShowEpisodes = watched.items
                     .filter { item -> item.season != null && item.episode != null }
                     .groupBy(WatchedItem::contentId)
@@ -232,16 +236,6 @@ private fun SimklSyncSnapshot.simklBaseWatchedMovieIds(): Set<String> {
         }
     }
     return watched
-}
-
-private fun Set<String>.filterInProgressMovies(progress: List<WatchProgress>): Set<String> {
-    val inProgress = progress.filter { item ->
-        item.contentType == "movie" && item.progressPercentage > 0f && !item.isCompleted()
-    }
-    if (inProgress.isEmpty()) return this
-    val result = this.toMutableSet()
-    inProgress.forEach { item -> result.remove(item.contentId) }
-    return result
 }
 
 private fun SimklMedia.simklTrackingContentIds(): Set<String> = buildSet {

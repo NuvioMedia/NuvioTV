@@ -1,0 +1,1024 @@
+package com.nuvio.tv.core.usenet
+
+import android.content.Context
+import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.R
+import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.plugin.absoluteAnimeEpisodeNumber
+import com.nuvio.tv.core.streams.StreamRankingProfile
+import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.util.parseRuntimeMinutes
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
+import com.nuvio.tv.data.repository.SimklIdResolver
+import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.remote.api.TmdbDetailsResponse
+import com.nuvio.tv.domain.model.AddonStreams
+import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.StreamBadge
+import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.domain.repository.MetaRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
+import java.security.MessageDigest
+import java.text.DateFormat
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ChannelResult
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Headers
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+
+/** Requests to an indexer are paused until [until] because it reported a limit. */
+class IndexerCooldownException(val until: Long) : IllegalStateException("Indexer limit reached")
+
+/** The indexer answered with an HTTP error status and no Newznab error that says more. */
+class IndexerHttpException(val code: Int) : IllegalStateException("Indexer HTTP $code")
+
+/**
+ * True when the indexer refused the search itself (Newznab 200-203, or an HTTP 4xx), which asking
+ * again would not change. Not a timeout, an unreachable indexer, a server error or a cooldown, which
+ * may pass; nor an authentication failure, 408 or 429.
+ */
+internal fun isSearchRejection(e: Exception): Boolean = e is NewznabUnsupportedSearchException ||
+    (e is IndexerHttpException && e.code in 400..499 && e.code !in setOf(401, 403, 408, 429))
+
+@Singleton
+class NewznabClient internal constructor(
+    storage: NewznabStateStorage,
+    /** Counts every request; null in unit tests that do not look. */
+    private val stats: UsenetSourceStats? = null,
+    /** The User-Agent of the next request; settings can change it at any time. */
+    private val agent: () -> String = { NUVIO_USER_AGENT }
+) {
+    @Inject constructor(storage: NewznabStateStorage, settings: UsenetSettings, stats: UsenetSourceStats) :
+        this(storage, stats, { settings.settings.value.searchAgent })
+
+    // API keys are in query strings: use a dedicated client without URL logging,
+    // Sentry breadcrumbs or a disk response cache.
+    private val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS).build()
+    private val states = NewznabIndexerStates(storage, ::now)
+    private val seasons = object : LinkedHashMap<String, Pair<Long, List<UsenetRelease>>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, List<UsenetRelease>>>) =
+            size > MAX_SEASONS
+    }
+
+    /** Caps cost an API hit on most indexers and rarely change; [live] skips the cache and any cooldown. */
+    suspend fun capabilities(indexer: UsenetIndexer, live: Boolean = false): NewznabCapabilities {
+        val cached = states.get(indexer)?.takeIf { it.caps != null }
+        if (!live && cached != null && now() - cached.capsFetchedAt < CAPS_TTL_MS) return cached.caps!!
+        val caps = try {
+            request(indexer, NewznabProtocol.apiUrl(indexer, "caps").build(), live, parse = NewznabProtocol::capabilities)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            // An expired copy still describes the indexer better than failing the search.
+            if (!live && cached != null) return cached.caps!! else throw e
+        }
+        states.update(indexer) { it.copy(caps = caps, capsFetchedAt = now()) }
+        return caps
+    }
+
+    /**
+     * Reads up to [results] items of each search, or every page when zero. An episode is always searched on its own: a
+     * long-running series has more releases per season than a search reads, which are its newest
+     * uploads, of any episode. The season search adds what an episode search never returns, the
+     * season packs, and the episode's numbered releases that an indexer filed without the episode.
+     * It runs alongside the episode's, which its pages would otherwise hold up.
+     */
+    suspend fun search(indexer: UsenetIndexer, request: UsenetSearchRequest, caps: NewznabCapabilities,
+        results: Int = UsenetSourceConfiguration.DEFAULT_INDEXER_RESULTS): List<UsenetRelease> = coroutineScope {
+        val season = async {
+            try {
+                Result.success(seasonReleases(indexer, request, caps, results).orEmpty()
+                    .filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) })
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { Result.failure(e) }
+        }
+        val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return@coroutineScope season.await().getOrThrow()
+        val episode = try {
+            pages(indexer, url, request, caps, results)
+                .filter { NewznabProtocol.matches(it, request, NewznabProtocol.isIdSearch(url)) }
+        } catch (e: CancellationException) { throw e }
+        // When the season answered, a failed or paused episode search still shows its releases.
+        catch (e: Exception) { return@coroutineScope season.await().getOrNull()?.takeIf { it.isNotEmpty() } ?: throw e }
+        // A failed season search leaves only the packs out.
+        (episode + season.await().getOrDefault(emptyList())).distinctBy { it.nzbUrl }
+    }
+
+    /**
+     * Checks the endpoint and the API key with live requests. Caps alone prove nothing about
+     * the key, since many indexers serve them publicly; a one-result search uses it.
+     */
+    suspend fun verify(indexer: UsenetIndexer) {
+        capabilities(indexer, live = true)
+        val latest = NewznabProtocol.apiUrl(indexer, "search").setQueryParameter("limit", "1").build()
+        // A search refused for its parameters still means the key was accepted; a page that is
+        // no Newznab answer (a login page served with the public caps) does not.
+        request(indexer, latest, ignoreCooldown = true, parse = NewznabProtocol::requireSearchAnswer)
+    }
+
+    /**
+     * Watching a series asks for one episode after another, and a single season
+     * search gives them all its packs for [SEASON_TTL_MS]. Memory only: release
+     * URLs carry the API key.
+     */
+    private suspend fun seasonReleases(indexer: UsenetIndexer, request: UsenetSearchRequest,
+        caps: NewznabCapabilities, results: Int): List<UsenetRelease>? {
+        val url = NewznabProtocol.searchUrl(indexer, request, caps, wholeSeason = true) ?: return null
+        // A season read for fewer results than asked for is read again.
+        val key = "$url#$results"
+        // Keyed by the endpoint and key, which another profile or a renamed indexer can share:
+        // reused releases take the asking indexer's id and name, which ordering and deduplication use.
+        synchronized(seasons) { seasons[key] }?.takeIf { now() - it.first < SEASON_TTL_MS }?.let { cached ->
+            return cached.second.map { it.copy(indexerId = indexer.id, indexerName = indexer.name) }
+        }
+        val releases = try {
+            pages(indexer, url, request, caps, results, wholeSeason = true)
+        } catch (e: CancellationException) { throw e }
+        // Some indexers reject season-only searches; remember it so each episode does not retry.
+        // Any other failure may pass, so it is not remembered: the next episode asks again.
+        catch (e: Exception) { if (isSearchRejection(e)) emptyList() else throw e }
+        synchronized(seasons) { seasons[key] = now() to releases }
+        return releases
+    }
+
+    /**
+     * Bounds fetching to [results] items, or reads every page when zero; never downloads NZBs. Indexers
+     * leave items out of a page while more follow, so the total they report says whether to ask for
+     * the next; without one, a full page does. An empty page ends the search.
+     */
+    private suspend fun pages(indexer: UsenetIndexer, url: HttpUrl, request: UsenetSearchRequest,
+        caps: NewznabCapabilities, results: Int, wholeSeason: Boolean = false): List<UsenetRelease> {
+        require(results >= 0) { "Invalid fetch limit" }
+        val limit = caps.limit.coerceIn(1, 100)
+        val kind = if (request.series) ContentKind.SHOW else ContentKind.MOVIE
+        val releases = mutableListOf<UsenetRelease>()
+        val seenUrls = hashSetOf<String>()
+        val seenPages = hashSetOf<List<Byte>>()
+        var offset = 0
+        while (results == 0 || offset < results) {
+            currentCoroutineContext().ensureActive()
+            val pageSize = if (results == 0) limit else minOf(limit, results - offset)
+            val next = (if (offset == 0) url else
+                NewznabProtocol.searchUrl(indexer, request, caps, offset, wholeSeason) ?: break)
+                .newBuilder().setQueryParameter("limit", pageSize.toString()).build()
+            val answer = try {
+                request(indexer, next, kind = kind) { xml ->
+                    NewznabProtocol.releases(xml, indexer) to
+                        MessageDigest.getInstance("SHA-256").digest(xml.toByteArray()).toList()
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                // A failed first page is still an error; later failures retain the pages already read.
+                if (offset == 0) throw e else break
+            }
+            val (page, fingerprint) = answer
+            if (page.items == 0 || !seenPages.add(fingerprint)) break
+            val fresh = page.releases.filter { seenUrls.add(it.nzbUrl) }
+            // Some indexers ignore offsets or cycle through the same pages with changing metadata.
+            if (page.releases.isNotEmpty() && fresh.isEmpty()) break
+            releases += if (results == 0) fresh else fresh.take(pageSize)
+            if (offset > Int.MAX_VALUE - pageSize) break
+            offset += pageSize
+            if (page.total?.let { offset >= it } ?: (page.items < pageSize)) break
+        }
+        return releases
+    }
+
+    /**
+     * Skips indexers in a cooldown without a request, and opens one when an
+     * indexer throttles us or reports a spent quota, so later searches do not
+     * spend requests that can only fail. Every request sent counts in the indexer's statistics,
+     * for [kind] when it searched for one.
+     */
+    private suspend fun <T> request(indexer: UsenetIndexer, url: HttpUrl, ignoreCooldown: Boolean = false,
+        kind: ContentKind? = null, parse: (String) -> T): T {
+        val blockedUntil = states.get(indexer)?.blockedUntil ?: 0
+        if (!ignoreCooldown && blockedUntil > now()) throw IndexerCooldownException(blockedUntil)
+        fun count(outcome: RequestOutcome, elapsedMs: Long = 0) =
+            stats?.indexerRequest(indexer.id, kind, outcome, elapsedMs)
+        val started = System.nanoTime()
+        val response = try { get(url) }
+            catch (e: CancellationException) { throw e }
+            catch (e: IOException) { count(RequestOutcome.FAILED); note(indexer, IndexerProblem.UNREACHABLE); throw e }
+            catch (e: Exception) { count(RequestOutcome.FAILED); note(indexer, IndexerProblem.RESPONSE); throw e }
+        val elapsedMs = (System.nanoTime() - started) / 1_000_000
+        val retryAfter = retryAfterMs(response.headers["Retry-After"])
+        if (response.code == 429) {
+            count(RequestOutcome.LIMITED)
+            throw cooldown(indexer, retryAfter?.coerceAtMost(MAX_THROTTLE_MS) ?: THROTTLE_MS)
+        }
+        return try {
+            if (response.code !in 200..299) {
+                NewznabProtocol.throwIfKnownError(response.body)
+                if (response.code == 401 || response.code == 403) throw NewznabAuthException()
+                throw IndexerHttpException(response.code)
+            }
+            parse(response.body).also {
+                val apiHitsLeft = left(response.headers, API_LEFT_HEADERS)
+                val grabsLeft = left(response.headers, GRABS_LEFT_HEADERS)
+                // Indexers announce a spent daily quota before they start refusing requests.
+                if (apiHitsLeft == 0 || grabsLeft == 0) cooldown(indexer, EXHAUSTED_MS)
+                if (apiHitsLeft != null || grabsLeft != null) states.update(indexer) {
+                    it.copy(problem = null, apiHitsLeft = apiHitsLeft, grabsLeft = grabsLeft, leftAt = now())
+                } else note(indexer, null)
+                count(RequestOutcome.ANSWERED, elapsedMs)
+            }
+        } catch (_: NewznabQuotaException) {
+            count(RequestOutcome.LIMITED)
+            throw cooldown(indexer, retryAfter ?: QUOTA_MS)
+        } catch (e: NewznabAuthException) {
+            count(RequestOutcome.FAILED)
+            note(indexer, IndexerProblem.AUTH); throw e
+        } catch (e: Exception) {
+            count(RequestOutcome.FAILED)
+            note(indexer, IndexerProblem.RESPONSE); throw e
+        }
+    }
+
+    /** Most requests succeed: only a changed outcome is written. */
+    private fun note(indexer: UsenetIndexer, problem: IndexerProblem?) {
+        if (states.get(indexer)?.problem != problem) states.update(indexer) { it.copy(problem = problem) }
+    }
+
+    /** Increments whenever an indexer status may have changed. */
+    val statusChanges: StateFlow<Int> get() = states.revision
+
+    fun status(indexer: UsenetIndexer): IndexerStatus = states.get(indexer).let { state ->
+        // The counts are daily: one from before the indexer's last reset would mislead.
+        val fresh = state != null && now() - state.leftAt < LEFT_TTL_MS
+        IndexerStatus(state?.blockedUntil ?: 0, state?.problem, state?.apiHitsLeft?.takeIf { fresh },
+            state?.grabsLeft?.takeIf { fresh }, state?.leftAt?.takeIf { fresh } ?: 0)
+    }
+
+    private fun left(headers: Headers, names: List<String>) =
+        names.firstNotNullOfOrNull { headers[it]?.trim()?.toIntOrNull() }?.coerceAtLeast(0)
+
+    /** Extends, never shortens, the cooldown: concurrent refusals must not undercut each other. */
+    private fun cooldown(indexer: UsenetIndexer, durationMs: Long): IndexerCooldownException {
+        states.update(indexer) { it.copy(blockedUntil = maxOf(it.blockedUntil, now() + durationMs)) }
+        return IndexerCooldownException(states.get(indexer)?.blockedUntil ?: (now() + durationMs))
+    }
+
+    private fun retryAfterMs(value: String?): Long? {
+        val text = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        text.toLongOrNull()?.let { return if (it > 0) it * 1000 else null }
+        return runCatching {
+            ZonedDateTime.parse(text, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() - now()
+        }.getOrNull()?.takeIf { it > 0 }
+    }
+
+    private fun now() = System.currentTimeMillis()
+
+    private class IndexerResponse(val code: Int, val headers: Headers, val body: String)
+
+    private suspend fun get(url: HttpUrl): IndexerResponse = suspendCancellableCoroutine { continuation ->
+        val call = client.newCall(Request.Builder().url(url).header(USER_AGENT, agent())
+            .header("Cache-Control", "no-store").build())
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (continuation.isActive) continuation.resumeWithException(IOException("Could not reach indexer"))
+            }
+            override fun onResponse(call: Call, response: Response) {
+                try {
+                    val result = response.use {
+                        val source = it.body?.source() ?: error("Empty indexer response")
+                        source.request(MAX_XML_BYTES + 1)
+                        check(source.buffer.size <= MAX_XML_BYTES) { "Indexer response is too large" }
+                        IndexerResponse(it.code, it.headers, source.readByteArray().toString(Charsets.UTF_8))
+                    }
+                    if (continuation.isActive) continuation.resume(result)
+                } catch (e: Exception) {
+                    if (continuation.isActive) continuation.resumeWithException(e)
+                }
+            }
+        })
+    }
+
+    private companion object {
+        const val MAX_XML_BYTES = 4L * 1024 * 1024
+        const val CAPS_TTL_MS = 7L * 24 * 3600 * 1000
+        const val THROTTLE_MS = 60_000L
+        const val MAX_THROTTLE_MS = 15 * 60_000L
+        const val QUOTA_MS = 30 * 60_000L
+        const val EXHAUSTED_MS = 15 * 60_000L
+        const val SEASON_TTL_MS = 2 * 3600_000L
+        const val MAX_SEASONS = 50
+        const val LEFT_TTL_MS = 24 * 3600_000L
+        val API_LEFT_HEADERS = listOf("X-RateLimit-Daily-Remaining", "x-api-remaining")
+        val GRABS_LEFT_HEADERS = listOf("X-DNZBLimit-Daily-Remaining", "x-grab-remaining")
+    }
+}
+
+data class BuiltInUsenetResult(val group: AddonStreams? = null, val failure: String? = null)
+
+/** How a listed release, and its upload's other episodes, last went. */
+private class ListedOutcome(val failed: Boolean, val played: Boolean, val sibling: SiblingOutcome?)
+
+@Singleton
+class BuiltInUsenetService @Inject constructor(
+    private val client: NewznabClient,
+    private val tmdb: TmdbService,
+    private val tmdbApi: TmdbApi,
+    private val unplayable: UnplayableReleases? = null,
+    /** Null in unit tests, which read the English wording. */
+    @ApplicationContext private val context: Context? = null,
+    /** Counts each indexer's searches and remembers which indexer listed each release. */
+    private val stats: UsenetSourceStats? = null,
+    /** The metas that give an anime catalog's ids their IMDb equivalent; null in unit tests without them. */
+    private val metas: MetaRepository? = null,
+    /** Maps an anime catalog's ids when their meta does not; null in unit tests without it. */
+    private val simkl: SimklIdResolver? = null,
+    /** Whether results show the size badge; null in unit tests, which keep the size in the details. */
+    private val badgeSettings: StreamBadgeSettingsDataStore? = null
+) {
+    /** A translated message; [english], the same wording, where there is no context. */
+    private fun text(id: Int, english: String, vararg args: Any): String =
+        context?.getString(id, *args) ?: english.format(Locale.ROOT, *args)
+
+    /** [contentId] is the title's own id, its meta's, when known. */
+    fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
+        season: Int?, episode: Int?, contentId: String? = null): Flow<BuiltInUsenetResult> = flow {
+        if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
+        val series = type.lowercase() != "movie"
+        val kind = if (series) ContentKind.SHOW else ContentKind.MOVIE
+        val (idSeason, idEpisode) = episodeNumbers(videoId)
+        val baseImdb = videoId.substringBefore(':').takeIf { it.matches(Regex("tt\\d+")) }
+        val baseTmdb = videoId.removePrefix("tmdb:").substringBefore(':')
+            .takeIf { it.toIntOrNull() != null }
+        // Indexers do not know an anime catalog's ids: the title, its meta or Simkl give the IMDb id and numbering.
+        val equivalent = if (baseImdb == null && baseTmdb == null) {
+            catalogImdbEquivalent(type, videoId, series, season, episode, contentId)
+        } else null
+        val resolvedSeason = equivalent?.season ?: season ?: idSeason
+        val resolvedEpisode = equivalent?.episode ?: episode ?: idEpisode
+        // The episode as searched, which picks its file in a pack, when it differs from the player's.
+        val searched = if (equivalent?.season != null && equivalent.episode != null) equivalent.season to equivalent.episode else null
+        // TMDB finds the show by its IMDb id when the video id is a catalog's own.
+        val lookupId = equivalent?.imdbId ?: videoId
+        val request = UsenetSearchRequest(baseImdb ?: equivalent?.imdbId, baseTmdb, season = resolvedSeason,
+            episode = resolvedEpisode, series = series)
+        if (series && (resolvedSeason == null || resolvedSeason < 0 || resolvedEpisode == null || resolvedEpisode < 1)) return@flow
+        // Read once, when a result first has a size to give a bitrate for.
+        val runtime by lazy {
+            heldRuntime(type, listOfNotNull(contentId, baseImdb, baseTmdb?.let { "tmdb:$it" }), videoId,
+                season ?: idSeason, episode ?: idEpisode)
+        }
+        val profile = config.ranking.profile()
+        val sizeBadges = try { badgeSettings?.settings?.first()?.showFileSizeBadges == true }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { false }
+        coroutineScope {
+            // A failed child would cancel this scope; keep lookup failures per indexer.
+            // A series' TMDB id and details, asked for once: its metadata and its seasons' episode counts
+            // read them. Null when its TMDB id could not be looked up.
+            val seriesLookup = if (!series) null else async {
+                val id = try { request.tmdbId ?: tmdb.ensureTmdbId(lookupId, type) }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { return@async null }
+                val details = try { id?.toIntOrNull()?.let { tmdbApi.getTvDetails(it, BuildConfig.TMDB_API_KEY).body() } }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { null }
+                SeriesLookup(id, details)
+            }
+            // Results are checked against the title's names and year, asked for alongside the indexers.
+            val metadata = async {
+                try { metadata(request, lookupId, type, seriesLookup) }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { null }
+            }
+            // A series' metadata, once it came within a few seconds: it tells the series' releases from
+            // another series' of its name. Like the episode counts, the list never waits for it, and is
+            // arranged again when it comes.
+            val seriesFacts = java.util.concurrent.atomic.AtomicReference<UsenetSearchRequest?>(null)
+            val factsLookup = if (!series) null else launch {
+                withTimeoutOrNull(ID_CHECK_WAIT_MS) { metadata.await() }?.let { seriesFacts.set(it) }
+            }
+            val releases = mutableListOf<UsenetRelease>()
+            val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
+            // Each season's episode count lets season packs, of one season or several, be filtered and
+            // sorted by their size per episode. The show's seasons are read once the first pack shows up,
+            // and the list never waits for them: packs count with their whole size until they come, and
+            // the list is arranged again then. Without an answer within a few seconds nothing changes.
+            val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Map<Int, Int>?>(null)
+            val seasonLookup = if (seriesLookup == null) null else launch(start = CoroutineStart.LAZY) {
+                val started = System.currentTimeMillis()
+                val counts = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
+                    seriesLookup.await()?.details?.seasons?.mapNotNull {
+                        val number = it.seasonNumber ?: return@mapNotNull null
+                        it.episodeCount?.takeIf { count -> count > 0 }?.let { count -> number to count }
+                    }?.toMap()?.takeIf { it.isNotEmpty() }
+                }
+                seasonEpisodes.set(counts)
+                runCatching { android.util.Log.i("UsenetSearch", "season episodes=$counts ms=${System.currentTimeMillis() - started}") }
+            }
+            // A series' releases its names leave to it, once its metadata is known.
+            fun ofSeries(found: List<UsenetRelease>): List<UsenetRelease> = seriesFacts.get()?.let {
+                NewznabProtocol.withoutNamesakeReleases(it, NewznabProtocol.seriesResultsOf(it, found))
+            } ?: found
+            fun seasonCounts(): Map<Int, Int>? = seasonEpisodes.get()
+            fun posted(release: UsenetRelease) = release.publishedAt.takeIf { it > 0 }
+            // Each release's outcome is looked up once per list, by nzbUrl: the sort compares releases
+            // many times, and the results show it too.
+            fun outcomes(): Map<String, ListedOutcome> = releases.associate {
+                val known = unplayable?.outcome(it.nzbUrl, it.title, it.size, servers, posted(it)) ?: ReleaseOutcome()
+                it.nzbUrl to ListedOutcome(known.failed, known.played, unplayable?.sibling(it.title, servers, posted(it)))
+            }
+            // Releases that already failed for good with these providers go last, still selectable;
+            // ones that played recently go first unless turned off.
+            fun arranged(outcomes: Map<String, ListedOutcome>): List<UsenetRelease> {
+                val ranks = outcomes.mapValues { (_, it) ->
+                    outcomeRank(it.failed || it.sibling?.blank == true, it.played, config.availableFirst)
+                }
+                // Across indexers: one indexer's release named with a newer series' year tells another's bare names apart.
+                val listed = ofSeries(releases)
+                return NewznabProtocol.arrange(
+                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(listed, config, seasonEpisodes = seasonCounts(), series = series) else listed, config,
+                    seasonEpisodes = seasonCounts(), series = series) { ranks[it.nzbUrl] ?: 1 }
+            }
+            val enabled = config.indexers.filter { it.enabled }
+            // Every indexer is searched at once unless the user chose priority fallback: then equal
+            // priorities are searched together and lower ones only when nothing playable was found.
+            val tiers = if (config.indexerFallback) enabled.groupBy { it.priority }.toSortedMap().values else listOf(enabled)
+            for (tier in tiers) {
+                val results = Channel<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>(Channel.UNLIMITED)
+                val jobs = tier.map { indexer ->
+                    launch {
+                        val result = try {
+                            val caps = client.capabilities(indexer)
+                            val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
+                            val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
+                            val fetchLimit = config.indexerResults(indexer)
+                            // A series' results, found by ID or by title, are checked as found when its
+                            // metadata is already known, so that results of another series alone are
+                            // asked again by title; a movie's title results were checked by the search,
+                            // which had its year.
+                            val seriesCheck: suspend (List<UsenetRelease>) -> List<UsenetRelease> = {
+                                seriesChecked(indexer, it, seriesFacts.get() ?: metadata.takeIf { m -> m.isCompleted }?.await())
+                            }
+                            val found = client.search(indexer, search, caps, fetchLimit).let {
+                                when {
+                                    series -> seriesCheck(it)
+                                    canSearchId -> confirmed(indexer, it) { metadata.await() }
+                                    else -> it
+                                }
+                            }
+                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, fetchLimit,
+                                seriesCheck.takeIf { series }) { metadata.await() } ?: found else found)
+                        } catch (e: CancellationException) { throw e }
+                        catch (e: Exception) { Result.failure(e) }
+                        countSearch(indexer, kind, result)
+                        results.send(indexer to result)
+                    }
+                }
+                launch { jobs.joinAll(); results.close() }
+                val tierStarted = System.currentTimeMillis()
+                fun log(message: String) = runCatching {
+                    android.util.Log.i("UsenetSearch", "${System.currentTimeMillis() - tierStarted}ms $message")
+                }
+                suspend fun show() {
+                    val outcomes = outcomes()
+                    val arranged = arranged(outcomes)
+                    log("show ${arranged.size} results")
+                    if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
+                        arranged.map {
+                            val outcome = outcomes.getValue(it.nzbUrl)
+                            it.toStream(config, series, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
+                                seasonEpisodes = seasonCounts(), sibling = outcome.sibling, searched = searched,
+                                runtimeMinutes = { runtime }, profile = profile, sizeBadge = sizeBadges)
+                        })))
+                }
+                // Like other sources, the list appears whole once every indexer answered, unless one is
+                // slow: after a short wait it shows what came and fills in from there. Progressive
+                // results show each indexer's answer as it comes.
+                val wait = if (config.progressiveResults) null else async { delay(COMPLETE_RESULTS_WAIT_MS) }
+                var waiting = wait != null
+                var lookupShown = false
+                var factsShown = false
+                // Whether the series' metadata, now known, takes releases off the list.
+                fun factsChangeList() = ofSeries(releases).size != releases.size
+                while (true) {
+                    val event = select<Any> {
+                        results.onReceiveCatching { it }
+                        if (waiting) wait?.onAwait { WAIT_OVER }
+                        // Arranged again once the episode count came, if the list is already shown.
+                        if (!lookupShown && seasonLookup?.isActive == true) seasonLookup.onJoin { SEASON_COUNTED }
+                        // And once the series' metadata came, if it takes releases off the shown list.
+                        if (!factsShown && factsLookup?.isActive == true) factsLookup.onJoin { SERIES_KNOWN }
+                    }
+                    if (event === WAIT_OVER) {
+                        log("wait over")
+                        waiting = false
+                        show()
+                        continue
+                    }
+                    if (event === SEASON_COUNTED) {
+                        lookupShown = true
+                        if (!waiting && seasonEpisodes.get() != null) show()
+                        continue
+                    }
+                    if (event === SERIES_KNOWN) {
+                        factsShown = true
+                        if (!waiting && factsChangeList()) show()
+                        continue
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val received = event as ChannelResult<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>
+                    val (indexer, result) = received.getOrNull() ?: break
+                    log("${indexer.name} answered: ${result.getOrNull()?.size ?: "failed"}")
+                    if (result.isFailure) {
+                        // Never display raw exception messages: network/parser errors can contain keys.
+                        val cooldown = result.exceptionOrNull() as? IndexerCooldownException
+                        emit(BuiltInUsenetResult(failure = if (cooldown != null) {
+                            text(R.string.usenet_indexer_search_paused, "%1\$s: indexer limit reached, paused until %2\$s.",
+                                indexer.name, DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(cooldown.until)))
+                        } else text(R.string.usenet_indexer_search_failed,
+                            "%1\$s: indexer search failed. Check the API URL, key and limits.", indexer.name)))
+                    } else {
+                        releases += result.getOrThrow()
+                        if (releases.any { it.packSeasons.isNotEmpty() }) seasonLookup?.start()
+                        if (!waiting) show()
+                    }
+                }
+                wait?.cancel()
+                if (waiting) show()
+                // Every indexer answered before the episode count: the list is shown, and is arranged
+                // again when the count comes within its few seconds.
+                if (!lookupShown && seasonLookup?.isActive == true) {
+                    seasonLookup.join()
+                    if (seasonEpisodes.get() != null) show()
+                }
+                // Likewise the series' metadata, within its few seconds.
+                if (!factsShown && factsLookup?.isActive == true) {
+                    factsLookup.join()
+                    if (factsChangeList()) show()
+                }
+                // A lower priority is searched only when this one listed nothing; after the last, nothing is.
+                if (tier === tiers.last() || arranged(outcomes()).isNotEmpty()) break
+            }
+            metadata.cancel()
+            seriesLookup?.cancel()
+            factsLookup?.cancel()
+            seasonLookup?.cancel()
+        }
+    }
+
+    /** One search of [indexer] in its statistics; its releases count for it once downloaded or played. */
+    private fun countSearch(indexer: UsenetIndexer, kind: ContentKind, result: Result<List<UsenetRelease>>) {
+        val stats = stats ?: return
+        val key = indexer.id
+        result.onSuccess { found ->
+            stats.indexerSearch(key, kind, SearchOutcome.ANSWERED, found.size)
+            stats.remember(found.map { it.nzbUrl }, key, kind)
+        }.onFailure {
+            stats.indexerSearch(key, kind, if (it is IndexerCooldownException) SearchOutcome.PAUSED else SearchOutcome.FAILED)
+        }
+    }
+
+    /**
+     * Asks again when a search found nothing: by title after an ID search (some indexers have thin
+     * ID coverage), then by the original title, under which foreign releases are often posted.
+     * Each attempt is made only when the ones before it found nothing, after [check]. Null when none found anything.
+     */
+    private suspend fun askAgain(indexer: UsenetIndexer, searched: UsenetSearchRequest, caps: NewznabCapabilities,
+        results: Int, check: (suspend (List<UsenetRelease>) -> List<UsenetRelease>)? = null,
+        metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
+        val url = NewznabProtocol.searchUrl(indexer, searched, caps) ?: return null
+        val byTitle = (metadata() ?: return null).copy(imdbId = null, tmdbId = null, tvdbId = null)
+        val attempts = listOfNotNull(
+            byTitle.takeIf { NewznabProtocol.isIdSearch(url) },
+            // Indexers search Latin text; an original title in another script would find nothing.
+            byTitle.originalTitle?.takeIf { NewznabProtocol.hasLatinLetter(it) }
+                ?.let { byTitle.copy(title = it, originalTitle = byTitle.title) }
+        )
+        for (attempt in attempts) {
+            if (NewznabProtocol.searchUrl(indexer, attempt, caps) == null) continue
+            val found = try { client.search(indexer, attempt, caps, results).let { check?.invoke(it) ?: it } }
+            catch (e: CancellationException) { throw e }
+            catch (e: IndexerCooldownException) { throw e }
+            // The first search succeeded; a failed later attempt only means nothing more was found.
+            catch (_: Exception) { continue }
+            if (found.isNotEmpty()) return found
+        }
+        return null
+    }
+
+    /**
+     * A movie's ID results that its names and year confirm, once its metadata comes within
+     * [ID_CHECK_WAIT_MS] of the indexer's answer; without it, the indexer's tags are trusted.
+     */
+    private suspend fun confirmed(indexer: UsenetIndexer, releases: List<UsenetRelease>,
+        metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease> {
+        if (releases.isEmpty()) return releases
+        val movie = withTimeoutOrNull(ID_CHECK_WAIT_MS) { metadata() } ?: return releases
+        return NewznabProtocol.idResultsOf(movie, releases).also { kept ->
+            if (kept.size < releases.size) runCatching {
+                android.util.Log.i("UsenetSearch", "${indexer.name}: ${releases.size - kept.size} ID results of another film")
+            }
+        }
+    }
+
+    /**
+     * A series' releases that their names leave to it rather than to another series of its name,
+     * when its metadata, [series], is known; otherwise all of them.
+     */
+    private fun seriesChecked(indexer: UsenetIndexer, releases: List<UsenetRelease>,
+        series: UsenetSearchRequest?): List<UsenetRelease> {
+        if (releases.isEmpty() || series == null) return releases
+        return NewznabProtocol.seriesResultsOf(series, releases).also { kept ->
+            if (kept.size < releases.size) runCatching {
+                android.util.Log.i("UsenetSearch", "${indexer.name}: ${releases.size - kept.size} results of another series")
+            }
+        }
+    }
+
+    /** The other series TMDB gives [title], its own [id] left out; null when TMDB did not answer. */
+    private suspend fun namesakes(title: String, id: Int?): List<UsenetNamesake>? = try {
+        tmdbApi.searchTv(BuildConfig.TMDB_API_KEY, title).body()?.results?.filter {
+            it.id != id && (NewznabProtocol.sameName(it.name, title) || NewznabProtocol.sameName(it.originalName, title))
+        }?.map { UsenetNamesake(it.firstAirDate?.take(4)?.toIntOrNull(), it.originCountry.orEmpty().toSet(), it.voteCount ?: 0) }
+    } catch (e: CancellationException) { throw e }
+    catch (_: Exception) { null }
+
+    /** A series' TMDB id, and its details when they came. */
+    private class SeriesLookup(val id: String?, val details: TmdbDetailsResponse?)
+
+    /** [seriesLookup], a series', gives its TMDB id and details; a movie's are looked up here. */
+    private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String,
+        seriesLookup: Deferred<SeriesLookup?>?): UsenetSearchRequest = coroutineScope {
+        val lookup = seriesLookup?.await()
+        if (seriesLookup != null && lookup == null) error("TMDB id unavailable")
+        val id = if (lookup != null) lookup.id else request.tmdbId ?: tmdb.ensureTmdbId(videoId, type)
+        val imdb = request.imdbId ?: id?.toIntOrNull()?.let { tmdb.tmdbToImdb(it, type) }
+        val details = lookup?.details
+        // A movie comes with its other names, which its ID results are checked against.
+        val movie = if (request.series) null else try {
+            id?.toIntOrNull()?.let { tmdbApi.getMovieNames(it, BuildConfig.TMDB_API_KEY).body() }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+        val title = movie?.title ?: details?.title ?: details?.name
+        // A series' other series of its name, asked for alongside its TVDB id.
+        val namesakes = if (!request.series || title == null) null else async { namesakes(title, id?.toIntOrNull()) }
+        val tvdb = if (!request.series) null else try {
+            id?.toIntOrNull()?.let { tmdbApi.getTvExternalIds(it, BuildConfig.TMDB_API_KEY).body()?.tvdbId?.toString() }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+        val original = (movie?.originalTitle ?: details?.originalTitle ?: details?.originalName)
+            ?.takeIf { it.isNotBlank() && !it.equals(title, ignoreCase = true) }
+        // Unknown unless both lists came: the movie's own titles alone would turn away its foreign releases.
+        val others = movie?.let { names ->
+            val alternative = names.alternativeTitles?.movieTitles ?: return@let null
+            val translated = names.translations?.translations ?: return@let null
+            (alternative.mapNotNull { it.title } + translated.mapNotNull { it.data?.title }).filter { it.isNotBlank() }.distinct()
+        }
+        fun yearOf(date: String?) = date?.take(4)?.toIntOrNull()
+        request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = title, originalTitle = original,
+            otherTitles = others, year = yearOf(movie?.releaseDate ?: details?.releaseDate ?: details?.firstAirDate),
+            seasonYear = yearOf(details?.seasons?.firstOrNull { it.seasonNumber == request.season }?.airDate),
+            lastYear = yearOf(details?.lastAirDate), countries = details?.originCountry.orEmpty().toSet(),
+            namesakes = namesakes?.await(), votes = details?.voteCount)
+    }
+
+    /**
+     * [runtimeMinutes], the movie's or episode's, gives the bitrate; [profile], the ranking profile,
+     * the release's quality tier. With [sizeBadge], the size badge results show, a single video's
+     * size is left out of the details: the badge shows the same.
+     */
+    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, series: Boolean, failed: Boolean = false,
+        played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null,
+        searched: Pair<Int, Int>? = null, runtimeMinutes: () -> Int? = { null }, profile: StreamRankingProfile? = null,
+        sizeBadge: Boolean = false): Stream {
+        fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
+        // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
+        // size badge shows an episode's share and the details keep the whole size.
+        val episodeShare = episodeSize(seasonEpisodes).takeIf { pack && it != size }
+        val season = packSeasons.size == 1
+        val sizeLabel = if (size <= 0) null else when {
+            !pack -> gb(size).takeUnless { sizeBadge }
+            episodeShare != null && season -> text(R.string.usenet_size_season_share,
+                "%1\$s whole season (~%2\$s per episode)", gb(size), gb(episodeShare))
+            episodeShare != null -> text(R.string.usenet_size_pack_share,
+                "%1\$s whole pack (~%2\$s per episode)", gb(size), gb(episodeShare))
+            season -> text(R.string.usenet_size_season, "%1\$s (whole season)", gb(size))
+            else -> text(R.string.usenet_size_pack, "%1\$s (whole pack)", gb(size))
+        }
+        val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
+        // A pack's bitrate is its episode share's, an estimate; unknown until its episodes are counted.
+        val bitrate = (if (pack) episodeShare else size)?.takeIf { it > 0 }?.let { bytes ->
+            val minutes = runtimeMinutes()?.takeIf { it > 0 } ?: return@let null
+            val mbps = bytes * 8.0 / (minutes * 60) / 1_000_000
+            // Whole megabits from 10 on: the details line has room for about 55 characters on a TV.
+            if (mbps < 0.1 || mbps > MAX_LISTED_MBPS) null
+            else (if (mbps < 10) "%s%.1f Mbps" else "%s%.0f Mbps").format(Locale.ROOT, if (pack) "~" else "", mbps)
+        }
+        val facts = rankingFacts
+        val pixels = facts.resolution.takeIf { it > 0 } ?: resolution
+        val resolutionLabel = when {
+            pixels >= 2160 -> "4K"
+            pixels > 0 -> "${pixels}p"
+            else -> null
+        }
+        // The name describes the video; the details, its audio, languages and listing. The release
+        // group is part of the release name; when that is hidden, the group ends the details.
+        val video = listOfNotNull(resolutionLabel, labels.service, UsenetReleaseLabels.quality(facts.quality))
+            .joinToString(" ").ifEmpty { null }
+        val tier = profile?.tierOf(facts)?.takeIf { it >= 0 }?.let { "T${it + 1}" }
+        val name = listOfNotNull(video, UsenetReleaseLabels.visual(facts.visual), UsenetReleaseLabels.codec(facts.codec), tier)
+            .joinToString(" • ").ifEmpty { "Usenet" }
+        val details = listOfNotNull(labels.audio, UsenetReleaseLabels.languages(labels.languages), sizeLabel, bitrate, age,
+            indexerName.takeIf { it.isNotBlank() }, labels.group.takeIf { !config.showReleaseNames })
+            .joinToString(" • ")
+        return Stream(name = name, title = title,
+            description = listOfNotNull(title.takeIf { config.showReleaseNames }, details.ifEmpty { null }).joinToString("\n"),
+            url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
+            // The size badge, as other sources show it, and the upload's binge group.
+            behaviorHints = usenetHints(bingeGroup(title, series), (episodeShare ?: size).takeIf { it > 0 }),
+            addonName = GROUP_NAME, addonLogo = null,
+            badges = listOfNotNull(
+                UNAVAILABLE_BADGE.takeIf { failed },
+                AVAILABLE_BADGE.takeIf { played && !failed },
+                sibling?.takeIf { !failed && !played }?.let(::siblingBadge),
+                SEASON_PACK_BADGE.takeIf { pack },
+                blurayLabel?.let {
+                    StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+                }),
+            nzbUrl = nzbUrl, servers = config.servers(),
+            publishedAt = publishedAt.takeIf { it > 0 },
+            usenetSeason = searched?.first, usenetEpisode = searched?.second,
+            quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
+    }
+
+    /**
+     * [videoId] on IMDb when it is an anime catalog's id, from the first that says:
+     * 1. the title's own IMDb id ([contentId]), with the episode's numbering;
+     * 2. the IMDb id and numbering its meta gives, from the meta the details page holds or, when it
+     *    is no longer held, from the catalog's addon;
+     * 3. Simkl's mapping: the IMDb id (the meta's first) and the episode's TVDB numbering.
+     * Null for any other id, or when none says: the catalog's own numbers would name another episode.
+     */
+    private suspend fun catalogImdbEquivalent(type: String, videoId: String, series: Boolean,
+        season: Int?, episode: Int?, contentId: String?): ImdbEquivalent? {
+        val metaId = animeMetaId(videoId, series) ?: return null
+        val held = contentId?.let { id -> cachedMeta(type, id) }
+        val equivalent = contentImdbEquivalent(contentId, held?.videos?.firstOrNull { it.id == videoId.trim() },
+            series, season, episode)
+            ?: run {
+                val meta = held ?: cachedMeta(type, metaId) ?: fetchedMeta(type, metaId)
+                meta?.let { imdbEquivalent(it, videoId, series) } ?: simklEquivalent(videoId, series,
+                    metaImdb = meta?.let { m -> m.videos.firstOrNull { it.id == videoId.trim() }?.imdbId ?: m.imdbId })
+            }
+        runCatching { android.util.Log.i("UsenetSearch", "$videoId on IMDb: ${equivalent ?: "unknown"}") }
+        return equivalent
+    }
+
+    private fun cachedMeta(type: String, id: String): com.nuvio.tv.domain.model.Meta? =
+        try { metas?.getCachedMeta(type, id) } catch (_: Exception) { null }
+
+    /**
+     * The movie's or episode's runtime in minutes, from the meta the details page holds under one of
+     * [ids]; null when none is held or it gives none. Nothing is fetched for it.
+     */
+    private fun heldRuntime(type: String, ids: List<String>, videoId: String, season: Int?, episode: Int?): Int? = try {
+        ids.distinct().firstNotNullOfOrNull { cachedMeta(type, it) }?.let { meta ->
+            val video = meta.videos.firstOrNull { it.id == videoId.trim() }
+                ?: meta.videos.firstOrNull { season != null && it.season == season && it.episode == episode }
+            video?.runtime?.takeIf { it > 0 } ?: parseRuntimeMinutes(meta.runtime)?.takeIf { it > 0 }
+        }
+    } catch (_: Exception) { null }
+
+    private suspend fun fetchedMeta(type: String, id: String): com.nuvio.tv.domain.model.Meta? {
+        val metas = metas ?: return null
+        return try {
+            withTimeoutOrNull(META_LOOKUP_TIMEOUT_MS) {
+                (metas.getMetaFromAllAddons(type, id).first { it !is NetworkResult.Loading } as? NetworkResult.Success)?.data
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+    }
+
+    /**
+     * [videoId] on IMDb as Simkl maps its anime catalog id: [metaImdb], or Simkl's IMDb id, and for an
+     * episode the TVDB season and episode Simkl gives the catalog's episode number. Null when Simkl
+     * is not set up, does not know the id, or does not map the episode.
+     */
+    private suspend fun simklEquivalent(videoId: String, series: Boolean, metaImdb: String?): ImdbEquivalent? {
+        val simkl = simkl ?: return null
+        val parts = videoId.trim().split(':')
+        val source = parts.getOrNull(0)?.lowercase(Locale.ROOT) ?: return null
+        val id = parts.getOrNull(1)?.takeIf { it.toLongOrNull() != null } ?: return null
+        return try {
+            withTimeoutOrNull(SIMKL_LOOKUP_TIMEOUT_MS) {
+                val ids = simkl.resolveIds(source, id) ?: return@withTimeoutOrNull null
+                val imdb = listOf(metaImdb, ids.imdb).firstNotNullOfOrNull { candidate ->
+                    candidate?.trim()?.takeIf { it.matches(Regex("tt\\d+")) }
+                } ?: return@withTimeoutOrNull null
+                if (!series) return@withTimeoutOrNull ImdbEquivalent(imdb, null, null)
+                val number = absoluteAnimeEpisodeNumber(videoId) ?: return@withTimeoutOrNull null
+                simkl.getEpisodeMapping(ids.simklId, ids.type).firstOrNull { it.animeEpisode == number }
+                    ?.let { ImdbEquivalent(imdb, it.tvdbSeason, it.tvdbEpisode) }
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+    }
+
+    companion object {
+        const val GROUP_NAME = "Built-in Usenet"
+        private val WAIT_OVER = Any()
+        private val SEASON_COUNTED = Any()
+        private val SERIES_KNOWN = Any()
+        /** How long a search may use for a season's episode count; the list never waits for it. */
+        private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
+        /** How long a search of an anime catalog's id waits for its meta when the details page no longer holds it. */
+        private const val META_LOOKUP_TIMEOUT_MS = 5_000L
+        /** How long a search of an anime catalog's id waits for Simkl's mapping when its meta gives none. */
+        private const val SIMKL_LOOKUP_TIMEOUT_MS = 5_000L
+        /**
+         * How long a movie's ID results wait for its metadata before they are listed unchecked, and
+         * how long a series' list may change once its metadata comes.
+         */
+        private const val ID_CHECK_WAIT_MS = 3_000L
+        /** How long a search waits for every indexer before it shows what came. */
+        const val COMPLETE_RESULTS_WAIT_MS = 5_000L
+        private const val BLURAY_COLOR = "#0B5ED7"
+        /** Above a UHD disc's peak: such a bitrate comes from a runtime that is not this release's. */
+        private const val MAX_LISTED_MBPS = 150.0
+        /**
+         * One upload's episodes share a binge group, so the next episode plays from the same upload
+         * when binge groups are preferred: its title without the episode's number and name. A
+         * season pack is its own group. A movie's release is its own group too, so reusing the
+         * binge group opens the same release again.
+         */
+        fun bingeGroup(title: String?, series: Boolean = true): String? {
+            val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return null
+            if (!series) return "$GROUP_NAME|$name"
+            val upload = NewznabProtocol.episodeTemplate(name)?.first
+                ?: name.takeIf { NewznabProtocol.packSeasons(it).isNotEmpty() } ?: return null
+            return "$GROUP_NAME|$upload"
+        }
+
+        private fun usenetHints(bingeGroup: String?, size: Long?): StreamBehaviorHints? =
+            if (bingeGroup == null && size == null) null
+            else StreamBehaviorHints(null, bingeGroup, null, null, videoSize = size)
+
+        /** On a release whose articles were missing or damaged when it was last tried. */
+        const val UNAVAILABLE_LABEL = "UNAVAILABLE"
+        private val UNAVAILABLE_BADGE = StreamBadge(name = UNAVAILABLE_LABEL, tagColor = "#6C757D",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /**
+         * On a release whose articles were there recently with these providers: it showed its first
+         * frame, perhaps for another episode of the same pack.
+         */
+        const val AVAILABLE_LABEL = "AVAILABLE"
+        private val AVAILABLE_BADGE = StreamBadge(name = AVAILABLE_LABEL, tagColor = "#198754",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /**
+         * On an untried release whose upload's other episode failed ("E02 FAILED") or played
+         * ("E02 PLAYED"): episodes posted together are usually removed, or kept, together.
+         */
+        private const val SIBLING_FAILED_COLOR = "#FD7E14"
+        private const val SIBLING_PLAYED_COLOR = "#0AA2C0"
+        private val SIBLING_LABEL = Regex("E(\\d+) (FAILED|PLAYED)")
+
+        /**
+         * The text a built-in badge named [name] is shown with: its string resource, and the
+         * episode of an "E02 FAILED" badge. A badge keeps its English name, which tells it apart;
+         * null for any other badge, shown by its name.
+         */
+        fun badgeText(name: String): Pair<Int, Int?>? = when (name) {
+            UNAVAILABLE_LABEL -> R.string.usenet_badge_unavailable to null
+            AVAILABLE_LABEL -> R.string.usenet_badge_available to null
+            SEASON_PACK_LABEL -> R.string.usenet_badge_season_pack to null
+            else -> SIBLING_LABEL.matchEntire(name)?.let { match ->
+                val episode = match.groupValues[1].toIntOrNull() ?: return@let null
+                (if (match.groupValues[2] == "FAILED") R.string.usenet_badge_episode_failed
+                else R.string.usenet_badge_episode_played) to episode
+            }
+        }
+
+        fun siblingBadge(outcome: SiblingOutcome): StreamBadge =
+            StreamBadge(name = "E%02d %s".format(Locale.ROOT, outcome.episode, if (outcome.failed) "FAILED" else "PLAYED"),
+                tagColor = if (outcome.failed) SIBLING_FAILED_COLOR else SIBLING_PLAYED_COLOR,
+                textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /** On a release holding a whole season or several, whose size is not the episode's. */
+        const val SEASON_PACK_LABEL = "SEASON PACK"
+        private val SEASON_PACK_BADGE = StreamBadge(name = SEASON_PACK_LABEL, tagColor = "#6F42C1",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /**
+         * A release played before, to open again without a search: reusing the last link keeps
+         * the release, never the engine's session link, which ends with its session. The providers
+         * are today's, so no credential is kept with it, and its binge group its upload's. Null when
+         * no provider is enabled.
+         */
+        fun restoredStream(nzbUrl: String, name: String, title: String?, size: Long?, publishedAt: Long?,
+            config: UsenetSourceConfiguration, series: Boolean = true): Stream? {
+            val servers = config.servers().ifEmpty { return null }
+            val download = withApiKeys(nzbUrl, config) ?: return null
+            return Stream(name = name, title = title, description = null, url = null, ytId = null, infoHash = null,
+                fileIdx = null, externalUrl = null,
+                behaviorHints = usenetHints(bingeGroup(title, series), size),
+                addonName = GROUP_NAME, addonLogo = null, nzbUrl = download, servers = servers, publishedAt = publishedAt)
+        }
+
+        /**
+         * [nzbUrl] as it may be kept outside the encrypted sources: every indexer API key in it is
+         * replaced by a reference to its indexer, wherever the indexer put it in the link.
+         * [withApiKeys] puts today's key back.
+         */
+        fun withoutApiKeys(nzbUrl: String, config: UsenetSourceConfiguration): String =
+            config.indexers.filter { it.apiKey.length >= MIN_REFERENCED_KEY }.sortedByDescending { it.apiKey.length }
+                .fold(nzbUrl) { url, indexer -> url.replace(indexer.apiKey, "$KEY_REFERENCE${indexer.id}}") }
+
+        /** The indexer that listed a kept link, named by its key reference. */
+        fun keptLinkIndexer(stored: String, config: UsenetSourceConfiguration): UsenetIndexer? =
+            KEY_REFERENCES.find(stored)?.groupValues?.get(1)?.let { id -> config.indexers.find { it.id == id } }
+
+        /** Null when a referenced indexer was removed or has no key any more: the link cannot be opened. */
+        fun withApiKeys(stored: String, config: UsenetSourceConfiguration): String? {
+            var missing = false
+            val url = KEY_REFERENCES.replace(stored) { match ->
+                val key = config.indexers.find { it.id == match.groupValues[1] }?.apiKey.orEmpty()
+                if (key.isEmpty()) missing = true
+                Regex.escapeReplacement(key)
+            }
+            return url.takeUnless { missing }
+        }
+
+        // Braces are never left bare in a URL, so a reference cannot be mistaken for part of one.
+        private const val KEY_REFERENCE = "{indexer-key:"
+        private val KEY_REFERENCES = Regex("""\{indexer-key:([^}]+)\}""")
+        /** Shorter values could match unrelated parts of a link. */
+        private const val MIN_REFERENCED_KEY = 8
+
+        /** Available releases first when chosen, unplayable ones last; the sort applies within each. */
+        private fun outcomeRank(failed: Boolean, available: Boolean, availableFirst: Boolean) = when {
+            failed -> 2
+            available && availableFirst -> 0
+            else -> 1
+        }
+
+        /**
+         * Labels results already listed, cached or shown, by how their releases last went, and orders
+         * the built-in group as a fresh search would: unplayable releases last, available ones first
+         * when [availableFirst]. An untried release says how its upload's other episode went; one
+         * whose other episode was blank goes last too. Other groups are unchanged.
+         */
+        fun arrangeOutcomes(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean,
+            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = false,
+            sibling: (Stream) -> SiblingOutcome? = { null }): List<AddonStreams> =
+            groups.map { group ->
+                if (group.addonName != GROUP_NAME) return@map group
+                val marked = group.streams.map { stream ->
+                    val failed = unplayable(stream)
+                    val good = !failed && available(stream)
+                    val other = if (failed || good) null else sibling(stream)
+                    val others = stream.badges.filterNot {
+                        it.name == UNAVAILABLE_LABEL || it.name == AVAILABLE_LABEL || SIBLING_LABEL.matches(it.name)
+                    }
+                    val badges = when {
+                        failed -> listOf(UNAVAILABLE_BADGE) + others
+                        good -> listOf(AVAILABLE_BADGE) + others
+                        other != null -> listOf(siblingBadge(other)) + others
+                        else -> others
+                    }
+                    (if (badges == stream.badges) stream else stream.copy(badges = badges)) to
+                        outcomeRank(failed || other?.blank == true, good, availableFirst)
+                }
+                val streams = marked.sortedBy { it.second }.map { it.first }
+                if (streams == group.streams) group else group.copy(streams = streams)
+            }
+    }
+}

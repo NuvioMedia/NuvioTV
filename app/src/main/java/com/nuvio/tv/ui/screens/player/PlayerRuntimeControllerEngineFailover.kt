@@ -22,6 +22,7 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
         InternalPlayerEngine.MVP_PLAYER -> InternalPlayerEngine.EXOPLAYER
         InternalPlayerEngine.AUTO -> if (mpvView != null) InternalPlayerEngine.EXOPLAYER else InternalPlayerEngine.MVP_PLAYER
     }
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && clearKeysNeedExoPlayer) return false
     beginSwitchTraceSession(reason = "startup-failover", targetEngine = targetEngine)
     logSwitchTrace(
         stage = "startup-failover-trigger",
@@ -71,11 +72,17 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     reason: String = "manual-switch"
 ) {
     if (currentStreamUrl.isBlank()) return
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && clearKeysNeedExoPlayer) {
+        Log.i(PlayerRuntimeController.TAG, "Engine switch to libmpv skipped: ClearKey HLS stream")
+        return
+    }
 
     beginSwitchTraceSession(reason = reason, targetEngine = targetEngine)
     val targetEngineLabel = targetEngineLabel(targetEngine)
     val switchMessage = context.getString(R.string.player_engine_switching_manual_message, targetEngineLabel)
-    val currentPosition = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
+    // An extra of a disc gives way to its feature, where it was left: libmpv plays only the stream.
+    val discFeaturePosition = discFeaturePositionMs.takeIf { isPlayingDiscExtra() }
+    val currentPosition = discFeaturePosition ?: currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
     logSwitchTrace(
         stage = "manual-switch-trigger",
         message = "targetEngine=$targetEngine positionMs=$currentPosition " +
@@ -121,6 +128,8 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     delayMpvResumeSeekUntilVideoTrack = switchingToMpv
 
     releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
+    // Only once released: while the extra plays, the release saves no progress for the item.
+    returnToDiscFeature()
     initializePlayer(
         url = currentStreamUrl,
         headers = currentHeaders,

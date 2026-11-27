@@ -6,11 +6,11 @@ import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
@@ -40,6 +40,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -148,13 +150,21 @@ fun SkipIntroButton(
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.8f),
-        exit = fadeOut(tween(200)) + scaleOut(tween(200), targetScale = 0.8f),
+        enter = scaleIn(tween(300), initialScale = 0.8f),
+        exit = scaleOut(tween(200), targetScale = 0.8f),
         modifier = modifier
     ) {
+        val contentAlpha by transition.animateFloat(
+            transitionSpec = { tween(if (targetState == EnterExitState.Visible) 300 else 200) },
+            label = "skipIntroAlpha"
+        ) { state -> if (state == EnterExitState.Visible) 1f else 0f }
         Card(
             onClick = onSkip,
             modifier = Modifier
+                .graphicsLayer {
+                    alpha = contentAlpha
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                }
                 .focusRequester(activeFocusRequester)
                 .focusProperties {
                     this.canFocus = canFocus

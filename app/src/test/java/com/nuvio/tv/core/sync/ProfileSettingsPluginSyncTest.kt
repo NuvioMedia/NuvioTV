@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.TestPreferencesStore
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.AmbientModeDataStore
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
+import com.nuvio.tv.domain.model.AmbientModeSettings
 import com.nuvio.tv.domain.model.UserProfile
 import com.squareup.moshi.Moshi
 import io.github.jan.supabase.postgrest.Postgrest
@@ -75,6 +77,25 @@ class ProfileSettingsPluginSyncTest {
         assertTrue(harness.service.pullCurrentProfileFromRemote().getOrThrow())
 
         assertTrue(harness.plugins.groupStreamsByRepository.first())
+    }
+
+    @Test
+    fun `ambient mode settings upload and restore after app data is cleared`() = runTest(dispatcher) {
+        val harness = harness()
+        val profileManager = mockk<ProfileManager>()
+        every { profileManager.activeProfileId } returns harness.activeProfileId
+        val ambient = AmbientModeDataStore(harness.factory, profileManager)
+        ambient.setTimeoutMinutes(1)
+        ambient.setEnabled(false)
+        harness.service.pushCurrentProfileToRemote().getOrThrow()
+        harness.factory.get(1, AmbientModeDataStore.FEATURE).edit { it.clear() }
+        assertEquals(AmbientModeSettings.DEFAULT_TIMEOUT_MINUTES, ambient.settings.first().timeoutMinutes)
+
+        assertTrue(harness.service.pullCurrentProfileFromRemote().getOrThrow())
+
+        val restored = ambient.settings.first()
+        assertEquals(1, restored.timeoutMinutes)
+        assertFalse(restored.enabled)
     }
 
     @Test

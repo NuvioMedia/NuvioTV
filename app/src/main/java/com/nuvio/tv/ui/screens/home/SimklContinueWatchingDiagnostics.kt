@@ -289,7 +289,7 @@ private fun buildInProgressDiagnosticRecord(
         }
         .maxByOrNull(WatchedItem::watchedAt)
     val finding = when {
-        effectiveProgress.progressPercentage >= WatchProgress.SIMKL_COMPLETED_THRESHOLD ->
+        effectiveProgress.isCompleted() ->
             SimklCwDiagnosticFinding.COMPLETED_PLAYBACK_VISIBLE
 
         matchingWatched == null -> SimklCwDiagnosticFinding.OPEN_PLAYBACK

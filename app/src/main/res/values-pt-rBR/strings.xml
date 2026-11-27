@@ -1247,7 +1247,6 @@
     <string name="mdblist_rate_limited">O limite de solicitações do MDBList foi atingido. A sincronização continuará após o limite zerar.</string>
     <string name="mdblist_revoke_failed">Desconectado neste aparelho. Remova este app nas configurações da sua conta do MDBList para revogar o acesso.</string>
     <string name="mdblist_title">Avaliações do MDBList</string>
-    <string name="mdblist_subtitle">Configure avaliações externas no destaque.</string>
     <string name="mdblist_enable_title">Ativar avaliações do MDBList</string>
     <string name="mdblist_enable_subtitle">Exiba avaliações externas na tela de detalhes.</string>
     <string name="mdblist_api_key_title">Chave API</string>
@@ -1274,7 +1273,6 @@
     <string name="mdblist_show_on_hero_title">Usar avaliações no destaque</string>
     <string name="mdblist_show_on_hero_subtitle">Exiba avaliações do MDBList no carrossel de destaque (moderno e clássico/grade)</string>
     <string name="mdblist_rating_order_title">Ordem das avaliações</string>
-    <string name="mdblist_rating_order_subtitle">As 3 primeiras avaliações ativadas e disponíveis aparecem no destaque moderno. Use as setas para reordenar.</string>
     <string name="mdblist_dialog_title">Chave API MDBList</string>
     <string name="mdblist_dialog_subtitle">Insira sua chave para buscar as avaliações.</string>
     <string name="mdblist_dialog_placeholder">Digite sua chave API MDBList</string>
@@ -2163,15 +2161,8 @@
     <string name="library_status_dropped">Abandonado</string>
     <string name="library_syncing_library">Sincronizando biblioteca…</string>
     <string name="library_type_all">Todos</string>
-    <string name="library_type_items">itens</string>
-    <string name="library_empty_local_title">Nenhum %1$s ainda</string>
-    <string name="library_empty_trakt_title">Nenhum %1$s nesta lista</string>
-    <string name="library_empty_local_subtitle">Comece a salvar seus favoritos para vê-los aqui</string>
-    <string name="library_empty_trakt_subtitle">Use \"+\" nos detalhes para adicionar itens à Minha Lista ou outras listas</string>
     <string name="library_empty_trakt_not_auth_title">Trakt não conectado</string>
     <string name="library_empty_trakt_not_auth_subtitle">Conecte sua conta Trakt em Configurações para ver sua biblioteca</string>
-    <string name="library_empty_simkl_title">Nenhum %1$s neste status</string>
-    <string name="library_empty_simkl_subtitle">Use + nos detalhes para adicionar itens a um status do Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl não conectado</string>
     <string name="library_empty_simkl_not_auth_subtitle">Conecte sua conta Simkl em Configurações para visualizar sua biblioteca do Simkl</string>
     <string name="library_list_create_dialog_title">Criar lista</string>
@@ -3380,17 +3371,17 @@
     <string name="stream_test_no_stream">Nenhuma reprodução registrada. Assista a um vídeo para executar testes de diagnóstico no servidor.</string>
     <string name="stream_test_btn_start">Iniciar teste</string>
     <string name="stream_test_btn_measuring_baseline">Medindo conexão padrão...</string>
-    <string name="stream_test_btn_measuring_parallel1">Medindo paralelo (1 MB)...</string>
-    <string name="stream_test_btn_measuring_parallel4">Medindo paralelo (4 MB)...</string>
-    <string name="stream_test_btn_measuring_parallel8">Medindo paralelo (8 MB)...</string>
-    <string name="stream_test_btn_measuring_parallel16">Medindo paralelo (16 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel1">Medindo paralelo (1 conexão)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Medindo paralelo (4 conexões)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Medindo paralelo (8 conexões)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Medindo paralelo (16 conexões)...</string>
     <string name="stream_test_btn_run_again">Executar novamente</string>
     <string name="stream_test_btn_running">Executando...</string>
     <string name="stream_test_label_baseline">Conexão única padrão (Baseline)</string>
-    <string name="stream_test_label_parallel1">Conexão paralela (chunks de 1 MB)</string>
-    <string name="stream_test_label_parallel4">Conexão paralela (chunks de 4 MB)</string>
-    <string name="stream_test_label_parallel8">Conexão paralela (chunks de 8 MB)</string>
-    <string name="stream_test_label_parallel16">Conexão paralela (chunks de 16 MB)</string>
+    <string name="stream_test_label_parallel1">Conexão paralela (1 conexão)</string>
+    <string name="stream_test_label_parallel4">Conexão paralela (4 conexões)</string>
+    <string name="stream_test_label_parallel8">Conexão paralela (8 conexões)</string>
+    <string name="stream_test_label_parallel16">Conexão paralela (16 conexões)</string>
     <string name="stream_test_error_prefix">Erro: %1$s</string>
     <string name="stream_test_video_bitrate">Taxa média de bits do vídeo: %1$s</string>
     <string name="stream_test_error_connection">Falha na conexão. O link do último stream reproduzido pode ter expirado ou estar inacessível. Por favor, reproduza o vídeo novamente e tente de novo.</string>
@@ -3427,6 +3418,15 @@
     <string name="autosync_thorough_title">Busca detalhada</string>
     <string name="autosync_thorough_description">Continue comparando outras legendas e faixas do vídeo para um ajuste mais preciso. Quando desativado, a primeira correspondência forte é usada mais rápido. Só ajustes confiáveis são aplicados.</string>
     <string name="autosync_label_synced">Sincronizado automaticamente</string>
+    <string name="player_disc_titles">Títulos do disco</string>
+    <string name="player_disc_title_feature">Filme · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Legendas %1$s</string>
+    <string name="player_disc_title_failed">Não foi possível reproduzir este título</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clipe</item>
+        <item quantity="other">%d clipes</item>
+    </plurals>
     <string name="stream_resume_from_time">Continuar a partir de %1$s</string>
     <string name="stream_resume_from_percent">Continuar a partir de %1$d%%</string>
 </resources>

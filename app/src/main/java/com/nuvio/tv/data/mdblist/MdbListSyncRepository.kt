@@ -29,6 +29,7 @@ class MdbListSyncRepository(
     private val coroutineScope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ratingsEnabled: () -> Boolean = { false },
     private val remote: (MdbListAuthScope) -> MdbListSyncRemote = { MdbListHttpSyncRemote(api, it) }
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -65,7 +66,22 @@ class MdbListSyncRepository(
     internal fun currentProjection(): MdbListProgressProjection = mutableProjection.value
         .takeIf { matchesCurrent(it.scope) && auth.state.value.isAuthenticated }?.projection ?: MdbListProgressProjection.Empty
 
-    suspend fun ensureLoaded() = withContext(dispatcher) { mutex.withLock { loadCurrent() } }
+    /**
+     * Loads the persisted snapshot of the current account. Once it is in memory this returns at once:
+     * the mutex is also held for the whole network sync, and readers only need the loaded snapshot.
+     */
+    suspend fun ensureLoaded(): MdbListSyncSnapshot? =
+        loadedSnapshot() ?: withContext(dispatcher) { mutex.withLock { loadCurrent() } }
+
+    private fun loadedSnapshot(): MdbListSyncSnapshot? {
+        val authorization = auth.state.value
+        if (!authorization.isAuthenticated) return null
+        val accountId = authorization.user?.id ?: return null
+        val scope = auth.scope()
+        if (!matchesCurrent(scope)) return null
+        val current = mutableState.value
+        return current.snapshot?.takeIf { current.scope == scope && it.accountId == accountId }
+    }
 
     fun refreshAsync(intent: TrackingRefreshIntent) {
         coroutineScope.launch { refresh(intent) }
@@ -83,7 +99,7 @@ class MdbListSyncRepository(
                     if (auth.state.value.user?.id == null) api.refreshUser(scope)
                     val snapshot = loadCurrent() ?: return@withLock
                     mutableState.value = mutableState.value.copy(isLoading = true, error = null, attemptedAtEpochMs = attemptedAt)
-                    val result = MdbListSyncEngine(remote(scope), now).synchronize(snapshot)
+                    val result = MdbListSyncEngine(remote(scope), now).synchronize(snapshot, ratingsEnabled())
                     commit(scope, result)
                     mutableState.value = mutableState.value.copy(attemptedAtEpochMs = attemptedAt)
                 } catch (error: CancellationException) {
@@ -159,6 +175,7 @@ class MdbListSyncRepository(
         val onlyPlaybackChanged = previous != null &&
             previous.watched === snapshot.watched &&
             previous.dropped === snapshot.dropped &&
+            previous.ratings === snapshot.ratings &&
             previous.library === snapshot.library &&
             previous.invalidatedBuckets === snapshot.invalidatedBuckets &&
             previous.watermark == snapshot.watermark &&

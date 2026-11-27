@@ -99,13 +99,16 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil3.Image
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import coil3.imageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.request.transformations
+import com.nuvio.tv.core.image.collectionCover
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -116,6 +119,7 @@ import com.nuvio.tv.domain.model.isPlaceholder
 import com.nuvio.tv.ui.components.ContinueWatchingCard
 import com.nuvio.tv.ui.components.continueWatchingArtworkWidth
 import com.nuvio.tv.ui.components.continueWatchingImageCacheKey
+import com.nuvio.tv.ui.components.posterTitleStyle
 import com.nuvio.tv.ui.components.continueWatchingImageModel
 import com.nuvio.tv.ui.components.continueWatchingShouldBlur
 import com.nuvio.tv.ui.components.continueWatchingUsesEpisodeThumbnails
@@ -337,7 +341,7 @@ private fun ModernCatalogRowItem(
 
     val suppressCardExpansionForHeroTrailer =
         effectiveAutoplayEnabled &&
-                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA_NO_EXPAND
     // Expansion is armed from a parent-level focusKey timer that can outlive real
     // card focus (e.g. user moves left into the sidebar). Never show the expanded
     // backdrop on a card that is not actually focused (#2815).
@@ -677,7 +681,7 @@ internal fun ModernRowSection(
                 ).roundToPx()
             }
             val cwHeightPx = with(density) { continueWatchingCardHeight.roundToPx() }
-            fun imageUrlAndKey(item: ModernCarouselItem): Pair<String, String>? {
+            fun imageUrlAndKey(item: ModernCarouselItem): Pair<String, MemoryCache.Key>? {
                 return when (val payload = item.payload) {
                     is ModernPayload.Catalog -> {
                         val url = item.imageUrl ?: return null
@@ -690,7 +694,9 @@ internal fun ModernRowSection(
                         )
                         val widthPx = with(density) { metrics.width.roundToPx() }
                         val heightPx = with(density) { metrics.height.roundToPx() }
-                        url to "${url}_${widthPx}x${heightPx}"
+                        val landscapeCustomPoster = useLandscapePosters && !alwaysShowLandscapeClearlogo &&
+                            !item.metaPreview?.landscapePoster.isNullOrBlank()
+                        url to cardImageMemoryCacheKey(url, widthPx, heightPx, item.cardImageFallbackUrl(landscapeCustomPoster))
                     }
                     is ModernPayload.CollectionFolder -> {
                         val url = item.imageUrl ?: return null
@@ -703,7 +709,9 @@ internal fun ModernRowSection(
                         )
                         val widthPx = with(density) { metrics.width.roundToPx() }
                         val heightPx = with(density) { metrics.height.roundToPx() }
-                        url to "${url}_${widthPx}x${heightPx}"
+                        val landscapeCustomPoster = useLandscapePosters && !alwaysShowLandscapeClearlogo &&
+                            !item.metaPreview?.landscapePoster.isNullOrBlank()
+                        url to cardImageMemoryCacheKey(url, widthPx, heightPx, item.cardImageFallbackUrl(landscapeCustomPoster))
                     }
                     is ModernPayload.ContinueWatching -> {
                         // Use the same model and cache key the card computes so the prefetch warms the entry the card actually reads.
@@ -715,14 +723,14 @@ internal fun ModernRowSection(
                             payload.item, blurUnwatchedEpisodes, continueWatchingUsesEpisodeThumbnails(continueWatchingCardStyle, useEpisodeThumbnails),
                             continueWatchingCardStyle != ContinueWatchingCardStyle.CARD
                         )
-                        model to continueWatchingImageCacheKey(model, cwWidthPx, cwHeightPx, blur)
+                        model to MemoryCache.Key(continueWatchingImageCacheKey(model, cwWidthPx, cwHeightPx, blur))
                     }
                 }
             }
             fun enqueueIfNeeded(item: ModernCarouselItem, widthPx: Int, heightPx: Int) {
                 if (widthPx <= 0 || heightPx <= 0) return
                 val (url, cacheKey) = imageUrlAndKey(item) ?: return
-                if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) return
+                if (imageLoader.memoryCache?.get(cacheKey) != null) return
                 val payload = item.payload
                 val blur = payload is ModernPayload.ContinueWatching &&
                     continueWatchingShouldBlur(
@@ -736,6 +744,7 @@ internal fun ModernRowSection(
                         .size(width = widthPx, height = heightPx)
                         .apply {
                             if (blur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
+                            if (payload is ModernPayload.CollectionFolder) collectionCover()
                         }
                         .build()
                 )
@@ -1195,15 +1204,18 @@ private fun ModernCarouselCard(
         is ModernPayload.CollectionFolder -> ContentScale.FillBounds
         else -> ContentScale.Crop
     }
-    // Keep decode target stable across expand/collapse to avoid recreating image requests/painters
-    // purely due to animated width changes.
     val maxRequestCardWidth = if (focusedPosterBackdropExpandEnabled) {
         maxOf(cardWidth, expandedCardWidth)
     } else {
         cardWidth
     }
-    val requestWidthPx = remember(maxRequestCardWidth, density) {
-        with(density) { maxRequestCardWidth.roundToPx() }.coerceAtLeast(1)
+    val imageRequestCardWidth = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
+        maxRequestCardWidth
+    } else {
+        cardWidth
+    }
+    val requestWidthPx = remember(imageRequestCardWidth, density) {
+        with(density) { imageRequestCardWidth.roundToPx() }.coerceAtLeast(1)
     }
     val requestHeightPx = remember(cardHeight, density) {
         with(density) { cardHeight.roundToPx() }.coerceAtLeast(1)
@@ -1211,26 +1223,19 @@ private fun ModernCarouselCard(
 
     val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
     var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
-    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
+    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey, isCollectionFolder) {
         imageUrl?.let {
+            val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
+            val fallbackUrl = item.cardImageFallbackUrl(isLandscapeCustomPoster)
             val builder = ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
-                .memoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
+                .memoryCacheKey(cardImageMemoryCacheKey(it, requestWidthPx, requestHeightPx, fallbackUrl, revalidationKey))
                 .size(width = requestWidthPx, height = requestHeightPx)
+            if (isCollectionFolder) builder.collectionCover()
             if (revalidationKey > 0) {
-                builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
-            }
-            val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
-            val fallbackUrl = if (isLandscapeCustomPoster) {
-                // Landscape custom poster -> fall back to original backdrop
-                item.metaPreview?.background ?: item.heroPreview.backdrop ?: item.metaPreview?.rawPosterUrl
-            } else {
-                item.metaPreview?.rawPosterUrl
-            }
-            if (!fallbackUrl.isNullOrBlank() && fallbackUrl != it) {
-                builder.memoryCacheKeyExtras(
-                    mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                builder.placeholderMemoryCacheKey(
+                    cardImageMemoryCacheKey(it, requestWidthPx, requestHeightPx, fallbackUrl, revalidationKey - 1)
                 )
             }
             builder.build()
@@ -1295,9 +1300,15 @@ private fun ModernCarouselCard(
         )
     }
     val effectiveFocusedBorder = if (isFastScrolling) transparentFocusBorder else focusedBorder
+    val loadedCover = if (isCollectionFolder) {
+        remember(imageModel) { mutableStateOf<Image?>(null) }
+    } else {
+        null
+    }
     val cardFocusGlow = when (payload) {
         is ModernPayload.CollectionFolder -> rememberArtworkBackedFocusGlow(
-            imageUrl = imageUrl,
+            cover = loadedCover?.value,
+            isFocused = isFocused,
             fallbackSeed = "${item.title}:${payload.collectionTitle}",
             enabled = payload.focusGlowEnabled
         )
@@ -1307,6 +1318,8 @@ private fun ModernCarouselCard(
     val titleStyle = remember(titleMedium) {
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
+    val titleSmall = MaterialTheme.typography.titleSmall
+    val labelTitleStyle = remember(titleSmall) { titleSmall.posterTitleStyle() }
 
     Column(
         modifier = modifier
@@ -1416,6 +1429,9 @@ private fun ModernCarouselCard(
                             error = backgroundPainter,
                             fallback = backgroundPainter,
                             contentScale = imageContentScale,
+                            onSuccess = loadedCover?.let { cover ->
+                                { success: AsyncImagePainter.State.Success -> cover.value = success.result.image }
+                            },
                             onError = {
                                 if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
                                     customPosterLoadFailed = true
@@ -1519,7 +1535,7 @@ private fun ModernCarouselCard(
             }
         }
 
-        if (showLabels && !isBackdropExpanded && item.title.isNotBlank()) {
+        if (showLabels && item.title.isNotBlank()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1527,7 +1543,7 @@ private fun ModernCarouselCard(
             ) {
                 Text(
                     text = item.title,
-                    style = titleStyle.copy(
+                    style = labelTitleStyle.copy(
                         textDirection = item.title.contentTextDirection()
                     ),
                     color = NuvioTheme.colors.TextPrimary,
@@ -1538,7 +1554,7 @@ private fun ModernCarouselCard(
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium.copy(
+                        style = MaterialTheme.typography.labelSmall.copy(
                             textDirection = subtitle.contentTextDirection()
                         ),
                         color = NuvioTheme.colors.TextSecondary,

@@ -26,6 +26,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         registerMpvEventRelay(view)
+        view.applyClearKeys(currentClearKeys)
         view.setMedia(currentStreamUrl, currentHeaders)
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
@@ -34,12 +35,12 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle, _uiState.value.effectiveAssSubtitleStyle)
         view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
-        view.setPaused(false)
+        view.setPaused(streamFallbackResumePosition != null && userPausedManually)
         applyPendingMpvSeekIfNeeded(view)
         installMpvMediaSession()
         hasRenderedFirstFrame = false
@@ -76,6 +77,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         ) {
             return@onFailure
         }
+        if (tryNextStream(detailedError)) return@onFailure
         cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update { state ->
             state.copy(
@@ -133,6 +135,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             .takeIf { it > 0L }
             ?: (_uiState.value.pendingSeekPosition?.coerceAtLeast(0L) ?: 0L)
         playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
+        view.applyClearKeys(currentClearKeys)
         view.setMedia(url, headers, initialResumePosition)
         playbackAnalyticsDiagnostics.recordRawEventLine(
             "PLAYER_INIT: engine=MPV host=${url.safeMpvTraceHost()} " +
@@ -150,12 +153,12 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle, _uiState.value.effectiveAssSubtitleStyle)
         view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
-        view.setPaused(false)
+        view.setPaused(streamFallbackResumePosition != null && userPausedManually)
         applyPendingMpvSeekIfNeeded(view)
         installMpvMediaSession()
 
@@ -202,6 +205,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         ) {
             return@onFailure
         }
+        if (tryNextStream(detailedError)) return@onFailure
         cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update {
             it.copy(
@@ -227,6 +231,14 @@ private fun String.safeMpvTraceHost(): String {
 }
 
 internal fun PlayerRuntimeController.pauseForLifecycle() {
+    cancelStreamFallback(showError = true)
+    if (streamFallbackSession != null && debridResolveJob?.isActive == true) {
+        debridResolveJob?.cancel()
+        debridResolveJob = null
+        _uiState.update {
+            it.copy(isLoadingSourceStreams = false, isLoadingEpisodeStreams = false, showLoadingOverlay = false)
+        }
+    }
     // Mark we're in background so onPlayerError can defer recovery to onResume.
     isInBackground = true
 
@@ -326,6 +338,11 @@ internal fun PlayerRuntimeController.markMpvTracksStale() {
     mpvTrackRefreshGate.markStale()
 }
 
+/** Makes the next progress tick re-read mpv chapters. Safe to call from any thread. */
+internal fun PlayerRuntimeController.markMpvChaptersStale() {
+    mpvChapterRefreshGate.markStale()
+}
+
 /**
  * Progress-tick entry point. Reading the track list costs about a dozen synchronous mpv property
  * reads per track on the main thread, so the tick only re-reads it after mpv reports a
@@ -348,6 +365,13 @@ internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
         subtitleTracks = state.subtitleTracks
     )
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+}
+
+internal fun PlayerRuntimeController.updateMpvChaptersOnTick() {
+    if (!isUsingMpvEngine()) return
+    val view = mpvView ?: return
+    if (!mpvChapterRefreshGate.isStale) return
+    refreshMpvChapters(view)
 }
 
 /** mpv only reports the video transfer once it has decoded video params, so this is re-read each tick. */

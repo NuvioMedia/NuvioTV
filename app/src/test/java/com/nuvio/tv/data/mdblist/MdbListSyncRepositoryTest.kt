@@ -191,4 +191,24 @@ class MdbListSyncRepositoryTest {
         assertEquals(listOf("activities", "playback"), harness.remote.calls)
         assertTrue(harness.repository.currentSnapshot()?.invalidatedBuckets?.isEmpty() == true)
     }
+
+    @Test
+    fun `loaded snapshot is returned without waiting for a running sync`() = runTest {
+        val harness = MdbListSyncTestHarness(backgroundScope)
+        harness.seed()
+        harness.repository.ensureLoaded()
+        val release = CompletableDeferred<Unit>()
+        harness.remote.beforeActivities = { release.await() }
+        val refresh = async { harness.repository.refresh(TrackingRefreshIntent.USER_INITIATED) }
+        runCurrent()
+        assertEquals(listOf("activities"), harness.remote.calls)
+
+        val loaded = async { harness.repository.ensureLoaded() }
+        runCurrent()
+        assertTrue(loaded.isCompleted)
+        assertEquals(42L, loaded.await()?.accountId)
+
+        release.complete(Unit)
+        refresh.await()
+    }
 }

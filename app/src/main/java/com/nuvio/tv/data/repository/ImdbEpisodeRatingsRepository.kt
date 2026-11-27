@@ -19,27 +19,35 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
     private val seriesGraphApi: SeriesGraphApi
 ) {
     private data class CacheEntry(
-        val ratings: Map<Pair<Int, Int>, Double>,
+        val episodes: List<ExternalEpisodeRating>,
         val expiresAtMs: Long
     )
 
     private val tag = "ImdbEpisodeRatingsRepo"
     private val cacheTtlMs = 30L * 60L * 1000L
     private val cache = ConcurrentHashMap<String, CacheEntry>()
-    private val inFlight = mutableMapOf<String, kotlinx.coroutines.Deferred<Map<Pair<Int, Int>, Double>>>()
+    private val inFlight = mutableMapOf<String, kotlinx.coroutines.Deferred<List<ExternalEpisodeRating>>>()
     private val inFlightMutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    suspend fun getEpisodeRatings(
+    internal suspend fun getEpisodeRatings(
+        imdbId: String?,
+        tmdbId: Int?,
+        addonEpisodes: List<AddonEpisodeAirDate>
+    ): Map<Pair<Int, Int>, Double> {
+        return alignEpisodeRatings(addonEpisodes, getExternalEpisodes(imdbId, tmdbId))
+    }
+
+    private suspend fun getExternalEpisodes(
         imdbId: String?,
         tmdbId: Int?
-    ): Map<Pair<Int, Int>, Double> {
+    ): List<ExternalEpisodeRating> {
         val normalizedImdbId = imdbId
             ?.trim()
             ?.takeIf { it.startsWith("tt", ignoreCase = true) }
             ?.substringBefore(':')
         val normalizedTmdbId = tmdbId?.takeIf { it > 0 }
-        if (normalizedImdbId == null && normalizedTmdbId == null) return emptyMap()
+        if (normalizedImdbId == null && normalizedTmdbId == null) return emptyList()
 
         val cacheKey = when {
             !normalizedImdbId.isNullOrBlank() -> "imdb:$normalizedImdbId"
@@ -48,7 +56,7 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
 
         val now = System.currentTimeMillis()
         cache[cacheKey]?.let { cached ->
-            if (cached.expiresAtMs > now) return cached.ratings
+            if (cached.expiresAtMs > now) return cached.episodes
             cache.remove(cacheKey)
         }
 
@@ -60,7 +68,7 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
                         tmdbId = normalizedTmdbId
                     ).also { result ->
                         cache[cacheKey] = CacheEntry(
-                            ratings = result,
+                            episodes = result,
                             expiresAtMs = System.currentTimeMillis() + cacheTtlMs
                         )
                     }
@@ -80,10 +88,10 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
     private suspend fun fetchEpisodeRatings(
         imdbId: String?,
         tmdbId: Int?
-    ): Map<Pair<Int, Int>, Double> {
+    ): List<ExternalEpisodeRating> {
         if (!imdbId.isNullOrBlank()) {
             val primary = fetchFromImdbTapframe(imdbId)
-            if (primary.isNotEmpty()) return primary
+            if (primary.any { it.rating != null }) return primary
             Log.w(tag, "Primary episode ratings empty for imdbId=$imdbId, trying fallback.")
         }
 
@@ -91,46 +99,46 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
             return fetchFromSeriesGraph(tmdbId)
         }
 
-        return emptyMap()
+        return emptyList()
     }
 
-    private suspend fun fetchFromImdbTapframe(imdbId: String): Map<Pair<Int, Int>, Double> {
+    private suspend fun fetchFromImdbTapframe(imdbId: String): List<ExternalEpisodeRating> {
         return try {
             val response = imdbTapframeApi.getSeasonRatings(imdbId)
             if (!response.isSuccessful) {
                 Log.w(tag, "Failed primary season ratings for imdbId=$imdbId (${response.code()})")
-                return emptyMap()
+                return emptyList()
             }
-            toRatingsMap(response.body().orEmpty())
+            toEpisodeRatings(response.body().orEmpty())
         } catch (e: Exception) {
             Log.w(tag, "Error fetching primary season ratings for imdbId=$imdbId", e)
-            emptyMap()
+            emptyList()
         }
     }
 
-    private suspend fun fetchFromSeriesGraph(tmdbId: Int): Map<Pair<Int, Int>, Double> {
+    private suspend fun fetchFromSeriesGraph(tmdbId: Int): List<ExternalEpisodeRating> {
         return try {
             val response = seriesGraphApi.getSeasonRatings(tmdbId)
             if (!response.isSuccessful) {
                 Log.w(tag, "Failed fallback season ratings for tmdbId=$tmdbId (${response.code()})")
-                return emptyMap()
+                return emptyList()
             }
-            toRatingsMap(response.body().orEmpty())
+            toEpisodeRatings(response.body().orEmpty())
         } catch (e: Exception) {
             Log.w(tag, "Error fetching fallback season ratings for tmdbId=$tmdbId", e)
-            emptyMap()
+            emptyList()
         }
     }
 
-    private fun toRatingsMap(payload: List<com.nuvio.tv.data.remote.api.SeriesGraphSeasonRatingsDto>): Map<Pair<Int, Int>, Double> {
-        return buildMap {
-            payload.forEach { season ->
-                season.episodes.orEmpty().forEach { episode ->
-                    val seasonNumber = episode.seasonNumber ?: return@forEach
-                    val episodeNumber = episode.episodeNumber ?: return@forEach
-                    val voteAverage = episode.voteAverage ?: return@forEach
-                    put(seasonNumber to episodeNumber, voteAverage)
-                }
+    private fun toEpisodeRatings(payload: List<com.nuvio.tv.data.remote.api.SeriesGraphSeasonRatingsDto>): List<ExternalEpisodeRating> {
+        return payload.flatMap { season ->
+            season.episodes.orEmpty().mapNotNull { episode ->
+                ExternalEpisodeRating(
+                    season = episode.seasonNumber ?: return@mapNotNull null,
+                    episode = episode.episodeNumber ?: return@mapNotNull null,
+                    airDate = episode.airDate,
+                    rating = episode.voteAverage
+                )
             }
         }
     }

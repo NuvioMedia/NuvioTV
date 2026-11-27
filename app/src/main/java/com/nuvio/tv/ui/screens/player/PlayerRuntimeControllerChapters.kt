@@ -5,19 +5,49 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+internal fun shouldReadMpvChapters(
+    fromRequestedMedia: Boolean,
+    chaptersStreamUrl: String?,
+    currentStreamUrl: String,
+    hasSkipDetectionChapters: Boolean,
+    showChapters: Boolean,
+    hasUiChapters: Boolean
+): Boolean {
+    if (!fromRequestedMedia) return false
+    if (chaptersStreamUrl == currentStreamUrl &&
+        hasSkipDetectionChapters &&
+        (!showChapters || hasUiChapters)
+    ) {
+        return false
+    }
+    return true
+}
+
 /**
  * mpv lists the chapters itself; they come with the file, so once read for a stream they are kept.
  * They always feed skip intro, and reach the UI only while the chapters setting is on, the same as
- * on ExoPlayer. Turning the setting on mid-stream reads them again on the next tick.
+ * on ExoPlayer. Observed via `chapter-list` (and marked stale on first frame) and guarded by
+ * [NuvioMpvSurfaceView.isPositionFromRequestedMedia] so an outgoing episode's chapters are never
+ * stamped onto the next episode during an in-place `loadfile replace`.
  */
 internal fun PlayerRuntimeController.refreshMpvChapters(view: NuvioMpvSurfaceView) {
+    val fromRequestedMedia = view.isPositionFromRequestedMedia()
     val showChapters = _uiState.value.chaptersEnabled
-    if (mpvChaptersStreamUrl == currentStreamUrl &&
-        skipDetectionChapters.isNotEmpty() &&
-        (!showChapters || _uiState.value.chapters.isNotEmpty())
+    if (!shouldReadMpvChapters(
+            fromRequestedMedia = fromRequestedMedia,
+            chaptersStreamUrl = mpvChaptersStreamUrl,
+            currentStreamUrl = currentStreamUrl,
+            hasSkipDetectionChapters = skipDetectionChapters.isNotEmpty(),
+            showChapters = showChapters,
+            hasUiChapters = _uiState.value.chapters.isNotEmpty()
+        )
     ) {
+        if (fromRequestedMedia) {
+            mpvChapterRefreshGate.onRefreshStarted()
+        }
         return
     }
+    mpvChapterRefreshGate.onRefreshStarted()
     val chapters = PlayerChapters.normalize(view.readChapters())
     if (chapters.isEmpty()) return
     mpvChaptersStreamUrl = currentStreamUrl
@@ -133,6 +163,9 @@ internal fun PlayerRuntimeController.recomputeChapterSkipIntervalsIfNeeded() {
 }
 
 internal fun PlayerRuntimeController.clearChapterSkipState() {
+    exoChapterLoadJob?.cancel()
+    exoChapterLoadJob = null
+    mpvChaptersStreamUrl = null
     skipDetectionChapters = emptyList()
     chapterSkipIntervals = emptyList()
     skipChaptersComputedForDuration = 0L

@@ -83,6 +83,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val modernLandscapePostersEnabledKey = booleanPreferencesKey("modern_landscape_posters_enabled")
     private val heroSectionEnabledKey = booleanPreferencesKey("hero_section_enabled")
     private val posterLabelsEnabledKey = booleanPreferencesKey("poster_labels_enabled")
+    private val modernPosterLabelsEnabledKey = booleanPreferencesKey("modern_poster_labels_enabled")
     private val catalogAddonNameEnabledKey = booleanPreferencesKey("catalog_addon_name_enabled")
     private val catalogTypeSuffixEnabledKey = booleanPreferencesKey("catalog_type_suffix_enabled")
     private val classicFocusGradientEnabledKey = booleanPreferencesKey("classic_focus_gradient_enabled")
@@ -90,6 +91,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val focusedPosterBackdropExpandDelaySecondsKey = intPreferencesKey("focused_poster_backdrop_expand_delay_seconds")
     private val focusedPosterBackdropTrailerEnabledKey = booleanPreferencesKey("focused_poster_backdrop_trailer_enabled")
     private val focusedPosterBackdropTrailerMutedKey = booleanPreferencesKey("focused_poster_backdrop_trailer_muted")
+    private val focusedPosterTrailerContinueInDetailsKey = booleanPreferencesKey("focused_poster_trailer_continue_in_details")
     private val focusedPosterBackdropTrailerPlaybackTargetKey =
         stringPreferencesKey("focused_poster_backdrop_trailer_playback_target")
     private val posterCardWidthDpKey = intPreferencesKey("poster_card_width_dp")
@@ -105,6 +107,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val cardDepthCastEnabledKey = booleanPreferencesKey("card_depth_cast_enabled")
     private val cardDepthTrailersEnabledKey = booleanPreferencesKey("card_depth_trailers_enabled")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
+    private val detailSeasonPostersEnabledKey = booleanPreferencesKey("detail_season_posters_enabled")
     private val randomEpisodeEnabledKey = booleanPreferencesKey("random_episode_enabled")
     private val startupSplashEnabledKey = booleanPreferencesKey("startup_splash_enabled")
     private val alwaysShowLandscapeClearlogoKey = booleanPreferencesKey("always_show_landscape_clearlogo")
@@ -272,6 +275,10 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[posterLabelsEnabledKey] ?: true
     }
 
+    val modernPosterLabelsEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[modernPosterLabelsEnabledKey] ?: false
+    }
+
     val catalogAddonNameEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[catalogAddonNameEnabledKey] ?: true
     }
@@ -300,6 +307,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val focusedPosterBackdropTrailerMuted: Flow<Boolean> = profileFlow { prefs ->
         prefs[focusedPosterBackdropTrailerMutedKey] ?: true
+    }
+
+    val focusedPosterTrailerContinueInDetails: Flow<Boolean> = profileFlow { prefs ->
+        prefs[focusedPosterTrailerContinueInDetailsKey] ?: false
     }
 
     val focusedPosterBackdropTrailerPlaybackTarget: Flow<FocusedPosterTrailerPlaybackTarget> =
@@ -341,6 +352,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val blurUnwatchedEpisodes: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurUnwatchedEpisodesKey] ?: false
+    }
+
+    val detailSeasonPostersEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[detailSeasonPostersEnabledKey] ?: false
     }
 
     val randomEpisodeEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -620,6 +635,12 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
+    suspend fun setModernPosterLabelsEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[modernPosterLabelsEnabledKey] = enabled
+        }
+    }
+
     suspend fun setCatalogAddonNameEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[catalogAddonNameEnabledKey] = enabled
@@ -667,6 +688,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setFocusedPosterBackdropTrailerMuted(muted: Boolean) {
         store().edit { prefs ->
             prefs[focusedPosterBackdropTrailerMutedKey] = muted
+        }
+    }
+
+    suspend fun setFocusedPosterTrailerContinueInDetails(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[focusedPosterTrailerContinueInDetailsKey] = enabled
         }
     }
 
@@ -750,6 +777,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurUnwatchedEpisodesKey] = enabled
+        }
+    }
+
+    suspend fun setDetailSeasonPostersEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[detailSeasonPostersEnabledKey] = enabled
         }
     }
 

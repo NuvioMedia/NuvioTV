@@ -129,7 +129,7 @@ internal fun DetailChildHost(
                 content(childNav)
             }
         }
-        if (overlayVisible) {
+        if (overlayVisible && !showingChild) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -231,7 +231,6 @@ internal fun DetailChildHost(
                     )
                 ) { nestedEntry ->
                     val nestedArgs = nestedEntry.arguments
-                    Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
                     MetaDetailsScreen(
                         viewModel = hiltViewModel(nestedEntry),
                         heroBackdropUrl = nestedArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() },
@@ -272,7 +271,6 @@ internal fun DetailChildHost(
                             )
                         }
                     )
-                    }
                 }
             }
         }

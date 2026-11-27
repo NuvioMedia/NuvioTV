@@ -124,18 +124,13 @@ fun HeroCarousel(
         items.getOrNull(activeIndex)?.let { currentOnActiveItemChanged(it) }
     }
 
-    // Auto-advance when not focused — delay first advance to 20s so initial GPU load settles
-    LaunchedEffect(isFocused, items.size) {
+    // Auto-advance, focused or not; each slide change restarts the interval.
+    LaunchedEffect(activeIndex, items.size) {
         if (items.size <= 1) return@LaunchedEffect
-        delay(AUTO_ADVANCE_INTERVAL_MS * 2) // 20s before first advance
-        while (true) {
-            delay(AUTO_ADVANCE_INTERVAL_MS)
-            // Let a long description finish scrolling before the slide is replaced.
-            snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
-            if (!isFocused) {
-                activeIndex = (activeIndex + 1) % items.size
-            }
-        }
+        delay(AUTO_ADVANCE_INTERVAL_MS)
+        // Let a long description finish scrolling before the slide is replaced.
+        snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
+        activeIndex = (activeIndex + 1) % items.size
     }
 
     Box(
@@ -303,11 +298,21 @@ private fun HeroCarouselSlide(
     val trailingMetadata = remember(runtimeText, releaseYear) {
         listOfNotNull(runtimeText, releaseYear)
     }
+    val ageRatingBadge = remember(item.ageRating) { heroAgeRatingBadgeText(item.ageRating) }
+    val statusBadge = rememberHeroStatusBadgeText(
+        status = item.status,
+        isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+    )
     val ratingText = remember(item.imdbRating, showImdbRatings) {
         item.imdbRating
             ?.takeIf { showImdbRatings }
             ?.let { String.format("%.1f", it) }
     }
+    val hasMdbListRatings = mdbListShowOnHero && item.mdbListRatings?.isEmpty() == false
+    val hasMetaBadge = ageRatingBadge != null || statusBadge != null
+    // As in the Modern hero: MDBList replaces the IMDb entry, and badges pull IMDb into the second row.
+    val showImdb = ratingText != null && !hasMdbListRatings
+    val showImdbInPrimary = showImdb && !hasMetaBadge
 
     Box(
         modifier = Modifier
@@ -351,13 +356,13 @@ private fun HeroCarouselSlide(
                 )
             }
 
-            if (leadingMetaText.isNotBlank() || trailingMetadata.isNotEmpty() || ratingText != null) {
+            if (leadingMetaText.isNotBlank() || trailingMetadata.isNotEmpty() || showImdbInPrimary) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val hasTrailingMeta = trailingMetadata.isNotEmpty() || ratingText != null
+                    val hasTrailingMeta = trailingMetadata.isNotEmpty() || showImdbInPrimary
                     if (leadingMetaText.isNotBlank()) {
                         Text(
                             text = leadingMetaText,
@@ -387,40 +392,36 @@ private fun HeroCarouselSlide(
                                     maxLines = 1
                                 )
                             }
-                            if (ratingText != null) {
-                                val mdbRatings = item.mdbListRatings
-                                if (mdbListShowOnHero && mdbRatings != null && !mdbRatings.isEmpty()) {
-                                } else {
-                                    if (trailingMetadata.isNotEmpty()) HeroCarouselMetaDivider()
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
-                                    ) {
-                                        ImdbRatingSourceLabel(
-                                            logoModifier = Modifier.size(NuvioTheme.spacing.xl),
-                                            textStyle = MaterialTheme.typography.labelMedium,
-                                            textColor = NuvioTheme.colors.TextSecondary
-                                        )
-                                        Text(
-                                            text = ratingText,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = NuvioTheme.colors.TextSecondary,
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
+                            if (showImdbInPrimary) {
+                                if (trailingMetadata.isNotEmpty()) HeroCarouselMetaDivider()
+                                HeroCarouselImdbMeta(ratingText.orEmpty())
                             }
                         }
                     }
                 }
             }
 
-            if (mdbListShowOnHero && item.mdbListRatings != null && !item.mdbListRatings.isEmpty()) {
-                MDBListRatingsRow(
-                    ratings = item.mdbListRatings,
-                    order = mdbListRatingOrder,
-                    maxItems = 6
-                )
+            if (hasMetaBadge || hasMdbListRatings) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                ) {
+                    HeroAgeRatingStatusBadges(
+                        ageRatingBadge = ageRatingBadge,
+                        statusBadge = statusBadge,
+                        textStyle = MaterialTheme.typography.labelMedium,
+                        contentColor = NuvioTheme.colors.TextPrimary
+                    )
+                    if (hasMetaBadge && (showImdb || hasMdbListRatings)) HeroCarouselMetaDivider()
+                    if (showImdb) HeroCarouselImdbMeta(ratingText.orEmpty())
+                    if (hasMdbListRatings) {
+                        MDBListRatingsRow(
+                            ratings = item.mdbListRatings!!,
+                            order = mdbListRatingOrder,
+                            maxItems = 3
+                        )
+                    }
+                }
             }
 
             item.description?.takeIf { it.isNotBlank() }?.let { description ->
@@ -436,6 +437,26 @@ private fun HeroCarouselSlide(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HeroCarouselImdbMeta(ratingText: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+    ) {
+        ImdbRatingSourceLabel(
+            logoModifier = Modifier.size(NuvioTheme.spacing.xl),
+            textStyle = MaterialTheme.typography.labelMedium,
+            textColor = NuvioTheme.colors.TextSecondary
+        )
+        Text(
+            text = ratingText,
+            style = MaterialTheme.typography.labelMedium,
+            color = NuvioTheme.colors.TextSecondary,
+            maxLines = 1
+        )
     }
 }
 
@@ -479,6 +500,7 @@ internal fun HeroCarouselBackdrop(
             .build()
     }
     val bgColor = NuvioTheme.colors.Background
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     Box(
         modifier = modifier
@@ -527,8 +549,8 @@ internal fun HeroCarouselBackdrop(
                         1.0f to Color.Transparent
                     )
                 },
-                startX = 0f,
-                endX = leftEndX
+                startX = if (isRtl) size.width else 0f,
+                endX = if (isRtl) size.width - leftEndX else leftEndX
             )
             onDrawWithContent {
                 drawContent()
@@ -539,6 +561,7 @@ internal fun HeroCarouselBackdrop(
                 )
                 drawRect(
                     brush = leftGradient,
+                    topLeft = Offset(if (isRtl) size.width - leftEndX else 0f, 0f),
                     size = Size(leftEndX, size.height)
                 )
             }

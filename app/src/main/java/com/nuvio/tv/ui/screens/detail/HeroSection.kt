@@ -67,11 +67,13 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import android.util.Log
 import com.nuvio.tv.R
+import com.nuvio.tv.core.tracking.TrackingRatingState
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.NextToWatch
+import com.nuvio.tv.domain.model.isSeriesWithWatchableEpisodes
 import com.nuvio.tv.domain.model.isWatchedAsOneItem
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.MDBListRatingsRow
@@ -111,6 +113,8 @@ fun HeroContentSection(
     isMovieWatched: Boolean,
     isMovieWatchedPending: Boolean,
     onToggleMovieWatched: () -> Unit,
+    ratingState: TrackingRatingState = TrackingRatingState(),
+    onRateClick: () -> Unit = {},
     trailerAvailable: Boolean = false,
     onTrailerClick: () -> Unit = {},
     showRandomEpisodeButton: Boolean = false,
@@ -136,7 +140,10 @@ fun HeroContentSection(
     val isSeriesApi = remember(meta.apiType) {
         meta.apiType.equals("series", ignoreCase = true) || meta.apiType.equals("tv", ignoreCase = true)
     }
-    val logoModel = remember(context, meta.logo) {
+    val canToggleWatched = remember(meta) {
+        meta.isWatchedAsOneItem() || meta.isSeriesWithWatchableEpisodes()
+    }
+    val logoModel =remember(context, meta.logo) {
         meta.logo?.let { logo ->
             ImageRequest.Builder(context)
                 .data(logo)
@@ -285,7 +292,7 @@ fun HeroContentSection(
                             onFocused = onHeroActionFocused
                         )
 
-                        if (meta.isWatchedAsOneItem()) {
+                        if (canToggleWatched) {
                             ActionIconButton(
                                 icon = if (isMovieWatched) {
                                     Icons.Default.Visibility
@@ -303,6 +310,14 @@ fun HeroContentSection(
                                 toggleable = true,
                                 selectedContainerColor = Color.White,
                                 selectedContentColor = Color.Black,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
+
+                        if (ratingState.isAvailable) {
+                            RatingActionButton(
+                                rating = ratingState.rating,
+                                onClick = onRateClick,
                                 onFocused = onHeroActionFocused
                             )
                         }

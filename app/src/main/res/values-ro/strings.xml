@@ -355,7 +355,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Evaluări MDBList</string>
-    <string name="mdblist_subtitle">Configurează ratingurile externe afișate în pagina de detaliu</string>
     <string name="mdblist_enable_title">Activează ratingurile MDBList</string>
     <string name="mdblist_enable_subtitle">Obține ratinguri de la furnizori externi în ecranul de detalii ale metadatelor</string>
     <string name="mdblist_api_key_title">Cheie API</string>
@@ -658,11 +657,6 @@
     <string name="library_delete_confirm">Șterge</string>
     <string name="library_source_local">LOCAL</string>
     <string name="library_type_all">Toate</string>
-    <string name="library_type_items">elemente</string>
-    <string name="library_empty_local_title">Încă nu există %1$s</string>
-    <string name="library_empty_trakt_title">Nu există %1$s în această listă</string>
-    <string name="library_empty_local_subtitle">Începeți să salvați favoritele pentru a le vedea aici</string>
-    <string name="library_empty_trakt_subtitle">Folosiți + în detalii pentru a adăuga elemente la lista de vizionare sau la liste</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Încărcare\u2026</string>

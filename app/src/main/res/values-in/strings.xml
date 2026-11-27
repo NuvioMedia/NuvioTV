@@ -842,7 +842,6 @@
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Rating MDBList</string>
-    <string name="mdblist_subtitle">Konfigurasikan rating eksternal yang ditampilkan di hero detail</string>
     <string name="mdblist_enable_title">Aktifkan Rating MDBList</string>
     <string name="mdblist_enable_subtitle">Ambil rating dari penyedia eksternal di layar detail metadata</string>
     <string name="mdblist_api_key_title">Kunci API</string>
@@ -1572,11 +1571,6 @@
     <string name="library_watchlist">Daftar Tonton</string>
     <string name="library_syncing_library">Menyinkronkan pustaka\u2026</string>
     <string name="library_type_all">Semua</string>
-    <string name="library_type_items">item</string>
-    <string name="library_empty_local_title">Belum ada %1$s</string>
-    <string name="library_empty_trakt_title">Tidak ada %1$s di daftar ini</string>
-    <string name="library_empty_local_subtitle">Mulai simpan favorit Anda untuk melihatnya di sini</string>
-    <string name="library_empty_trakt_subtitle">Gunakan + di detail untuk menambahkan item ke daftar tonton atau daftar</string>
     <string name="library_empty_trakt_not_auth_title">Trakt belum terhubung</string>
     <string name="library_empty_trakt_not_auth_subtitle">Hubungkan akun Trakt Anda di Pengaturan untuk melihat pustaka Trakt Anda</string>
     <string name="cloud_library_connect_action">Hubungkan akun</string>
@@ -2900,7 +2894,6 @@
     <string name="mdblist_show_on_hero_title">Gunakan Rating di Hero</string>
     <string name="mdblist_show_on_hero_subtitle">Tampilkan rating MDBList pada karusel hero (modern dan klasik/grid)</string>
     <string name="mdblist_rating_order_title">Urutan Rating</string>
-    <string name="mdblist_rating_order_subtitle">3 rating pertama yang aktif dan tersedia ditampilkan pada hero modern. Gunakan panah untuk mengubah urutan.</string>
     <string name="mdblist_library_lists">Daftar pustaka</string>
     <string name="mdblist_library_lists_description">Pilih daftar MDBList mana yang muncul di Pustaka dan di Kelola Daftar. Daftar Tontonan selalu ditampilkan.</string>
     <string name="mdblist_library_lists_empty">Belum ada daftar yang ditemukan di akun MDBList Anda. Sinkronkan untuk memuatnya.</string>
@@ -3081,8 +3074,6 @@
     <string name="library_status_on_hold">Ditunda</string>
     <string name="library_status_completed">Selesai</string>
     <string name="library_status_dropped">Dihentikan</string>
-    <string name="library_empty_simkl_title">Tidak ada %1$s dengan status ini</string>
-    <string name="library_empty_simkl_subtitle">Gunakan + di detail untuk menambahkan item ke status Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl tidak terhubung</string>
     <string name="library_empty_simkl_not_auth_subtitle">Hubungkan akun Simkl Anda di Pengaturan untuk melihat pustaka Simkl</string>
     <string name="cloud_library_search_clear">Kosongkan pencarian</string>
@@ -3418,17 +3409,17 @@
     <string name="stream_test_no_stream">Belum ada pemutaran tercatat. Putar video untuk menjalankan uji diagnostik pada host-nya.</string>
     <string name="stream_test_btn_start">Mulai Uji</string>
     <string name="stream_test_btn_measuring_baseline">Mengukur Baseline...</string>
-    <string name="stream_test_btn_measuring_parallel1">Mengukur Paralel (1MB)...</string>
-    <string name="stream_test_btn_measuring_parallel4">Mengukur Paralel (4MB)...</string>
-    <string name="stream_test_btn_measuring_parallel8">Mengukur Paralel (8MB)...</string>
-    <string name="stream_test_btn_measuring_parallel16">Mengukur Paralel (16MB)...</string>
+    <string name="stream_test_btn_measuring_parallel1">Mengukur Paralel (1 koneksi)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Mengukur Paralel (4 koneksi)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Mengukur Paralel (8 koneksi)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Mengukur Paralel (16 koneksi)...</string>
     <string name="stream_test_btn_run_again">Jalankan Lagi</string>
     <string name="stream_test_btn_running">Menjalankan...</string>
     <string name="stream_test_label_baseline">Koneksi Tunggal Standar (Baseline)</string>
-    <string name="stream_test_label_parallel1">Koneksi Paralel (Chunk 1 MB)</string>
-    <string name="stream_test_label_parallel4">Koneksi Paralel (Chunk 4 MB)</string>
-    <string name="stream_test_label_parallel8">Koneksi Paralel (Chunk 8 MB)</string>
-    <string name="stream_test_label_parallel16">Koneksi Paralel (Chunk 16 MB)</string>
+    <string name="stream_test_label_parallel1">Koneksi Paralel (1 koneksi)</string>
+    <string name="stream_test_label_parallel4">Koneksi Paralel (4 koneksi)</string>
+    <string name="stream_test_label_parallel8">Koneksi Paralel (8 koneksi)</string>
+    <string name="stream_test_label_parallel16">Koneksi Paralel (16 koneksi)</string>
     <string name="stream_test_error_prefix">Error: %1$s</string>
     <string name="stream_test_video_bitrate">Bitrate Video Rata-rata: %1$s</string>
     <string name="stream_test_error_connection">Koneksi gagal. Tautan stream yang terakhir diputar mungkin sudah kedaluwarsa atau tidak dapat dijangkau. Silakan putar video lagi dan coba ulang.</string>
@@ -3461,7 +3452,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Pencarian Sinkronisasi Otomatis Menyeluruh</string>
     <string name="autosync_thorough_description">Terus bandingkan subtitle lain dan jalur tertanam untuk kecocokan yang lebih dekat sebelum sinkronisasi. Saat nonaktif, kecocokan kuat pertama digunakan lebih cepat. Hanya kecocokan yang meyakinkan yang akan diterapkan.</string>
-    <string name="autosync_toast_no_fit">Sinkronisasi gagal: subtitle ini tidak cocok dengan versi video tersebut.</string>
     <string name="autosync_label_synced">Tersinkron otomatis</string>
     <string name="stream_resume_from_time">Lanjutkan dari %1$s</string>
     <string name="stream_resume_from_percent">Lanjutkan dari %1$d%%</string>

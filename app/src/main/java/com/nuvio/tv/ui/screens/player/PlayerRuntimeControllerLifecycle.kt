@@ -14,6 +14,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     flushPlaybackState: Boolean,
     keepTorrentStream: Boolean = false
 ) {
+    if (flushPlaybackState) cancelStreamFallback()
     logScrobbleDiagnostic("release_player", "flushPlaybackState=$flushPlaybackState")
 
     // Preserve current subtitle selection across any rebuild. When the user explicitly
@@ -61,6 +62,9 @@ internal fun PlayerRuntimeController.releasePlayer(
 
     releaseMediaSession()
     progressJob?.cancel()
+    exoChapterLoadJob?.cancel()
+    exoChapterLoadJob = null
+    mpvChaptersStreamUrl = null
     mpvTrackRefreshJob?.cancel()
     mpvTrackRefreshJob = null
     mpvTrackRefreshInProgress = false
@@ -78,6 +82,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     hideSubtitleDelayOverlayJob?.cancel()
     subtitleAutoSyncLoadJob?.cancel()
     cancelAutomaticSubtitleSync() // AutoSync hook
+    com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.release(this)
     stopSidecarAddonSubtitle(clearView = true)
     subtitleTimingRefreshJob?.cancel()
     subtitleTimingRefreshJob = null
