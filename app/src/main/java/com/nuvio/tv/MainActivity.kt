@@ -1,5 +1,6 @@
 package com.nuvio.tv
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -1525,7 +1526,7 @@ private fun LegacySidebarScaffold(
     val openDrawerItemWidth = sidebarTokens.itemWidth
 
     val focusManager = LocalFocusManager.current
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val contentFocusRequester = remember { FocusRequester() }
     var pendingContentFocusTransfer by remember { mutableStateOf(false) }
     var pendingSidebarFocusRequest by remember { mutableStateOf(false) }
@@ -1925,7 +1926,7 @@ private fun ModernSidebarScaffold(
     val openSidebarWidth = sidebarTokens.expandedWidth
 
     val focusManager = LocalFocusManager.current
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val contentFocusRequester = remember { FocusRequester() }
     val drawerItemFocusRequesters = rememberDrawerItemFocusRequesters(drawerItems)
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current

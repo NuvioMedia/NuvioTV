@@ -5,6 +5,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -281,7 +282,7 @@ internal fun AddonFilterChips(
     chipListState: LazyListState = rememberLazyListState(),
     debugTag: String = "AddonFilterChips"
 ) {
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val chipMap = sourceChips.associateBy { it.name }
     val orderedNames = externalOrderedNames ?: remember(addons, sourceChips) {
         buildList {

@@ -5,6 +5,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
@@ -127,7 +128,7 @@ fun PostPlayRecommendationOverlay(
     val nextRecommendationFocusRequester = remember { FocusRequester() }
     val context = LocalContext.current
     val imageLoader = context.imageLoader
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val playPainter = rememberPostPlayRecommendationIcon(R.raw.ic_player_play)
     val detailsPainter = rememberVectorPainter(Icons.Default.Info)
     val trailerPainter = rememberPostPlayRecommendationIcon(R.raw.trailer_play_button)

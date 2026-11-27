@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.keepLtr
 
@@ -164,7 +165,7 @@ private fun SliderSettingsItemLayout(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val shape = settingsTallRowShape()
 
     Card(

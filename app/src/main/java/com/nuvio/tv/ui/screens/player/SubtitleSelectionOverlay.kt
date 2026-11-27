@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.util.Log
@@ -831,7 +832,7 @@ private fun SubtitleStyleRail(
     isStyleDisabledByLibass: Boolean = false,
     supportsAssStyleCustomization: Boolean = false
 ) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
     val dispatchStyleEvent: (PlayerEvent) -> Unit = { event ->
         if (!isStyleDisabledByLibass) {
@@ -1183,7 +1184,7 @@ private fun SubtitleLanguageCard(
     onFocused: () -> Unit
 ) {
     val textColor = if (isSelected) NuvioTheme.colors.OnSecondary else Color.White
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveToOptionsKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_LEFT else android.view.KeyEvent.KEYCODE_DPAD_RIGHT
 
     Card(
@@ -1266,7 +1267,7 @@ private fun SubtitleOptionCard(
     } else {
         NuvioTheme.colors.TextTertiary
     }
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
     val moveRightKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_LEFT else android.view.KeyEvent.KEYCODE_DPAD_RIGHT
 
@@ -1595,7 +1596,7 @@ private fun StepperButton(
     onFocused: ((String) -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
 
     IconButton(
@@ -1660,7 +1661,7 @@ internal fun ToggleChip(
     onFocused: ((String) -> Unit)? = null,
     onClick: () -> Unit
 ) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
     val switchSemantics = Modifier.semantics {
         role = Role.Switch
@@ -1771,7 +1772,7 @@ private fun ColorChip(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
 
     val swatchLabel = stringResource(R.string.cd_color_swatch, overlaySwatchColorLabel(color))

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.animation.AnimatedContent
@@ -132,7 +133,7 @@ fun CommentsSection(
     windowResetKey: String? = null
 ) {
     val cardShape = RoundedCornerShape(NuvioTheme.radii.xl)
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val firstItemFocusRequester = remember { FocusRequester() }
     val internalTitleModeFocusRequester = remember { FocusRequester() }
     val internalEpisodeModeFocusRequester = remember { FocusRequester() }
