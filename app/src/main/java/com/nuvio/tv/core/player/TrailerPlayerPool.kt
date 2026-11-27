@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.player
 
 import android.content.Context
+import android.os.HandlerThread
+import android.os.Process
 import android.text.Layout
 import android.util.Log
 import androidx.compose.ui.geometry.Rect
@@ -12,6 +14,8 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
@@ -72,6 +76,7 @@ class TrailerPlayerPool @Inject constructor(
     }
 
     private var _player: ExoPlayer? = null
+    private var playbackThread: HandlerThread? = null
     private var owner: Any? = null
     private var loadedVideoUrl: String? = null
     private var ownerLetterboxZoom: Float? = null
@@ -296,6 +301,8 @@ class TrailerPlayerPool @Inject constructor(
                 runCatching { player.release() }
             }
             _player = null
+            playbackThread?.quitSafely()
+            playbackThread = null
         }
     }
 
@@ -322,6 +329,8 @@ class TrailerPlayerPool @Inject constructor(
                 runCatching { player.release() }
             }
             _player = null
+            playbackThread?.quitSafely()
+            playbackThread = null
         }
     }
 
@@ -364,6 +373,15 @@ class TrailerPlayerPool @Inject constructor(
             )
         }
         val renderersFactory = object : DefaultRenderersFactory(context) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean
+            ): AudioSink = DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                .build()
+
             override fun buildTextRenderers(
                 context: Context,
                 output: TextOutput,
@@ -380,7 +398,16 @@ class TrailerPlayerPool @Inject constructor(
                 )
             }
         }
+        // Keep home-screen trailers on a standard playback looper so global performance-mode
+        // real-time thread elevation and AsyncAudioSink never affect UI scrolling.
+        playbackThread?.quitSafely()
+        val trailerThread = HandlerThread(
+            "ExoPlayer:TrailerPlayback",
+            Process.THREAD_PRIORITY_AUDIO
+        ).apply { start() }
+        playbackThread = trailerThread
         return ExoPlayer.Builder(context, renderersFactory)
+            .setPlaybackLooper(trailerThread.looper)
             .setLoadControl(loadControl)
             .setTrackSelector(trackSelector)
             .setBandwidthMeter(
