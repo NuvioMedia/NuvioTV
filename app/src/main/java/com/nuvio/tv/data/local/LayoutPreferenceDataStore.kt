@@ -121,6 +121,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
     private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val blurContinueWatchingNextUpKey = booleanPreferencesKey("blur_continue_watching_next_up")
+    private val showContinueWatchingRemainingEpisodesKey =
+        booleanPreferencesKey("show_continue_watching_remaining_episodes")
     private val continueWatchingSortModeKey = stringPreferencesKey("continue_watching_sort_mode")
     private val continueWatchingClickActionKey = stringPreferencesKey("continue_watching_click_action")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
@@ -410,6 +412,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val blurContinueWatchingNextUp: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurContinueWatchingNextUpKey] ?: false
+    }
+
+    val showContinueWatchingRemainingEpisodes: Flow<Boolean> = profileFlow { prefs ->
+        prefs[showContinueWatchingRemainingEpisodesKey] ?: false
     }
 
     val continueWatchingSortMode: Flow<ContinueWatchingSortMode> = profileFlow { prefs ->
@@ -861,6 +867,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setBlurContinueWatchingNextUp(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurContinueWatchingNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setShowContinueWatchingRemainingEpisodes(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showContinueWatchingRemainingEpisodesKey] = enabled
         }
     }
 

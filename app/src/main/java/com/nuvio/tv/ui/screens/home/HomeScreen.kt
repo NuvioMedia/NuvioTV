@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -47,6 +48,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalContinueWatchingRemainingEpisodes
 import com.nuvio.tv.ui.components.LocalStartupLoadingState
 import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
 import com.nuvio.tv.ui.components.shouldShowHomeStartupLoader
@@ -378,49 +380,54 @@ fun HomeScreen(
                                 )
                         }
                     ) {
-                        when (uiState.homeLayout) {
-                            HomeLayout.CLASSIC -> ClassicHomeRoute(
-                                viewModel = viewModel,
-                                uiState = uiState,
-                                posterCardStyle = posterCardStyle,
-                                onNavigateToDetail = onNavigateToDetailStable,
-                                onContinueWatchingClick = onContinueWatchingClickStable,
-                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginningStable,
-                                onContinueWatchingPlayManually = onContinueWatchingPlayManuallyStable,
-                                showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
-                                onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAllStable,
-                                onNavigateToFolderDetail = onNavigateToFolderDetailStable,
-                                isCatalogItemWatched = isCatalogItemWatched,
-                                onCatalogItemLongPress = onCatalogItemLongPress
-                            )
+                        CompositionLocalProvider(
+                            LocalContinueWatchingRemainingEpisodes provides
+                                uiState.continueWatchingRemainingEpisodes
+                        ) {
+                            when (uiState.homeLayout) {
+                                HomeLayout.CLASSIC -> ClassicHomeRoute(
+                                    viewModel = viewModel,
+                                    uiState = uiState,
+                                    posterCardStyle = posterCardStyle,
+                                    onNavigateToDetail = onNavigateToDetailStable,
+                                    onContinueWatchingClick = onContinueWatchingClickStable,
+                                    onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginningStable,
+                                    onContinueWatchingPlayManually = onContinueWatchingPlayManuallyStable,
+                                    showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
+                                    onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAllStable,
+                                    onNavigateToFolderDetail = onNavigateToFolderDetailStable,
+                                    isCatalogItemWatched = isCatalogItemWatched,
+                                    onCatalogItemLongPress = onCatalogItemLongPress
+                                )
 
-                            HomeLayout.GRID -> GridHomeRoute(
-                                viewModel = viewModel,
-                                uiState = uiState,
-                                posterCardStyle = posterCardStyle,
-                                onNavigateToDetail = onNavigateToDetailStable,
-                                onContinueWatchingClick = onContinueWatchingClickStable,
-                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginningStable,
-                                onContinueWatchingPlayManually = onContinueWatchingPlayManuallyStable,
-                                showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
-                                onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAllStable,
-                                onNavigateToFolderDetail = onNavigateToFolderDetailStable,
-                                isCatalogItemWatched = isCatalogItemWatched,
-                                onCatalogItemLongPress = onCatalogItemLongPress
-                            )
+                                HomeLayout.GRID -> GridHomeRoute(
+                                    viewModel = viewModel,
+                                    uiState = uiState,
+                                    posterCardStyle = posterCardStyle,
+                                    onNavigateToDetail = onNavigateToDetailStable,
+                                    onContinueWatchingClick = onContinueWatchingClickStable,
+                                    onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginningStable,
+                                    onContinueWatchingPlayManually = onContinueWatchingPlayManuallyStable,
+                                    showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
+                                    onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAllStable,
+                                    onNavigateToFolderDetail = onNavigateToFolderDetailStable,
+                                    isCatalogItemWatched = isCatalogItemWatched,
+                                    onCatalogItemLongPress = onCatalogItemLongPress
+                                )
 
-                            HomeLayout.MODERN -> ModernHomeRoute(
-                                viewModel = viewModel,
-                                uiState = uiState,
-                                onNavigateToDetail = onNavigateToDetailStable,
-                                onContinueWatchingClick = onContinueWatchingClickStable,
-                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginningStable,
-                                onContinueWatchingPlayManually = onContinueWatchingPlayManuallyStable,
-                                showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
-                                onNavigateToFolderDetail = onNavigateToFolderDetailStable,
-                                isCatalogItemWatched = isCatalogItemWatched,
-                                onCatalogItemLongPress = onCatalogItemLongPress
-                            )
+                                HomeLayout.MODERN -> ModernHomeRoute(
+                                    viewModel = viewModel,
+                                    uiState = uiState,
+                                    onNavigateToDetail = onNavigateToDetailStable,
+                                    onContinueWatchingClick = onContinueWatchingClickStable,
+                                    onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginningStable,
+                                    onContinueWatchingPlayManually = onContinueWatchingPlayManuallyStable,
+                                    showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
+                                    onNavigateToFolderDetail = onNavigateToFolderDetailStable,
+                                    isCatalogItemWatched = isCatalogItemWatched,
+                                    onCatalogItemLongPress = onCatalogItemLongPress
+                                )
+                            }
                         }
                     }
                 }

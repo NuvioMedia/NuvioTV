@@ -296,6 +296,8 @@ class HomeViewModel @Inject constructor(
     /** Cached show ID siblings from the last badge evaluation cycle (for anime ID expansion). */
     @Volatile
     internal var cwLastShowIdSiblings: Map<String, Set<String>> = emptyMap()
+    /** Bumped after each badge pass so the remaining-episode counts pick up new watched data. */
+    internal val cwRemainingEpisodesRefresh = MutableStateFlow(0)
     internal val cwTmdbIdCache: MutableMap<String, String?> = createLruMap(MAX_CW_CACHE_SIZE)
     internal val cwNextUpResolutionCache = Collections.synchronizedMap(mutableMapOf<String, NextUpResolution?>())
     internal val cwNextUpNegativeCacheTimestamps = ConcurrentHashMap<String, Long>()
@@ -411,6 +413,7 @@ class HomeViewModel @Inject constructor(
             observeTmdbSettings()
             observeMdbListSettings()
             observeBlurUnwatchedEpisodes()
+            observeContinueWatchingRemainingEpisodes()
             observeProgressSourceChanges()
             observeCollections()
             observeInstalledAddons()

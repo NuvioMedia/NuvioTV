@@ -144,6 +144,18 @@ internal fun LayoutContinueWatchingSection(
             checked = uiState.showUnairedNextUp,
             onToggle = { onEvent(LayoutSettingsEvent.SetShowUnairedNextUp(!uiState.showUnairedNextUp)) }
         )
+        SettingsToggleRow(
+            title = stringResource(R.string.layout_cw_remaining_episodes),
+            subtitle = stringResource(R.string.layout_cw_remaining_episodes_sub),
+            checked = uiState.showContinueWatchingRemainingEpisodes,
+            onToggle = {
+                onEvent(
+                    LayoutSettingsEvent.SetShowContinueWatchingRemainingEpisodes(
+                        !uiState.showContinueWatchingRemainingEpisodes
+                    )
+                )
+            }
+        )
         SettingsActionRow(
             title = stringResource(R.string.layout_cw_click_action),
             subtitle = stringResource(R.string.layout_cw_click_action_sub),

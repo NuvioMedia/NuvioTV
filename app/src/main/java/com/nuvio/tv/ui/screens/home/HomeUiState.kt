@@ -71,6 +71,8 @@ data class HomeUiState(
     val continueWatchingEnabled: Boolean = true,
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
     val continueWatchingClickAction: ContinueWatchingClickAction = ContinueWatchingClickAction.STREAM,
+    /** contentId → aired episodes not watched yet; empty when the setting is off. */
+    val continueWatchingRemainingEpisodes: Map<String, Int> = emptyMap(),
     val heroEnrichmentEnabled: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
     val homeRows: List<HomeRow> = emptyList(),
