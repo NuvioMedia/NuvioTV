@@ -1,5 +1,7 @@
 package com.nuvio.tv.data.mdblist
 
+import kotlin.coroutines.ContinuationInterceptor
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 
 internal const val MDBLIST_TEST_LIST_KEY = "mdblist:list:7"
@@ -19,7 +21,8 @@ internal fun mdbListLibrarySnapshot(now: Long) = MdbListLibrarySnapshot(
 )
 
 internal fun MdbListSyncTestHarness.libraryService(coroutineScope: CoroutineScope) = MdbListLibraryService(
-    http.api, repository, http.store, activeProfile, coroutineScope, { http.now }
+    http.api, repository, http.store, activeProfile, coroutineScope, { http.now },
+    coroutineScope.coroutineContext[ContinuationInterceptor] as CoroutineDispatcher
 )
 
 internal fun MdbListSyncTestHarness.seedLibrary(library: MdbListLibrarySnapshot = mdbListLibrarySnapshot(http.now)) {

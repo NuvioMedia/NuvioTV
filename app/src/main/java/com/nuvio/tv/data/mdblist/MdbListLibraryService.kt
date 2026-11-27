@@ -9,11 +9,14 @@ import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.ListMembershipSnapshot
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -25,7 +28,8 @@ class MdbListLibraryService(
     auth: MdbListAuthStore,
     activeProfileId: StateFlow<Int>,
     private val coroutineScope: CoroutineScope,
-    private val now: () -> Long = System::currentTimeMillis
+    private val now: () -> Long = System::currentTimeMillis,
+    projectionDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
     private val writer = MdbListLibraryWriter(api, sync, now)
     val listManager: TrackingListManager = writer
@@ -38,7 +42,13 @@ class MdbListLibraryService(
         }
     }.distinctUntilChanged()
     private val snapshots = allSnapshots.onEach { refreshAsync() }
-    private val projection = snapshots.map { MdbListLibraryProjection(it?.visible() ?: MdbListLibrarySnapshot()) }
+    private val projectionLock = Any()
+    @Volatile
+    private var cachedProjection: CachedProjection? = null
+
+    // Every membership observer (each detail screen observes two) and the library items share one
+    // projection per snapshot, built off the main thread: it walks every item of every visible list.
+    private val projection = snapshots.map(::projectionOf).flowOn(projectionDispatcher)
 
     /** Every list that can be hidden, with whether it is shown in the library, for MDBList settings. */
     val listOptions = allSnapshots.map { it?.listOptions().orEmpty() }.distinctUntilChanged()
@@ -50,6 +60,18 @@ class MdbListLibraryService(
     }.distinctUntilChanged()
 
     fun observeMembership(id: String, type: String) = projection.map { it.membership(id, type) }.distinctUntilChanged()
+
+    private fun projectionOf(library: MdbListLibrarySnapshot?): MdbListLibraryProjection {
+        if (library == null) {
+            cachedProjection = null
+            return MdbListLibraryProjection(MdbListLibrarySnapshot())
+        }
+        cachedProjection?.takeIf { it.library === library }?.let { return it.projection }
+        return synchronized(projectionLock) {
+            cachedProjection?.takeIf { it.library === library }?.projection
+                ?: MdbListLibraryProjection(library.visible()).also { cachedProjection = CachedProjection(library, it) }
+        }
+    }
 
     suspend fun getMembershipSnapshot(input: LibraryEntryInput): ListMembershipSnapshot {
         val scope = sync.currentScope()
@@ -143,6 +165,11 @@ class MdbListLibraryService(
     private companion object {
         const val TAG = "MdbListLibrary"
     }
+
+    private class CachedProjection(
+        val library: MdbListLibrarySnapshot,
+        val projection: MdbListLibraryProjection
+    )
 
     private data class LibraryLoadState(
         val scope: MdbListAuthScope? = null,
