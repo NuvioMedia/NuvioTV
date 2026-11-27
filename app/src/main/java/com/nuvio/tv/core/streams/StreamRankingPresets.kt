@@ -34,7 +34,7 @@ import kotlinx.serialization.Serializable
  * See docs/USENET_SORTING.md for sources and the profile's exact behaviour.
  */
 object StreamRankingPresets {
-    val languages = listOf("en", "ja", "de", "fr", "nl", "es", "it", "pt", "ko", "zh", "hi", "ru", "uk", "ar", "pl", "tr", "multi", "dual")
+    val languages = listOf("en", "ja", "de", "fr", "nl", "es", "it", "pt", "ko", "zh", "hi", "ru", "uk", "ar", "he", "pl", "tr", "multi", "dual")
     private fun condition(field: StreamRankingField, value: String) = StreamRankingCondition(field, StreamRankingOperator.IS, value)
     private fun groups(name: String, qualities: String, names: String, score: Int) = StreamRankingRule(
         name = name, score = score, conditions = listOf(condition(StreamRankingField.QUALITY, qualities), condition(StreamRankingField.GROUP, names))

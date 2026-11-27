@@ -176,7 +176,7 @@ private object StreamReleaseParser {
         "fr" to token("french|fre|fra|vff|vfq|truefrench|fr"), "nl" to token("dutch|nld|nederlands|nl"),
         "es" to token("spanish|spa|castellano|es"), "it" to token("italian|ita|it"), "pt" to token("portuguese|por|ptbr|pt"),
         "ko" to token("korean|kor|ko"), "zh" to token("chinese|chi|zho|mandarin|zh"), "hi" to token("hindi|hin|hi"),
-        "ru" to token("russian|rus|ru"), "uk" to token("ukrainian|ukr"), "ar" to token("arabic|ara"),
+        "ru" to token("russian|rus|ru"), "uk" to token("ukrainian|ukr"), "ar" to token("arabic|ara"), "he" to token("hebrew|heb"),
         "pl" to token("polish|pol"), "tr" to token("turkish|tur"), "multi" to token("multi|multi[ ._-]?audio"),
         "dual" to token("dual|dual[ ._-]?audio")
     )
