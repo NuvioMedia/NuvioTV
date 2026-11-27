@@ -959,18 +959,13 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     }
 
     /**
-     * ClearKey pairs (`kid:key,kid:key`, hex) for FFmpeg's CENC decryption: the DASH demuxer
-     * (`cenc_decryption_keys`) and the MP4 one (`decryption_keys`) each read their own option.
-     * Global like the headers, so it is set again before every file.
+     * ClearKey pairs (`kid:key,kid:key`, hex) for FFmpeg's CENC decryption: the DASH demuxer reads
+     * `cenc_decryption_keys`, MP4 `decryption_keys`. Global like the headers, so it is set again
+     * before every file. HLS is left to ExoPlayer: FFmpeg's HLS demuxer rejects SAMPLE-AES-CTR keys.
      */
     fun applyClearKeys(clearKeys: String?) {
         ensureInitialized()
-        val keys = clearKeys?.split(',')?.joinToString(":") { it.replace(':', '=') }
-        // %n% quoting keeps FFmpeg's own `=`/`:` separators inside one mpv key-value entry.
-        mpv.setPropertyString(
-            "demuxer-lavf-o",
-            keys?.let { "cenc_decryption_keys=%${it.length}%$it,decryption_keys=%${it.length}%$it" }.orEmpty()
-        )
+        mpv.setPropertyString("demuxer-lavf-o", clearKeys?.let(::clearKeyLavfOptions).orEmpty())
     }
 
     private fun applyHeaders(headers: Map<String, String>) {
@@ -1161,4 +1156,11 @@ internal fun mpvPlaybackPositionSec(
     if (audioPtsSec == null || seeking) return timePosSec
     val glitchMinSec = MPV_VIDEO_PTS_GLITCH_MIN_SEC + abs(audioDelaySec)
     return if (audioPtsSec - timePosSec > glitchMinSec) audioPtsSec else timePosSec
+}
+
+/** [NuvioMpvSurfaceView.applyClearKeys]'s `demuxer-lavf-o` value for `kid:key,kid:key` pairs. */
+internal fun clearKeyLavfOptions(clearKeys: String): String {
+    val keys = clearKeys.split(',').joinToString(":") { it.replace(':', '=') }
+    // %n% quoting keeps FFmpeg's own `=`/`:` separators inside one mpv key-value entry.
+    return "cenc_decryption_keys=%${keys.length}%$keys,decryption_keys=%${keys.length}%$keys"
 }
