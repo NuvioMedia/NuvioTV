@@ -513,7 +513,7 @@ fun EpisodesRow(
     onOpenEpisodeComments: (Video) -> Unit = {},
     showOpenEpisodeComments: Boolean = false,
     onMarkPreviousEpisodesWatched: (Video) -> Unit = {},
-    upFocusRequester: FocusRequester,
+    upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     episodeFocusRequesters: MutableMap<String, FocusRequester> = mutableMapOf(),
     restoreEpisodeId: String? = null,
@@ -779,7 +779,7 @@ private fun EpisodeCard(
     cardMetrics: EpisodeCardMetrics,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
-    upFocusRequester: FocusRequester,
+    upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     focusRequester: FocusRequester,
     isFocusEnabled: Boolean = true,
@@ -1002,7 +1002,9 @@ private fun EpisodeCard(
             }
             .focusProperties {
                 canFocus = isFocusEnabled
-                up = upFocusRequester
+                if (upFocusRequester != null) {
+                    up = upFocusRequester
+                }
                 if (downFocusRequester != null) {
                     down = downFocusRequester
                 }
