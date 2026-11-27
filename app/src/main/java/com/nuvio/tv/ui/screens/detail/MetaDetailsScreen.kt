@@ -81,6 +81,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -146,6 +147,7 @@ import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.components.posteroptions.TrackingRemovalConfirmationDialog
 import com.nuvio.tv.core.tracking.LOCAL_LIBRARY_LIST_KEY
 import com.nuvio.tv.core.tracking.supportsMembershipFor
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -1438,7 +1440,7 @@ private fun MetaDetailsContent(
     val selectedSeasonFocusRequester = remember { FocusRequester() }
     val heroPlayButtonFocusRequester = remember { FocusRequester() }
     var synopsisTruncated by remember(meta.id, meta.description) { mutableStateOf(false) }
-    val heroPlayFocusRequester = if (synopsisTruncated) null else heroPlayButtonFocusRequester
+    val heroPlayFocusRequester = if (synopsisTruncated || !(shufflePoolEmpty || isPlayEnabled)) null else heroPlayButtonFocusRequester
     val randomEpisodeFocusRequester = remember { FocusRequester() }
     val castTabFocusRequester = remember { FocusRequester() }
     val moreLikeTabFocusRequester = remember { FocusRequester() }
@@ -1493,6 +1495,7 @@ private fun MetaDetailsContent(
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     val childClosedEpoch = LocalDetailChildClosedEpoch.current
     val suppressDetailRowRelocation = pendingRestoreType == RestoreTarget.EPISODE
     val suppressRestoreBringIntoView =
@@ -1540,6 +1543,29 @@ private fun MetaDetailsContent(
     }
     var lastDetailDpadKey by rememberSaveable(meta.id) { mutableIntStateOf(0) }
     val tapScroll = remember { DetailTapScroll() }
+    var offscreenHeroFocusJob by remember { mutableStateOf<Job?>(null) }
+
+    fun focusHeroFromOffscreen(): Boolean {
+        if (offscreenHeroFocusJob?.isActive == true) return true
+        if (listState.layoutInfo.visibleItemsInfo.any { it.key == "hero" }) return false
+        offscreenHeroFocusJob = coroutineScope.launch {
+            if (listState.firstVisibleItemIndex == 1) {
+                listState.scroll { scrollBy(-(listState.firstVisibleItemScrollOffset + 2f)) }
+            } else {
+                listState.animateScrollToItem(0)
+            }
+            // Wait for hero composition/layout and truncated synopsis state to settle
+            // before delegating to normal upward focus traversal.
+            withFrameNanos { }
+            withFrameNanos { }
+            if (lastDetailDpadKey != KeyEvent.KEYCODE_DPAD_UP) return@launch
+            if (!focusManager.moveFocus(FocusDirection.Up)) {
+                listState.animateScrollToItem(0)
+                runCatching { heroPlayButtonFocusRequester.requestFocus() }
+            }
+        }
+        return true
+    }
     val episodeRowStayVerticalResponder = remember(lastDetailDpadKey, pendingRestoreType) {
         object : BringIntoViewResponder {
             override fun calculateRectForParent(localRect: Rect): Rect {
@@ -1594,30 +1620,33 @@ private fun MetaDetailsContent(
         return if (lastVisible.index < info.totalItemsCount - 1) Int.MAX_VALUE else tail
     }
 
+    fun allowCompanyPageScroll(): Boolean {
+        val key = tapScroll.lastKey
+        val vertical = key == KeyEvent.KEYCODE_DPAD_UP || key == KeyEvent.KEYCODE_DPAD_DOWN
+        if (!vertical) return false
+        if (key == KeyEvent.KEYCODE_DPAD_DOWN && tapScroll.rapidDown) return true
+        return key == KeyEvent.KEYCODE_DPAD_UP && remainingDetailScrollPx() !in 1..200
+    }
+
     fun onCompanyRowFocused(revealOverflowPx: Float) {
-        if (tapScroll.rapidDown && tapScroll.lastKey == KeyEvent.KEYCODE_DPAD_DOWN) return
+        if (!detailFastScrolling && tapScroll.rapidDown && tapScroll.lastKey == KeyEvent.KEYCODE_DPAD_DOWN) return
         pinDetailPageScroll()
         if (pendingRestoreType == RestoreTarget.COMPANY_OR_NETWORK) return
+        if (tapScroll.lastKey == KeyEvent.KEYCODE_DPAD_UP) return
         val remaining = remainingDetailScrollPx()
         val distance = when {
             revealOverflowPx > 1f -> {
                 if (remaining == Int.MAX_VALUE) revealOverflowPx else minOf(revealOverflowPx, remaining.toFloat())
             }
             remaining in 1..200 -> remaining.toFloat()
+            (detailFastScrolling || tapScroll.lastKey == KeyEvent.KEYCODE_DPAD_DOWN) &&
+                remaining != Int.MAX_VALUE && remaining > 0 -> remaining.toFloat()
             else -> 0f
         }
         if (distance <= 1f) return
         coroutineScope.launch {
             listState.animateScrollBy(distance, NuvioMotion.slowTween())
         }
-    }
-
-    fun allowCompanyPageScroll(): Boolean {
-        val key = tapScroll.lastKey
-        val vertical = key == KeyEvent.KEYCODE_DPAD_UP || key == KeyEvent.KEYCODE_DPAD_DOWN
-        if (!vertical) return false
-        if (key == KeyEvent.KEYCODE_DPAD_DOWN && tapScroll.rapidDown) return true
-        return remainingDetailScrollPx() !in 1..200
     }
 
     fun restorePinnedDetailPageIfNudge() {
@@ -2455,6 +2484,9 @@ private fun MetaDetailsContent(
                             KeyEvent.KEYCODE_DPAD_RIGHT -> {
                                 lastDetailDpadKey = native.keyCode
                                 tapScroll.lastKey = native.keyCode
+                                if (native.keyCode != KeyEvent.KEYCODE_DPAD_UP) {
+                                    offscreenHeroFocusJob?.cancel()
+                                }
                             }
                         }
                         if (native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && native.repeatCount == 0) {
@@ -2661,6 +2693,13 @@ private fun MetaDetailsContent(
                         modifier = Modifier
                             .onSizeChanged { seasonTabsHeightPx = it.height }
                             .bringIntoViewResponder(detailRowBringIntoViewResponder)
+                            .onPreviewKeyEvent { event ->
+                                val native = event.nativeKeyEvent
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_UP &&
+                                    native.action == KeyEvent.ACTION_DOWN &&
+                                    native.repeatCount == 0 &&
+                                    focusHeroFromOffscreen()
+                            }
                     ) {
                         SeasonTabs(
                             seasons = seasons,
@@ -2691,6 +2730,14 @@ private fun MetaDetailsContent(
                         modifier = Modifier
                             .onSizeChanged { episodesRowHeightPx = it.height }
                             .bringIntoViewResponder(episodeRowStayVerticalResponder)
+                            .onPreviewKeyEvent { event ->
+                                val native = event.nativeKeyEvent
+                                !showSeasonTabs &&
+                                    native.keyCode == KeyEvent.KEYCODE_DPAD_UP &&
+                                    native.action == KeyEvent.ACTION_DOWN &&
+                                    native.repeatCount == 0 &&
+                                    focusHeroFromOffscreen()
+                            }
                     ) {
                         EpisodesRow(
                             episodes = episodesForSeason,
@@ -2720,7 +2767,7 @@ private fun MetaDetailsContent(
                             onOpenEpisodeComments = episodeCommentsClick,
                             showOpenEpisodeComments = shouldShowCommentsSection,
                             onMarkPreviousEpisodesWatched = onMarkPreviousEpisodesWatched,
-                            upFocusRequester = if (showSeasonTabs) selectedSeasonFocusRequester else (heroPlayFocusRequester ?: heroPlayButtonFocusRequester),
+                            upFocusRequester = if (showSeasonTabs) selectedSeasonFocusRequester else heroPlayFocusRequester,
                             downFocusRequester = episodesDownFocusRequester,
                             episodeFocusRequesters = seasonEpisodeFocusRequesters,
                             restoreEpisodeId = visibleEpisodeRestoreId,
