@@ -36,6 +36,7 @@ private const val FORCE_RESYNC_MIN_INTERVAL_MS = 30_000L
 private const val FULL_STARTUP_PULL_TTL_MS = 6 * 60 * 60 * 1000L
 private const val FOREGROUND_ACTIVITY_PULL_DELAY_MS = 2_500L
 private const val FOREGROUND_ACTIVITY_PULL_MIN_INTERVAL_MS = 2 * 60_000L
+private const val FOREGROUND_PANEL_PULL_MIN_INTERVAL_MS = 5 * 60_000L
 private const val PERIODIC_SURFACE_PULL_INTERVAL_MS = 15 * 60_000L
 
 internal data class SurfacePullFreshness(
@@ -93,6 +94,8 @@ class StartupSyncService @Inject constructor(
     private var lastPulledIncludedProfileSettings: Boolean = false
     private var lastPulledAtMs: Long = 0L
     private var activityPullFreshness = SurfacePullFreshness()
+    private var foregroundPanelPullJob: Job? = null
+    private var foregroundPanelPullFreshness = SurfacePullFreshness()
     @Volatile
     private var forceSyncRequested: Boolean = false
     @Volatile
@@ -121,6 +124,8 @@ class StartupSyncService @Inject constructor(
                         startupPullJob = null
                         activityPullJob?.cancel()
                         activityPullJob = null
+                        foregroundPanelPullJob?.cancel()
+                        foregroundPanelPullJob = null
                         periodicSurfacePullJob?.cancel()
                         periodicSurfacePullJob = null
                         pluginSyncScheduler.cancel()
@@ -128,6 +133,7 @@ class StartupSyncService @Inject constructor(
                         lastPulledIncludedProfileSettings = false
                         lastPulledAtMs = 0L
                         activityPullFreshness = SurfacePullFreshness()
+                        foregroundPanelPullFreshness = SurfacePullFreshness()
                         forceSyncRequested = false
                         forceSyncIncludesProfileSettings = true
                         pendingResyncKey = null
@@ -176,6 +182,7 @@ class StartupSyncService @Inject constructor(
             delayMs = FOREGROUND_ACTIVITY_PULL_DELAY_MS,
             minIntervalMs = FOREGROUND_ACTIVITY_PULL_MIN_INTERVAL_MS
         )
+        scheduleForegroundPanelPull()
     }
 
     /** In-app navigation never resumes the activity, so it asks for the same throttled pull. */
@@ -185,6 +192,57 @@ class StartupSyncService @Inject constructor(
             delayMs = FOREGROUND_ACTIVITY_PULL_DELAY_MS,
             minIntervalMs = FOREGROUND_ACTIVITY_PULL_MIN_INTERVAL_MS
         )
+    }
+
+    /**
+     * Pulls the panel-owned data (addons, profile settings, home catalog settings) when the app
+     * comes back to the foreground, so changes made from the web panel are applied without a
+     * cold start. Throttled per profile so a simple return does not trigger a pull every time.
+     */
+    private fun scheduleForegroundPanelPull() {
+        val state = authManager.authState.value as? AuthState.FullAccount ?: return
+        if (startupPullJob?.isActive == true) return
+        val key = pullKey(state.userId)
+        val now = SystemClock.elapsedRealtime()
+        if (
+            foregroundPanelPullJob?.isActive == true ||
+            foregroundPanelPullFreshness.isRecent(key, now, FOREGROUND_PANEL_PULL_MIN_INTERVAL_MS)
+        ) {
+            return
+        }
+        foregroundPanelPullFreshness = SurfacePullFreshness(key = key, pulledAtMs = now)
+
+        foregroundPanelPullJob = scope.launch {
+            // The full startup pull already covers these surfaces.
+            if (startupPullJob?.isActive == true) return@launch
+            val profileId = profileManager.activeProfileId.value
+            Log.d(TAG, "Foreground panel sync started profile=$profileId")
+            val addonsPulled = coroutineScope {
+                val addons = async { pullRealtimeAddons(profileId) }
+                launch {
+                    profileSettingsSyncService.pullCurrentProfileFromRemote()
+                        .onSuccess { applied ->
+                            Log.d(TAG, "Foreground profile settings pull completed profile=$profileId applied=$applied")
+                        }
+                        .onFailure { error ->
+                            Log.e(TAG, "Foreground profile settings pull failed profile=$profileId", error)
+                        }
+                }
+                launch {
+                    homeCatalogSettingsSyncService.pullFromRemote()
+                        .onSuccess { applied ->
+                            Log.d(TAG, "Foreground home catalog pull completed profile=$profileId applied=$applied")
+                        }
+                        .onFailure { error ->
+                            Log.e(TAG, "Foreground home catalog pull failed profile=$profileId", error)
+                        }
+                }
+                addons.await()
+            }
+            // The remote addon list changed, so screens holding catalogs re-request them.
+            if (addonsPulled) _manualAddonRefreshes.tryEmit(Unit)
+            Log.d(TAG, "Foreground panel sync completed profile=$profileId")
+        }
     }
 
     private val _manualAddonRefreshes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -737,17 +795,19 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-    private suspend fun pullRealtimeAddons(profileId: Int) {
+    private suspend fun pullRealtimeAddons(profileId: Int): Boolean {
         addonRepository.isSyncingFromRemote = true
-        try {
+        return try {
             val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
             addonRepository.reconcileWithRemoteAddonUrls(
                 remoteUrls = remoteAddonUrls,
                 removeMissingLocal = true
             )
             Log.d(TAG, "Realtime addons pull reconciled ${remoteAddonUrls.size} addons for profile $profileId")
+            true
         } catch (e: Exception) {
             Log.e(TAG, "Realtime addons pull failed profile=$profileId", e)
+            false
         } finally {
             addonRepository.isSyncingFromRemote = false
         }
