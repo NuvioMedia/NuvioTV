@@ -1921,6 +1921,8 @@
     <string name="settings_p2p_profile_fast_description">Utilise davantage de connexions de pairs pour les torrents difficiles ou à haut débit binaire</string>
     <string name="settings_p2p_cache_size_title">Taille du cache du torrent</string>
     <string name="settings_p2p_cache_size_description">Données de torrent téléchargées et conservées sur cet appareil pour accélérer les relectures</string>
+    <string name="settings_p2p_cache_memory_only">En mémoire uniquement</string>
+    <string name="settings_p2p_cache_memory_only_description">Les données de torrent restent en RAM et ne sont jamais écrites sur le stockage. Un retour arrière les télécharge de nouveau.</string>
     <string name="settings_p2p_cache_none">Aucun cache persistant</string>
     <string name="settings_p2p_cache_2_gb">2 Go</string>
     <string name="settings_p2p_cache_5_gb">5 Go</string>
