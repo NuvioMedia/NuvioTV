@@ -102,6 +102,7 @@ internal class MpvEventRelay(
         if (!active.get() || epoch != controller.mpvEventRelayEpoch) return
         when (property) {
             MPV_TRACK_LIST_PROPERTY -> controller.markMpvTracksStale()
+            MPV_CHAPTER_LIST_PROPERTY -> controller.markMpvChaptersStale()
             MPV_SID_PROPERTY, MPV_SUB_TEXT_PROPERTY -> syncStyledSubtitles()
         }
     }
@@ -135,6 +136,7 @@ internal fun PlayerRuntimeController.registerMpvEventRelay(view: NuvioMpvSurface
     resetMpvStartupWatchdog()
     // Changes that happened before the relay was attached are not replayed.
     markMpvTracksStale()
+    markMpvChaptersStale()
     val relay = MpvEventRelay(this, mpvEventRelayEpoch)
     mpvEventRelay = relay
     runCatching { view.mpv.addObserver(relay) }

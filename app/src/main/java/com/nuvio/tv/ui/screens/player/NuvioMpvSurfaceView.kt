@@ -17,6 +17,7 @@ import kotlin.math.pow
 import kotlin.math.roundToLong
 
 internal const val MPV_TRACK_LIST_PROPERTY = "track-list"
+internal const val MPV_CHAPTER_LIST_PROPERTY = "chapter-list"
 internal const val MPV_SID_PROPERTY = "sid"
 internal const val MPV_SUB_TEXT_PROPERTY = "sub-text"
 private const val MPV_TEXT_OUTLINE_SIZE_PER_WIDTH = 0.5
@@ -951,9 +952,10 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     }
 
     override fun observeProperties() {
-        // Progress is polled by PlayerRuntimeController. Track-list changes are pushed so
-        // the poll can skip re-reading an unchanged track list.
+        // Progress is polled by PlayerRuntimeController. Track-list and chapter-list changes are
+        // pushed so the poll can skip re-reading unchanged lists.
         mpv.observeProperty(MPV_TRACK_LIST_PROPERTY, MPV.mpvFormat.MPV_FORMAT_NONE)
+        mpv.observeProperty(MPV_CHAPTER_LIST_PROPERTY, MPV.mpvFormat.MPV_FORMAT_NONE)
         mpv.observeProperty(MPV_SID_PROPERTY, MPV.mpvFormat.MPV_FORMAT_STRING)
         mpv.observeProperty(MPV_SUB_TEXT_PROPERTY, MPV.mpvFormat.MPV_FORMAT_STRING)
     }

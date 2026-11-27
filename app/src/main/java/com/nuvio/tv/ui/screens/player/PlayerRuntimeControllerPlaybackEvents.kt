@@ -385,6 +385,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                 (pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L))
                             if (firstFrameReady) {
                                 hasRenderedFirstFrame = true
+                                markMpvChaptersStale()
                                 recordPlayedRelease()
                                 resetMpvStartupWatchdog()
                                 scheduleMpvStableProgressReset()
@@ -422,7 +423,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         duration = playerDuration,
                         bufferedPosition = (pos + (view.demuxerCacheDurationSec() * 1000.0).toLong())
                             .coerceAtLeast(displayPosition),
-                        playerReportsLive = view.isLiveStreamNow() || mpvDurationGrowth.grew,
+                        playerReportsLive = (view.isPositionFromRequestedMedia() && view.isLiveStreamNow()) || mpvDurationGrowth.grew,
                         isPlaying = playingForWatchClock
                     )
                     // Prefer the largest known duration; MPV can report a shorter one transiently.
@@ -455,6 +456,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     // session in sync with the state sampled by this existing progress tick.
                     refreshMpvMediaSession()
                     updateMpvTracksOnTick()
+                    updateMpvChaptersOnTick()
                     recomputeChapterSkipIntervalsIfNeeded()
                     updateActiveSkipInterval(pos)
                     if (!_playbackTimeline.value.isLive) {
