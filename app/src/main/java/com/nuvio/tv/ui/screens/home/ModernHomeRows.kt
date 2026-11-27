@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.LocalAppliedRootContentInset
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.view.KeyEvent as AndroidKeyEvent
@@ -547,8 +548,9 @@ internal fun ModernRowSection(
         }
         val rowTitle = row.title
         val textColor = NuvioTheme.colors.TextPrimary
-        val textModifier = remember(rowTitleBottom) {
-            Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
+        val rowTitleStart = 52.dp + LocalAppliedRootContentInset.current
+        val textModifier = remember(rowTitleBottom, rowTitleStart) {
+            Modifier.padding(start = rowTitleStart, bottom = rowTitleBottom)
         }
         Text(
             text = rowTitle,
@@ -654,7 +656,9 @@ internal fun ModernRowSection(
         }
 
         val density = LocalDensity.current
-        val rowStartPadding = 52.dp
+        // The rows list reaches under the legacy sidebar (see ModernHomeRowsList), so the start
+        // padding grows by the sidebar inset to keep the first card and the focus anchor in place.
+        val rowStartPadding = 52.dp + LocalAppliedRootContentInset.current
         val context = LocalContext.current
         val imageLoader = context.imageLoader
 
@@ -925,7 +929,7 @@ internal fun ModernRowSection(
                             ?: FocusRequester.Default
                     }
                     .focusGroup(),
-                contentPadding = PaddingValues(horizontal = rowStartPadding),
+                contentPadding = PaddingValues(start = rowStartPadding, end = 52.dp),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 itemsIndexed(

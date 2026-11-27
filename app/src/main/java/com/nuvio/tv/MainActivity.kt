@@ -61,6 +61,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -225,6 +226,21 @@ import kotlinx.coroutines.launch
 
 val LocalSidebarExpanded = compositionLocalOf { false }
 val LocalRootContentInset = compositionLocalOf { 0.dp }
+
+/**
+ * The start padding the current root destination actually got for the legacy sidebar (see
+ * rootComposable in NuvioNavHost). Unlike [LocalRootContentInset], it is 0 on non-root screens,
+ * which are not padded, so a screen can use it to reach back under the sidebar.
+ */
+val LocalAppliedRootContentInset = compositionLocalOf { 0.dp }
+
+/**
+ * Number of composed screens that draw their backdrop edge to edge, under the legacy sidebar.
+ * While it is above zero the closed sidebar drops its solid background and the screen draws a
+ * fade in its place. A count, not a flag, so the enter/exit order of a navigation transition
+ * cannot leave it wrong. Null outside the legacy sidebar scaffold.
+ */
+val LocalSidebarBackdropBleed = compositionLocalOf<MutableIntState?> { null }
 val LocalContentFocusRequester = compositionLocalOf { FocusRequester.Default }
 
 data class SplashBackground(
@@ -1530,6 +1546,7 @@ private fun LegacySidebarScaffold(
     var pendingContentFocusTransfer by remember { mutableStateOf(false) }
     var pendingSidebarFocusRequest by remember { mutableStateOf(false) }
     var drawerHasFocus by remember { mutableStateOf(false) }
+    val sidebarBackdropBleed = remember { mutableIntStateOf(0) }
     // Bumped on every key event the drawer sees so the auto-collapse timer
     // resets while the user navigates between drawer items.
     var legacyDrawerInteractionVersion by remember { mutableStateOf(0) }
@@ -1584,11 +1601,16 @@ private fun LegacySidebarScaffold(
         drawerContent = { drawerValue ->
             if (showSidebar) {
                 val drawerWidth = if (drawerValue == DrawerValue.Open) openDrawerWidth else closedDrawerWidth
+                // Over an edge-to-edge backdrop the closed rail is transparent and the screen draws
+                // a fade in its place (the rail clips to its width, the fade runs past it);
+                // expanded, it stays solid to keep the labels readable.
+                val fadeOverBackdrop = sidebarBackdropBleed.intValue > 0 && drawerValue == DrawerValue.Closed
+                val drawerBackground = NuvioTheme.colors.Background
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(drawerWidth)
-                        .background(NuvioTheme.colors.Background)
+                        .then(if (fadeOverBackdrop) Modifier else Modifier.background(drawerBackground))
                         .padding(NuvioTheme.spacing.card.outer)
                         .selectableGroup()
                         .onFocusChanged { drawerHasFocus = it.hasFocus }
@@ -1778,6 +1800,7 @@ private fun LegacySidebarScaffold(
             CompositionLocalProvider(
                 LocalSidebarExpanded provides (drawerState.currentValue == DrawerValue.Open),
                 LocalRootContentInset provides rootContentInset,
+                LocalSidebarBackdropBleed provides sidebarBackdropBleed,
                 LocalContentFocusRequester provides contentFocusRequester
             ) {
                 NuvioNavHost(
