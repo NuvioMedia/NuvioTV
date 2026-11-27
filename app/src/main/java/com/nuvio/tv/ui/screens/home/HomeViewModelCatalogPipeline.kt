@@ -304,8 +304,17 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
             _uiState.first { it.layoutPreferencesReady }
         }
         val isGridLayout = _uiState.value.homeLayout == HomeLayout.GRID
-        val eagerHomeCatalogs = if (isGridLayout) catalogsToLoad else catalogsToLoad.take(eagerCatalogLoadCount)
-        val lazyHomeCatalogs = if (isGridLayout) emptyList() else catalogsToLoad.drop(eagerCatalogLoadCount)
+        val (eagerHomeCatalogs, lazyHomeCatalogs) = if (isGridLayout) {
+            catalogsToLoad to emptyList()
+        } else {
+            catalogsToLoad.withIndex()
+                .partition { (index, entry) ->
+                    val (addon, catalog) = entry
+                    index < eagerCatalogLoadCount ||
+                        catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id) in heroCatalogSet
+                }
+                .let { (eager, lazy) -> eager.map { it.value } to lazy.map { it.value } }
+        }
 
         // Build placeholder descriptors for lazy catalogs
         synchronized(catalogStateLock) {
