@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.cloud
 
 import com.nuvio.tv.core.debrid.DebridProviders
+import com.nuvio.tv.core.util.normalizeForMatching
 import com.nuvio.tv.data.remote.api.TorboxApi
 import com.nuvio.tv.data.remote.dto.TorboxCloudFileDto
 import com.nuvio.tv.data.remote.dto.TorboxCloudItemDto
@@ -189,9 +190,7 @@ private fun String.normalizeDisplayName(): String =
         .substringAfterLast('/')
         .substringAfterLast('\\')
         .substringBeforeLast('.', this)
-        .lowercase()
-        .replace(Regex("[^a-z0-9]+"), " ")
-        .trim()
+        .normalizeForMatching()
 
 private fun Any?.scalarString(): String? =
     when (this) {

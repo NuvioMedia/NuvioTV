@@ -1,5 +1,7 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.util.normalizeForMatching
+
 internal data class EpisodeMappingEntry(
     val season: Int,
     val episode: Int,
@@ -110,17 +112,12 @@ private fun remapEpisodeBetweenLists(
     return orderedTargetEpisodes[sourceIndex]
 }
 
-private val NON_ALPHANUMERIC = Regex("[^a-z0-9]+")
-private val COLLAPSED_SPACES = Regex("\\s+")
 private val normalizedTitleCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
 private fun normalizeEpisodeTitle(title: String?, cache: java.util.concurrent.ConcurrentHashMap<String, String>): String {
     if (title == null) return ""
     return cache.getOrPut(title) {
-        title.lowercase()
-            .replace(NON_ALPHANUMERIC, " ")
-            .trim()
-            .replace(COLLAPSED_SPACES, " ")
+        title.normalizeForMatching()
     }
 }
 
