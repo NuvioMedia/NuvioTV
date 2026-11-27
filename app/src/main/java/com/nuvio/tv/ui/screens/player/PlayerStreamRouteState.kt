@@ -49,6 +49,7 @@ internal fun playerStreamRouteValues(
         ),
         "audioDelayMs" to hints?.audioDelayMs?.toString().orEmpty(),
         "audioDelayLanguage" to encoded(hints?.audioDelayLanguage),
+        "clearKeys" to encoded(hints?.clearKeys),
         // The new stream resumes from its saved progress, whatever the first one was opened with.
         "startFromBeginning" to "false"
     )

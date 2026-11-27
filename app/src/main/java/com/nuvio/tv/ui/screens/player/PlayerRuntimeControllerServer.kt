@@ -179,6 +179,7 @@ private fun PlayerRuntimeController.restartServerStream(
 private fun PlayerRuntimeController.restartServerSession(session: ServerPlaybackSession, positionMs: Long) {
     currentStreamUrl = session.url
     currentHeaders = session.headers
+    currentClearKeys = null
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
         url = session.url,
         filename = null,

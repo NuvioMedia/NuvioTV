@@ -641,6 +641,7 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     val playbackRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(url, headers)
     currentStreamUrl = playbackRequest.url
     currentHeaders = playbackRequest.headers
+    currentClearKeys = stream.behaviorHints?.clearKeys
     currentFilename = stream.behaviorHints?.filename ?: streamFilenameFromUrl(playbackRequest.url)
     currentStreamResponseHeaders = stream.behaviorHints?.proxyHeaders?.response.orEmpty()
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
@@ -791,6 +792,7 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
             year = year,
             audioDelayMs = stream.behaviorHints?.audioDelayMs,
             audioDelayLanguage = stream.behaviorHints?.audioDelayLanguage,
+            clearKeys = stream.behaviorHints?.clearKeys,
             addonName = stream.addonName,
             addonLogo = stream.addonLogo,
             streamDescription = stream.description
@@ -823,6 +825,7 @@ private fun PlayerRuntimeController.persistTorrentStreamForReuse(stream: Stream)
             year = year,
             audioDelayMs = stream.behaviorHints?.audioDelayMs,
             audioDelayLanguage = stream.behaviorHints?.audioDelayLanguage,
+            clearKeys = stream.behaviorHints?.clearKeys,
             addonName = stream.addonName,
             addonLogo = stream.addonLogo,
             streamDescription = stream.description
@@ -1076,7 +1079,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                         mimeTypeOverride = currentStreamMimeType,
                         audioDelayUsProvider = audioDelayUs::get,
                         cacheKey = currentStreamCacheKey,
-                        bluray = currentStreamBluray
+                        bluray = currentStreamBluray,
+                        clearKeys = currentClearKeys
                     )
                 )
                 player.playWhenReady = true

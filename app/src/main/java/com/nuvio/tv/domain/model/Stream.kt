@@ -3,6 +3,7 @@ package com.nuvio.tv.domain.model
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.core.debrid.DebridProviders
 import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
+import kotlin.io.encoding.Base64
 import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 
@@ -229,6 +230,35 @@ fun Number?.toStreamAudioDelayMs(): Int? =
 fun String?.toStreamAudioDelayLanguage(): String? =
     this?.trim()?.takeIf { it.isNotEmpty() && it.length <= 35 }
 
+/**
+ * Normalizes `behaviorHints.clearKeys` to `kid:key,kid:key` in lowercase hex. Accepts a `{kid: key}`
+ * object, a `[{kid, k}]` array or a `kid:key,kid:key` string; each side is hex (UUID dashes allowed)
+ * or base64/base64url and must be 16 bytes. Invalid pairs are dropped, null when none is left.
+ */
+fun Any?.toStreamClearKeys(): String? {
+    val pairs: List<Pair<Any?, Any?>> = when (this) {
+        is String -> split(',', ';').map { it.substringBefore(':', "") to it.substringAfter(':', "") }
+        is Map<*, *> -> entries.map { it.key to it.value }
+        is Iterable<*> -> mapNotNull { entry -> (entry as? Map<*, *>)?.let { it["kid"] to it["k"] } }
+        else -> return null
+    }
+    return pairs
+        .mapNotNull { (kid, key) -> clearKeyHex(kid)?.let { k -> clearKeyHex(key)?.let { v -> "$k:$v" } } }
+        .distinct()
+        .joinToString(",")
+        .ifEmpty { null }
+}
+
+private val clearKeyBase64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
+
+private fun clearKeyHex(value: Any?): String? {
+    val text = (value as? String)?.trim().orEmpty()
+    val hex = text.replace("-", "")
+    if (hex.length == 32 && hex.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return hex.lowercase()
+    val bytes = runCatching { clearKeyBase64.decode(text.replace('+', '-').replace('/', '_')) }.getOrNull()
+    return bytes?.takeIf { it.size == 16 }?.joinToString("") { "%02x".format(it) }
+}
+
 @Immutable
 data class StreamBehaviorHints(
     val notWebReady: Boolean?,
@@ -241,7 +271,9 @@ data class StreamBehaviorHints(
     // Extra audio delay for this stream (ms, >0 = audio later), added on top of the user's/device delay.
     val audioDelayMs: Int? = null,
     // When set, audioDelayMs only applies to audio and embedded subtitle tracks in this language.
-    val audioDelayLanguage: String? = null
+    val audioDelayLanguage: String? = null,
+    // ClearKey DRM pairs as `kid:key,kid:key` (hex), see [toStreamClearKeys]. Secret: never log them.
+    val clearKeys: String? = null
 )
 
 @Immutable

@@ -196,6 +196,7 @@ internal fun PlayerRuntimeController.launchTorrentSourceStream(
 
             currentStreamUrl = localUrl
             currentHeaders = emptyMap()
+            currentClearKeys = null
             currentStreamMimeType = null
             recordDistinctPluginPlay(
                 bingeGroup = stream.behaviorHints?.bingeGroup ?: currentStreamBingeGroup,

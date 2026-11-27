@@ -958,6 +958,16 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.observeProperty(MPV_SUB_TEXT_PROPERTY, MPV.mpvFormat.MPV_FORMAT_STRING)
     }
 
+    /**
+     * ClearKey pairs (`kid:key,kid:key`, hex) for FFmpeg's CENC decryption: the DASH demuxer reads
+     * `cenc_decryption_keys`, MP4 `decryption_keys`. Global like the headers, so it is set again
+     * before every file. HLS is left to ExoPlayer: FFmpeg's HLS demuxer rejects SAMPLE-AES-CTR keys.
+     */
+    fun applyClearKeys(clearKeys: String?) {
+        ensureInitialized()
+        mpv.setPropertyString("demuxer-lavf-o", clearKeys?.let(::clearKeyLavfOptions).orEmpty())
+    }
+
     private fun applyHeaders(headers: Map<String, String>) {
         if (headers.isEmpty()) {
             mpv.setPropertyString("http-header-fields", "")
@@ -1146,4 +1156,11 @@ internal fun mpvPlaybackPositionSec(
     if (audioPtsSec == null || seeking) return timePosSec
     val glitchMinSec = MPV_VIDEO_PTS_GLITCH_MIN_SEC + abs(audioDelaySec)
     return if (audioPtsSec - timePosSec > glitchMinSec) audioPtsSec else timePosSec
+}
+
+/** [NuvioMpvSurfaceView.applyClearKeys]'s `demuxer-lavf-o` value for `kid:key,kid:key` pairs. */
+internal fun clearKeyLavfOptions(clearKeys: String): String {
+    val keys = clearKeys.split(',').joinToString(":") { it.replace(':', '=') }
+    // %n% quoting keeps FFmpeg's own `=`/`:` separators inside one mpv key-value entry.
+    return "cenc_decryption_keys=%${keys.length}%$keys,decryption_keys=%${keys.length}%$keys"
 }

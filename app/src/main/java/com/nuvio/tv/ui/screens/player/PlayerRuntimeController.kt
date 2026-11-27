@@ -241,6 +241,12 @@ class PlayerRuntimeController(
     internal var currentStreamCacheKey: String? = null
     internal var currentStreamMimeType: String?
     internal var currentHeaders: Map<String, String>
+    // ClearKey DRM pairs of the current stream (`kid:key,kid:key`, hex).
+    internal var currentClearKeys: String? = navigationArgs.clearKeys
+
+    // libmpv decrypts ClearKey DASH and MP4 through FFmpeg, but FFmpeg's HLS demuxer takes no keys.
+    internal val clearKeysNeedExoPlayer: Boolean
+        get() = currentClearKeys != null && currentStreamMimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8
     internal var streamSubtitles: List<Subtitle> = emptyList()
 
     init {

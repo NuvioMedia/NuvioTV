@@ -22,6 +22,7 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
         InternalPlayerEngine.MVP_PLAYER -> InternalPlayerEngine.EXOPLAYER
         InternalPlayerEngine.AUTO -> if (mpvView != null) InternalPlayerEngine.EXOPLAYER else InternalPlayerEngine.MVP_PLAYER
     }
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && clearKeysNeedExoPlayer) return false
     beginSwitchTraceSession(reason = "startup-failover", targetEngine = targetEngine)
     logSwitchTrace(
         stage = "startup-failover-trigger",
@@ -71,6 +72,10 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     reason: String = "manual-switch"
 ) {
     if (currentStreamUrl.isBlank()) return
+    if (targetEngine == InternalPlayerEngine.MVP_PLAYER && clearKeysNeedExoPlayer) {
+        Log.i(PlayerRuntimeController.TAG, "Engine switch to libmpv skipped: ClearKey HLS stream")
+        return
+    }
 
     beginSwitchTraceSession(reason = reason, targetEngine = targetEngine)
     val targetEngineLabel = targetEngineLabel(targetEngine)

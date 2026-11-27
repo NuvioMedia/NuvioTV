@@ -694,6 +694,7 @@ private fun PlaybackNavHost(
                                 profileId = playbackInfo.profileId,
                                 audioDelayMs = playbackInfo.audioDelayMs,
                                 audioDelayLanguage = playbackInfo.audioDelayLanguage,
+                                clearKeys = playbackInfo.clearKeys,
                                 streamType = playbackInfo.streamType
                             )
                         )
@@ -738,6 +739,7 @@ private fun PlaybackNavHost(
                                 profileId = playbackInfo.profileId,
                                 audioDelayMs = playbackInfo.audioDelayMs,
                                 audioDelayLanguage = playbackInfo.audioDelayLanguage,
+                                clearKeys = playbackInfo.clearKeys,
                                 fromLinkCache = playbackInfo.fromLinkCache,
                                 streamType = playbackInfo.streamType
                             )
@@ -913,6 +915,11 @@ private fun PlaybackNavHost(
                     defaultValue = null
                 },
                 navArgument("audioDelayLanguage") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("clearKeys") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null

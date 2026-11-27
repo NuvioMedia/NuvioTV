@@ -93,6 +93,7 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
                         bingeGroup = currentStreamBingeGroup,
                         contentLanguage = contentLanguage,
                         year = year,
+                        clearKeys = currentClearKeys,
                         addonName = currentAddonName,
                         addonLogo = currentAddonLogo,
                         streamDescription = currentStreamDescription
@@ -318,8 +319,12 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 currentState.subtitleStyle.showOnlyPreferredLanguages != settings.subtitleStyle.showOnlyPreferredLanguages
             val wasRememberingAudioDelayPerDevice = rememberAudioDelayPerDeviceEnabled
             rememberAudioDelayPerDeviceEnabled = settings.rememberAudioDelayPerDevice
-            val resolvedInternalPlayerEngine =
+            // A ClearKey HLS stream plays on ExoPlayer whatever the setting: see initializePlayer.
+            val resolvedInternalPlayerEngine = if (clearKeysNeedExoPlayer) {
+                InternalPlayerEngine.EXOPLAYER
+            } else {
                 runtimeInternalPlayerEngineOverride ?: resolvedAutoPlayerEngine ?: settings.internalPlayerEngine
+            }
             val resolvedAudioAmplificationDb = when {
                 !hasInitializedAudioAmplificationForSession -> {
                     hasInitializedAudioAmplificationForSession = true
@@ -982,7 +987,7 @@ internal fun PlayerRuntimeController.handleVc1PlaybackFailure(errorMessage: Stri
     _uiState.update {
         it.copy(
             error = displayMessage,
-            showSwitchToMpvErrorAction = true,
+            showSwitchToMpvErrorAction = !clearKeysNeedExoPlayer,
             isPlaying = false,
             showControls = false,
             isBuffering = false,
