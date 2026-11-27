@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rating_rate">قيّم</string>
+    <string name="rating_your_rating">تقييمك</string>
+    <string name="rating_rate_episode">قيّم الحلقة</string>
+    <string name="rating_rated">قيّمت %1$s/10</string>
+    <string name="rating_value">%1$s من 10</string>
+    <string name="rating_syncs_to">تُزامَن مع %1$s</string>
+    <string name="rating_saved">تم حفظ التقييم</string>
+    <string name="rating_removed">تمت إزالة التقييم</string>
+    <string name="rating_failed">تعذّر تحديث تقييمك على %1$s</string>
+    <string name="rating_remove">إزالة</string>
+    <string name="tracking_ratings_title">التقييمات</string>
+    <string name="tracking_ratings_subtitle">أين تُحفظ تقييماتك ومن أين تُعرض</string>
+    <string name="tracking_ratings_dialog_subtitle">قيّم العناوين من صفحة تفاصيلها. تُحفظ تقييماتك وتُعرض من الخدمة التي تختارها.</string>
+    <string name="tracking_ratings_off_description">أخفِ زر التقييم.</string>
+    <string name="tracking_ratings_simkl_description">قيّم الأفلام والمسلسلات. تقييم عنوان غير موجود في قوائم Simkl يضيفه إليها.</string>
+    <string name="tracking_ratings_mdblist_description">قيّم الأفلام والمسلسلات والحلقات.</string>
+</resources>

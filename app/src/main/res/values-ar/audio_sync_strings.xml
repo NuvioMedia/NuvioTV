@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sync_setting_title">مزامنة الترجمة مع الصوت</string>
+    <string name="audio_sync_setting_description">تطابق الترجمة مع الحوار عندما لا يجد التزامن التلقائي مطابقة موثوقة.</string>
+    <string name="audio_sync_model_title">نموذج الكلام الإنجليزي (%1$d م.ب.)</string>
+    <string name="audio_sync_model_description">اختياري. يتعرف الكلام الإنجليزي ويطابقه مع الترجمة الإنجليزية الخارجية، لمزامنة أسرع وأدق. يستهلك معالجًا وذاكرة أكثر.</string>
+    <string name="audio_sync_model_downloading">جارٍ التنزيل… %1$d%%</string>
+    <string name="audio_sync_model_ready">تم تنزيله. إذا تعثّر التشغيل، احذفه للمزامنة بكشف الكلام فقط.</string>
+    <string name="audio_sync_model_failed">تعذّر التنزيل. حدّد لإعادة المحاولة. ما زال كشف الكلام يعمل.</string>
+    <string name="audio_sync_model_download">تنزيل</string>
+    <string name="audio_sync_model_delete">حذف</string>
+    <string name="audio_sync_sampling_title">أخذ عينات الصوت</string>
+    <string name="audio_sync_sampling_description">يستمع إلى الحوار قبل التشغيل، فتُوجد المزامنة أسرع.</string>
+    <string name="audio_sync_sampling_off">معطّل</string>
+    <string name="audio_sync_sampling_low">منخفض</string>
+    <string name="audio_sync_sampling_high">مرتفع</string>
+    <string name="audio_sync_sampling_off_description">يستمع فقط إلى ما يُشغَّل، فتستغرق المزامنة وقتًا أطول. لا يعمل مع مشغّل mpv.</string>
+    <string name="audio_sync_sampling_low_description">يستمع مسبقًا إلى بضعة مشاهد حوار عبر اتصال إضافي واحد، حتى 75 م.ب. لكل عنوان. ويُستخدم بدل «مرتفع» على الشبكات محدودة الاستهلاك.</string>
+    <string name="audio_sync_sampling_high_description">أسرع مزامنة. يستمع مسبقًا إلى مشاهد أكثر عبر عدة اتصالات، حتى 150 م.ب. لكل عنوان عادةً، ويستهلك معالجًا أكثر. بعض الخوادم تحدّ عدد الاتصالات المسموح بها.</string>
+    <string name="licenses_attributions_audio_sync_title">مزامنة الترجمة بالصوت</string>
+    <string name="licenses_attributions_audio_sync_body">يستخدم كشف الكلام أوزان Silero VAD v5 (MIT، فريق Silero). ويستخدم التعرف الاختياري على الكلام sherpa-onnx (Apache-2.0، ‏k2-fsa) ونموذج Zipformer GigaSpeech الإنجليزي الخاص به (Apache-2.0). وتُرفق الإشعارات الكاملة مع التطبيق في licenses/audio_sync_NOTICE.md.</string>
+</resources>
