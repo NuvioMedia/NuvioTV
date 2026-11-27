@@ -279,4 +279,95 @@ class TvReorderListLayoutTest {
         )
         assertEquals(2200, target)
     }
+
+    @Test
+    fun `anchored header scroll grows by header delta to keep list stationary`() {
+        val target = computeAnchoredHeaderScrollPx(
+            preMeasureScrollPx = 700,
+            headerDeltaPx = 200,
+            maxScrollPx = 900,
+        )
+        assertEquals(900, target)
+    }
+
+    @Test
+    fun `anchored header scroll shrinks by header delta from pre-clamp scroll`() {
+        val targetAtBottom = computeAnchoredHeaderScrollPx(
+            preMeasureScrollPx = 900,
+            headerDeltaPx = -200,
+            maxScrollPx = 700,
+        )
+        assertEquals(700, targetAtBottom)
+
+        val targetMidList = computeAnchoredHeaderScrollPx(
+            preMeasureScrollPx = 500,
+            headerDeltaPx = -200,
+            maxScrollPx = 700,
+        )
+        assertEquals(300, targetMidList)
+    }
+
+    @Test
+    fun `anchored header scroll clamps to zero and maxScrollPx`() {
+        assertEquals(
+            0,
+            computeAnchoredHeaderScrollPx(
+                preMeasureScrollPx = 100,
+                headerDeltaPx = -250,
+                maxScrollPx = 700,
+            ),
+        )
+        assertEquals(
+            180,
+            computeAnchoredHeaderScrollPx(
+                preMeasureScrollPx = 0,
+                headerDeltaPx = 220,
+                maxScrollPx = 180,
+            ),
+        )
+    }
+
+    @Test
+    fun `same row bring into view is suppressed only when control is already visible`() {
+        assertTrue(
+            shouldSuppressSameRowBringIntoView(
+                suppressCenteringForSameRow = true,
+                offset = 820f,
+                size = 60f,
+                containerSize = 1080f,
+            ),
+        )
+        assertTrue(
+            shouldSuppressSameRowBringIntoView(
+                suppressCenteringForSameRow = true,
+                offset = 0f,
+                size = 60f,
+                containerSize = 1080f,
+            ),
+        )
+        assertTrue(
+            !shouldSuppressSameRowBringIntoView(
+                suppressCenteringForSameRow = false,
+                offset = 820f,
+                size = 60f,
+                containerSize = 1080f,
+            ),
+        )
+        assertTrue(
+            !shouldSuppressSameRowBringIntoView(
+                suppressCenteringForSameRow = true,
+                offset = -10f,
+                size = 60f,
+                containerSize = 1080f,
+            ),
+        )
+        assertTrue(
+            !shouldSuppressSameRowBringIntoView(
+                suppressCenteringForSameRow = true,
+                offset = 1040f,
+                size = 60f,
+                containerSize = 1080f,
+            ),
+        )
+    }
 }
