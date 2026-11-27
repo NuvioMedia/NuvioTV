@@ -192,9 +192,12 @@
     <string name="episodes_specials">Specials</string>
     <string name="episodes_episode">Aflevering</string>
     <string name="episodes_cd_watched">Bekeken</string>
+    <string name="episodes_cd_rewatched">Opnieuw bekeken</string>
     <string name="episodes_dialog_subtitle">Afleveringsacties</string>
     <string name="episodes_mark_watched">Markeren als bekeken</string>
     <string name="episodes_mark_unwatched">Markeren als onbekeken</string>
+    <string name="episodes_mark_rewatched">Markeren als opnieuw bekeken</string>
+    <string name="episodes_mark_not_rewatched">Markeren als niet opnieuw bekeken</string>
     <string name="episodes_mark_season_watched">Seizoen markeren als bekeken</string>
     <string name="episodes_mark_season_unwatched">Seizoen markeren als onbekeken</string>
     <string name="episodes_mark_previous_watched">Eerdere afleveringen van dit seizoen als bekeken markeren</string>
@@ -208,6 +211,10 @@
     <string name="detail_removed_from_library">Verwijderd uit bibliotheek</string>
     <string name="detail_episode_marked_watched">Aflevering gemarkeerd als bekeken</string>
     <string name="detail_episode_marked_unwatched">Aflevering gemarkeerd als onbekeken</string>
+    <string name="detail_episode_marked_rewatched">Aflevering gemarkeerd als opnieuw bekeken</string>
+    <string name="detail_episode_marked_not_rewatched">Aflevering gemarkeerd als niet opnieuw bekeken</string>
+    <string name="detail_rewatch_too_soon">Simkl heeft deze herhaalde weergave niet geregistreerd: de aflevering is minder dan 48 uur geleden bekeken.</string>
+    <string name="detail_rewatch_not_recorded">Simkl heeft deze herhaalde weergave niet geregistreerd.</string>
     <string name="detail_lists_updated">Lijsten bijgewerkt</string>
     <string name="detail_movie_marked_watched">Gemarkeerd als bekeken</string>
     <string name="detail_movie_marked_unwatched">Gemarkeerd als onbekeken</string>
@@ -417,6 +424,8 @@
     <string name="about_update_auto_install_subtitle">Download nieuwe versies op de achtergrond en installeer ze wanneer het apparaat niet in gebruik is</string>
     <string name="about_update_auto_install_notice_title">Melding na automatische updates</string>
     <string name="about_update_auto_install_notice_subtitle">Toon een banner bij de volgende start nadat de app zichzelf heeft bijgewerkt</string>
+    <string name="about_update_optimize_install_title">Updates optimaliseren tijdens installatie</string>
+    <string name="about_update_optimize_install_subtitle">Snellere eerste start na een update, maar de app sluit ongeveer een minuut terwijl de update wordt geïnstalleerd. Schakel dit uit om in plaats daarvan het installatiescherm van Android te gebruiken</string>
     <string name="about_update_channel_title">Updatekanaal</string>
     <string name="about_update_channel_subtitle">Kies welk type app-updates je wilt ontvangen</string>
     <string name="about_check_updates">Controleren op updates</string>
@@ -494,6 +503,27 @@
     <string name="tracking_simkl_anime_id_mal">Voorkeur voor MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Voorkeur voor Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Voorkeur voor TVDB</string>
+    <string name="settings_tracking_completion_title">Drempel voor bekeken</string>
+    <string name="settings_tracking_completion_subtitle">Percentage dat afgespeeld moet zijn om een titel als bekeken te markeren. Markeringen voor de aftiteling hebben voorrang wanneer die beschikbaar zijn.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">Opnieuw kijken bijhouden</string>
+    <string name="settings_tracking_rewatch_subtitle">Registreer herhaalde weergaven van titels die je meer dan 2 dagen geleden hebt uitgekeken als aparte Simkl-herkijksessies, en volg actieve sessies in Verder kijken.</string>
+    <string name="settings_tracking_rewatch_dialog_title">Opnieuw kijken bijhouden</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">Herkijksessies vereisen Simkl PRO of VIP en worden alleen aangemaakt voor titels die je al hebt uitgekeken.</string>
+    <string name="settings_tracking_rewatch_off">Uit</string>
+    <string name="settings_tracking_rewatch_off_subtitle">Registreer geen herhaalde weergaven bij Simkl en toon geen actieve herkijksessies in Verder kijken.</string>
+    <string name="settings_tracking_rewatch_semi">Halfautomatisch</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">Vraag één keer voordat een nieuwe herkijksessie start. Zodra die actief is, worden de overige afleveringen automatisch geregistreerd.</string>
+    <string name="settings_tracking_rewatch_automatic">Automatisch</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">Start automatisch een herkijksessie en registreer herhaalde weergaven telkens wanneer je een uitgekeken titel opnieuw afspeelt.</string>
+    <string name="settings_tracking_rewatch_pro_title">Opnieuw kijken bijhouden vereist Simkl PRO of VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl registreert herhaalde weergaven alleen voor Pro- en VIP-accounts. Sessies die al op je Simkl-account staan, blijven daar als je abonnement verandert.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">Upgraden</string>
+    <string name="settings_tracking_rewatch_pro_not_now">Niet nu</string>
+    <string name="rewatch_prompt_title">Je hebt deze titel al uitgekeken.</string>
+    <string name="rewatch_prompt_subtitle">Een herkijksessie starten op Simkl?</string>
+    <string name="rewatch_prompt_confirm">Ja</string>
+    <string name="rewatch_prompt_dismiss">Nee</string>
     <string name="tracking_status_connected">Verbonden</string>
     <string name="tracking_status_disconnected">Niet verbonden</string>
     <string name="tracking_status_waiting">Wachten op goedkeuring</string>
@@ -624,6 +654,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Gebruik de eigen globale focus-scrollanimatie en -positionering van Nuvio.</string>
     <string name="advanced_rgb565">RGB565-beelddecodering</string>
     <string name="advanced_rgb565_subtitle">Gebruik 16-bits kleur met minder geheugengebruik voor geschikte ondoorzichtige afbeeldingen. Bij wijziging wordt de app opnieuw gestart.</string>
+    <string name="advanced_hardware_bitmaps">Hardwarematige afbeeldingsdecodering</string>
+    <string name="advanced_hardware_bitmaps_subtitle">Bewaar gedecodeerde afbeeldingen alleen in het grafische geheugen. Gebruikt minder RAM, maar het laden van nieuwe afbeeldingen kan haperen op minder krachtige GPU\'s.</string>
     <string name="advanced_memory_only_vertical_scroll">Verticaal scrollen alleen uit geheugen</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Sla schijf- en netwerkverzoeken voor afbeeldingen over tijdens verticaal scrollen door startrijen.</string>
     <string name="advanced_compose_highlighter">Compose-highlighter</string>
@@ -650,6 +682,7 @@
     <string name="settings_mdblist_subtitle">Externe beoordelingsproviders</string>
     <string name="settings_animeskip_subtitle">Tijdstempels voor intro-/outro-overslaan bij anime</string>
     <string name="settings_debrid_subtitle">Experimentele cloudaccountbronnen</string>
+    <string name="settings_usenet_subtitle">Providers, indexers, afspelen en diagnostiek</string>
 
     <string name="playback_title">Afspeelinstellingen</string>
     <string name="playback_subtitle">Configureer videoweergave en ondertitelopties</string>
@@ -775,6 +808,16 @@
     <string name="playback_engine_mvplayer">Libmpv (bèta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Engine automatisch wisselen bij opstartfout</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Als het starten van een stream mislukt, wissel dan automatisch tussen ExoPlayer en libmpv.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Schakel terugval naar de volgende passende bron uit om dit te gebruiken.</string>
+    <string name="autoplay_fallback_next_source">Terugval naar volgende passende bron bij fout</string>
+    <string name="autoplay_fallback_next_source_sub">Als de automatisch gekozen bron mislukt of niet op tijd start, probeer dan ongemerkt de volgende passende bronnen.</string>
+    <string name="autoplay_fallback_max_sources">Te proberen bronnen bij fout</string>
+    <string name="autoplay_fallback_max_sources_sub">Hoeveel extra passende bronnen er worden geprobeerd voordat de foutmelding verschijnt.</string>
+    <string name="autoplay_fallback_startup_timeout">Starttijd per bron</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Hoelang er op het starten van een bron wordt gewacht voordat de volgende wordt geprobeerd.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$ds</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Schakel Engine automatisch wisselen bij opstartfout uit om dit te gebruiken.</string>
+    <string name="player_error_source_startup_timeout">De bron is niet binnen %1$d seconden gestart.</string>
     <string name="playback_release_decoder_on_background">Decoder vrijgeven op de achtergrond</string>
     <string name="playback_release_decoder_on_background_sub">Geef de videodecoder vrij wanneer Nuvio naar de achtergrond gaat. Schakel dit in als het afspelen na terugkeer naar de app mislukt met een decoderfout. De speler laadt opnieuw bij terugkeer, ook na de screensaver</string>
     <string name="playback_external_forward_subtitles">Ondertiteling doorsturen naar externe speler</string>
@@ -811,6 +854,8 @@
     <string name="playback_true_black_letterbox_sub">Teken de balken rond het beeld niet, zodat ze bij HDR puur zwart blijven. Laat dit uit als er een lichte lijn op de balken verschijnt.</string>
     <string name="playback_exo_chapters_title">Hoofdstukken tonen</string>
     <string name="playback_exo_chapters_sub">Leest hoofdstukken uit MKV-bestanden om ze op de voortgangsbalk te markeren en ertussen te springen.</string>
+    <string name="playback_chapter_title_title">Hoofdstuktitel tonen</string>
+    <string name="playback_chapter_title_sub">Toon de naam van het huidige hoofdstuk boven de voortgangsbalk.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Trailers automatisch afspelen</string>
     <string name="audio_autoplay_trailers_sub">Speel trailers automatisch af op het detailscherm en na afloop van een film of aflevering</string>
@@ -865,6 +910,8 @@
     <string name="dv7_mode_strip_dv_desc">Verwijdert de Dolby Vision-RPU-laag uit alle streams.</string>
     <string name="audio_dv5_to_dv81_title">DV5 naar DV8.1 converteren</string>
     <string name="audio_dv5_to_dv81_sub">Meld Profile 5-streams als Profile 8.1 voor HDR10-compatibele uitvoer. Helpt op apparaten zonder eigen DV5-decoder.</string>
+    <string name="audio_zero_dovi_l5_title">Dolby Vision-letterboxmetadata negeren (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Zet de offsets van het actieve beeldgebied in Dolby Vision L5 op nul tijdens het afspelen. Verhelpt donkere of doorschijnende balken langs de letterboxranden bij bestanden met defecte L5-metadata.</string>
     <string name="audio_strip_hdr10plus_title">HDR10+-metadata verwijderen</string>
     <string name="audio_strip_hdr10plus_sub">Verwijder dynamische HDR10+-metadata uit streams. Als Converteren naar DV8.1 ook aanstaat, wordt het verwijderen na de conversie uitgevoerd.</string>
     <string name="audio_dv7_preserve_mapping_title">DV-mapping behouden (DV7 naar DV8.1)</string>
@@ -909,12 +956,35 @@
     <string name="sub_outline">Omtrek</string>
     <string name="sub_outline_sub">Voeg een omtrek toe rond ondertitels voor betere zichtbaarheid</string>
     <string name="sub_outline_color">Omtrekkleur</string>
+    <string name="sub_outline_width">Omtrekdikte</string>
     <string name="sub_hdr_style">Aparte stijl voor HDR / Dolby Vision</string>
     <string name="sub_hdr_style_sub">Gebruik een andere tekstkleur en een lagere helderheid voor ondertitels bij HDR- en Dolby Vision-video</string>
     <string name="sub_hdr_text_color">HDR-tekstkleur</string>
     <string name="sub_hdr_brightness">HDR-helderheid</string>
     <string name="sub_hdr_dim_player_controls">Spelerbediening dimmen bij HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Pas de HDR-helderheid toe op de spelerbediening en menu\'s die over HDR- en Dolby Vision-video worden getoond</string>
+    <string name="sub_appearance">Uiterlijk van ondertitels</string>
+    <string name="sub_appearance_desc">Lettertype, kleuren, achtergrond en schaduw</string>
+    <string name="sub_appearance_hint">Geldt voor tekstondertitels. Opgemaakte ASS-ondertitels en beeldondertitels behouden hun oorspronkelijke uiterlijk.</string>
+    <string name="sub_preview">Voorbeeld</string>
+    <string name="sub_preview_text">Elk verhaal begint met een beetje nieuwsgierigheid.</string>
+    <string name="sub_font">Lettertype</string>
+    <string name="sub_font_default">Standaard</string>
+    <string name="sub_font_serif">Schreef</string>
+    <string name="sub_font_mono">Monospace</string>
+    <string name="sub_font_import">Importeren vanaf telefoon</string>
+    <string name="sub_font_import_desc">Voeg een .ttf- of .otf-lettertype van maximaal 10 MB toe. Geïmporteerde lettertypen blijven op deze tv.</string>
+    <string name="sub_font_import_qr">Scan met je telefoon om een .ttf- of .otf-lettertype toe te voegen</string>
+    <string name="sub_font_missing">Lettertype niet beschikbaar op dit apparaat. Het standaardlettertype wordt gebruikt.</string>
+    <string name="sub_font_remove">%1$s verwijderen</string>
+    <string name="sub_background">Achtergrond</string>
+    <string name="sub_bg_opacity">Achtergronddekking</string>
+    <string name="sub_bg_roundness">Hoekafronding</string>
+    <string name="sub_shadow">Slagschaduw</string>
+    <string name="sub_shadow_desc">Laat de tekst beter afsteken tegen heldere scènes</string>
+    <string name="sub_shadow_opacity">Schaduwdekking</string>
+    <string name="sub_shadow_size">Schaduwgrootte</string>
+    <string name="sub_reset_appearance">Uiterlijk herstellen</string>
     <string name="sub_advanced_section">Geavanceerde ondertitelweergave</string>
     <string name="sub_libass">Gebruik libass voor ASS/SSA-ondertitels</string>
     <string name="sub_libass_sub">Geavanceerde ASS/SSA-rendering (stijlen, positionering, animaties)</string>
@@ -1041,6 +1111,7 @@
     <string name="layout_discover_location_in_sidebar_desc">Ontdekken krijgt een eigen item in het zijpaneel.</string>
     <string name="layout_poster_labels">Posterlabels tonen</string>
     <string name="layout_poster_labels_sub">Toon titels onder posters in rijen, raster en alles-bekijken.</string>
+    <string name="layout_modern_poster_labels_sub">Toon de titel en het jaar onder posters in de rijen op het startscherm.</string>
     <string name="layout_addon_name">Add-onnaam tonen</string>
     <string name="layout_addon_name_sub">Toon bronnaam onder catalogustitels.</string>
     <string name="layout_catalog_type">Catalogustype tonen</string>
@@ -1065,6 +1136,8 @@
     <string name="layout_cw_enabled_sub">Toon de rij Verder kijken op het startscherm.</string>
     <string name="layout_use_episode_thumbnails_cw">Afleveringsminiaturen in Verder kijken gebruiken</string>
     <string name="layout_use_episode_thumbnails_cw_sub">Gebruik afleveringsminiaturen als standaardafbeelding. Als dit uitstaat, wordt de achtergrondafbeelding gebruikt.</string>
+    <string name="layout_season_posters">Seizoensposters</string>
+    <string name="layout_season_posters_sub">Toon seizoenen als posters in plaats van teksttabbladen, indien beschikbaar.</string>
     <string name="layout_blur_unwatched">Onbekeken afleveringen vervagen</string>
     <string name="layout_blur_unwatched_sub">Vervaag afleveringsminiaturen tot ze bekeken zijn om spoilers te voorkomen.</string>
     <string name="layout_episode_options_overlay">Overlay met afleveringsopties</string>
@@ -1092,6 +1165,14 @@
     <string name="layout_cw_sort_streaming_desc">Uitgebrachte items eerst, komende aan het einde</string>
     <string name="layout_cw_sort_split_upcoming">Aparte rij Binnenkort</string>
     <string name="layout_cw_sort_split_upcoming_desc">Verplaats nog niet uitgezonden afleveringen naar een aparte rij Binnenkort</string>
+    <string name="layout_cw_click_action">Bij selecteren</string>
+    <string name="layout_cw_click_action_sub">Wat er opent wanneer je een item in Verder kijken selecteert</string>
+    <string name="layout_cw_click_stream">Stream openen</string>
+    <string name="layout_cw_click_stream_desc">Kies een bron of hervat het afspelen</string>
+    <string name="layout_cw_click_details">Details openen</string>
+    <string name="layout_cw_click_details_desc">Open de detailpagina van de titel</string>
+    <string name="layout_cw_click_details_upcoming">Details alleen bij komende afleveringen</string>
+    <string name="layout_cw_click_details_upcoming_desc">Open de details voor afleveringen die nog niet zijn uitgezonden, en de stream voor de rest</string>
     <string name="upcoming_section_title">Binnenkort</string>
     <string name="layout_trailer_button">Trailerknop tonen</string>
     <string name="layout_trailer_button_sub">Toon trailerknop op detailpagina (alleen indien beschikbaar).</string>
@@ -1101,6 +1182,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">Pauzeer de trailer wanneer je omlaag scrolt en hervat hem zodra je weer bovenaan bent.</string>
     <string name="layout_trailer_4k">4K-trailers</string>
     <string name="layout_trailer_4k_sub">Speel trailers boven 1080p af wanneer beschikbaar. Gebruikt veel meer geheugen; standaard uit op apparaten met 2 GB RAM of minder.</string>
+    <string name="layout_trailer_subtitles">Ondertitels bij trailers</string>
+    <string name="layout_trailer_subtitles_sub">Toon ondertitels bij trailers in je voorkeurstaal voor ondertitels, indien beschikbaar.</string>
     <string name="layout_detail_group_episodes">Afleveringen</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>
@@ -1121,6 +1204,8 @@
     <string name="layout_trailer_muted">Trailer gedempt afspelen</string>
     <string name="layout_trailer_muted_sub_preview">Demp het trailergeluid tijdens de automatische preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Demp het trailergeluid in uitgevouwen kaarten.</string>
+    <string name="layout_trailer_continue_in_details">Trailer doorspelen in details</string>
+    <string name="layout_trailer_continue_in_details_sub">Laat de trailer doorspelen wanneer je de detailpagina opent.</string>
     <string name="layout_section_card_style">Posterkaart</string>
     <string name="layout_section_card_style_desc">Pas kaartbreedte en hoekradius aan.</string>
     <string name="settings_card_depth_title">Diepte-effect van kaarten</string>
@@ -1156,6 +1241,7 @@
     <string name="layout_trailer_location_sub">Kies waar de trailerpreview wordt afgespeeld in het moderne startscherm.</string>
     <string name="layout_trailer_expanded_card">Uitgevouwen kaart</string>
     <string name="layout_trailer_hero_media">Hero-media</string>
+    <string name="layout_trailer_hero_media_no_expand">Hero-media (niet uitvouwen)</string>
     <string name="layout_preset_compact">Compact</string>
     <string name="layout_preset_dense">Dicht</string>
     <string name="layout_preset_standard">Standaard</string>
@@ -1206,6 +1292,13 @@
     <string name="web_custom_poster_none">Geen patroon ingesteld</string>
     <string name="web_custom_poster_loading">Laden…</string>
     <string name="web_custom_poster_placeholders_info">Placeholders: {id} geeft alle ID\'s van de titel door. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} richten zich op één ID-type - als dat niet beschikbaar is, blijft de originele poster staan. {imdb_id|tmdb_id|kitsu_id} geeft aan welke ID-typen worden ondersteund - het overeenkomende type wordt gebruikt, anders blijft de originele poster staan. Voeg ? toe om een placeholder optioneel te maken: zonder waarde wordt die leeg ingevuld in plaats van overgeslagen, bijvoorbeeld {imdb_id?}. Andere placeholders: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Lettertypen voor ondertitels</string>
+    <string name="web_subtitle_font_subtitle">Kies een .ttf- of .otf-bestand om het voor ondertitels op je tv te gebruiken.</string>
+    <string name="web_subtitle_font_choose">Lettertypebestand kiezen</string>
+    <string name="web_subtitle_font_uploading">Uploaden…</string>
+    <string name="web_subtitle_font_added">Toegevoegd aan je tv</string>
+    <string name="web_subtitle_font_error">Kon dit lettertype niet importeren. Kies een geldig .ttf- of .otf-bestand kleiner dan 10 MB.</string>
+    <string name="web_subtitle_font_connection_error">Verbindingsfout</string>
     <string name="mdblist_name">MDBList</string>
     <string name="mdblist_tracking_description">Synchroniseer kijkgeschiedenis en afspeelvoortgang tussen apparaten</string>
     <string name="mdblist_connected_as">Verbonden als %1$s</string>
@@ -1229,6 +1322,7 @@
 
 
     <string name="mdblist_title">MDBList-beoordelingen</string>
+    <string name="mdblist_subtitle">Stel de externe beoordelingen in die in de detail-hero worden getoond</string>
     <string name="mdblist_enable_title">MDBList-beoordelingen inschakelen</string>
     <string name="mdblist_enable_subtitle">Haal beoordelingen op van externe providers in het detailscherm</string>
     <string name="mdblist_api_key_title">API-sleutel</string>
@@ -1255,6 +1349,7 @@
     <string name="mdblist_show_on_hero_title">Beoordelingen in hero gebruiken</string>
     <string name="mdblist_show_on_hero_subtitle">Toon MDBList-beoordelingen in de hero-carrousel (modern en klassiek/raster)</string>
     <string name="mdblist_rating_order_title">Volgorde van beoordelingen</string>
+    <string name="mdblist_rating_order_subtitle">De eerste 3 ingeschakelde en beschikbare beoordelingen worden in de moderne hero getoond. Gebruik de knop Herschikken om de volgorde te wijzigen.</string>
     <string name="mdblist_dialog_title">MDBList API-sleutel</string>
     <string name="mdblist_dialog_subtitle">Voer je API-sleutel in om externe beoordelingen op te halen</string>
     <string name="mdblist_dialog_placeholder">Voer MDBList API-sleutel in</string>
@@ -1471,6 +1566,8 @@
     <string name="tmdb_networks_subtitle">Netwerken met logo\'s van TMDB</string>
     <string name="tmdb_episodes_title">Afleveringen</string>
     <string name="tmdb_episodes_subtitle">Afleveringstitels, beschrijvingen, miniaturen en speelduur van TMDB</string>
+    <string name="tmdb_season_posters_title">Seizoensposters</string>
+    <string name="tmdb_season_posters_subtitle">Seizoensposters van TMDB voor de seizoenstabbladen op de detailpagina</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Mogelijke trailers uit TMDB-video\'s voor het trailergedeelte op de detailpagina</string>
     <string name="tmdb_more_like_this_title">Vergelijkbare titels</string>
@@ -1714,6 +1811,13 @@
     <string name="addon_installing">Bezig met installeren</string>
     <string name="addon_install_btn">Installeren</string>
     <string name="addon_install_success">%1$s geïnstalleerd</string>
+    <string name="addon_tracking_consent_title">Tracking-add-on</string>
+    <string name="addon_tracking_consent_body">%1$s is een tracking-add-on. Nuvio stuurt je activiteit naar deze add-on: wat je afspeelt, pauzeert en stopt, inclusief de afspeelpositie, wat je aan je bibliotheek toevoegt of eruit verwijdert, en wat je als bekeken of onbekeken markeert. Deze gegevens verlaten Nuvio en worden verwerkt door de ontwikkelaar van de add-on en de dienst waarmee die verbinding maakt.</string>
+    <string name="addon_tracking_consent_checkbox">Ik ga akkoord met het delen van mijn kijkactiviteit en bibliotheek met deze add-on</string>
+    <string name="addon_tracking_consent_checked">Aangevinkt</string>
+    <string name="addon_tracking_consent_unchecked">Niet aangevinkt</string>
+    <string name="addon_tracking_consent_cancel">Annuleren</string>
+    <string name="addon_tracking_consent_install">Installeren</string>
     <string name="addon_error_invalid_url">Voer een geldige add-on-URL in</string>
     <string name="addon_error_invalid_scheme">De add-on-URL moet beginnen met http of https</string>
     <string name="addon_installed_section">Geïnstalleerd</string>
@@ -1761,6 +1865,9 @@
     <string name="catalog_order_disabled_on_home">Uitgeschakeld op het startscherm</string>
     <string name="catalog_order_enable">Inschakelen</string>
     <string name="catalog_order_disable">Uitschakelen</string>
+    <string name="catalog_order_pinned">Vastgezet</string>
+    <string name="catalog_order_pinned_to_top">Bovenaan vastgezet</string>
+    <string name="catalog_order_pin_to_move_toast">Maak de collectie los van bovenaan om deze te verplaatsen</string>
 
 
     <string name="stream_retry">Opnieuw proberen</string>
@@ -1793,6 +1900,8 @@
     <string name="settings_p2p_profile_fast_description">Gebruikt meer peerverbindingen voor lastige torrents of torrents met een hoge bitrate</string>
     <string name="settings_p2p_cache_size_title">Grootte torrentcache</string>
     <string name="settings_p2p_cache_size_description">Gedownloade torrentgegevens die op dit apparaat worden bewaard om sneller opnieuw af te spelen</string>
+    <string name="settings_p2p_cache_memory_only">Alleen geheugen</string>
+    <string name="settings_p2p_cache_memory_only_description">Torrentgegevens blijven in het RAM en worden nooit naar de opslag geschreven. Bij terugspoelen worden ze opnieuw gedownload.</string>
     <string name="settings_p2p_cache_none">Geen blijvende cache</string>
     <string name="settings_p2p_cache_2_gb">2 GB</string>
     <string name="settings_p2p_cache_5_gb">5 GB</string>
@@ -1977,6 +2086,7 @@
     <string name="subtitle_off">Uit</string>
     <string name="subtitle_style_title">Ondertitelstijl</string>
     <string name="subtitle_style_customize">Aanpassen</string>
+    <string name="subtitle_style_customize_ass">ASS/SSA-opmaak aanpassen</string>
     <string name="subtitle_style_color">Kleur</string>
     <string name="subtitle_style_reset">Herstellen</string>
     <string name="subtitle_style_font_size">Lettergrootte</string>
@@ -2143,6 +2253,10 @@
     <string name="library_status_dropped">Gestopt</string>
     <string name="library_syncing_library">Bibliotheek synchroniseren\u2026</string>
     <string name="library_type_all">Alles</string>
+    <string name="library_empty_title">Geen items om weer te geven</string>
+    <string name="library_empty_local_hint">Wijzig je filters of sla je favorieten op om ze hier te zien</string>
+    <string name="library_empty_trakt_hint">Wijzig je filters of gebruik + bij de details om items aan je kijklijst of lijsten toe te voegen</string>
+    <string name="library_empty_simkl_hint">Wijzig je filters of gebruik + bij de details om items een Simkl-status te geven</string>
     <string name="library_empty_trakt_not_auth_title">Trakt niet verbonden</string>
     <string name="library_empty_trakt_not_auth_subtitle">Verbind je Trakt-account in de instellingen om je Trakt-bibliotheek te bekijken</string>
     <string name="library_empty_simkl_not_auth_title">Simkl niet verbonden</string>
@@ -2359,6 +2473,7 @@
     <string name="cast_detail_error">Er is iets misgegaan</string>
     <string name="cast_detail_retry">Opnieuw proberen</string>
     <string name="cast_detail_filmography">Filmografie</string>
+    <string name="cast_detail_filter_all">Alles</string>
     <string name="cast_detail_born">Geboren: %1$s</string>
     <string name="cast_detail_born_died">Geboren: %1$s — †%2$s</string>
     <string name="cast_detail_age">%1$d jaar</string>
@@ -2439,6 +2554,8 @@
     <string name="update_checking">Controleren op updates…</string>
     <string name="update_waiting_for_stable">Je ontvangt de volgende stabiele release zodra die beschikbaar is</string>
     <string name="update_download_complete">Download voltooid. Klaar om te installeren.</string>
+    <string name="update_ready_closes">Download voltooid. De app sluit terwijl de update wordt geïnstalleerd, wat een minuut kan duren. Open de app daarna opnieuw.</string>
+    <string name="update_ready_closes_and_reopens">Download voltooid. De app sluit terwijl de update wordt geïnstalleerd en opent daarna vanzelf weer, wat een minuut kan duren.</string>
     <string name="update_installed_automatically">Automatisch bijgewerkt terwijl het apparaat niet in gebruik was</string>
     <string name="update_up_to_date">Het systeem is up-to-date. Laatste wijzigingen:</string>
     <string name="update_close">Sluiten</string>
@@ -2477,6 +2594,10 @@
     <string name="plugin_repo_added_with_providers">%1$s toegevoegd met %2$d providers</string>
     <string name="plugin_repo_removed">Repository verwijderd</string>
     <string name="plugin_repo_refreshed">Repository vernieuwd</string>
+    <string name="plugin_repo_delete_confirm_title">Repository verwijderen?</string>
+    <string name="plugin_repo_delete_confirm_message">Weet je zeker dat je deze wilt verwijderen?</string>
+    <string name="plugin_repo_delete_no">Nee</string>
+    <string name="plugin_repo_delete_yes">Ja</string>
 
     <!-- Trakt errors -->
 
@@ -2547,6 +2668,7 @@
     <string name="cd_loading_logo">Logo laden</string>
     <string name="cd_move_up">Omhoog verplaatsen</string>
     <string name="cd_move_down">Omlaag verplaatsen</string>
+    <string name="cd_reorder">Herschikken</string>
     <string name="cd_edit">Bewerken</string>
     <string name="cd_delete">Verwijderen</string>
     <string name="cd_qr_code">QR-code</string>
@@ -2618,10 +2740,21 @@
     <string name="collections_valid_summary">%1$d collectie(s), %2$d map(pen)</string>
     <string name="collections_confirm_import">Importeren bevestigen</string>
     <string name="collections_folder_count">%1$d map(pen)</string>
+    <string name="collections_pinned">Vastgezet</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">Titel van rij</string>
     <string name="collections_editor_save">Opslaan</string>
+    <string name="collections_editor_unsaved_title">Wijzigingen opslaan?</string>
+    <string name="collections_editor_unsaved_subtitle">Je hebt niet-opgeslagen wijzigingen in deze collectie.</string>
+    <string name="collections_editor_unsaved_incomplete_title">Niet-opgeslagen wijzigingen</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">Voer een titel in en voeg ten minste één map toe om deze collectie op te slaan.</string>
+    <string name="collections_editor_unsaved_missing_title">Voer een collectietitel in om je wijzigingen op te slaan.</string>
+    <string name="collections_editor_unsaved_missing_folder">Voeg ten minste één map toe om deze collectie op te slaan.</string>
+    <string name="collections_editor_folder_unsaved_title">Wijzigingen in map opslaan?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">Je hebt niet-opgeslagen wijzigingen in deze map.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">Niet-opgeslagen wijzigingen in map</string>
+    <string name="collections_editor_folder_unsaved_missing_source">Voeg ten minste één bron toe om deze map op te slaan.</string>
     <string name="collections_editor_backdrop">Achtergrondafbeelding</string>
     <string name="collections_editor_pin_above">Vastzetten boven catalogi</string>
     <string name="collections_editor_pin_above_desc">Toon deze collectie boven alle gewone startcatalogi. Meerdere vastgezette collecties volgen de volgorde waarin ze zijn gemaakt.</string>
@@ -3367,6 +3500,13 @@
     <string name="stream_test_error_prefix">Fout: %1$s</string>
     <string name="stream_test_video_bitrate">Gemiddelde videobitrate: %1$s</string>
     <string name="stream_test_error_connection">Verbinding mislukt. De link van de laatst afgespeelde stream is mogelijk verlopen of onbereikbaar. Speel de video opnieuw af en probeer het nogmaals.</string>
+    <string name="player_finding_next_stream">Volgende stream zoeken…</string>
+    <string name="player_trying_next_stream">Volgende stream proberen (poging %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">Geen werkende streams meer. Kies een andere bron of probeer het opnieuw.</string>
+    <string name="usenet_builtin_addon_title">Ingebouwde Usenet</string>
+    <string name="usenet_builtin_addon_desc">Resultaten van je eigen NNTP-providers en Newznab-indexers. Verplaats dit item om te kiezen waar ze worden weergegeven.</string>
+    <string name="usenet_fallback">Automatische Usenet-terugval</string>
+    <string name="usenet_fallback_description">Als een Usenet-stream mislukt, worden de volgende Usenet-bronnen geprobeerd tot aan je ingestelde maximum aantal pogingen. Torrent- en andere streams wisselen nooit automatisch.</string>
     <string name="random_episode_title">Willekeurige aflevering</string>
     <string name="layout_random_episode_sub">Speel willekeurige afleveringen van elke serie af. Als je dit uitschakelt, wordt willekeurig afspelen gepauzeerd.</string>
     <string name="random_episode_unwatched">Onbekeken afleveringen</string>
@@ -3397,7 +3537,23 @@
     <string name="autosync_thorough_title">Grondig zoeken bij automatische synchronisatie</string>
     <string name="autosync_thorough_description">Blijf andere ondertitels en ingesloten sporen vergelijken voor een betere match voordat er wordt gesynchroniseerd. Als dit uitstaat, wordt de eerste sterke match eerder gebruikt. Alleen betrouwbare matches worden toegepast.</string>
     <string name="autosync_label_synced">Automatisch gesynchroniseerd</string>
+    <string name="autosync_status_title">Status automatische synchronisatie</string>
+    <string name="autosync_status_synced">Gesynchroniseerd</string>
+    <string name="autosync_status_not_needed">Niet nodig</string>
+    <string name="autosync_status_in_progress">Bezig</string>
+    <string name="autosync_status_no_fit">Komt mogelijk niet overeen</string>
+    <string name="autosync_status_no_reference">Geen ingesloten ondertitels</string>
+    <string name="autosync_status_failed">Mislukt</string>
     <string name="stream_resume_from_time">Hervatten vanaf %1$s</string>
     <string name="stream_resume_from_percent">Hervatten vanaf %1$d%%</string>
+    <string name="player_disc_titles">Disctitels</string>
+    <string name="player_disc_title_feature">Hoofdfilm · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Ondertitels %1$s</string>
+    <string name="player_disc_title_failed">Deze titel kon niet worden afgespeeld</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clip</item>
+        <item quantity="other">%d clips</item>
+    </plurals>
 
 </resources>
