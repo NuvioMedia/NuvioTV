@@ -124,18 +124,13 @@ fun HeroCarousel(
         items.getOrNull(activeIndex)?.let { currentOnActiveItemChanged(it) }
     }
 
-    // Auto-advance when not focused — delay first advance to 20s so initial GPU load settles
-    LaunchedEffect(isFocused, items.size) {
+    // Auto-advance, focused or not; each slide change restarts the interval.
+    LaunchedEffect(activeIndex, items.size) {
         if (items.size <= 1) return@LaunchedEffect
-        delay(AUTO_ADVANCE_INTERVAL_MS * 2) // 20s before first advance
-        while (true) {
-            delay(AUTO_ADVANCE_INTERVAL_MS)
-            // Let a long description finish scrolling before the slide is replaced.
-            snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
-            if (!isFocused) {
-                activeIndex = (activeIndex + 1) % items.size
-            }
-        }
+        delay(AUTO_ADVANCE_INTERVAL_MS)
+        // Let a long description finish scrolling before the slide is replaced.
+        snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
+        activeIndex = (activeIndex + 1) % items.size
     }
 
     Box(
