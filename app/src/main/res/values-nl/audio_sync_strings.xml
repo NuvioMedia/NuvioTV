@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sync_setting_title">Ondertitels synchroniseren met audio</string>
+    <string name="audio_sync_setting_description">Lijnt ondertitels uit met de dialoog wanneer automatische synchronisatie geen betrouwbare match vindt.</string>
+    <string name="audio_sync_model_title">Engels spraakmodel (%1$d MB)</string>
+    <string name="audio_sync_model_description">Optioneel. Herkent Engelse spraak en koppelt die aan externe Engelse ondertitels, voor snellere en nauwkeurigere synchronisatie. Gebruikt meer CPU en geheugen.</string>
+    <string name="audio_sync_model_downloading">Downloaden… %1$d%%</string>
+    <string name="audio_sync_model_ready">Gedownload. Als het afspelen hapert, verwijder het model dan om alleen met spraakdetectie te synchroniseren.</string>
+    <string name="audio_sync_model_failed">Downloaden mislukt. Selecteer om het opnieuw te proberen. Spraakdetectie werkt nog steeds.</string>
+    <string name="audio_sync_model_download">Downloaden</string>
+    <string name="audio_sync_model_delete">Verwijderen</string>
+    <string name="audio_sync_sampling_title">Audiosampling</string>
+    <string name="audio_sync_sampling_description">Luistert vooruit naar de dialoog, zodat de synchronisatie sneller wordt gevonden.</string>
+    <string name="audio_sync_sampling_off">Uit</string>
+    <string name="audio_sync_sampling_low">Laag</string>
+    <string name="audio_sync_sampling_high">Hoog</string>
+    <string name="audio_sync_sampling_off_description">Luistert alleen naar wat er wordt afgespeeld, waardoor synchroniseren langer duurt. Werkt niet met de mpv-speler.</string>
+    <string name="audio_sync_sampling_low_description">Luistert vooruit naar een paar dialoogscènes via één extra verbinding, tot 75 MB per titel. Wordt op netwerken met datalimiet ook gebruikt in plaats van Hoog.</string>
+    <string name="audio_sync_sampling_high_description">Snelste synchronisatie. Luistert vooruit naar meer scènes via meerdere verbindingen, meestal tot 150 MB per titel, en gebruikt meer CPU. Sommige servers beperken het aantal toegestane verbindingen.</string>
+    <string name="licenses_attributions_audio_sync_title">Ondertitelsynchronisatie op basis van audio</string>
+    <string name="licenses_attributions_audio_sync_body">Spraakdetectie gebruikt de gewichten van Silero VAD v5 (MIT, Silero Team). Optionele spraakherkenning gebruikt sherpa-onnx (Apache-2.0, k2-fsa) en het bijbehorende Engelse Zipformer GigaSpeech-model (Apache-2.0). De volledige vermeldingen worden met de app meegeleverd in licenses/audio_sync_NOTICE.md.</string>
+</resources>
