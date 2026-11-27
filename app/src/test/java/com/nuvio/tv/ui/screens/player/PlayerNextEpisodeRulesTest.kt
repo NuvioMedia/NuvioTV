@@ -218,4 +218,116 @@ class PlayerNextEpisodeRulesTest {
     fun `an unknown duration is not away from the end`() {
         assertFalse(awayFromEnd(positionMs = 0L, durationMs = 0L))
     }
+
+    private fun autoAdvance(
+        positionMs: Long,
+        durationMs: Long,
+        skipIntervals: List<SkipInterval> = emptyList(),
+        mode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
+        percent: Float = 99f,
+        minutesBeforeEnd: Float = 2f
+    ) = PlayerNextEpisodeRules.shouldAutoAdvanceToNextEpisode(
+        positionMs = positionMs,
+        durationMs = durationMs,
+        skipIntervals = skipIntervals,
+        thresholdMode = mode,
+        thresholdPercent = percent,
+        thresholdMinutesBeforeEnd = minutesBeforeEnd
+    )
+
+    // A 45:05 episode whose crowd-sourced outro marker starts 64 s before the end
+    // and runs past it (Love & Death S1E6).
+    private val earlyOutroDurationMs = 2_705_000L
+    private val earlyOutro = listOf(outro(startSec = 2_641.0, endSec = 2_708.0))
+
+    @Test
+    fun `an outro marker near the end shows the card at the outro start`() {
+        assertTrue(
+            shouldShow(
+                positionMs = 2_641_000L,
+                durationMs = earlyOutroDurationMs,
+                skipIntervals = earlyOutro,
+                percent = 99f
+            )
+        )
+    }
+
+    @Test
+    fun `an outro marker does not auto advance before the user threshold`() {
+        assertFalse(autoAdvance(2_641_000L, earlyOutroDurationMs, earlyOutro))
+        assertFalse(autoAdvance(2_677_000L, earlyOutroDurationMs, earlyOutro))
+        assertTrue(autoAdvance(2_678_000L, earlyOutroDurationMs, earlyOutro))
+    }
+
+    @Test
+    fun `a 100 percent threshold auto advances only at the end`() {
+        assertFalse(autoAdvance(2_704_000L, earlyOutroDurationMs, earlyOutro, percent = 100f))
+        assertTrue(autoAdvance(earlyOutroDurationMs, earlyOutroDurationMs, earlyOutro, percent = 100f))
+    }
+
+    @Test
+    fun `a threshold earlier than the outro auto advances at the outro start`() {
+        assertFalse(autoAdvance(2_640_000L, earlyOutroDurationMs, earlyOutro, percent = 97f))
+        assertTrue(autoAdvance(2_641_000L, earlyOutroDurationMs, earlyOutro, percent = 97f))
+    }
+
+    @Test
+    fun `minutes mode auto advances at the minutes threshold`() {
+        val mode = NextEpisodeThresholdMode.MINUTES_BEFORE_END
+        assertFalse(autoAdvance(2_674_000L, earlyOutroDurationMs, earlyOutro, mode, minutesBeforeEnd = 0.5f))
+        assertTrue(autoAdvance(2_675_000L, earlyOutroDurationMs, earlyOutro, mode, minutesBeforeEnd = 0.5f))
+    }
+
+    @Test
+    fun `without outro data auto advance matches the card`() {
+        val durationMs = 45 * 60_000L
+        for (positionMs in listOf(2_600_000L, 2_672_000L, 2_673_000L, durationMs)) {
+            assertEquals(
+                shouldShow(positionMs, durationMs, percent = 99f),
+                autoAdvance(positionMs, durationMs)
+            )
+        }
+    }
+
+    // The same episode's file carries its own "Credits" chapter from 42:09 to the end.
+    private val chapterOutro = listOf(
+        SkipInterval(startTime = 2_529.0, endTime = 2_704.0, type = "outro", provider = "chapters")
+    )
+
+    private fun awayFromEndWithOutro(positionMs: Long, intervals: List<SkipInterval>) =
+        PlayerNextEpisodeRules.isAwayFromEnd(
+            positionMs = positionMs,
+            durationMs = 2_704_000L,
+            skipIntervals = intervals,
+            thresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
+            thresholdPercent = 99f,
+            thresholdMinutesBeforeEnd = 2f
+        )
+
+    @Test
+    fun `a rewind before the outro start is away from the end`() {
+        assertTrue(awayFromEndWithOutro(30 * 60_000L, chapterOutro))
+        assertTrue(awayFromEndWithOutro(2_528_000L, chapterOutro))
+    }
+
+    @Test
+    fun `a position inside the outro is not away from the end`() {
+        assertFalse(awayFromEndWithOutro(2_529_000L, chapterOutro))
+        assertFalse(awayFromEndWithOutro(2_650_000L, chapterOutro))
+    }
+
+    @Test
+    fun `a position past the reported duration is not away from the end`() {
+        assertFalse(awayFromEndWithOutro(2_800_000L, chapterOutro))
+    }
+
+    @Test
+    fun `a post-credits scene still holds auto advance until the scene ends`() {
+        val intervals = listOf(
+            outro(startSec = 2_500.0, endSec = 2_600.0),
+            SkipInterval(startTime = 2_600.0, endTime = 2_690.0, type = "post-credits", provider = "introdb")
+        )
+        assertFalse(autoAdvance(2_689_000L, earlyOutroDurationMs, intervals))
+        assertTrue(autoAdvance(2_690_000L, earlyOutroDurationMs, intervals))
+    }
 }

@@ -740,7 +740,7 @@ private fun PlayerRuntimeController.setApiSkipIntervals(api: List<SkipInterval>)
     recomputeMergedSkipIntervals()
 }
 
-/** Recompute the merged skipIntervals from chapters (priority) + API (gap-fill). */
+/** Recompute the merged skipIntervals: chapters win except for the ending, where API wins; each fills gaps. */
 internal fun PlayerRuntimeController.recomputeMergedSkipIntervals() {
     val isMovie = contentType.equals("movie", ignoreCase = true)
     val merged = mergeSkipIntervals(apiSkipIntervals, chapterSkipIntervals, isMovie = isMovie)

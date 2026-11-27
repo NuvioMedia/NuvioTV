@@ -125,6 +125,32 @@ object PlayerNextEpisodeRules {
         }
     }
 
+    /**
+     * True when auto-play may jump to the next episode without a click.
+     *
+     * An outro marker can show the card early (it may come from a crowd-sourced database and
+     * start before the episode's last scene ends), but the jump waits for the user's own
+     * threshold, so a marker that starts too early never cuts the episode short.
+     */
+    fun shouldAutoAdvanceToNextEpisode(
+        positionMs: Long,
+        durationMs: Long,
+        skipIntervals: List<SkipInterval>,
+        thresholdMode: NextEpisodeThresholdMode,
+        thresholdPercent: Float,
+        thresholdMinutesBeforeEnd: Float
+    ): Boolean =
+        shouldShowNextEpisodeCard(
+            positionMs = positionMs,
+            durationMs = durationMs,
+            skipIntervals = skipIntervals,
+            thresholdMode = thresholdMode,
+            thresholdPercent = thresholdPercent,
+            thresholdMinutesBeforeEnd = thresholdMinutesBeforeEnd
+        ) && positionMs >= userThresholdPositionMs(
+            durationMs, thresholdMode, thresholdPercent, thresholdMinutesBeforeEnd
+        )
+
     /** True when a reading is clearly before the end and outside the next-episode window. */
     fun isAwayFromEnd(
         positionMs: Long,
