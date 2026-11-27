@@ -4,6 +4,7 @@ import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.domain.model.toStreamClearKeys
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -54,6 +55,8 @@ data class PartyStream(
     @SerialName("binge_group") val bingeGroup: String? = null,
     @SerialName("stream_type") val streamType: String? = null,
     val badges: List<StreamBadge> = emptyList(),
+    // Guests need the host's ClearKey pairs to play the same stream.
+    @SerialName("clear_keys") val clearKeys: String? = null,
 ) {
     fun toStream(): Stream = Stream(
         name = name,
@@ -71,6 +74,7 @@ data class PartyStream(
             proxyHeaders = ProxyHeaders(request = headers, response = responseHeaders),
             videoSize = videoSize,
             filename = filename,
+            clearKeys = clearKeys.toStreamClearKeys(),
         ),
         addonName = addonName,
         addonLogo = addonLogo,
