@@ -54,6 +54,20 @@ class MdbListUserRatingsTest {
     }
 
     @Test
+    fun `rating lookup resolves ids through the sync projection index`() {
+        val linked = MdbListMedia(MdbListIds(imdb = "tt5", tmdb = 5))
+        val snapshot = MdbListSyncSnapshot(
+            42,
+            watched = listOf(MdbListWatchedRecord(MdbListItemType.MOVIE, linked, TIME)),
+            ratings = listOf(MdbListRatingRecord(MdbListItemType.MOVIE, MdbListMedia(MdbListIds(imdb = "tt5")), 7.0, TIME))
+        )
+        val tmdbOnly = TrackingMediaReference(kind = TrackingMediaKind.MOVIE, ids = TrackingExternalIds(tmdb = 5))
+
+        assertEquals(7.0, snapshot.userRating(tmdbOnly, MdbListProgressProjection(snapshot))!!, 0.0)
+        assertNull(snapshot.userRating(tmdbOnly, MdbListProgressProjection.Empty))
+    }
+
+    @Test
     fun `payload uses episode ids when known and show numbers otherwise`() {
         val snapshot = MdbListSyncSnapshot(42)
         val byIds = payload(snapshot.mutationTarget(show(TrackingEpisode(season = 1, number = 2, tmdbId = 77))), 8)
