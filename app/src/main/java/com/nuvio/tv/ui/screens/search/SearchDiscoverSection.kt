@@ -59,6 +59,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.tv.ui.util.RtlKeyUtils
 import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -750,6 +751,9 @@ private fun DiscoverActionCard(
     }
     val cardDepthStyle = LocalCardDepthStyle.current
     val globalLandscape = com.nuvio.tv.ui.components.LocalLandscapePosterMode.current
+    val endKey = RtlKeyUtils.endDpadKey(
+        androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    )
 
     Column(
         modifier = modifier.then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
@@ -765,7 +769,7 @@ private fun DiscoverActionCard(
                 .onPreviewKeyEvent { event ->
                     actionType != DiscoverGridAction.None &&
                         event.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
-                        event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                        event.nativeKeyEvent.keyCode == endKey
                 }
                 .onFocusChanged { state -> if (state.isFocused) onFocused() }
                 .then(
