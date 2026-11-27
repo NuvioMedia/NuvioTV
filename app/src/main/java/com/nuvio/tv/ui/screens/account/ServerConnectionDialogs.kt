@@ -3,6 +3,9 @@
 package com.nuvio.tv.ui.screens.account
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -245,15 +248,17 @@ private fun ServerConnectionDialog(
         subtitle = stringResource(R.string.custom_server_description),
         suppressFirstKeyUp = false
     ) {
-        InputField(
-            value = serverUrl,
-            onValueChange = { serverUrl = it },
-            placeholder = stringResource(R.string.custom_server_url_placeholder),
-            keyboardType = KeyboardType.Uri,
-            imeAction = ImeAction.Done,
-            onImeAction = { if (canDiscover) onDiscover(serverUrl) },
-            modifier = Modifier.focusRequester(urlFocusRequester)
-        )
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            InputField(
+                value = serverUrl,
+                onValueChange = { serverUrl = it },
+                placeholder = stringResource(R.string.custom_server_url_placeholder),
+                keyboardType = KeyboardType.Uri,
+                imeAction = ImeAction.Done,
+                onImeAction = { if (canDiscover) onDiscover(serverUrl) },
+                modifier = Modifier.focusRequester(urlFocusRequester)
+            )
+        }
         uiState.error?.let {
             ServerMessage(
                 text = it,

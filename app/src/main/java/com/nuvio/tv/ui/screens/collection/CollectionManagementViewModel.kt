@@ -10,7 +10,10 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +37,8 @@ data class CollectionManagementUiState(
     val validationResult: ValidationResult? = null,
     val validatedJson: String? = null,
     val isLoadingImport: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val movingCollectionKey: String? = null
 )
 
 @HiltViewModel
@@ -47,44 +51,145 @@ class CollectionManagementViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CollectionManagementUiState())
     val uiState: StateFlow<CollectionManagementUiState> = _uiState.asStateFlow()
 
+    private var collectionMoveBaseline: List<Collection>? = null
+    private var collectionDraftOrder: List<String>? = null
+    private var pendingCollectionOrder: List<String>? = null
+    private var collectionPersistGeneration: Int = 0
+
     init {
         viewModelScope.launch {
             collectionsDataStore.collections.collectLatest { collections ->
+                val resolved = resolveObservedCollections(collections)
                 _uiState.update {
-                    it.copy(collections = collections, isLoading = false)
+                    it.copy(collections = resolved, isLoading = false)
                 }
             }
         }
     }
 
     fun deleteCollection(collectionId: String) {
+        pendingCollectionOrder = null
         viewModelScope.launch {
             collectionsDataStore.removeCollection(collectionId)
             collectionSyncService.triggerPush()
         }
     }
 
-    fun moveUp(index: Int) {
-        if (index <= 0) return
+    fun enterCollectionMoveMode(collectionId: String) {
+        val current = _uiState.value.collections
+        if (current.size <= 1 || current.none { it.id == collectionId }) return
+        pendingCollectionOrder = null
+        collectionMoveBaseline = current
+        collectionDraftOrder = current.map { it.id }
+        _uiState.update { it.copy(movingCollectionKey = collectionId) }
+    }
+
+    fun moveCollectionDuringDrag(collectionId: String, direction: Int): Int? {
+        val draft = collectionDraftOrder ?: return null
+        val fromIndex = draft.indexOf(collectionId)
+        val toIndex = fromIndex + direction
+        if (fromIndex < 0 || toIndex !in draft.indices) return null
+        val reordered = draft.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+        collectionDraftOrder = reordered
+        applyCollectionDraftOrder()
+        return toIndex
+    }
+
+    fun confirmCollectionMove() {
+        val draft = collectionDraftOrder
+        val baseline = collectionMoveBaseline
+        val baselineIds = baseline?.map { it.id }
+        collectionDraftOrder = null
+        collectionMoveBaseline = null
+        _uiState.update { it.copy(movingCollectionKey = null) }
+        if (draft == null || draft == baselineIds) return
+
+        val ordered = orderCollectionsByIds(_uiState.value.collections, draft)
+        val orderedIds = ordered.map { it.id }
+        val generation = ++collectionPersistGeneration
+        pendingCollectionOrder = orderedIds
         viewModelScope.launch {
-            val current = _uiState.value.collections.toMutableList()
-            val item = current.removeAt(index)
-            current.add(index - 1, item)
-            collectionsDataStore.setCollections(current)
-            collectionSyncService.triggerPush()
+            var wrote = false
+            try {
+                withContext(NonCancellable) {
+                    collectionsDataStore.setCollections(ordered)
+                    wrote = true
+                    collectionSyncService.triggerPush()
+                }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (_: Throwable) {
+                wrote = false
+            }
+            if (!wrote && generation == collectionPersistGeneration) {
+                if (pendingCollectionOrder == orderedIds) {
+                    pendingCollectionOrder = null
+                }
+                if (baseline != null && _uiState.value.movingCollectionKey == null) {
+                    _uiState.update { it.copy(collections = baseline) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            delay(2_500L)
+            if (generation == collectionPersistGeneration && pendingCollectionOrder == orderedIds) {
+                pendingCollectionOrder = null
+            }
         }
     }
 
-    fun moveDown(index: Int) {
-        val current = _uiState.value.collections
-        if (index >= current.size - 1) return
-        viewModelScope.launch {
-            val mutableList = current.toMutableList()
-            val item = mutableList.removeAt(index)
-            mutableList.add(index + 1, item)
-            collectionsDataStore.setCollections(mutableList)
-            collectionSyncService.triggerPush()
+    fun cancelCollectionMove() {
+        val baseline = collectionMoveBaseline
+        collectionDraftOrder = null
+        collectionMoveBaseline = null
+        pendingCollectionOrder = null
+        _uiState.update {
+            it.copy(
+                movingCollectionKey = null,
+                collections = baseline ?: it.collections
+            )
         }
+    }
+
+    private fun applyCollectionDraftOrder() {
+        val draft = collectionDraftOrder ?: return
+        _uiState.update { state ->
+            state.copy(collections = orderCollectionsByIds(state.collections, draft))
+        }
+    }
+
+    private fun resolveObservedCollections(collections: List<Collection>): List<Collection> {
+        val draft = collectionDraftOrder
+        if (draft != null) return orderCollectionsByIds(collections, draft)
+        val pending = pendingCollectionOrder
+        if (pending != null) {
+            val emittedIds = collections.map { it.id }
+            if (emittedIds == pending || emittedIds.toSet() != pending.toSet()) {
+                pendingCollectionOrder = null
+                return collections
+            }
+            return orderCollectionsByIds(collections, pending)
+        }
+        return collections
+    }
+
+    private fun orderCollectionsByIds(
+        collections: List<Collection>,
+        orderIds: List<String>
+    ): List<Collection> {
+        val byId = collections.associateBy { it.id }
+        val seen = LinkedHashSet<String>()
+        val ordered = ArrayList<Collection>(collections.size)
+        for (id in orderIds) {
+            val collection = byId[id] ?: continue
+            if (seen.add(id)) ordered.add(collection)
+        }
+        for (collection in collections) {
+            if (seen.add(collection.id)) ordered.add(collection)
+        }
+        return ordered
     }
 
     fun exportCollections(): String {
@@ -195,22 +300,24 @@ class CollectionManagementViewModel @Inject constructor(
                     .socketFactory(com.nuvio.tv.core.network.NoDelaySocketFactory)
                     .build()
                 val request = okhttp3.Request.Builder().url(url).build()
-                val response = withContext(Dispatchers.IO) {
-                    client.newCall(request).execute()
+                // Read the body on IO too: execute() only returns the headers.
+                val (code, body) = withContext(Dispatchers.IO) {
+                    client.newCall(request).execute().use { response ->
+                        response.code to if (response.isSuccessful) response.body?.string().orEmpty() else null
+                    }
                 }
-                if (!response.isSuccessful) {
+                if (body == null) {
                     _uiState.update {
                         it.copy(
                             isLoadingImport = false,
                             importError = context.getString(
                                 R.string.collections_import_failed_fetch_http,
-                                response.code
+                                code
                             )
                         )
                     }
                     return@launch
                 }
-                val body = response.body?.string() ?: ""
                 _uiState.update { it.copy(importText = body, isLoadingImport = false) }
                 validateJson(body)
             } catch (e: Exception) {

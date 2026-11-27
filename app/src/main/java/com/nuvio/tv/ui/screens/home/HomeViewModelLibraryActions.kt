@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -317,7 +318,7 @@ private fun HomeViewModel.closePosterListPickerAfterSave(changes: ListMembership
 }
 
 fun HomeViewModel.togglePosterMovieWatched(item: MetaPreview) {
-    if (!item.apiType.equals("movie", ignoreCase = true)) return
+    if (isSeriesLikeType(item.apiType)) return
     val statusKey = homeItemStatusKey(item.id, item.apiType)
     if (statusKey in _uiState.value.movieWatchedPending) return
 

@@ -1,12 +1,16 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
+import com.nuvio.tv.core.streams.CompiledStreamBadgeFilter
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.LibassRenderMode
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -17,6 +21,7 @@ import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.SourceChipItem
+import java.util.Locale
 
 enum class PlayerExitReason {
     StillWatchingPrompt
@@ -72,6 +77,7 @@ data class PlayerUiState(
     val currentStreamInfoHash: String? = null, // InfoHash of the currently playing stream (for debrid matching)
     val currentStreamFileIdx: Int? = null, // FileIdx of the currently playing stream (for debrid matching)
     val currentStreamAddonName: String? = null, // Addon name of the currently playing stream
+    val currentStreamDescription: String? = null, // Description of the currently playing stream
     val backdrop: String? = null,
     val logo: String? = null,
     val description: String? = null,
@@ -101,12 +107,21 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
+    /** The file's chapters, sorted; empty when it has fewer than two or chapters are turned off. */
+    val chapters: List<PlayerChapter> = emptyList(),
+    /** The "Show chapters" setting, for both engines. */
+    val chaptersEnabled: Boolean = false,
+    /** Whether the current chapter's title is shown above the progress bar. */
+    val showChapterTitle: Boolean = true,
+    val showChaptersPanel: Boolean = false,
     val audioDelayMs: Int = 0,
     val audioAmplificationDb: Int = 0,
     val isAudioAmplificationAvailable: Boolean = false,
     val persistAudioAmplification: Boolean = false,
     val centerMixLevelDb: Int = 0,
     val isCenterMixAvailable: Boolean = false,
+    val nightMode: NightMode = NightMode.OFF,
+    val isNightModeAvailable: Boolean = false,
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
@@ -120,9 +135,16 @@ data class PlayerUiState(
     val subtitleAutoSyncLoading: Boolean = false,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
     val showSpeedDialog: Boolean = false,
+    val showDiscTitlesDialog: Boolean = false,
+    /** A Blu-ray's titles, when the stream is one clip of a disc with more than one. */
+    val discTitles: List<DiscTitle> = emptyList(),
+    val currentDiscTitle: String? = null,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
+    val assSubtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(size = SubtitleStyleSettings.ASS_SIZE_DEFAULT),
+    // Current video is HDR10/HDR10+/HLG/Dolby Vision; selects the HDR subtitle style when enabled
+    val isHdrVideo: Boolean = false,
     // Addon subtitles
     val addonSubtitles: List<Subtitle> = emptyList(),
     val isLoadingAddonSubtitles: Boolean = false,
@@ -147,6 +169,7 @@ data class PlayerUiState(
     val watchedEpisodeKeys: Set<Pair<Int, Int>> = emptySet(),
     val showEpisodeStreams: Boolean = false,
     val isLoadingEpisodeStreams: Boolean = false,
+    val isEpisodeAutoPlaySearching: Boolean = false,
     val episodeStreamsError: String? = null,
     val episodeAllStreams: List<Stream> = emptyList(),
     val episodeSelectedAddonFilter: String? = null, // null means "All"
@@ -172,6 +195,7 @@ data class PlayerUiState(
     val showFileSizeBadges: Boolean = true,
     val showAddonLogo: Boolean = true,
     val streamBadgePlacement: StreamBadgePlacement = StreamBadgePlacement.BOTTOM,
+    val playerBadgeFilters: List<CompiledStreamBadgeFilter> = emptyList(),
     val error: String? = null,
     val showSwitchToMpvErrorAction: Boolean = false,
     val playbackIssueReportStatus: PlaybackIssueReportStatus = PlaybackIssueReportStatus.Idle,
@@ -208,6 +232,7 @@ data class PlayerUiState(
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val useLibass: Boolean = false,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
+    val libassRenderMode: LibassRenderMode = LibassRenderMode.DEFAULT,
     val displayModeInfo: DisplayModeInfo? = null,
     val showDisplayModeInfo: Boolean = false,
     // Aspect ratio / resize mode
@@ -236,13 +261,55 @@ data class PlayerUiState(
     // from loading overlay, rebuffering indicator, and corner overlay.
     val hideTorrentStats: Boolean = true,
     val isLive: Boolean = false
-)
+) {
+    /** Subtitle style to render with, after applying the HDR override for the current video. */
+    val effectiveSubtitleStyle: SubtitleStyleSettings
+        get() = subtitleStyle.forVideo(isHdrVideo)
+
+    /** In-player style edits to the text color go to the HDR override while this is true. */
+    val isEditingHdrSubtitleStyle: Boolean
+        get() = isHdrVideo && subtitleStyle.hdrStyleEnabled
+
+    val effectiveAssSubtitleStyle: SubtitleStyleSettings
+        get() = assSubtitleStyle.forVideo(isHdrVideo)
+
+    val isAssSubtitleSelected: Boolean
+        get() {
+            selectedAddonSubtitle?.let { return PlayerSubtitleUtils.mimeTypeFromUrl(it.url) == MimeTypes.TEXT_SSA }
+            val codec = subtitleTracks.getOrNull(selectedSubtitleTrackIndex)?.codec?.lowercase(Locale.US) ?: return false
+            return codec.contains("ass") || codec.contains("ssa")
+        }
+
+    val isAssSubtitleStyleActive: Boolean
+        get() = isAssSubtitleSelected && (internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER || useLibass)
+
+    val editableSubtitleStyle: SubtitleStyleSettings
+        get() = (if (isAssSubtitleStyleActive) assSubtitleStyle else subtitleStyle).editableForVideo(isHdrVideo)
+
+    /** Brightness factor for the player controls and menus drawn over the video (1 = undimmed). */
+    val playerControlsBrightness: Float
+        get() = subtitleStyle.playerControlsBrightness(isHdrVideo)
+}
 
 internal fun PlayerUiState.clearFrameRateDetection(): PlayerUiState = copy(
     detectedFrameRateRaw = 0f,
     detectedFrameRate = 0f,
     detectedFrameRateSource = null
 )
+
+internal val PlayerUiState.showEpisodeAutoPlayLoadingOverlay: Boolean
+    get() = isEpisodeAutoPlaySearching && loadingOverlayEnabled
+
+internal fun PlayerUiState.finishEpisodeAutoPlaySearch(showStreamPicker: Boolean = false): PlayerUiState =
+    copy(
+        isEpisodeAutoPlaySearching = false,
+        showEpisodeStreams = showEpisodeStreams || (isEpisodeAutoPlaySearching && showStreamPicker),
+        isLoadingEpisodeStreams = if (isEpisodeAutoPlaySearching && showStreamPicker) {
+            false
+        } else {
+            isLoadingEpisodeStreams
+        }
+    )
 
 data class PlaybackTimelineState(
     val currentPosition: Long = 0L,
@@ -295,11 +362,16 @@ sealed class PlayerEvent {
     data class OnPreviewSeekBy(val deltaMs: Long) : PlayerEvent()
     data object OnCommitPreviewSeek : PlayerEvent()
     data class OnSeekTo(val position: Long) : PlayerEvent()
+    data class OnSkipChapter(val forward: Boolean) : PlayerEvent()
+    data object OnShowChaptersPanel : PlayerEvent()
+    data object OnDismissChaptersPanel : PlayerEvent()
+    data class OnSelectChapter(val index: Int) : PlayerEvent()
     data class OnSelectAudioTrack(val index: Int) : PlayerEvent()
     data class OnSetAudioDelayMs(val delayMs: Int) : PlayerEvent()
     data class OnSetAudioAmplificationDb(val db: Int) : PlayerEvent()
     data class OnSetPersistAudioAmplification(val enabled: Boolean) : PlayerEvent()
     data class OnSetCenterMixLevelDb(val db: Int) : PlayerEvent()
+    data class OnSetNightMode(val mode: NightMode) : PlayerEvent()
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
@@ -319,13 +391,15 @@ sealed class PlayerEvent {
     data class OnAdjustSubtitleDelay(val deltaMs: Int, val showOverlay: Boolean = true) : PlayerEvent()
     data class OnResetSubtitleDelay(val showOverlay: Boolean = true) : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
+    data object OnShowDiscTitles : PlayerEvent()
+    data class OnSelectDiscTitle(val name: String) : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
     data object OnShowEpisodesPanel : PlayerEvent()
     data object OnDismissEpisodesPanel : PlayerEvent()
     data object OnBackFromEpisodeStreams : PlayerEvent()
     data class OnEpisodeSeasonSelected(val season: Int) : PlayerEvent()
-    data class OnEpisodeSelected(val video: Video) : PlayerEvent()
+    data class OnEpisodeSelected(val video: Video, val manualSelection: Boolean = false) : PlayerEvent()
     data object OnReloadEpisodeStreams : PlayerEvent()
     data class OnEpisodeAddonFilterSelected(val addonName: String?) : PlayerEvent()
     data class OnEpisodeStreamSelected(val stream: Stream) : PlayerEvent()
@@ -352,11 +426,19 @@ sealed class PlayerEvent {
 
     // Subtitle style events (for in-player style tab)
     data class OnSetSubtitleSize(val size: Int) : PlayerEvent()
+    data class OnSetSubtitleHdrBrightness(val brightness: Int) : PlayerEvent()
     data class OnSetSubtitleTextColor(val color: Int) : PlayerEvent()
     data class OnSetSubtitleBold(val bold: Boolean) : PlayerEvent()
     data class OnSetSubtitleOutlineEnabled(val enabled: Boolean) : PlayerEvent()
     data class OnSetSubtitleOutlineColor(val color: Int) : PlayerEvent()
     data class OnSetSubtitleVerticalOffset(val offset: Int) : PlayerEvent()
+    data class OnSetSubtitleFont(val fontId: String) : PlayerEvent()
+    data class OnSetSubtitleBackgroundColor(val color: Int) : PlayerEvent()
+    data class OnSetSubtitleBackgroundRadius(val radius: Int) : PlayerEvent()
+    data class OnSetSubtitleShadowEnabled(val enabled: Boolean) : PlayerEvent()
+    data class OnSetSubtitleShadowOpacity(val opacity: Int) : PlayerEvent()
+    data class OnSetSubtitleShadowSize(val size: Int) : PlayerEvent()
+    data class OnSetSubtitleCustomizeAss(val enabled: Boolean) : PlayerEvent()
     data object OnResetSubtitleDefaults : PlayerEvent()
     data object OnToggleAspectRatio : PlayerEvent()
     data object OnSwitchInternalPlayerEngine : PlayerEvent()
@@ -414,4 +496,14 @@ data class StreamInfoData(
     val subtitleSource: String? = null,
     val playerEngine: String? = null,
     val serverPlayback: String? = null
+)
+
+/** A title of a Blu-ray disc: one of its playlists. */
+data class DiscTitle(
+    val name: String,
+    val durationMs: Long,
+    val clipCount: Int,
+    val isFeature: Boolean,
+    val audioLanguages: List<String> = emptyList(),
+    val subtitleLanguages: List<String> = emptyList()
 )

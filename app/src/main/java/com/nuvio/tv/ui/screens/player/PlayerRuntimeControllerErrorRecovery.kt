@@ -7,6 +7,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.usenetFailureExplanation
+import com.nuvio.tv.core.player.usenetFailureKind
+import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -65,7 +68,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
         delay(RETRY_DELAY_MS)
 
         releasePlayer(flushPlaybackState = false)
-        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+        reinitializeCurrentStream(startPaused = paused)
     }
     return true
 }
@@ -89,10 +92,9 @@ internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
         PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE, -> true
 
         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
-            val httpCause = error.findCauseOfType<HttpDataSource.InvalidResponseCodeException>()
+            val httpCause = error.findCause<HttpDataSource.InvalidResponseCodeException>()
             if (httpCause != null) {
-                val code = httpCause.responseCode
-                !(code == 400 || code == 401 || code == 403 || code == 404 || code == 410)
+                !isPermanentHttpStatus(httpCause.responseCode)
             } else {
                 true
             }
@@ -117,6 +119,10 @@ internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
         else -> false
     }
 }
+
+/** HTTP statuses a retry of the same request gets again, so retrying only delays the error. */
+internal fun isPermanentHttpStatus(code: Int): Boolean =
+    code == 400 || code == 401 || code == 403 || code == 404 || code == 410
 
 /**
  * Audio-track failures that the safe-audio → audio-disabled fallback ladder can recover from.
@@ -168,7 +174,9 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     if (responseException != null) {
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
-        val providerHint = httpStatusExplanation(context, code)
+        // A stream the Usenet engine gave up on says why instead of reading as an expired link.
+        val providerHint = usenetFailureExplanation(usenetFailureKind(responseException.headerFields))
+            ?.let(context::getString) ?: httpStatusExplanation(context, code)
         return buildString {
             append("HTTP $code")
             statusText?.let { append(" $it") }
@@ -178,12 +186,12 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     }
 
     // Check for unrecognized format (provider returned non-video content)
-    val isUnrecognizedFormat = findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null
+    val isUnrecognizedFormat = findCause<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null
     if (isUnrecognizedFormat) {
         return context.getString(com.nuvio.tv.R.string.player_error_source_invalid_content, errorCodeName)
     }
 
-    val decoderInit = findCauseOfType<MediaCodecRenderer.DecoderInitializationException>()
+    val decoderInit = findCause<MediaCodecRenderer.DecoderInitializationException>()
     if (decoderInit != null) {
         val decoderMessage = decoderInit.message?.trim()?.takeIf { it.isNotBlank() }
             ?: decoderInit.diagnosticInfo?.trim()?.takeIf { it.isNotBlank() }
@@ -200,15 +208,6 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     } else {
         errorCodeName
     }
-}
-
-private inline fun <reified T : Throwable> Throwable.findCauseOfType(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
 }
 
 internal fun Throwable.toDisplayMessage(context: android.content.Context, fallback: String? = null): String {
@@ -299,7 +298,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
                 if (savedPosition > 0L) {
                     _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
                 }
-                initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+                reinitializeCurrentStream(startPaused = paused)
             }
         } else {
             // Full teardown — clears any corrupt decoder/internal state.
@@ -307,7 +306,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
             if (savedPosition > 0L) {
                 _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
             }
-            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+            reinitializeCurrentStream(startPaused = paused)
         }
     }
     return true
@@ -332,6 +331,8 @@ internal fun PlayerRuntimeController.scheduleStableProgressReset() {
         delay(STABLE_PROGRESS_RESET_DELAY_MS)
         val player = _exoPlayer ?: return@launch
         if (player.playbackState == Player.STATE_READY && player.isPlaying) {
+            // Seconds of steady playback confirm a tunneled stream really decodes.
+            tunneledFirstFrameAssumed = false
             resetErrorRetryState()
         }
     }
@@ -393,7 +394,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
         if (savedPosition > 0L) {
             _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
         }
-        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+        reinitializeCurrentStream(startPaused = paused)
     }
 
     return true
@@ -471,7 +472,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
         if (savedPosition > 0L) {
             _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
         }
-        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+        reinitializeCurrentStream(startPaused = paused)
     }
     return true
 }
@@ -494,7 +495,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
         error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
-        error.findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null ||
+        error.findCause<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null ||
         error.cause?.toString()?.contains("UnrecognizedInputFormatException") == true
 
     if (!isSourceOrParsingError) return false
@@ -511,6 +512,26 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
         showRecoveryOverlay()
+        // A Blu-ray clip under another name, or a web listing of a disc folder. Probed only now,
+        // so streams that play never pay for it.
+        if (currentStreamBluray == null && !BlurayPlaylistResolver.isLikelyBdavM2tsUrl(currentStreamUrl)) {
+            val bluray = PlayerMediaSourceFactory.probeBlurayLayout(url = currentStreamUrl, headers = currentHeaders)
+            if (bluray != null) {
+                Log.i(PlayerRuntimeController.TAG, "Stream probe found Blu-ray ${bluray::class.simpleName}. Retrying playback...")
+                currentStreamBluray = bluray
+                releasePlayer(flushPlaybackState = false)
+                if (savedPosition > 0L) {
+                    _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+                }
+                initializePlayer(
+                    currentStreamUrl,
+                    currentHeaders,
+                    overrideInternalPlayerEngine = runtimeInternalPlayerEngineOverride,
+                    startPaused = paused
+                )
+                return@launch
+            }
+        }
         val probedMime = PlayerMediaSourceFactory.probeNetworkMimeType(
             url = currentStreamUrl,
             headers = currentHeaders
@@ -527,7 +548,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
             if (savedPosition > 0L) {
                 _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
             }
-            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+            reinitializeCurrentStream(startPaused = paused)
         } else if (previousMimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8) {
             currentStreamMimeType = null
             currentStreamResponseHeaders = emptyMap()
@@ -535,8 +556,14 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
             if (savedPosition > 0L) {
                 _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
             }
-            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+            reinitializeCurrentStream(startPaused = paused)
         } else {
+            if (tryRefreshExpiredLinkAfterError(detailedError)) {
+                return@launch
+            }
+            if (tryFallbackToNextSourceAfterError(detailedError)) {
+                return@launch
+            }
             if (maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
                 return@launch
             }
@@ -547,6 +574,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 return@launch
             }
             val userFacingError = error.toDisplayMessage(context)
+            if (tryNextStream(userFacingError)) return@launch
             _uiState.update {
                 it.copy(
                     error = userFacingError,

@@ -1,5 +1,9 @@
 package com.nuvio.tv.data.mdblist
 
+import com.nuvio.tv.core.util.daysInMonth
+import com.nuvio.tv.core.util.daysSinceEpoch
+import com.nuvio.tv.core.util.decimalAt
+import com.nuvio.tv.core.util.fractionMillisAt
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -46,17 +50,78 @@ private val mdbListLocalTimestamp = DateTimeFormatterBuilder()
     .optionalEnd()
     .toFormatter()
 
-internal fun mdbListTimestamp(value: String): Long = runCatching { Instant.parse(value).toEpochMilli() }
+internal fun mdbListTimestamp(value: String): Long =
+    parseMdbListTimestampFast(value) ?: parseMdbListTimestampSlow(value)
+
+private fun parseMdbListTimestampSlow(value: String): Long = runCatching { Instant.parse(value).toEpochMilli() }
     .recoverCatching { OffsetDateTime.parse(value).toInstant().toEpochMilli() }
     .recoverCatching { LocalDateTime.parse(value, mdbListLocalTimestamp).toInstant(ZoneOffset.UTC).toEpochMilli() }
     .getOrElse { throw MdbListDecodingException() }
 
+private fun parseMdbListTimestampFast(text: String): Long? {
+    val length = text.length
+    if (length < MDBLIST_TIMESTAMP_MIN_LENGTH) return null
+    if (text[4] != '-' || text[7] != '-' || text[13] != ':' || text[16] != ':') return null
+    val separator = text[10]
+    if (separator != ' ' && separator != 'T' && separator != 't') return null
+    val year = decimalAt(text, 0, 4)
+    val month = decimalAt(text, 5, 2)
+    val day = decimalAt(text, 8, 2)
+    val hour = decimalAt(text, 11, 2)
+    val minute = decimalAt(text, 14, 2)
+    val second = decimalAt(text, 17, 2)
+    if (year < 1 || month !in 1..12 || day < 1) return null
+    if (hour !in 0..23 || minute !in 0..59 || second !in 0..59) return null
+    if (day > daysInMonth(year, month)) return null
+    var index = MDBLIST_TIMESTAMP_MIN_LENGTH
+    var millis = 0
+    if (index < length && text[index] == '.') {
+        val fractionStart = index + 1
+        var fractionEnd = fractionStart
+        while (fractionEnd < length && text[fractionEnd] in '0'..'9') fractionEnd++
+        if (fractionEnd - fractionStart !in 1..9) return null
+        millis = fractionMillisAt(text, fractionStart, fractionEnd)
+        if (millis < 0) return null
+        index = fractionEnd
+    }
+    val offsetSeconds = when {
+        index == length -> if (separator == ' ') 0L else return null
+        separator == ' ' -> return null
+        text[index] == 'Z' || text[index] == 'z' -> {
+            if (index != length - 1) return null
+            0L
+        }
+        text[index] == '+' || text[index] == '-' -> {
+            if (length - index != 6 || text[index + 3] != ':') return null
+            val zoneHour = decimalAt(text, index + 1, 2)
+            val zoneMinute = decimalAt(text, index + 4, 2)
+            if (zoneHour < 0 || zoneMinute < 0 || zoneMinute > 59) return null
+            if (zoneHour > 18 || (zoneHour == 18 && zoneMinute != 0)) return null
+            val magnitude = zoneHour * 3_600L + zoneMinute * 60L
+            if (text[index] == '-') -magnitude else magnitude
+        }
+        else -> return null
+    }
+    val localSeconds = daysSinceEpoch(year, month, day) * 86_400L + hour * 3_600L + minute * 60L + second
+    return (localSeconds - offsetSeconds) * 1_000L + millis
+}
+
+private const val MDBLIST_TIMESTAMP_MIN_LENGTH = 19
+
 internal fun JsonObject.timestamp(vararg names: String): String? = text(*names)?.also(::mdbListTimestamp)
+
+internal fun String.isMdbListImdbId(): Boolean {
+    if (length < 3 || this[0] != 't' || this[1] != 't') return false
+    for (index in 2 until length) {
+        if (this[index] !in '0'..'9') return false
+    }
+    return true
+}
 
 internal fun decodeMdbListIds(value: JsonObject): MdbListIds {
     val ids = value.objectValue("ids") ?: value
     return MdbListIds(
-        imdb = ids.text("imdb", "imdbid")?.takeIf { it.matches(Regex("tt[0-9]+")) },
+        imdb = ids.text("imdb", "imdbid")?.takeIf(String::isMdbListImdbId),
         tmdb = ids.number("tmdb", "tmdbid")?.takeIf { it > 0L },
         tvdb = ids.number("tvdb", "tvdbid")?.takeIf { it > 0L },
         trakt = ids.number("trakt", "traktid")?.takeIf { it > 0L },

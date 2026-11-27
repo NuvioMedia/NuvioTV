@@ -31,6 +31,7 @@ import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.screens.home.GridItem
@@ -68,12 +69,15 @@ data class FolderDetailUiState(
     val homeLayout: HomeLayout = HomeLayout.MODERN,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val posterLabelsEnabled: Boolean = true,
+    val modernPosterLabelsEnabled: Boolean = false,
     val catalogAddonNameEnabled: Boolean = true,
     val catalogTypeSuffixEnabled: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val modernLandscapePostersEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
+    val alwaysShowLandscapeClearlogo: Boolean = false,
+    val heroDescriptionAutoScrollEnabled: Boolean = false,
     val focusedPosterBackdropExpandEnabled: Boolean = false,
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
@@ -130,6 +134,8 @@ class FolderDetailViewModel @Inject constructor(
     private val trailerService: TrailerService,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
     private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
+    private val trailerPlayerPool: com.nuvio.tv.core.player.TrailerPlayerPool,
+    private val backgroundTrailerController: com.nuvio.tv.core.player.BackgroundTrailerController,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 ) : ViewModel() {
 
@@ -153,6 +159,8 @@ class FolderDetailViewModel @Inject constructor(
     val trailerPreviewAudioUrls: StateFlow<Map<String, String>> = _trailerPreviewAudioUrls.asStateFlow()
     private val trailerPreviewLoadingIds = mutableSetOf<String>()
     private val trailerPreviewNegativeCache = mutableSetOf<String>()
+    private val trailerPreviewYoutubeKeys = mutableMapOf<String, String>()
+    private var continueTrailerInDetails = false
     private val modernCarouselRowBuildCache = ModernCarouselRowBuildCache()
     private var activeTrailerPreviewItemId: String? = null
     private var trailerPreviewRequestVersion: Long = 0L
@@ -193,6 +201,11 @@ class FolderDetailViewModel @Inject constructor(
         viewModelScope.launch {
             mdbListSettingsDataStore.settings.distinctUntilChanged().collect { currentMdbListSettings = it }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.focusedPosterTrailerContinueInDetails.collect { enabled ->
+                continueTrailerInDetails = enabled
+            }
+        }
     }
 
     private fun observeWatchedStatusCombined() {
@@ -209,9 +222,8 @@ class FolderDetailViewModel @Inject constructor(
                 allItems.forEach { item ->
                     val key = com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
                     val isWatched = when (item.apiType) {
-                        "movie" -> item.id in movieWatchedIds
                         "series", "tv" -> item.id in seriesWatchedIds
-                        else -> false
+                        else -> !isSeriesLikeType(item.apiType) && item.id in movieWatchedIds
                     }
                     newStatus[key] = isWatched
                 }
@@ -252,12 +264,15 @@ class FolderDetailViewModel @Inject constructor(
             val homeLayout = layoutPreferenceDataStore.selectedLayout.first()
             val homeImdbRatingsVisibility = layoutPreferenceDataStore.homeImdbRatingsVisibility.first()
             val posterLabelsEnabled = layoutPreferenceDataStore.posterLabelsEnabled.first()
+            val modernPosterLabelsEnabled = layoutPreferenceDataStore.modernPosterLabelsEnabled.first()
             val catalogAddonNameEnabled = layoutPreferenceDataStore.catalogAddonNameEnabled.first()
             val catalogTypeSuffixEnabled = layoutPreferenceDataStore.catalogTypeSuffixEnabled.first()
             val hideUnreleasedContent = layoutPreferenceDataStore.hideUnreleasedContent.first()
             val showFullReleaseDate = layoutPreferenceDataStore.showFullReleaseDate.first()
             val modernLandscapePosters = layoutPreferenceDataStore.modernLandscapePostersEnabled.first()
             val modernFullScreenBackdrop = layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled.first()
+            val alwaysShowLandscapeClearlogo = layoutPreferenceDataStore.alwaysShowLandscapeClearlogo.first()
+            val heroDescriptionAutoScrollEnabled = layoutPreferenceDataStore.heroDescriptionAutoScrollEnabled.first()
             val focusedPosterBackdropExpandEnabled = layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled.first()
             val focusedPosterBackdropExpandDelaySeconds = layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.first()
             val focusedPosterBackdropTrailerEnabled = layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled.first()
@@ -351,12 +366,15 @@ class FolderDetailViewModel @Inject constructor(
                     homeLayout = homeLayout,
                     homeImdbRatingsVisibility = homeImdbRatingsVisibility,
                     posterLabelsEnabled = posterLabelsEnabled,
+                    modernPosterLabelsEnabled = modernPosterLabelsEnabled,
                     catalogAddonNameEnabled = catalogAddonNameEnabled,
                     catalogTypeSuffixEnabled = catalogTypeSuffixEnabled,
                     hideUnreleasedContent = hideUnreleasedContent,
                     showFullReleaseDate = showFullReleaseDate,
                     modernLandscapePostersEnabled = modernLandscapePosters,
                     modernHeroFullScreenBackdropEnabled = modernFullScreenBackdrop,
+                    alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
+                    heroDescriptionAutoScrollEnabled = heroDescriptionAutoScrollEnabled,
                     focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
                     focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
                     focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled &&
@@ -566,9 +584,11 @@ class FolderDetailViewModel @Inject constructor(
                         isLoading = anyLoading,
                         homeLayout = s.homeLayout,
                         homeImdbRatingsVisibility = s.homeImdbRatingsVisibility,
-                        posterLabelsEnabled = if (s.homeLayout == HomeLayout.MODERN) false else s.posterLabelsEnabled,
+                        posterLabelsEnabled = if (s.homeLayout == HomeLayout.MODERN) s.modernPosterLabelsEnabled else s.posterLabelsEnabled,
                         modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
                         modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
+                        alwaysShowLandscapeClearlogo = s.alwaysShowLandscapeClearlogo,
+                        heroDescriptionAutoScrollEnabled = s.heroDescriptionAutoScrollEnabled,
                         catalogAddonNameEnabled = s.catalogAddonNameEnabled,
                         catalogTypeSuffixEnabled = s.catalogTypeSuffixEnabled,
                         focusedPosterBackdropExpandEnabled = s.focusedPosterBackdropExpandEnabled,
@@ -605,6 +625,8 @@ class FolderDetailViewModel @Inject constructor(
                     posterLabelsEnabled = s.posterLabelsEnabled,
                     modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
                     modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
+                    alwaysShowLandscapeClearlogo = s.alwaysShowLandscapeClearlogo,
+                    heroDescriptionAutoScrollEnabled = s.heroDescriptionAutoScrollEnabled,
                     catalogAddonNameEnabled = s.catalogAddonNameEnabled,
                     catalogTypeSuffixEnabled = s.catalogTypeSuffixEnabled,
                     focusedPosterBackdropExpandEnabled = s.focusedPosterBackdropExpandEnabled,
@@ -1492,8 +1514,11 @@ class FolderDetailViewModel @Inject constructor(
                     }
                     _trailerPreviewUrls.update { it - itemId }
                     _trailerPreviewAudioUrls.update { it - itemId }
+                    trailerPreviewYoutubeKeys.remove(itemId)
                 } else {
                     _trailerPreviewUrls.update { it + (itemId to resolvedSource.videoUrl) }
+                    resolvedSource.youtubeKey?.let { trailerPreviewYoutubeKeys[itemId] = it }
+                        ?: trailerPreviewYoutubeKeys.remove(itemId)
                     val audioUrl = resolvedSource.audioUrl
                     if (audioUrl.isNullOrBlank()) {
                         _trailerPreviewAudioUrls.update { it - itemId }
@@ -1505,6 +1530,20 @@ class FolderDetailViewModel @Inject constructor(
                 trailerPreviewLoadingIds.remove(itemId)
             }
         }
+    }
+
+    fun beginTrailerHandoff(itemId: String) {
+        if (!continueTrailerInDetails) return
+        val videoUrl = _trailerPreviewUrls.value[itemId] ?: return
+        val audioUrl = _trailerPreviewAudioUrls.value[itemId]
+        val youtubeKey = trailerPreviewYoutubeKeys[itemId]
+        if (backgroundTrailerController.beginTransfer(itemId, videoUrl, audioUrl, youtubeKey)) return
+        trailerPlayerPool.beginHandoff(
+            itemId = itemId,
+            videoUrl = videoUrl,
+            audioUrl = audioUrl,
+            youtubeKey = youtubeKey
+        )
     }
 
     private fun extractYear(releaseInfo: String?): String? {

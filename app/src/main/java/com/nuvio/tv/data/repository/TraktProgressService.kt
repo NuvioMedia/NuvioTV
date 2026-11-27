@@ -28,6 +28,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedMovieItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedShowItemDto
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
@@ -163,7 +165,6 @@ class TraktProgressService @Inject constructor(
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler)
     private val refreshSignals = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val episodeVideoIdCache = mutableMapOf<String, String>()
     private val remoteProgress = MutableStateFlow<List<WatchProgress>>(emptyList())
     private val optimisticProgress = MutableStateFlow<Map<String, OptimisticProgressEntry>>(emptyMap())
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
@@ -288,6 +289,10 @@ class TraktProgressService @Inject constructor(
         }
         scope.launch {
             refreshEvents().collectLatest {
+                if (!traktAuthService.getCurrentAuthState().isAuthenticated) {
+                    trace("refresh skipped: not signed in to Trakt")
+                    return@collectLatest
+                }
                 val success = try {
                     refreshRemoteSnapshot()
                     true
@@ -340,7 +345,6 @@ class TraktProgressService @Inject constructor(
         refreshGeneration.incrementAndGet()
 
         cacheMutex.withLock {
-            episodeVideoIdCache.clear()
             cachedMoviesPlayback = null
             cachedEpisodesPlayback = null
             cachedUserStats = null
@@ -677,6 +681,9 @@ class TraktProgressService @Inject constructor(
             }
             .distinctUntilChanged()
     }
+
+    /** Watched movie keys as Trakt returned or accepted them, without optimistic progress. */
+    fun observeReportedWatchedMovieIds(): Flow<Set<String>> = watchedMoviesState.asStateFlow()
 
     suspend fun markAsWatched(
         progress: WatchProgress,
@@ -1101,15 +1108,17 @@ class TraktProgressService @Inject constructor(
 
             val snapshot = try {
                 progressDeferred.await()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "fetchAllProgressSnapshot failed, keeping existing snapshot", e)
                 null
             }
             watchedMoviesDeferred?.let {
-                try { it.await() } catch (_: Exception) { }
+                try { it.await() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
             }
             seedsDeferred?.let {
-                try { it.await() } catch (_: Exception) { }
+                try { it.await() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
             }
 
             if (snapshot == null) {
@@ -2381,31 +2390,11 @@ class TraktProgressService @Inject constructor(
         }
     }
 
-    private suspend fun resolveEpisodeVideoId(
+    private fun resolveEpisodeVideoId(
         contentId: String,
         season: Int,
         episode: Int
-    ): String {
-        val key = "$contentId:$season:$episode"
-        episodeVideoIdCache[key]?.let { return it }
-
-        // Check if metadata is already cached (from a previous hydrateMetadata cycle).
-        // If so, resolve videoId from it without a network call.
-        val existingMeta = metadataState.value[contentId]
-        if (existingMeta != null) {
-            val episodeMeta = existingMeta.episodes.entries.firstOrNull {
-                it.key.first == season && it.key.second == episode
-            }
-            // Use the video ID pattern that matches addon meta structure
-            val videoId = episodeMeta?.let { "$contentId:${it.key.first}:${it.key.second}" }
-            if (videoId != null) {
-                episodeVideoIdCache[key] = videoId
-                return videoId
-            }
-        }
-
-        return "$contentId:$season:$episode"
-    }
+    ): String = "$contentId:$season:$episode"
 
     private fun progressKey(progress: WatchProgress): String {
         return if (progress.season != null && progress.episode != null) {

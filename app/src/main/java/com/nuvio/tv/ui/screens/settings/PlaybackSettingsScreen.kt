@@ -52,6 +52,8 @@ fun PlaybackSettingsContent(
 ) {
     val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = PlayerSettings())
     val transparentLetterbox by viewModel.transparentLetterbox.collectAsStateWithLifecycle(initialValue = false)
+    val zeroDoviLevel5 by viewModel.zeroDoviLevel5.collectAsStateWithLifecycle(initialValue = false)
+    val releaseDecoderOnBackground by viewModel.releaseDecoderOnBackground.collectAsStateWithLifecycle(initialValue = false)
     val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(initialValue = TorrentSettingsData())
     val torrentCacheState by viewModel.torrentCacheState.collectAsStateWithLifecycle()
     val torrentState by viewModel.torrentState.collectAsStateWithLifecycle()
@@ -108,6 +110,8 @@ fun PlaybackSettingsContent(
                 playerSettings = playerSettings,
                 p2p = p2p,
                 transparentLetterbox = transparentLetterbox,
+                zeroDoviLevel5 = zeroDoviLevel5,
+                releaseDecoderOnBackground = releaseDecoderOnBackground,
                 onUpdate = onUpdate,
                 onOpenDialog = { openDialog = it },
                 onMemorySettingChanged = { memoryUsageTrigger++ },

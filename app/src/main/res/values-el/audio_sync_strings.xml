@@ -1,0 +1,21 @@
+<resources>
+    <string name="audio_sync_setting_title">Συγχρονισμός υποτίτλων με τον ήχο</string>
+    <string name="audio_sync_setting_description">Ευθυγραμμίζει τους υποτίτλους με τον διάλογο όταν ο Αυτόματος συγχρονισμός δεν βρίσκει αξιόπιστη αντιστοίχιση.</string>
+    <string name="audio_sync_model_title">Μοντέλο αγγλικής ομιλίας (%1$d MB)</string>
+    <string name="audio_sync_model_description">Προαιρετικό. Αναγνωρίζει αγγλική ομιλία και την αντιστοιχίζει με εξωτερικούς αγγλικούς υποτίτλους για ταχύτερο και ακριβέστερο συγχρονισμό. Χρησιμοποιεί περισσότερη CPU και μνήμη.</string>
+    <string name="audio_sync_model_downloading">Λήψη… %1$d%%</string>
+    <string name="audio_sync_model_ready">Λήφθηκε. Αν η αναπαραγωγή δυσκολεύεται, διαγράψτε το για συγχρονισμό μόνο με ανίχνευση ομιλίας.</string>
+    <string name="audio_sync_model_failed">Η λήψη απέτυχε. Επιλέξτε για νέα προσπάθεια. Η ανίχνευση ομιλίας λειτουργεί ακόμα.</string>
+    <string name="audio_sync_model_download">Λήψη</string>
+    <string name="audio_sync_model_delete">Διαγραφή</string>
+    <string name="audio_sync_sampling_title">Δειγματοληψία ήχου</string>
+    <string name="audio_sync_sampling_description">Ακούει τον διάλογο μπροστά από την αναπαραγωγή, ώστε ο συγχρονισμός να βρίσκεται νωρίτερα.</string>
+    <string name="audio_sync_sampling_off">Ανενεργή</string>
+    <string name="audio_sync_sampling_low">Χαμηλή</string>
+    <string name="audio_sync_sampling_high">Υψηλή</string>
+    <string name="audio_sync_sampling_off_description">Ακούει μόνο ό,τι αναπαράγεται, οπότε ο συγχρονισμός αργεί περισσότερο. Δεν λειτουργεί με το πρόγραμμα αναπαραγωγής mpv.</string>
+    <string name="audio_sync_sampling_low_description">Ακούει μπροστά μερικές σκηνές διαλόγου μέσω μίας επιπλέον σύνδεσης, έως 75 MB ανά τίτλο. Χρησιμοποιείται επίσης αντί για Υψηλή σε δίκτυα με χρέωση δεδομένων.</string>
+    <string name="audio_sync_sampling_high_description">Ταχύτερος συγχρονισμός. Ακούει μπροστά περισσότερες σκηνές μέσω πολλών συνδέσεων, συνήθως έως 150 MB ανά τίτλο, και χρησιμοποιεί περισσότερη CPU. Ορισμένοι διακομιστές περιορίζουν τον αριθμό συνδέσεων.</string>
+    <string name="licenses_attributions_audio_sync_title">Συγχρονισμός υποτίτλων με τον ήχο</string>
+    <string name="licenses_attributions_audio_sync_body">Η ανίχνευση ομιλίας χρησιμοποιεί τα βάρη Silero VAD v5 (MIT, Silero Team). Η προαιρετική αναγνώριση ομιλίας χρησιμοποιεί το sherpa-onnx (Apache-2.0, k2-fsa) και το αγγλικό μοντέλο Zipformer GigaSpeech (Apache-2.0). Οι πλήρεις σημειώσεις περιλαμβάνονται στην εφαρμογή στο licenses/audio_sync_NOTICE.md.</string>
+</resources>

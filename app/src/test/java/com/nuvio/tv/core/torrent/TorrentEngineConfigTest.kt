@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.torrent
 
+import com.nuvio.engine.NuvioStorageMode
 import com.nuvio.engine.NuvioTorrentProfile
 import com.nuvio.engine.NuvioUploadMode
 import java.io.File
@@ -21,14 +22,16 @@ class TorrentEngineConfigTest {
             cacheDirectory = cacheDirectory,
             uploadEnabled = true,
             torrentProfile = TorrentProfile.FAST,
-            diskCacheCapacityBytes = TorrentCacheSize.GB_5.bytes
+            cacheSize = TorrentCacheSize.GB_5,
+            memoryStorageCapacityBytes = MinTorrentMemoryStorageBytes
         )
         val downloadOnly = buildTorrentEngineConfig(
             stateDirectory = stateDirectory,
             cacheDirectory = cacheDirectory,
             uploadEnabled = false,
             torrentProfile = TorrentProfile.SOFT,
-            diskCacheCapacityBytes = TorrentCacheSize.NONE.bytes
+            cacheSize = TorrentCacheSize.NONE,
+            memoryStorageCapacityBytes = MinTorrentMemoryStorageBytes
         )
 
         assertEquals(0, uploading.streamInactivityTimeoutMilliseconds)
@@ -39,6 +42,33 @@ class TorrentEngineConfigTest {
         assertEquals(NuvioUploadMode.Disabled, downloadOnly.uploadMode)
         assertEquals(NuvioTorrentProfile.Soft, downloadOnly.torrentProfile)
         assertEquals(0L, downloadOnly.diskCacheCapacityBytes)
+        assertEquals(NuvioStorageMode.Disk, uploading.storageMode)
+        assertEquals(NuvioStorageMode.Disk, downloadOnly.storageMode)
+    }
+
+    @Test
+    fun `memory only cache selects engine memory storage`() {
+        val config = buildTorrentEngineConfig(
+            stateDirectory = File("state"),
+            cacheDirectory = File("cache"),
+            uploadEnabled = true,
+            torrentProfile = TorrentProfile.BALANCED,
+            cacheSize = TorrentCacheSize.MEMORY_ONLY,
+            memoryStorageCapacityBytes = 256L * 1024L * 1024L
+        )
+
+        assertEquals(NuvioStorageMode.Memory, config.storageMode)
+        assertEquals(256L * 1024L * 1024L, config.memoryStorageCapacityBytes)
+        assertEquals(0L, config.diskCacheCapacityBytes)
+    }
+
+    @Test
+    fun `memory storage capacity follows device memory within bounds`() {
+        val gib = 1024L * 1024L * 1024L
+        assertEquals(256L * 1024L * 1024L, torrentMemoryStorageCapacityBytes(2L * gib, lowRamDevice = false))
+        assertEquals(MinTorrentMemoryStorageBytes, torrentMemoryStorageCapacityBytes(512L * 1024L * 1024L, lowRamDevice = false))
+        assertEquals(MaxTorrentMemoryStorageBytes, torrentMemoryStorageCapacityBytes(8L * gib, lowRamDevice = false))
+        assertEquals(MinTorrentMemoryStorageBytes, torrentMemoryStorageCapacityBytes(8L * gib, lowRamDevice = true))
     }
 
     @Test
@@ -73,7 +103,6 @@ class TorrentEngineConfigTest {
     fun `global cache pressure does not become terminal error`() {
         assertNull(
             unexpectedTorrentError(
-                requestId = 0L,
                 eventTorrentId = null,
                 currentTorrentId = "torrent",
                 message = "disk cache budget is exceeded by protected torrent data",
@@ -86,14 +115,14 @@ class TorrentEngineConfigTest {
     fun `matching unsolicited torrent failure becomes terminal error`() {
         assertEquals(
             TorrentState.Error("file write failed"),
-            unexpectedTorrentError(0L, "torrent", "torrent", "file write failed", "unknown")
+            unexpectedTorrentError("torrent", "torrent", "file write failed", "unknown")
         )
     }
 
     @Test
-    fun `command and stale torrent failures are ignored`() {
-        assertNull(unexpectedTorrentError(9L, "torrent", "torrent", "failed", "unknown"))
-        assertNull(unexpectedTorrentError(0L, "old-torrent", "torrent", "failed", "unknown"))
+    fun `stale torrent failures are ignored`() {
+        assertNull(unexpectedTorrentError("old-torrent", "torrent", "failed", "unknown"))
+        assertNull(unexpectedTorrentError("torrent", null, "failed", "unknown"))
     }
 
     @Test
@@ -106,6 +135,22 @@ class TorrentEngineConfigTest {
         )
         assertEquals(0.375f, engineOnly, 0.0001f)
         assertEquals(0.95f, torrentInitialLoadingProgress(60_000L, 0L, 0L), 0.0001f)
+    }
+
+    @Test
+    fun `payload measurement sums stored bytes of every payload file`() {
+        val cacheDirectory = Files.createTempDirectory("nuvio-engine-cache-").toFile()
+        try {
+            File(cacheDirectory, "payload/$TORRENT_ID/season").apply { mkdirs() }
+            File(cacheDirectory, "payload/$TORRENT_ID/video.mkv").writeText("12345")
+            File(cacheDirectory, "payload/$TORRENT_ID/season/episode.mkv").writeText("123")
+            File(cacheDirectory, "state.bin").writeText("ignored")
+
+            assertEquals(8L, measureTorrentPayloadBytes(cacheDirectory) { it.length() })
+            assertEquals(0L, measureTorrentPayloadBytes(File(cacheDirectory, "missing")) { it.length() })
+        } finally {
+            cacheDirectory.deleteRecursively()
+        }
     }
 
     @Test

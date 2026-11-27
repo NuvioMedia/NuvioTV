@@ -17,6 +17,7 @@ import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.WatchedItem
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.domain.model.supportsExtra
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -153,6 +154,12 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
         return
     }
 
+    // The layout preference flow is debounced, so on a cold start the saved hero
+    // sources are still unknown when the first catalogs publish, and the hero
+    // falls back to whichever catalog answered first. Read them before loading
+    // so the hero only ever renders its own sources.
+    currentHeroCatalogKeys = layoutPreferenceDataStore.heroCatalogSelections.first()
+
     activeCatalogLoadSignature = signature
     catalogsLoadInProgress = true
     // A full load leaves every catalog fresh, so the next return to Home has nothing to do.
@@ -181,6 +188,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     trailerPreviewNegativeCache.clear()
     trailerPreviewUrlsState.clear()
     trailerPreviewAudioUrlsState.clear()
+    trailerPreviewYoutubeKeys.clear()
     activeTrailerPreviewItemId = null
     trailerPreviewRequestVersion = 0L
     prefetchedExternalMetaIds.clear()
@@ -296,8 +304,17 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
             _uiState.first { it.layoutPreferencesReady }
         }
         val isGridLayout = _uiState.value.homeLayout == HomeLayout.GRID
-        val eagerHomeCatalogs = if (isGridLayout) catalogsToLoad else catalogsToLoad.take(eagerCatalogLoadCount)
-        val lazyHomeCatalogs = if (isGridLayout) emptyList() else catalogsToLoad.drop(eagerCatalogLoadCount)
+        val (eagerHomeCatalogs, lazyHomeCatalogs) = if (isGridLayout) {
+            catalogsToLoad to emptyList()
+        } else {
+            catalogsToLoad.withIndex()
+                .partition { (index, entry) ->
+                    val (addon, catalog) = entry
+                    index < eagerCatalogLoadCount ||
+                        catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id) in heroCatalogSet
+                }
+                .let { (eager, lazy) -> eager.map { it.value } to lazy.map { it.value } }
+        }
 
         // Build placeholder descriptors for lazy catalogs
         synchronized(catalogStateLock) {
@@ -955,10 +972,11 @@ internal fun HomeViewModel.schedulePosterStatusReconcilePipeline(rows: List<Cata
 }
 
 internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<CatalogRow>) {
+    // Movies and every other one-video type (an add-on's "youtube", say) are watched as a whole.
     val allMovieItemsByKey = linkedMapOf<String, String>()
     rows.asSequence()
         .flatMap { row -> row.items.asSequence() }
-        .filter { it.apiType.equals("movie", ignoreCase = true) }
+        .filterNot { isSeriesLikeType(it.apiType) }
         .forEach { item ->
             val key = homeItemStatusKey(item.id, item.apiType)
             if (key !in allMovieItemsByKey) {

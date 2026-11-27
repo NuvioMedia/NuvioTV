@@ -27,6 +27,7 @@ enum class TorrentProfile {
 }
 
 enum class TorrentCacheSize(val bytes: Long) {
+    MEMORY_ONLY(0L),
     NONE(0L),
     GB_2(2L * 1024L * 1024L * 1024L),
     GB_5(5L * 1024L * 1024L * 1024L),

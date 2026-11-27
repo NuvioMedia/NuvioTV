@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -50,8 +49,6 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import coil3.compose.rememberAsyncImagePainter
-import coil3.request.ImageRequest
 import com.nuvio.tv.ui.components.AutoResizeText
 import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -65,6 +62,7 @@ import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithCache
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.hazeEffect
@@ -81,8 +79,6 @@ internal fun ModernSidebarBlurPanel(
     sidebarLabelAlpha: Float,
     sidebarIconScale: Float,
     sidebarExpandProgress: Float,
-    isSidebarExpanded: Boolean,
-    sidebarCollapsePending: Boolean,
     blurEnabled: Boolean,
     sidebarHazeState: HazeState,
     panelShape: RoundedCornerShape,
@@ -97,10 +93,7 @@ internal fun ModernSidebarBlurPanel(
 ) {
     val delayedBlurProgress =
         ((sidebarExpandProgress - 0.34f) / 0.66f).coerceIn(0f, 1f)
-    val showPanelBlur = blurEnabled &&
-        isSidebarExpanded &&
-        !sidebarCollapsePending &&
-        delayedBlurProgress > 0f
+    val showPanelBlur = blurEnabled && delayedBlurProgress > 0f
     val expandedPanelBlurModifier = if (showPanelBlur) {
         Modifier.hazeEffect(state = sidebarHazeState) {
             blurRadius = NuvioTheme.effects.blurPanel * delayedBlurProgress
@@ -453,16 +446,4 @@ private fun SidebarProfileItem(
         )
         }
     }
-}
-
-@Composable
-private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
-    return rememberAsyncImagePainter(
-        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-            .data(rawIconRes)
-            .size(sizePx)
-            .build()
-    )
 }

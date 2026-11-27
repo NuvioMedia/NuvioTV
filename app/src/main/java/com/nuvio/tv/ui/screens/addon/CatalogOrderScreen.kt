@@ -2,9 +2,14 @@
 
 package com.nuvio.tv.ui.screens.addon
 
+import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,40 +22,52 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.Switch
+import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.components.tvReorderDisabledFocusBorder
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
 fun CatalogOrderScreen(
@@ -58,113 +75,157 @@ fun CatalogOrderScreen(
     onBackPress: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    val pinToMoveNotice = stringResource(R.string.catalog_order_pin_to_move_toast)
+    var pinnedNoticeMessage by remember { mutableStateOf<String?>(null) }
+    var pinnedNoticeNonce by remember { mutableIntStateOf(0) }
 
-    BackHandler { onBackPress() }
+    LaunchedEffect(pinnedNoticeNonce) {
+        if (pinnedNoticeMessage != null) {
+            delay(3_000)
+            pinnedNoticeMessage = null
+        }
+    }
+
+    BackHandler(enabled = uiState.movingKey == null) {
+        onBackPress()
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl)
+            .background(NuvioTheme.colors.Background),
     ) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
-        ) {
-            item {
-                Text(
-                    text = stringResource(R.string.catalog_order_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = NuvioTheme.colors.TextPrimary
-                )
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                Text(
-                    text = stringResource(R.string.catalog_order_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioTheme.colors.TextSecondary
-                )
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-                val followAddonsLabel = stringResource(R.string.catalog_order_follow_addons)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        when {
+            uiState.isLoading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = followAddonsLabel,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = NuvioTheme.colors.TextPrimary
-                        )
-                        Text(
-                            text = stringResource(R.string.catalog_order_follow_addons_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NuvioTheme.colors.TextSecondary
-                        )
+                    CatalogOrderHeader(
+                        followAddonsOrder = uiState.followAddonsOrder,
+                        movingKey = uiState.movingKey,
+                        onToggleFollowAddons = viewModel::toggleFollowAddonsOrder,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        LoadingIndicator()
                     }
-                    Switch(
-                        checked = uiState.followAddonsOrder,
-                        onCheckedChange = { viewModel.toggleFollowAddonsOrder(it) },
-                        modifier = Modifier.semantics { contentDescription = followAddonsLabel },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = NuvioTheme.colors.Primary,
-                            checkedTrackColor = NuvioTheme.colors.Primary.copy(alpha = 0.5f)
-                        )
+                }
+            }
+
+            uiState.items.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
+                ) {
+                    CatalogOrderHeader(
+                        followAddonsOrder = uiState.followAddonsOrder,
+                        movingKey = uiState.movingKey,
+                        onToggleFollowAddons = viewModel::toggleFollowAddonsOrder,
+                    )
+                    Text(
+                        text = stringResource(R.string.catalog_order_empty),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NuvioTheme.colors.TextSecondary,
                     )
                 }
             }
 
-            when {
-                uiState.isLoading -> {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = NuvioTheme.spacing.xl),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            LoadingIndicator()
-                        }
-                    }
+            else -> {
+                val reorderScrollState = rememberScrollState()
+                val movingItem = uiState.movingKey?.let { movingKey ->
+                    uiState.items.firstOrNull { it.key == movingKey }
                 }
-
-                uiState.items.isEmpty() -> {
-                    item {
-                        Text(
-                            text = stringResource(R.string.catalog_order_empty),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = NuvioTheme.colors.TextSecondary
+                Box(modifier = Modifier.fillMaxSize()) {
+                TvReorderList(
+                    items = uiState.items,
+                    key = { it.key },
+                    canMove = { it.canMove && uiState.movingKey == null },
+                    movingKey = uiState.movingKey,
+                    onStartMove = viewModel::enterMoveMode,
+                    onMoveBy = viewModel::moveDuringDrag,
+                    onConfirmMove = { viewModel.confirmMove() },
+                    onCancelMove = { viewModel.cancelMove() },
+                    modifier = Modifier.fillMaxSize(),
+                    scrollState = reorderScrollState,
+                    contentPadding = PaddingValues(
+                        start = NuvioTheme.spacing.xxxl,
+                        end = NuvioTheme.spacing.xxxl,
+                        top = NuvioTheme.spacing.xl,
+                        bottom = NuvioTheme.spacing.xxxl,
+                    ),
+                    header = {
+                        CatalogOrderHeader(
+                            followAddonsOrder = uiState.followAddonsOrder,
+                            movingKey = uiState.movingKey,
+                            onToggleFollowAddons = viewModel::toggleFollowAddonsOrder,
                         )
-                    }
+                    },
+                    useHeaderAwareBringIntoView = true,
+                    scrollToTopOnEdgeItem = true,
+                ) { item, isMoving, onStartMove, onConfirmMove ->
+                    CatalogOrderCard(
+                        item = item,
+                        isMoving = isMoving,
+                        onStartMove = onStartMove,
+                        onConfirmMove = onConfirmMove,
+                        onPinnedMoveAttempt = {
+                            pinnedNoticeMessage = pinToMoveNotice
+                            pinnedNoticeNonce++
+                        },
+                        onToggleEnabled = { viewModel.toggleCatalogEnabled(item.disableKey) },
+                        actionsEnabled = uiState.movingKey == null || isMoving,
+                    )
                 }
+                SettingsVerticalScrollIndicators(
+                    state = reorderScrollState,
+                    suppressBackward = movingItem != null && !movingItem.canMoveUp,
+                    suppressForward = movingItem != null && !movingItem.canMoveDown,
+                    forceBackward = movingItem?.canMoveUp == true,
+                    forceForward = movingItem?.canMoveDown == true
+                )
+                }
+            }
+        }
 
-                else -> {
-                    itemsIndexed(
-                        items = uiState.items,
-                        key = { _, item -> item.key }
-                    ) { index, item ->
-                        CatalogOrderCard(
-                            item = item,
-                            onMoveUp = {
-                                viewModel.moveUp(item.key)
-                                scope.launch {
-                                    listState.animateScrollToItem((index - 1).coerceAtLeast(0))
-                                }
-                            },
-                            onMoveDown = {
-                                viewModel.moveDown(item.key)
-                                scope.launch {
-                                    listState.animateScrollToItem(
-                                        (index + 1).coerceAtMost(uiState.items.lastIndex)
-                                    )
-                                }
-                            },
-                            onToggleEnabled = { viewModel.toggleCatalogEnabled(item.disableKey) }
-                        )
-                    }
+        AnimatedVisibility(
+            visible = pinnedNoticeMessage != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
+        ) {
+            val visibleMessage = pinnedNoticeMessage ?: return@AnimatedVisibility
+            Surface(
+                shape = RoundedCornerShape(NuvioTheme.radii.md),
+                colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundElevated),
+                border = Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md),
+                ),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = NuvioTheme.spacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Lock,
+                        contentDescription = null,
+                        tint = NuvioTheme.colors.Secondary,
+                    )
+                    Text(
+                        text = visibleMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NuvioTheme.colors.TextPrimary,
+                    )
                 }
             }
         }
@@ -172,16 +233,115 @@ fun CatalogOrderScreen(
 }
 
 @Composable
+private fun CatalogOrderHeader(
+    followAddonsOrder: Boolean,
+    movingKey: String?,
+    onToggleFollowAddons: (Boolean) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = stringResource(R.string.catalog_order_title),
+        style = MaterialTheme.typography.headlineLarge,
+        color = NuvioTheme.colors.TextPrimary,
+    )
+    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+    Text(
+        text = stringResource(R.string.catalog_order_subtitle),
+        style = MaterialTheme.typography.bodyMedium,
+        color = NuvioTheme.colors.TextSecondary,
+    )
+    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.catalog_order_follow_addons),
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioTheme.colors.TextPrimary,
+            )
+            Text(
+                text = stringResource(R.string.catalog_order_follow_addons_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextSecondary,
+            )
+        }
+        Surface(
+            onClick = {
+                if (movingKey == null) {
+                    onToggleFollowAddons(!followAddonsOrder)
+                }
+            },
+            modifier = Modifier.semantics {
+                role = Role.Switch
+                toggleableState = if (followAddonsOrder) ToggleableState.On else ToggleableState.Off
+            },
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Color.Transparent,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground
+            ),
+            border = ClickableSurfaceDefaults.border(
+                focusedBorder = Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                )
+            ),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+        ) {
+            Box(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Switch(
+                    checked = followAddonsOrder,
+                    onCheckedChange = null,
+                    enabled = movingKey == null,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = NuvioTheme.colors.Secondary,
+                        checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
+                    ),
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+    }
+}
+
+@Composable
 private fun CatalogOrderCard(
     item: CatalogOrderItem,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onToggleEnabled: () -> Unit
+    isMoving: Boolean,
+    onStartMove: () -> Unit,
+    onConfirmMove: () -> Unit,
+    onPinnedMoveAttempt: () -> Unit,
+    onToggleEnabled: () -> Unit,
+    actionsEnabled: Boolean,
 ) {
+    val cardColor by animateColorAsState(
+        targetValue = if (isMoving) {
+            NuvioTheme.colors.FocusBackground
+        } else {
+            NuvioTheme.colors.BackgroundCard
+        },
+        animationSpec = NuvioMotion.focusTween(),
+        label = "catalogOrderCardColor",
+    )
+    val cardBorder = if (isMoving) {
+        BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing)
+    } else {
+        null
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = NuvioTheme.colors.BackgroundCard),
-        shape = RoundedCornerShape(NuvioTheme.radii.md)
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(NuvioTheme.radii.md),
+        border = cardBorder,
     ) {
         Row(
             modifier = Modifier
@@ -190,25 +350,40 @@ private fun CatalogOrderCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${item.catalogName} - ${item.typeLabel.toDisplayTypeLabel()}",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (item.isDisabled) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextPrimary
-                )
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
-                Text(
-                    text = item.addonName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NuvioTheme.colors.TextSecondary
-                )
-                if (item.isDisabled) {
-                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+            ) {
+                Column {
                     Text(
-                        text = stringResource(R.string.catalog_order_disabled_on_home),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioTheme.colors.Error
+                        text = "${item.catalogName} - ${item.typeLabel.toDisplayTypeLabel()}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (item.isDisabled) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextPrimary
                     )
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+                    val subtitle = if (item.isPinnedToTop) {
+                        "${item.addonName} • ${stringResource(R.string.catalog_order_pinned_to_top)}"
+                    } else {
+                        item.addonName
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NuvioTheme.colors.TextSecondary
+                        )
+                        if (item.isDisabled) {
+                            Text(
+                                text = stringResource(R.string.catalog_order_disabled_on_home),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NuvioTheme.colors.Error
+                            )
+                        }
+                    }
                 }
             }
 
@@ -216,70 +391,104 @@ private fun CatalogOrderCard(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onMoveUp,
-                    enabled = item.canMoveUp,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
+                val toggleLabel = stringResource(
+                    if (item.isDisabled) R.string.catalog_order_enable else R.string.catalog_order_disable
+                )
+                Surface(
+                    onClick = {
+                        if (actionsEnabled && !isMoving) onToggleEnabled()
+                    },
+                    modifier = Modifier.semantics {
+                        role = Role.Switch
+                        contentDescription = toggleLabel
+                        toggleableState = if (item.isDisabled) ToggleableState.Off else ToggleableState.On
+                    },
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = Color.Transparent,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground
                     ),
-                    border = ButtonDefaults.border(
+                    border = ClickableSurfaceDefaults.border(
                         focusedBorder = Border(
                             border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = stringResource(R.string.cd_move_up)
-                    )
+                    Box(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Switch(
+                            checked = !item.isDisabled,
+                            onCheckedChange = null,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = NuvioTheme.colors.Secondary,
+                                checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+                }
+                if (item.isPinnedToTop) {
+                    Button(
+                        onClick = onPinnedMoveAttempt,
+                        enabled = actionsEnabled,
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextSecondary,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = NuvioTheme.colors.Primary
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            ),
+                            focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lock,
+                            contentDescription = stringResource(R.string.catalog_order_pinned),
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = if (isMoving) onConfirmMove else onStartMove,
+                        enabled = isMoving || (item.canMove && actionsEnabled),
+                        colors = if (isMoving) {
+                            ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.Secondary,
+                                contentColor = NuvioTheme.colors.OnSecondary,
+                                focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                                focusedContentColor = NuvioTheme.colors.OnSecondary,
+                            )
+                        } else {
+                            ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            )
+                        },
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            ),
+                            focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Reorder,
+                            contentDescription = stringResource(R.string.cd_reorder)
+                        )
+                    }
                 }
 
-                Button(
-                    onClick = onMoveDown,
-                    enabled = item.canMoveDown,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = NuvioTheme.colors.Primary
-                    ),
-                    border = ButtonDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDownward,
-                        contentDescription = stringResource(R.string.cd_move_down)
-                    )
-                }
-
-                Button(
-                    onClick = onToggleEnabled,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundCard,
-                        contentColor = if (item.isDisabled) NuvioTheme.colors.Success else NuvioTheme.colors.TextSecondary,
-                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                        focusedContentColor = if (item.isDisabled) NuvioTheme.colors.Success else NuvioTheme.colors.Error
-                    ),
-                    border = ButtonDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                ) {
-                    Text(text = if (item.isDisabled) stringResource(R.string.catalog_order_enable) else stringResource(R.string.catalog_order_disable))
-                }
             }
         }
     }

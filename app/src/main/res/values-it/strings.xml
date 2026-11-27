@@ -834,15 +834,6 @@
 <string name="sub_libass">Usa libass per sottotitoli ASS/SSA</string>
 <string name="sub_libass_sub">Sperimentale: rendering ASS/SSA avanzato (stili, posizionamento, animazioni)</string>
 <string name="sub_libass_mode">Modalità rendering Libass</string>
-<string name="sub_mode_overlay_gl">Overlay OpenGL (Consigliato)</string>
-<string name="sub_mode_overlay_gl_sub">Migliore qualità con supporto HDR. Esegue il rendering dei sottotitoli su un thread separato.</string>
-<string name="sub_mode_overlay_canvas">Canvas sovrapposto</string>
-<string name="sub_mode_effects_gl">Effetti OpenGL</string>
-<string name="sub_mode_effects_gl_sub">Supporto animazioni tramite effetti Media3. Più veloce di Canvas.</string>
-<string name="sub_mode_effects_canvas">Effetti Canvas</string>
-<string name="sub_mode_effects_canvas_sub">Supporto animazioni tramite effetti Media3 con rendering Canvas.</string>
-<string name="sub_mode_standard">Cues standard</string>
-<string name="sub_mode_standard_sub">Rendering base dei sottotitoli senza supporto animazioni. Massima compatibilità.</string>
 <string name="sub_org_none">Nessuna (ordine predefinito)</string>
 <string name="sub_org_by_lang">Per lingua</string>
 <string name="sub_org_by_addon">Per addon</string>
@@ -1074,7 +1065,6 @@
 
 
 <string name="mdblist_title">Valutazioni MDBList</string>
-<string name="mdblist_subtitle">Configura le valutazioni esterne mostrate nella sezione hero dei dettagli</string>
 <string name="mdblist_enable_title">Abilita valutazioni MDBList</string>
 <string name="mdblist_enable_subtitle">Recupera le valutazioni da provider esterni nella schermata dei dettagli dei metadati</string>
 <string name="mdblist_api_key_title">Chiave API</string>
@@ -1660,7 +1650,6 @@
 <string name="parental_severity_mild">Lieve</string>
 <string name="player_ends_at">Finisce alle: %1$s</string>
 <string name="player_live_watched">LIVE  %1$s</string>
-<string name="player_via">tramite %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
 <string name="season_episode_format">S%1$d E%2$d</string>
 <string name="player_subtitle_delay">Ritardo sottotitoli</string>
@@ -1934,15 +1923,8 @@
 <string name="library_status_dropped">Abbandonato</string>
 <string name="library_syncing_library">Sincronizzazione libreria\u2026</string>
 <string name="library_type_all">Tutto</string>
-<string name="library_type_items">elementi</string>
-<string name="library_empty_local_title">Ancora nessun %1$s</string>
-<string name="library_empty_trakt_title">Nessun %1$s in questa lista</string>
-<string name="library_empty_local_subtitle">Inizia a salvare i tuoi preferiti per vederli qui</string>
-<string name="library_empty_trakt_subtitle">Usa il tasto + nei dettagli per aggiungere elementi alla lista da guardare o alle tue liste</string>
 <string name="library_empty_trakt_not_auth_title">Trakt non connesso</string>
 <string name="library_empty_trakt_not_auth_subtitle">Connetti il tuo account Trakt nelle Impostazioni per visualizzare la tua libreria Trakt</string>
-<string name="library_empty_simkl_title">Nessun elemento in %1$s</string>
-<string name="library_empty_simkl_subtitle">Usa + nei dettagli per aggiungere elementi a uno stato Simkl</string>
 <string name="library_empty_simkl_not_auth_title">Simkl non connesso</string>
 <string name="library_empty_simkl_not_auth_subtitle">Collega il tuo account Simkl nelle Impostazioni per visualizzare la tua libreria Simkl</string>
 <string name="library_list_create_dialog_title">Crea lista</string>
@@ -2316,7 +2298,6 @@
 <string name="player_error_failed_start_torrent">Impossibile avviare il torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-<string name="sub_mode_overlay_canvas_sub">Supporto HDR con rendering canvas. Potrebbe bloccare il thread UI.</string>
 
 <string name="ratings_season_label">S%1$d</string>
 <string name="ratings_episode_label">E%1$d</string>
@@ -3127,17 +3108,17 @@
 <string name="stream_test_no_stream">Nessuna riproduzione registrata. Riproduci un video per eseguire i test diagnostici sul suo host.</string>
 <string name="stream_test_btn_start">Avvia test</string>
 <string name="stream_test_btn_measuring_baseline">Misurazione baseline...</string>
-<string name="stream_test_btn_measuring_parallel1">Misurazione parallela (1MB)...</string>
-<string name="stream_test_btn_measuring_parallel4">Misurazione parallela (4MB)...</string>
-<string name="stream_test_btn_measuring_parallel8">Misurazione parallela (8MB)...</string>
-<string name="stream_test_btn_measuring_parallel16">Misurazione parallela (16MB)...</string>
+<string name="stream_test_btn_measuring_parallel1">Misurazione parallela (1 connessione)...</string>
+<string name="stream_test_btn_measuring_parallel4">Misurazione parallela (4 connessioni)...</string>
+<string name="stream_test_btn_measuring_parallel8">Misurazione parallela (8 connessioni)...</string>
+<string name="stream_test_btn_measuring_parallel16">Misurazione parallela (16 connessioni)...</string>
 <string name="stream_test_btn_run_again">Esegui di nuovo</string>
 <string name="stream_test_btn_running">In esecuzione...</string>
 <string name="stream_test_label_baseline">Connessione singola standard (baseline)</string>
-<string name="stream_test_label_parallel1">Connessione parallela (chunk da 1 MB)</string>
-<string name="stream_test_label_parallel4">Connessione parallela (chunk da 4 MB)</string>
-<string name="stream_test_label_parallel8">Connessione parallela (chunk da 8 MB)</string>
-<string name="stream_test_label_parallel16">Connessione parallela (chunk da 16 MB)</string>
+<string name="stream_test_label_parallel1">Connessione parallela (1 connessione)</string>
+<string name="stream_test_label_parallel4">Connessione parallela (4 connessioni)</string>
+<string name="stream_test_label_parallel8">Connessione parallela (8 connessioni)</string>
+<string name="stream_test_label_parallel16">Connessione parallela (16 connessioni)</string>
 <string name="stream_test_error_prefix">Errore: %1$s</string>
 <string name="stream_test_video_bitrate">Bitrate video medio: %1$s</string>
 <string name="stream_test_error_connection">Connessione fallita. Il link dell\'ultimo stream riprodotto potrebbe essere scaduto o non raggiungibile. Riproduci di nuovo il video e riprova.</string>
@@ -3195,7 +3176,7 @@
     <string name="playback_section_stream_selection_desc">Come viene scelto un flusso quando premi Riproduci.</string>
     <string name="playback_section_up_next">In arrivo</string>
     <string name="playback_section_up_next_desc">Riproduzione automatica dell\'episodio successivo e suggerimenti al termine della visione.</string>
-    <string name="playback_section_skip">SALTA SEGMENTI</string>
+    <string name="playback_section_skip">Salta segmenti</string>
     <string name="playback_section_skip_desc">Salta sigle iniziali, riepiloghi e titoli di coda.</string>
     <string name="playback_section_interface">Interfaccia del lettore</string>
     <string name="playback_section_interface_desc">Sovrapposizioni, orologio e dettagli mostrati durante la riproduzione.</string>
@@ -3292,7 +3273,6 @@
     <string name="mdblist_show_on_hero_title">Usa le valutazioni nell’hero</string>
     <string name="mdblist_show_on_hero_subtitle">Mostra le valutazioni MDBList nell’hero (Modern e Classic/Grid)</string>
     <string name="mdblist_rating_order_title">Ordine delle valutazioni</string>
-    <string name="mdblist_rating_order_subtitle">Nell’hero Modern vengono mostrate le prime 3 valutazioni abilitate e disponibili. Usa le frecce per cambiarne l’ordine.</string>
     <string name="mdblist_library_lists">Liste della libreria</string>
     <string name="mdblist_library_lists_description">Scegli quali liste MDBList mostrare nella Libreria e in Gestisci liste. La watchlist viene sempre visualizzata.</string>
     <string name="mdblist_library_lists_empty">Nessuna lista trovata nel tuo account MDBList. Sincronizza per caricarle.</string>
@@ -3370,8 +3350,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Ricerca approfondita con sincronizzazione automatica</string>
     <string name="autosync_thorough_description">Continua a confrontare gli altri sottotitoli e le tracce incorporate per trovare una corrispondenza più precisa prima della sincronizzazione. Se disattivata, viene usata prima la prima corrispondenza affidabile. Vengono applicate solo corrispondenze sicure.</string>
-    <string name="autosync_toast_failed">Sincronizzazione non riuscita: Auto Sync non ha trovato una corrispondenza tra questo sottotitolo e il video.</string>
-    <string name="autosync_toast_failed_no_reference">Sincronizzazione non riuscita: questo video non contiene sottotitoli incorporati da confrontare.</string>
-    <string name="autosync_toast_failed_unsupported">Sincronizzazione non riuscita: Auto Sync non supporta questo formato di sottotitoli.</string>
     <string name="autosync_label_synced">Sincronizzato automaticamente</string>
+    <string name="stream_resume_from_time">Riprendi da %1$s</string>
+    <string name="stream_resume_from_percent">Riprendi dal %1$d%%</string>
 </resources>

@@ -161,7 +161,7 @@ private fun buildCatalogEntries(addons: List<Addon>): List<HomeCatalogSyncEntry>
 }
 
 private fun CatalogDescriptor.shouldShowOnHomeForSync(): Boolean {
-    if (extra.any { it.name.equals("search", ignoreCase = true) && it.isRequired }) {
+    if (isSearchOnlyCatalog()) {
         return false
     }
     return !hasExplicitShowInHome || showInHome

@@ -17,6 +17,7 @@ import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.repository.AddonEpisodeAirDate
 import com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository
 import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.data.repository.TraktCommentsService
@@ -26,8 +27,15 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
+import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
+import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.core.tracking.buildTrackingMediaReference
+import com.nuvio.tv.data.simkl.rewatchedCatalogueEpisodesOf
+import com.nuvio.tv.data.simkl.simklHistoryRewatchWasRecorded
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
+import com.nuvio.tv.domain.model.MDBListRatings
+import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.NextToWatch
@@ -35,6 +43,9 @@ import com.nuvio.tv.domain.model.TmdbSettings
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.isSeriesLikeType
+import com.nuvio.tv.domain.model.isSeriesWithWatchableEpisodes
+import com.nuvio.tv.domain.model.isWatchedAsOneItem
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -77,6 +88,16 @@ import javax.inject.Inject
 
 private const val TAG = "MetaDetailsViewModel"
 
+/**
+ * Whether pressing Back on the full-screen trailer should hand playback back to the
+ * detail page as a background trailer instead of stopping it.
+ */
+internal fun shouldContinueTrailerInBackgroundOnBack(
+    isTrailerPlaying: Boolean,
+    autoplayEnabled: Boolean,
+    playInBackground: Boolean
+): Boolean = isTrailerPlaying && autoplayEnabled && playInBackground
+
 @HiltViewModel
 class MetaDetailsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -92,6 +113,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val trailerService: TrailerService,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
+    private val trailerPlayerPool: com.nuvio.tv.core.player.TrailerPlayerPool,
+    private val backgroundTrailerController: com.nuvio.tv.core.player.BackgroundTrailerController,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktCommentsService: TraktCommentsService,
     private val traktRelatedService: TraktRelatedService,
@@ -106,6 +129,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val metaDetailsSessionState: MetaDetailsSessionState,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    private val simklSyncRepository: com.nuvio.tv.data.simkl.SimklSyncRepository,
+    private val simklTrackingHistoryWriter: com.nuvio.tv.data.simkl.SimklTrackingHistoryWriter,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
@@ -115,11 +140,13 @@ class MetaDetailsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MetaDetailsUiState())
     private val shuffleVisit = System.nanoTime()
-    val uiState: StateFlow<MetaDetailsUiState> = combine(
-        _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
-    ) { state, profile, progress ->
-        applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, MetaDetailsUiState())
+    val uiState: StateFlow<MetaDetailsUiState> by lazy {
+        combine(
+            _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
+        ) { state, profile, progress ->
+            applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, _uiState.value)
+    }
 
     private val _posterCardCornerRadiusDp = MutableStateFlow(12)
     val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
@@ -141,11 +168,14 @@ class MetaDetailsViewModel @Inject constructor(
     private var commentsJob: Job? = null
     private var commentsLoadMoreJob: Job? = null
     private var pendingDefaultLibraryToggle: LibraryEntryInput? = null
+    private var mdbListSettingsAtLoad: MDBListSettings? = null
 
     private var trailerDelayMs = 7000L
     private var trailerAutoplayEnabled = false
     private var trailerPlayInBackground = false
     private var trailerHasPlayed = false
+    private var trailerHandoffActive = false
+    private var handoffTrailerYoutubeKey: String? = null
     private var suppressSeasonAutoSwitch = false
 
     private var isPlayButtonFocused = false
@@ -163,16 +193,19 @@ class MetaDetailsViewModel @Inject constructor(
     private val _optimisticUnmarks = mutableSetOf<Pair<Int, Int>>()
 
     init {
+        applyTrailerHandoff()
         posterOptions.bind(viewModelScope)
         observeMetaViewSettings()
         observeTrailerAutoplaySettings()
         observeTraktCommentsAvailability()
         observeLibraryState()
         observeWatchProgress()
+        observeMovieResumeProgress()
         observeWatchedEpisodes()
         observeMovieWatched()
         observeRelatedWatchedStatus()
         observeBlurUnwatchedEpisodes()
+        observeSeasonPostersEnabled()
         observeEpisodeOptionsOverlayStyle()
         observeOverallRatingsVisibility()
         observeDetailImdbRatingsVisibility()
@@ -182,8 +215,47 @@ class MetaDetailsViewModel @Inject constructor(
         }
         observeShowFullReleaseDate()
         observeHideUnreleasedContent()
+        observeRewatchRuns()
         loadMeta()
     }
+
+    /**
+     * Re-derives the play action when the account's rewatch runs change.
+     *
+     * A run is read from the account and can arrive after the screen has already computed the
+     * button, so without this the button would keep offering the old watch position until something
+     * else moved.
+     */
+    private fun observeRewatchRuns() {
+        viewModelScope.launch {
+            simklSyncRepository.state
+                .map { state -> state.snapshot.rewatchRuns }
+                .distinctUntilChanged()
+                .collectLatest { calculateNextToWatch() }
+        }
+    }
+
+    /**
+     * The episodes the running rewatch of the item has covered, for the marker the episode list draws.
+     *
+     * Only a run's own episodes are collected; without a run the set is empty and the list draws its
+     * marker exactly as it did before rewatches existed.
+     */
+    private fun refreshRewatchEpisodes() {
+        val snapshot = simklSyncRepository.state.value.snapshot
+        val run = rewatchRunFor(_uiState.value.meta?.id) ?: rewatchRunFor(_effectiveContentId.value)
+        val episodes = run
+            ?.let { active -> snapshot.rewatchSessions.rewatchedCatalogueEpisodesOf(active.contentId) }
+            .orEmpty()
+        _uiState.update { state ->
+            if (state.rewatchEpisodes == episodes) state else state.copy(rewatchEpisodes = episodes)
+        }
+    }
+
+    /** The rewatch run that matches a content id, if the account is in the middle of one. */
+    private fun rewatchRunFor(contentId: String?): com.nuvio.tv.core.tracking.RewatchRunPosition? =
+        simklSyncRepository.state.value.snapshot.rewatchRuns
+            .firstOrNull { run -> run.matches(contentId) }
 
     private fun observeHideUnreleasedContent() {
         viewModelScope.launch {
@@ -361,11 +433,14 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPlayButtonFocused -> handlePlayButtonFocused()
             MetaDetailsEvent.OnTrailerButtonClick -> handleTrailerButtonClick()
             MetaDetailsEvent.OnTrailerEnded -> handleTrailerEnded()
+            MetaDetailsEvent.OnTrailerBackPress -> handleTrailerBackPress()
             is MetaDetailsEvent.OnSharedTrailerSelected -> handleSharedTrailerSelected(event.trailer)
             MetaDetailsEvent.OnDismissSharedTrailer -> dismissSharedTrailerOverlay()
             MetaDetailsEvent.OnRetrySharedTrailer -> retrySharedTrailer()
             MetaDetailsEvent.OnToggleMovieWatched -> toggleMovieWatched()
             is MetaDetailsEvent.OnToggleEpisodeWatched -> toggleEpisodeWatched(event.video)
+            is MetaDetailsEvent.OnMarkEpisodeRewatched -> markEpisodeRewatched(event.video)
+            is MetaDetailsEvent.OnUnmarkEpisodeRewatched -> unmarkEpisodeRewatched(event.video)
             is MetaDetailsEvent.OnMarkSeasonWatched -> markSeasonWatched(event.season)
             is MetaDetailsEvent.OnMarkSeasonUnwatched -> markSeasonUnwatched(event.season)
             is MetaDetailsEvent.OnMarkPreviousEpisodesWatched -> markPreviousEpisodesWatched(event.video)
@@ -376,6 +451,7 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPickerDismiss -> dismissListPicker()
             MetaDetailsEvent.OnRemovalConfirmed -> confirmPickerRemoval()
             MetaDetailsEvent.OnRemovalCancelled -> cancelPickerRemoval()
+            is MetaDetailsEvent.OnShowMessage -> showMessage(event.message, event.isError)
             MetaDetailsEvent.OnClearMessage -> clearMessage()
             MetaDetailsEvent.OnLifecyclePause -> handleLifecyclePause()
         }
@@ -501,6 +577,17 @@ class MetaDetailsViewModel @Inject constructor(
         }
     }
 
+    private fun observeMovieResumeProgress() {
+        if (!itemType.equals("movie", ignoreCase = true)) return
+
+        viewModelScope.launch {
+            _effectiveContentId
+                .flatMapLatest { contentId -> watchProgressRepository.getProgress(contentId) }
+                .distinctUntilChanged()
+                .collectLatest { calculateNextToWatch() }
+        }
+    }
+
     private fun revalidateLocalWatchedEpisodesAgainstActiveProvider(
         providerProgressMap: Map<Pair<Int, Int>, WatchProgress>
     ) {
@@ -594,7 +681,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun observeMovieWatched() {
-        if (itemType.lowercase() != "movie") return
+        if (isSeriesLikeType(itemType)) return
         viewModelScope.launch {
             _effectiveContentId.flatMapLatest { cid ->
                 _uiState.map { it.meta?.imdbId?.takeIf { id -> id != cid && id.isNotBlank() } }
@@ -620,6 +707,18 @@ class MetaDetailsViewModel @Inject constructor(
                 _uiState.update { state ->
                     if (state.blurUnwatchedEpisodes == enabled) state else state.copy(blurUnwatchedEpisodes = enabled)
                 }
+                }
+        }
+    }
+
+    private fun observeSeasonPostersEnabled() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.detailSeasonPostersEnabled
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    _uiState.update { state ->
+                        if (state.seasonPostersEnabled == enabled) state else state.copy(seasonPostersEnabled = enabled)
+                    }
                 }
         }
     }
@@ -730,6 +829,7 @@ class MetaDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             cancelCommentsRequests()
             val mdbListSettings = mdbListSettingsDataStore.settings.first()
+            mdbListSettingsAtLoad = mdbListSettings
             val isMdbListActive = mdbListRepository.isAvailable(mdbListSettings)
             _uiState.update {
                 it.copy(
@@ -927,7 +1027,8 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun applyMeta(
         meta: Meta,
-        initialNextToWatch: NextToWatch?
+        initialNextToWatch: NextToWatch?,
+        cachedMdbListRatings: CachedMdbListRatings?
     ) {
         // Update the effective content ID so watch-progress observers pick up
         // the canonical ID (e.g. IMDB "tt0396375") instead of the navigation ID
@@ -983,7 +1084,9 @@ class MetaDetailsViewModel @Inject constructor(
                 nextToWatch = effectiveNextToWatch,
                 error = null,
                 commentsEpisodeTarget = null,
-                shouldShowCommentsSection = traktCommentsEnabled && traktAuthenticated && supportsComments(meta)
+                shouldShowCommentsSection = traktCommentsEnabled && traktAuthenticated && supportsComments(meta),
+                mdbListRatings = cachedMdbListRatings?.ratings ?: it.mdbListRatings,
+                mdbListRatingOrder = cachedMdbListRatings?.order ?: it.mdbListRatingOrder
             )
         }
 
@@ -1010,12 +1113,23 @@ class MetaDetailsViewModel @Inject constructor(
             contentType = enriched.apiType
         )?.resolveForMeta(enriched)
 
+        // Home rows usually fetched this title's ratings already. Showing them with the meta avoids a second
+        // layout and draw of the hero when they would land a moment later, which froze a playing trailer.
+        val cachedMdbListRatings = if (isServerItem) null else cachedMdbListRatings(enriched)
         applyMeta(
-            meta = enriched,
-            initialNextToWatch = cachedNextToWatch
+            meta = withHandoffTrailer(enriched),
+            initialNextToWatch = cachedNextToWatch,
+            cachedMdbListRatings = cachedMdbListRatings
         )
 
         val contentId = _effectiveContentId.value
+
+        // Ratings don't depend on watch progress, so start them before the remote
+        // progress wait below, which can take long or never finish if the sync keeps failing.
+        if (!isServerItem) {
+            loadEpisodeRatingsAsync(enriched)
+            if (cachedMdbListRatings == null) viewModelScope.launch { loadMDBListRatings(enriched) }
+        }
 
         // Wait for remote progress provider (Simkl/Trakt) to finish initial load.
         watchProgressRepository.observeRemoteProgressLoaded().first { it }
@@ -1036,10 +1150,6 @@ class MetaDetailsViewModel @Inject constructor(
         val watchedEpisodes = watchedDeferred.await()
         val precomputedNextToWatch = computeNextToWatch(enriched, progressMap, watchedEpisodes)
         updateNextToWatch(precomputedNextToWatch)
-
-        if (isServerItem) return
-        loadEpisodeRatingsAsync(enriched)
-        viewModelScope.launch { loadMDBListRatings(enriched) }
     }
 
     private fun NextToWatch.resolveForMeta(meta: Meta): NextToWatch? {
@@ -1408,6 +1518,19 @@ class MetaDetailsViewModel @Inject constructor(
         }
     }
 
+    private fun cachedMdbListRatings(meta: Meta): CachedMdbListRatings? {
+        val settings = mdbListSettingsAtLoad ?: return null
+        val result = mdbListRepository.cachedRatingsForMeta(
+            meta = meta,
+            fallbackItemId = itemId,
+            fallbackItemType = itemType,
+            settings = settings
+        ) ?: return null
+        return CachedMdbListRatings(result.ratings, settings.enabledRatingOrder())
+    }
+
+    private class CachedMdbListRatings(val ratings: MDBListRatings, val order: List<String>)
+
     private suspend fun loadMDBListRatings(meta: Meta) {
         val settings = mdbListSettingsDataStore.settings.first()
         val isMdbListActive = mdbListRepository.isAvailable(settings)
@@ -1501,7 +1624,8 @@ class MetaDetailsViewModel @Inject constructor(
 
                 val ratings = imdbEpisodeRatingsRepository.getEpisodeRatings(
                     imdbId = imdbId,
-                    tmdbId = tmdbId
+                    tmdbId = tmdbId,
+                    addonEpisodes = meta.videos.map { AddonEpisodeAirDate(it.season, it.episode, it.released) }
                 )
 
                 _uiState.update { state ->
@@ -1549,7 +1673,7 @@ class MetaDetailsViewModel @Inject constructor(
             ?: return meta
 
         val isSeries = meta.apiType in listOf("series", "tv")
-        val needsEpisodes = settings.useEpisodes && isSeries
+        val needsEpisodes = (settings.useEpisodes || settings.useSeasonPosters) && isSeries
 
         // Fetch main enrichment and episode enrichment in parallel.
         val (enrichment, episodeMap) = coroutineScope {
@@ -1663,7 +1787,8 @@ class MetaDetailsViewModel @Inject constructor(
                             useTmdbReleaseDates = false
                         ),
                         thumbnail = if (settings.useEpisodes) ep?.thumbnail ?: video.thumbnail else video.thumbnail,
-                        runtime = if (settings.useEpisodes) ep?.runtimeMinutes ?: video.runtime else video.runtime
+                        runtime = if (settings.useEpisodes) ep?.runtimeMinutes ?: video.runtime else video.runtime,
+                        seasonPoster = if (settings.useSeasonPosters) ep?.seasonPoster ?: video.seasonPoster else video.seasonPoster
                     )
                 }
             )
@@ -1847,17 +1972,23 @@ class MetaDetailsViewModel @Inject constructor(
         if (updated != current) {
             watchedSeriesStateHolder.updateWithValidation(updated, allIds)
         }
+        _uiState.update { state ->
+            if (state.isMovieWatched == allWatched) state else state.copy(isMovieWatched = allWatched)
+        }
     }
 
     private fun calculateNextToWatch() {
+        refreshRewatchEpisodes()
         val meta = _uiState.value.meta ?: return
         val progressMap = _uiState.value.episodeProgressMap
         val watchedEpisodes = _uiState.value.watchedEpisodes
+        val isSeries = meta.apiType.equals("series", ignoreCase = true) ||
+            meta.apiType.equals("tv", ignoreCase = true)
 
         // Don't override an existing nextToWatch with a computation from empty progress data.
         // The inline computation in applyMetaWithEnrichment reads directly from the repo
         // and may have better data than the UI state observer at this point.
-        if (progressMap.isEmpty() && watchedEpisodes.isEmpty() && _uiState.value.nextToWatch != null) {
+        if (isSeries && progressMap.isEmpty() && watchedEpisodes.isEmpty() && _uiState.value.nextToWatch != null) {
             return
         }
 
@@ -1867,6 +1998,32 @@ class MetaDetailsViewModel @Inject constructor(
             val nextToWatch = computeNextToWatch(meta, progressMap, watchedEpisodes)
             updateNextToWatch(nextToWatch)
         }
+    }
+
+    /**
+     * The last completed canonical mark, by time, or null when there is none.
+     *
+     * A mark inside the run and a mark past it both carry the time of the viewing, so the newest mark
+     * is what tells the run where the user is now. The local watched items cover batch marks that
+     * have not reached the progress map yet, and the progress map covers playback marks.
+     */
+    private suspend fun latestCompletedCanonicalMark(
+        progressMap: Map<Pair<Int, Int>, WatchProgress>,
+    ): Triple<Int, Int, Long>? {
+        val marks = buildMap<Pair<Int, Int>, Long> {
+            watchedItemsPreferences.getWatchedEpisodesWithTimestamps(_effectiveContentId.value)
+                .first()
+                .forEach { (position, watchedAt) -> put(position, watchedAt) }
+            progressMap.values.forEach { progress ->
+                val season = progress.season ?: return@forEach
+                val episode = progress.episode ?: return@forEach
+                if (!progress.isCompleted()) return@forEach
+                val position = season to episode
+                put(position, maxOf(get(position) ?: 0L, progress.lastWatched))
+            }
+        }
+        val latest = marks.maxByOrNull { (_, watchedAt) -> watchedAt } ?: return null
+        return Triple(latest.key.first, latest.key.second, latest.value)
     }
 
     private suspend fun computeNextToWatch(
@@ -1917,6 +2074,69 @@ class MetaDetailsViewModel @Inject constructor(
 
         val nonSpecialEpisodes = allEpisodes.filter { (it.season ?: 0) > 0 }
         val episodePool = if (nonSpecialEpisodes.isNotEmpty()) nonSpecialEpisodes else allEpisodes
+
+        // A rewatch run the user is following decides where Play goes while the canonical watch has
+        // not moved past the run's next step. A local mark of that step is part of the run and moves
+        // it forward, while an episode the user watched further after the run retires it. When the
+        // run has no episode after it, or the account holds no run for this series, the canonical
+        // position decides exactly as it does without a run.
+        val rewatchRun = rewatchRunFor(meta.id) ?: rewatchRunFor(_effectiveContentId.value)
+        if (rewatchRun != null) {
+            val showUnairedNextUp = layoutPreferenceDataStore.showUnairedNextUp.first()
+            val expectedNext = nextEpisodeAfterRun(
+                episodes = episodePool,
+                run = rewatchRun,
+                showUnairedNextUp = showUnairedNextUp,
+            )
+            val latestMark = latestCompletedCanonicalMark(progressMap)
+            val action = rewatchRun.playActionFor(
+                expectedNextSeason = expectedNext?.season,
+                expectedNextEpisode = expectedNext?.episode,
+                latestMarkSeason = latestMark?.first,
+                latestMarkEpisode = latestMark?.second,
+                latestMarkedAtEpochMs = latestMark?.third ?: 0L,
+            )
+            val runEpisode = when (action) {
+                RewatchPlayAction.KEEP -> expectedNext
+                RewatchPlayAction.ADVANCE -> expectedNext?.let { next ->
+                    val advancedRun = rewatchRun.copy(
+                        seasonNumber = next.season ?: rewatchRun.seasonNumber,
+                        episodeNumber = next.episode ?: rewatchRun.episodeNumber,
+                        markedAtEpochMs = latestMark?.third ?: rewatchRun.markedAtEpochMs,
+                    )
+                    nextEpisodeAfterRun(episodePool, advancedRun, showUnairedNextUp)
+                }
+                RewatchPlayAction.REJECT -> null
+            }
+            if (runEpisode != null) {
+                // Starting the run's next episode does not throw away the position the user already
+                // reached in it: the player resumes from there, and the button says so.
+                val runProgress = runEpisode.season?.let { season ->
+                    runEpisode.episode?.let { episode -> progressMap[season to episode] }
+                }?.takeIf { progress -> shouldResumeProgress(progress) }
+                return NextToWatch(
+                    watchProgress = runProgress,
+                    isResume = runProgress != null,
+                    nextVideoId = runEpisode.id,
+                    nextSeason = runEpisode.season,
+                    nextEpisode = runEpisode.episode,
+                    displayText = if (runProgress != null) {
+                        localizedContext.getString(
+                            R.string.detail_btn_resume_episode,
+                            runEpisode.season,
+                            runEpisode.episode
+                        )
+                    } else {
+                        localizedContext.getString(
+                            R.string.detail_btn_next_episode,
+                            runEpisode.season,
+                            runEpisode.episode
+                        )
+                    }
+                )
+            }
+        }
+
         val useFurthestEpisode = layoutPreferenceDataStore.nextUpFromFurthestEpisode.first()
         val latestSeriesProgress = if (useFurthestEpisode) {
             // When using furthest episode mode, consider both progressMap entries
@@ -2171,16 +2391,8 @@ class MetaDetailsViewModel @Inject constructor(
         return meta.videos.firstOrNull { it.id == defaultVideoId && it.available != false }
     }
 
-    private fun shouldResumeProgress(progress: WatchProgress): Boolean {
-        if (progress.isCompleted()) return false
-        if (progress.progressPercentage >= 0.02f) return true
-
-        val hasStartedPlayback = progress.position > 0L ||
-            progress.progressPercent?.let { it > 0f } == true
-        return hasStartedPlayback &&
-            progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
-            progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
-    }
+    // Same rule the player uses to resume, so Resume never restarts from 0
+    private fun shouldResumeProgress(progress: WatchProgress): Boolean = progress.isInProgress()
 
     private fun toggleLibrary() {
         if (
@@ -2436,8 +2648,12 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun toggleMovieWatched() {
         val meta = _uiState.value.meta ?: return
-        if (meta.apiType != "movie") return
         if (_uiState.value.isMovieWatchedPending) return
+        if (meta.isSeriesWithWatchableEpisodes()) {
+            toggleSeriesWatched(meta)
+            return
+        }
+        if (!meta.isWatchedAsOneItem()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isMovieWatchedPending = true) }
@@ -2456,6 +2672,54 @@ class MetaDetailsViewModel @Inject constructor(
                 )
             }
             _uiState.update { it.copy(isMovieWatchedPending = false) }
+        }
+    }
+
+    private fun toggleSeriesWatched(meta: Meta) {
+        val markWatched = !_uiState.value.isMovieWatched
+        viewModelScope.launch {
+            _uiState.update { it.copy(isMovieWatchedPending = true) }
+            val targets = meta.watchableEpisodes().filter { video ->
+                val key = video.season!! to video.episode!!
+                val watched = _uiState.value.episodeProgressMap[key]?.isCompleted() == true ||
+                    key in _uiState.value.watchedEpisodes
+                watched != markWatched
+            }
+            val keys = targets.map { it.season!! to it.episode!! }.toSet()
+            if (markWatched) {
+                _optimisticUnmarks -= keys
+                _optimisticMarks += keys
+            } else {
+                _optimisticMarks -= keys
+                _optimisticUnmarks += keys
+            }
+            runCatching {
+                if (targets.isEmpty()) return@runCatching
+                if (markWatched) {
+                    watchProgressRepository.markAsCompletedBatch(
+                        targets.map { buildCompletedEpisodeProgress(meta, it) }
+                    )
+                } else {
+                    watchProgressRepository.removeFromHistoryBatch(
+                        contentId = _effectiveContentId.value,
+                        videoId = resolveFallbackVideoId(),
+                        episodes = targets.map { Triple(it.season!!, it.episode!!, it.id) }
+                    )
+                }
+            }.onSuccess {
+                showMessage(
+                    localizedContext.getString(
+                        if (markWatched) R.string.detail_movie_marked_watched else R.string.detail_movie_marked_unwatched
+                    )
+                )
+            }.onFailure { error ->
+                showMessage(
+                    message = error.message ?: context.getString(com.nuvio.tv.R.string.detail_error_update_watched_failed),
+                    isError = true
+                )
+            }
+            _uiState.update { it.copy(isMovieWatchedPending = false) }
+            reevaluateSeriesWatchedBadge()
         }
     }
 
@@ -2492,6 +2756,138 @@ class MetaDetailsViewModel @Inject constructor(
                 )
             }
 
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
+            }
+        }
+    }
+
+    /**
+     * Writes an episode the account already watched into the open rewatch run.
+     *
+     * The mark goes through the same history write as a first watch; Simkl turns a mark of an
+     * already watched episode into a repeat viewing and pins the run the account holds. The local
+     * watched state does not change, so the episode stays watched after the mark.
+     */
+    private fun markEpisodeRewatched(video: Video) {
+        val meta = _uiState.value.meta ?: return
+        val season = video.season ?: return
+        val episode = video.episode ?: return
+        val pendingKey = episodePendingKey(video)
+        if (_uiState.value.episodeWatchedPendingKeys.contains(pendingKey)) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKey)
+            }
+            runCatching {
+                // Only Simkl hears about this one: a rewatch is its concept, and the shared mark
+                // path would also write the viewing to Trakt or MDBList.
+                val media = buildTrackingMediaReference(
+                    contentType = meta.apiType,
+                    parentMetaId = _effectiveContentId.value,
+                    videoId = video.id,
+                    title = meta.name,
+                    releaseInfo = meta.releaseInfo,
+                    seasonNumber = season,
+                    episodeNumber = episode,
+                    episodeTitle = video.title
+                )
+                val result = simklTrackingHistoryWriter.addToHistory(
+                    profileId = profileManager.activeProfileId.value,
+                    // The user picked the rewatch action, so the write says so. The writer still
+                    // owns the mode and plan gate and pins the open run only where it can take one.
+                    items = listOf(TrackingHistoryItem(media = media, isRewatch = true))
+                )
+                check(result.notFoundCount == 0) { "Simkl did not match the episode" }
+                val rewatchStatus = result.resolutions
+                    .firstOrNull { resolution -> resolution.rewatchStatus != null }
+                    ?.rewatchStatus
+                    ?.trim()
+                    ?.lowercase()
+                when {
+                    simklHistoryRewatchWasRecorded(rewatchStatus, result.addedCount) -> showMessage(
+                        localizedContext.getString(R.string.detail_episode_marked_rewatched)
+                    )
+                    rewatchStatus == "too_soon" -> showMessage(
+                        message = localizedContext.getString(R.string.detail_rewatch_too_soon),
+                        isError = true
+                    )
+                    // A history write inside the 2-day gap can still echo the active session, so
+                    // the missing added episode, not the status alone, says it did not book it.
+                    else -> showMessage(
+                        message = localizedContext.getString(R.string.detail_rewatch_not_recorded),
+                        isError = true
+                    )
+                }
+            }.onFailure { error ->
+                showMessage(
+                    message = error.message ?: context.getString(com.nuvio.tv.R.string.detail_error_update_episode_watched_failed),
+                    isError = true
+                )
+            }
+            // The writer reads the run this write opened or extended back from the sessions and
+            // adopts it, so a second full sync here would only duplicate that read.
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
+            }
+        }
+    }
+
+    /**
+     * Drops the visible rewatch of an episode without touching its original watch.
+     *
+     * The removal names the rewatch session the episode belongs to, so Simkl deletes only that
+     * viewing. The writer reads the session from the account snapshot; when it cannot name one, no
+     * request is sent.
+     */
+    private fun unmarkEpisodeRewatched(video: Video) {
+        val meta = _uiState.value.meta ?: return
+        val season = video.season ?: return
+        val episode = video.episode ?: return
+        val pendingKey = episodePendingKey(video)
+        if (_uiState.value.episodeWatchedPendingKeys.contains(pendingKey)) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKey)
+            }
+            runCatching {
+                val media = buildTrackingMediaReference(
+                    contentType = meta.apiType,
+                    parentMetaId = _effectiveContentId.value,
+                    videoId = video.id,
+                    title = meta.name,
+                    releaseInfo = meta.releaseInfo,
+                    seasonNumber = season,
+                    episodeNumber = episode,
+                    episodeTitle = video.title
+                )
+                val result = simklTrackingHistoryWriter.removeRewatchFromHistory(
+                    profileId = profileManager.activeProfileId.value,
+                    items = listOf(media)
+                )
+                check(result != null && result.notFoundCount == 0) {
+                    "Simkl did not find the rewatch to remove"
+                }
+                // The committed receipt dropped the episode from the running session; re-read the
+                // set so the original watch loses its R marker at once.
+                refreshRewatchEpisodes()
+                showMessage(localizedContext.getString(R.string.detail_episode_marked_not_rewatched))
+            }.onFailure { error ->
+                showMessage(
+                    message = error.message ?: context.getString(R.string.detail_error_update_episode_watched_failed),
+                    isError = true
+                )
+            }
+            // The removed viewing is not gone from the snapshot until a read sees it; re-deriving
+            // only re-reads what is already stored.
+            runCatching {
+                delay(1_500)
+                simklSyncRepository.refresh(TrackingRefreshIntent.USER_INITIATED)
+            }.onFailure { error ->
+                Log.w(TAG, "Could not refresh Simkl after a rewatch removal", error)
+            }
             _uiState.update {
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
             }
@@ -2820,8 +3216,43 @@ class MetaDetailsViewModel @Inject constructor(
 
     // --- Trailer ---
 
+    private fun applyTrailerHandoff() {
+        val transfer = backgroundTrailerController.pendingTransfer(itemId)
+        val poolHandoff = if (transfer == null) trailerPlayerPool.peekHandoff(itemId) else null
+        if (transfer == null && poolHandoff == null) return
+        if (isServerItem || !AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            backgroundTrailerController.cancelTransfer(itemId)
+            trailerPlayerPool.cancelHandoff(itemId)
+            return
+        }
+        val playInBackground = trailerPlayerPool.playInBackgroundPreference
+        trailerHandoffActive = true
+        trailerHasPlayed = true
+        handoffTrailerYoutubeKey = transfer?.youtubeKey ?: poolHandoff?.youtubeKey
+        _uiState.update { state ->
+            state.copy(
+                trailerUrl = transfer?.videoUrl ?: poolHandoff?.videoUrl,
+                trailerAudioUrl = transfer?.audioUrl ?: poolHandoff?.audioUrl,
+                isTrailerLoading = false
+            )
+        }
+        setTrailerPlaybackState(
+            isPlaying = !playInBackground,
+            showControls = false,
+            hideLogo = false,
+            isBackgroundPlaying = playInBackground
+        )
+    }
+
+    private fun withHandoffTrailer(meta: Meta): Meta {
+        val key = handoffTrailerYoutubeKey?.takeIf { it.isNotBlank() } ?: return meta
+        if (meta.trailers.any { it.ytId == key }) return meta
+        return meta.copy(trailers = listOf(MetaTrailer(type = "Trailer", ytId = key)) + meta.trailers)
+    }
+
     private fun fetchTrailerUrl() {
         if (isServerItem) return
+        if (trailerHandoffActive) return
         val meta = _uiState.value.meta ?: return
 
         trailerFetchJob?.cancel()
@@ -2973,6 +3404,28 @@ class MetaDetailsViewModel @Inject constructor(
             isPlaying = false,
             showControls = false,
             hideLogo = false
+        )
+    }
+
+    private fun handleTrailerBackPress() {
+        val continueInBackground = shouldContinueTrailerInBackgroundOnBack(
+            isTrailerPlaying = _uiState.value.isTrailerPlaying,
+            autoplayEnabled = trailerAutoplayEnabled,
+            playInBackground = trailerPlayInBackground
+        )
+        if (!continueInBackground) {
+            handleTrailerEnded()
+            return
+        }
+        // Hand the running trailer back to the detail page without restarting it.
+        trailerHasPlayed = true
+        isPlayButtonFocused = false
+        idleTimerJob?.cancel()
+        setTrailerPlaybackState(
+            isPlaying = false,
+            showControls = false,
+            hideLogo = false,
+            isBackgroundPlaying = true
         )
     }
 

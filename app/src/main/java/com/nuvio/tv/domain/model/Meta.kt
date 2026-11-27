@@ -45,7 +45,8 @@ data class Meta(
     val hasLandscapePoster: Boolean? = null,
     val hasLogo: Boolean? = null,
     val hasLinks: Boolean? = null,
-    val hasVideos: Boolean? = null
+    val hasVideos: Boolean? = null,
+    val seasonPosters: Map<Int, String> = emptyMap()
 ) {
     val apiType: String
         get() = type.toApiString(rawType)
@@ -60,6 +61,18 @@ data class Meta(
      */
     fun watchableEpisodes(): List<Video> = videos.watchableEpisodes()
 }
+
+/**
+ * Whether this title is marked watched as a whole, like a movie, instead of per episode: movies
+ * always are, and so is any other type that is not a show (an add-on's "youtube", say) when it
+ * has no episode list.
+ */
+fun Meta.isWatchedAsOneItem(): Boolean =
+    apiType.equals("movie", ignoreCase = true) || (!isSeriesLikeType(apiType) && videos.isEmpty())
+
+fun Meta.isSeriesWithWatchableEpisodes(): Boolean =
+    (apiType.equals("series", ignoreCase = true) || apiType.equals("tv", ignoreCase = true)) &&
+        watchableEpisodes().isNotEmpty()
 
 fun List<Video>.watchableEpisodes(): List<Video> {
     val candidates = filter {
@@ -115,7 +128,7 @@ private val LANGUAGE_NORMALIZATION_MAP = mapOf(
     "ita" to "it", "spa" to "es", "por" to "pt", "rus" to "ru",
     "hin" to "hi", "tur" to "tr", "pol" to "pl", "nld" to "nl",
     "dut" to "nl", "swe" to "sv", "nor" to "no", "dan" to "da",
-    "fin" to "fi", "tha" to "th", "ara" to "ar", "heb" to "he",
+    "fin" to "fi", "tha" to "th", "ara" to "ar", "heb" to "he", "hbo" to "he", "iw" to "he",
     "ces" to "cs", "cze" to "cs", "ron" to "ro", "rum" to "ro",
     "hun" to "hu", "ukr" to "uk", "ell" to "el", "gre" to "el",
     "eng" to "en", "vie" to "vi", "ind" to "id", "msa" to "ms",
@@ -198,7 +211,15 @@ data class Video(
     val runtime: Int? = null, // episode runtime in minutes
     /** Per-episode rating supplied by the addon, when it provides one. */
     val rating: Double? = null,
-    val available: Boolean? = null
+    val available: Boolean? = null,
+    val seasonPoster: String? = null,
+    /**
+     * The episode on IMDb, when the addon numbers it its own way (anime catalogs restart each
+     * season or count on past a thousand): its IMDb id, season and episode.
+     */
+    val imdbId: String? = null,
+    val imdbSeason: Int? = null,
+    val imdbEpisode: Int? = null
 )
 
 @Immutable

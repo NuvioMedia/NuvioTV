@@ -2,7 +2,10 @@ package com.nuvio.tv.data.simkl
 
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.data.local.TraktSettingsDataStore
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -12,10 +15,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -25,7 +30,8 @@ class SimklSyncRepository @Inject constructor(
     private val storage: SimklSyncStorage,
     private val authRepository: SimklAuthRepository,
     private val authStorage: SimklAuthStorage,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val settingsDataStore: TraktSettingsDataStore
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -39,6 +45,12 @@ class SimklSyncRepository @Inject constructor(
 
     val state: StateFlow<SimklSyncState> = _state.asStateFlow()
     internal val projection: StateFlow<SimklSnapshotProjection> = _projection.asStateFlow()
+
+    internal fun currentEntryIndex(): SimklEntryIndex? {
+        val currentProjection = _projection.value
+        val currentEntries = _state.value.snapshot.entries
+        return currentProjection.entryIndex.takeIf { it.matchesEntries(currentEntries) }
+    }
 
     init {
         scope.launch {
@@ -114,11 +126,21 @@ class SimklSyncRepository @Inject constructor(
             val playback = current.snapshot.playback.filterNot { session -> session.id in sessionIds }
             if (playback.size == current.snapshot.playback.size) return@withLock
             val snapshot = current.snapshot.copy(playback = playback)
-            val projection = buildProjection(snapshot)
-            storage.save(profileId, encodeSnapshot(snapshot))
+            val onlyPlaybackChanged = snapshot.entries === current.snapshot.entries
+            val storedSnapshot = if (onlyPlaybackChanged) snapshot else snapshot.withFreshStorageRevision()
+            val projection = if (onlyPlaybackChanged && _projection.value !== SimklSnapshotProjection.Empty) {
+                _projection.value.withUpdatedPlayback(snapshot)
+            } else {
+                buildProjection(snapshot)
+            }
+            if (onlyPlaybackChanged) {
+                storage.savePlayback(profileId, encodePlayback(storedSnapshot))
+            } else {
+                storage.save(profileId, encodeSnapshot(storedSnapshot))
+            }
             if (profileId == profileManager.activeProfileId.value) {
                 _projection.value = projection
-                _state.value = current.copy(snapshot = snapshot)
+                _state.value = current.copy(snapshot = storedSnapshot)
             }
         }
     }
@@ -130,16 +152,28 @@ class SimklSyncRepository @Inject constructor(
         snapshotMutex.withLock {
             if (!isCurrent(profileId, generation)) return@withLock
             val current = _state.value
-            val snapshot = current.snapshot.applyScrobbleResult(
+            val index = _projection.value.entryIndex.takeIf { it.matchesEntries(current.snapshot.entries) }
+            val (snapshot, updatedIndex) = current.snapshot.applyScrobbleResultWithIndex(
                 result = result,
-                committedAtEpochMs = System.currentTimeMillis()
+                committedAtEpochMs = System.currentTimeMillis(),
+                entryIndex = index
             )
             if (snapshot == current.snapshot) return@withLock
-            val projection = buildProjection(snapshot)
-            storage.save(profileId, encodeSnapshot(snapshot))
+            val onlyPlaybackChanged = snapshot.entries === current.snapshot.entries
+            val storedSnapshot = if (onlyPlaybackChanged) snapshot else snapshot.withFreshStorageRevision()
+            val projection = if (onlyPlaybackChanged && _projection.value !== SimklSnapshotProjection.Empty) {
+                _projection.value.withUpdatedPlayback(snapshot)
+            } else {
+                buildProjection(snapshot, updatedIndex)
+            }
+            if (onlyPlaybackChanged) {
+                storage.savePlayback(profileId, encodePlayback(storedSnapshot))
+            } else {
+                storage.save(profileId, encodeSnapshot(storedSnapshot))
+            }
             if (isCurrent(profileId, generation)) {
                 _projection.value = projection
-                _state.value = current.copy(snapshot = snapshot)
+                _state.value = current.copy(snapshot = storedSnapshot)
             }
         }
     }
@@ -151,23 +185,141 @@ class SimklSyncRepository @Inject constructor(
         snapshotMutex.withLock {
             if (!isCurrent(profileId, generation)) return@withLock
             val current = _state.value
+            val index = _projection.value.entryIndex.takeIf { it.matchesEntries(current.snapshot.entries) }
             val snapshot = current.snapshot.applyMutationReceipt(
                 receipt = receipt,
-                committedAtEpochMs = System.currentTimeMillis()
+                committedAtEpochMs = System.currentTimeMillis(),
+                entryIndex = index
             )
             if (snapshot == current.snapshot) return@withLock
             val projection = buildProjection(snapshot)
-            storage.save(profileId, encodeSnapshot(snapshot))
+            val storedSnapshot = snapshot.withFreshStorageRevision()
+            storage.save(profileId, encodeSnapshot(storedSnapshot))
             if (isCurrent(profileId, generation)) {
                 _projection.value = projection
-                _state.value = current.copy(snapshot = snapshot)
+                _state.value = current.copy(snapshot = storedSnapshot)
             }
         }
     }
 
+    /**
+     * Stores the runs the account's rewatch sessions make, so a rewatch the user just confirmed shows
+     * up in Continue Watching at once instead of after the next sync. The sessions come from the
+     * caller, which read them to answer whether the write landed; only the running rewatch sessions
+     * are kept, never the canonical rows read beside them. A read paired with the watermark carries the
+     * changed items only, so it is merged into the sessions already stored and the items it does not
+     * mention keep theirs.
+     */
+    internal suspend fun adoptRewatchSessions(sessions: List<SimklLibraryEntry>) =
+        withContext(Dispatchers.IO) {
+            // What the caller read is a delta outside the initial sync (it was paired with the sync
+            // watermark): it carries the changed items only, so merging it keeps the sessions of the
+            // items it did not mention. A full read merges the same way: it mentions every item, which
+            // makes the read the whole set again.
+            ensureLoaded()
+            val profileId = profileManager.activeProfileId.value
+            val generation = profileGeneration
+            snapshotMutex.withLock {
+                if (!isCurrent(profileId, generation)) return@withLock
+                val current = _state.value
+                // The delta is merged against the snapshot inside the lock: a sync that landed
+                // between the caller's read and this write must not be overwritten with what the
+                // snapshot held before it.
+                val merged = mergeRewatchSessions(
+                    read = sessions,
+                    stored = current.snapshot.rewatchSessions
+                )
+                val runs = runCatching {
+                    deriveSimklRewatchRuns(
+                        entries = merged,
+                        offerRuns = offersSimklRewatchRuns()
+                    )
+                }.getOrElse { error ->
+                    Log.w(TAG, "Could not read the runs out of the rewatch sessions", error)
+                    return@withLock
+                }
+                if (
+                    current.snapshot.rewatchRuns == runs &&
+                    current.snapshot.rewatchSessions == merged
+                ) {
+                    return@withLock
+                }
+                val snapshot = current.snapshot.copy(
+                    rewatchRuns = runs,
+                    rewatchSessions = merged
+                )
+                val projection = buildProjection(snapshot)
+                val storedSnapshot = snapshot.withFreshStorageRevision()
+                storage.save(profileId, encodeSnapshot(storedSnapshot))
+                if (isCurrent(profileId, generation)) {
+                    _projection.value = projection
+                    _state.value = current.copy(snapshot = storedSnapshot)
+                }
+            }
+        }
+
+    /**
+     * Re-derives the runs after the user changed how rewatches are recorded.
+     *
+     * The sessions of the last read are kept on the snapshot, so the row follows the setting at once
+     * instead of at the next sync, and it works offline. With nothing read yet there is nothing to
+     * re-derive, and the next sync picks the setting up on its own.
+     */
+    internal suspend fun refreshRewatchRuns() = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val profileId = profileManager.activeProfileId.value
+        val generation = profileGeneration
+        snapshotMutex.withLock {
+            if (!isCurrent(profileId, generation)) return@withLock
+            val current = _state.value
+            // Read the sessions inside the lock so a sync that landed before this write is not overwritten.
+            val sessions = current.snapshot.rewatchSessions
+            if (sessions.isEmpty()) return@withLock
+            val runs = runCatching {
+                deriveSimklRewatchRuns(
+                    entries = sessions,
+                    offerRuns = offersSimklRewatchRuns()
+                )
+            }.getOrElse { error ->
+                Log.w(TAG, "Could not re-derive the runs after a setting change", error)
+                return@withLock
+            }
+            if (current.snapshot.rewatchRuns == runs) return@withLock
+            val snapshot = current.snapshot.copy(rewatchRuns = runs)
+            val projection = buildProjection(snapshot)
+            val storedSnapshot = snapshot.withFreshStorageRevision()
+            storage.save(profileId, encodeSnapshot(storedSnapshot))
+            if (isCurrent(profileId, generation)) {
+                _projection.value = projection
+                _state.value = current.copy(snapshot = storedSnapshot)
+            }
+        }
+    }
+
+    internal suspend fun commitRating(media: TrackingMediaReference, rating: Int?) = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val profileId = profileManager.activeProfileId.value
+        val generation = profileGeneration
+        val ratedAt = System.currentTimeMillis().epochMsToUtcIso()
+        val committed = snapshotMutex.withLock {
+            if (!isCurrent(profileId, generation)) return@withLock true
+            val current = _state.value
+            val snapshot = current.snapshot.withRating(media, rating, ratedAt) ?: return@withLock false
+            val projection = buildProjection(snapshot)
+            val storedSnapshot = snapshot.withFreshStorageRevision()
+            storage.save(profileId, encodeSnapshot(storedSnapshot))
+            if (isCurrent(profileId, generation)) {
+                _projection.value = projection
+                _state.value = current.copy(snapshot = storedSnapshot)
+            }
+            true
+        }
+        if (!committed) refreshAsync(TrackingRefreshIntent.INVALIDATED)
+    }
+
     private suspend fun loadProfile(profileId: Int) = loadMutex.withLock {
         if (loadedProfileId == profileId) return@withLock
-        val snapshot = storage.load(profileId)
+        val persistedSnapshot = storage.load(profileId)
             ?.trim()
             ?.takeIf(String::isNotEmpty)
             ?.let { payload ->
@@ -175,7 +327,18 @@ class SimklSyncRepository @Inject constructor(
                     .onFailure { error -> Log.w(TAG, "Unable to decode Simkl snapshot", error) }
                     .getOrNull()
             }
-            ?: SimklSyncSnapshot()
+        var snapshot = persistedSnapshot ?: SimklSyncSnapshot()
+        val playbackOverride = storage.loadPlayback(profileId)
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let { payload ->
+                runCatching { decodePlaybackOverride(payload, persistedSnapshot) }
+                    .onFailure { error -> Log.w(TAG, "Unable to decode Simkl playback override", error) }
+                    .getOrNull()
+            }
+        if (playbackOverride != null) {
+            snapshot = snapshot.copy(playback = playbackOverride)
+        }
         val projection = buildProjection(snapshot)
         if (profileId == profileManager.activeProfileId.value) {
             loadedProfileId = profileId
@@ -187,6 +350,11 @@ class SimklSyncRepository @Inject constructor(
     private suspend fun refreshSnapshot(profileId: Int, generation: Long) = snapshotMutex.withLock {
         val previous = _state.value
         _state.value = previous.copy(isLoading = true, errorMessage = null)
+        // Before the engine, so the sessions are read in this same sync once the plan allows them.
+        // A failed read leaves the plan unknown and is tried again on the next sync.
+        if (shouldLoadSimklPlanForRewatches(settingsDataStore.simklRewatchMode.first(), authStorage.state.value)) {
+            authRepository.ensurePlanLoaded()
+        }
         val result = try {
             engine.synchronize(previous.snapshot)
         } catch (error: CancellationException) {
@@ -211,18 +379,23 @@ class SimklSyncRepository @Inject constructor(
         )
         val projection = if (
             merged.entries === previous.snapshot.entries &&
-            merged.playback === previous.snapshot.playback
+            merged.playback === previous.snapshot.playback &&
+            merged.rewatchRuns == previous.snapshot.rewatchRuns &&
+            merged.rewatchSessions == previous.snapshot.rewatchSessions
         ) {
             _projection.value
+        } else if (merged.entries === previous.snapshot.entries && _projection.value !== SimklSnapshotProjection.Empty) {
+            _projection.value.withUpdatedPlayback(merged)
         } else {
             buildProjection(merged)
         }
         authRepository.synchronizeUserSettings(merged.activities?.settings?.all)
         if (!isCurrent(profileId, generation)) return@withLock
-        storage.save(profileId, encodeSnapshot(merged))
+        val storedSnapshot = merged.withFreshStorageRevision()
+        storage.save(profileId, encodeSnapshot(storedSnapshot))
         if (isCurrent(profileId, generation)) {
             _projection.value = projection
-            _state.value = SimklSyncState(snapshot = merged, hasLoaded = true)
+            _state.value = SimklSyncState(snapshot = storedSnapshot, hasLoaded = true)
         }
     }
 
@@ -247,8 +420,15 @@ class SimklSyncRepository @Inject constructor(
         }
     }
 
-    private suspend fun buildProjection(snapshot: SimklSyncSnapshot): SimklSnapshotProjection =
-        withContext(Dispatchers.Default) { SimklSnapshotProjection.create(snapshot) }
+    /* The mode is read from `TraktSettingsDataStore`; while it is off the runs are dropped. */
+    private suspend fun offersSimklRewatchRuns(): Boolean =
+        settingsDataStore.simklRewatchMode.first() != SimklRewatchMode.OFF
+
+    private suspend fun buildProjection(
+        snapshot: SimklSyncSnapshot,
+        entryIndex: SimklEntryIndex? = null
+    ): SimklSnapshotProjection =
+        withContext(Dispatchers.Default) { SimklSnapshotProjection.create(snapshot, entryIndex) }
 
     private suspend fun decodeSnapshot(payload: String): SimklSyncSnapshot =
         withContext(Dispatchers.Default) { json.decodeFromString(payload) }
@@ -256,7 +436,37 @@ class SimklSyncRepository @Inject constructor(
     private suspend fun encodeSnapshot(snapshot: SimklSyncSnapshot): String =
         withContext(Dispatchers.Default) { json.encodeToString(snapshot) }
 
+    private suspend fun decodePlaybackOverride(
+        payload: String,
+        persistedSnapshot: SimklSyncSnapshot?
+    ): List<SimklPlaybackSession>? = withContext(Dispatchers.Default) {
+        val override = runCatching {
+            json.decodeFromString<SimklPlaybackOverride>(payload)
+        }.getOrNull()
+        if (override != null) {
+            return@withContext override.playback.takeIf {
+                persistedSnapshot != null && override.storageRevision == persistedSnapshot.storageRevision
+            }
+        }
+        runCatching { json.decodeFromString<List<SimklPlaybackSession>>(payload) }.getOrNull()
+            ?.takeIf { persistedSnapshot != null && persistedSnapshot.storageRevision == null }
+    }
+
+    private suspend fun encodePlayback(snapshot: SimklSyncSnapshot): String =
+        withContext(Dispatchers.Default) {
+            json.encodeToString(SimklPlaybackOverride(snapshot.storageRevision, snapshot.playback))
+        }
+
+    private fun SimklSyncSnapshot.withFreshStorageRevision(): SimklSyncSnapshot =
+        copy(storageRevision = UUID.randomUUID().toString())
+
     private companion object {
         const val TAG = "SimklSync"
     }
 }
+
+@Serializable
+private data class SimklPlaybackOverride(
+    val storageRevision: String? = null,
+    val playback: List<SimklPlaybackSession>
+)

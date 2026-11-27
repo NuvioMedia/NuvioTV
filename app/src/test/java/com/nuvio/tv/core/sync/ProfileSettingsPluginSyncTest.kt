@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.TestPreferencesStore
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.AmbientModeDataStore
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
+import com.nuvio.tv.domain.model.AmbientModeSettings
 import com.nuvio.tv.domain.model.UserProfile
 import com.squareup.moshi.Moshi
 import io.github.jan.supabase.postgrest.Postgrest
@@ -75,6 +77,25 @@ class ProfileSettingsPluginSyncTest {
         assertTrue(harness.service.pullCurrentProfileFromRemote().getOrThrow())
 
         assertTrue(harness.plugins.groupStreamsByRepository.first())
+    }
+
+    @Test
+    fun `ambient mode settings upload and restore after app data is cleared`() = runTest(dispatcher) {
+        val harness = harness()
+        val profileManager = mockk<ProfileManager>()
+        every { profileManager.activeProfileId } returns harness.activeProfileId
+        val ambient = AmbientModeDataStore(harness.factory, profileManager)
+        ambient.setTimeoutMinutes(1)
+        ambient.setEnabled(false)
+        harness.service.pushCurrentProfileToRemote().getOrThrow()
+        harness.factory.get(1, AmbientModeDataStore.FEATURE).edit { it.clear() }
+        assertEquals(AmbientModeSettings.DEFAULT_TIMEOUT_MINUTES, ambient.settings.first().timeoutMinutes)
+
+        assertTrue(harness.service.pullCurrentProfileFromRemote().getOrThrow())
+
+        val restored = ambient.settings.first()
+        assertEquals(1, restored.timeoutMinutes)
+        assertFalse(restored.enabled)
     }
 
     @Test
@@ -252,6 +273,44 @@ class ProfileSettingsPluginSyncTest {
         assertTrue(harness.pushes.isEmpty())
     }
 
+    @Test
+    fun `switching profiles does not push the newly active profile's local settings`() = runTest(dispatcher) {
+        val harness = harness(authenticated = true)
+        harness.store(2, "theme_settings").edit { it[stringPreferencesKey("theme")] = "stale local theme" }
+        harness.remote[2] = settings(null, theme = "cloud theme")
+        runCurrent()
+
+        harness.activeProfileId.value = 2
+        runCurrent()
+        advanceTimeBy(2_000)
+        runCurrent()
+
+        assertTrue(harness.pushes.isEmpty())
+        assertEquals(settings(null, theme = "cloud theme"), harness.remote[2])
+    }
+
+    @Test
+    fun `a change made right before switching profiles is pushed for its own profile`() = runTest(dispatcher) {
+        val harness = harness(authenticated = true)
+        harness.store(2, "theme_settings").edit { it[stringPreferencesKey("theme")] = "secondary theme" }
+        runCurrent()
+
+        harness.store(1, "theme_settings").edit { it[stringPreferencesKey("theme")] = "new primary theme" }
+        runCurrent()
+        advanceTimeBy(500)
+        harness.activeProfileId.value = 2
+        runCurrent()
+        advanceTimeBy(2_000)
+        runCurrent()
+
+        assertEquals(listOf(1), harness.pushes)
+        val remoteTheme = harness.remote.getValue(1).getValue("features").jsonObject
+            .getValue("theme_settings").jsonObject
+            .getValue("theme").jsonObject
+        assertEquals("new primary theme", remoteTheme.getValue("value").jsonPrimitive.content)
+        assertTrue(harness.remote[2] == null)
+    }
+
     private fun harness(profileId: Int = 1, authenticated: Boolean = false): Harness {
         val stores = mutableMapOf<Pair<Int, String>, TestPreferencesStore>()
         val factory = mockk<ProfileDataStoreFactory>()
@@ -305,7 +364,7 @@ class ProfileSettingsPluginSyncTest {
         )
         services += service
         val plugins = PluginDataStore(mockk(relaxed = true), Moshi.Builder().build(), factory, profileManager)
-        return Harness(service, plugins, factory, remote, pulls, pushes)
+        return Harness(service, plugins, factory, activeProfileId, remote, pulls, pushes)
     }
 
     private fun grouping(enabled: Boolean) = buildJsonObject {
@@ -336,6 +395,7 @@ class ProfileSettingsPluginSyncTest {
         val service: ProfileSettingsSyncService,
         val plugins: PluginDataStore,
         val factory: ProfileDataStoreFactory,
+        val activeProfileId: MutableStateFlow<Int>,
         val remote: MutableMap<Int, JsonObject>,
         val pulls: MutableList<Int>,
         val pushes: MutableList<Int>

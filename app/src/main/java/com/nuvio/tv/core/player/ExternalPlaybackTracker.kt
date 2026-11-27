@@ -1,5 +1,8 @@
 package com.nuvio.tv.core.player
 
+import com.nuvio.tv.data.repository.AddonEventDispatcher
+import com.nuvio.tv.data.repository.AddonPlayerAction
+import com.nuvio.tv.data.repository.AddonPlayerEventTarget
 import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackResult
@@ -7,6 +10,8 @@ import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.torrent.TorrentService
+import com.nuvio.tv.core.tracking.TRACKING_COMPLETION_BAR_PERCENT
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -24,6 +29,7 @@ import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.ui.screens.player.PlayerNextEpisodeRules
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,6 +49,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 internal fun PlayerSettings.shouldSendSkipSegments(): Boolean = externalPlayerSendSkipSegments
+
+/**
+ * The segment types and the margin `PlayerContentEndPolicy` uses for the content end.
+ *
+ * The tracker needs the same point for the Simkl rewatch decision, and it sits in `core`, below
+ * the player package. Kept here as a copy rather than importing the UI: the two must move together.
+ */
+private val EXTERNAL_CONTENT_END_TYPES = setOf("outro", "ed", "mixed-ed", "movie-credits")
+private const val EXTERNAL_CONTENT_END_TOLERANCE_SECONDS = 5.0
 
 internal fun externalSkipIntervals(
     intervals: List<SkipInterval>
@@ -184,6 +199,7 @@ class ExternalPlaybackTracker @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val watchProgressRepository: WatchProgressRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
+    private val addonEventDispatcher: AddonEventDispatcher,
     private val metaRepository: MetaRepository,
     private val episodeShufflePlayback: EpisodeShufflePlayback,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -191,7 +207,8 @@ class ExternalPlaybackTracker @Inject constructor(
     private val cloudLibraryRepository: CloudLibraryRepository,
     private val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
     private val cloudPlaybackSessionStore: CloudLibraryPlaybackSessionStore,
-    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager,
+    private val torrentService: TorrentService
 ) {
     companion object {
         private const val TAG = "ExtPlaybackTracker"
@@ -254,6 +271,15 @@ class ExternalPlaybackTracker @Inject constructor(
     private var nextEpisodeSnapshot: ExternalNextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
     private var autoNextEnabledForPendingLaunch: Boolean? = null
     private var pendingCloudSessionToken: String? = null
+    private var pendingStartPositionMs: Long = 0L
+
+    /** Where the credits start for the pending external playback, when the launcher resolved them. */
+    private var pendingContentEndSeconds: Double? = null
+
+    @Volatile
+    private var ownsTorrentStream = false
+    val isOwningTorrentStream: Boolean get() = ownsTorrentStream
+    private var pendingOwnsTorrentStream = false
 
     private val autoPlayNextNavigationEvents = ExternalAutoNextNavigationEvents(
         maxAgeMs = AUTO_NEXT_OVERLAY_TIMEOUT_MS
@@ -385,8 +411,11 @@ class ExternalPlaybackTracker @Inject constructor(
         autoLaunch: Boolean = false,
         nextEpisodeSnapshot: ExternalNextEpisodeSnapshot? = null,
         cloudSessionToken: String? = null,
+        ownsTorrentStream: Boolean = false,
         context: Context
     ): Boolean {
+        this.ownsTorrentStream = false
+        this.pendingOwnsTorrentStream = ownsTorrentStream
         if (shouldCancelPendingAutoLaunch(autoLaunch)) {
             Log.d(AUTO_NEXT_TAG, "auto launch cancelled before tracker setup")
             return false
@@ -421,13 +450,15 @@ class ExternalPlaybackTracker @Inject constructor(
                 resolveSkipSegmentsJson(metadata)
             }
             val position = positionDeferred.await()
+            pendingStartPositionMs = position
+            persistStartPosition(position)
             val skipSegmentsJson = skipSegmentsDeferred.await()
             if (shouldCancelPendingAutoLaunch(autoLaunch)) {
                 Log.d(AUTO_NEXT_TAG, "auto launch cancelled during player preparation")
                 false
             } else {
                 withContext(Dispatchers.Main.immediate) {
-                    doLaunch(
+                    val intentSent = doLaunch(
                         url = url,
                         title = title,
                         headers = headers,
@@ -437,6 +468,9 @@ class ExternalPlaybackTracker @Inject constructor(
                         skipSegmentsJson = skipSegmentsJson,
                         context = context
                     )
+                    if (intentSent) this@ExternalPlaybackTracker.ownsTorrentStream =
+                        pendingOwnsTorrentStream
+                    intentSent
                 }
             }
         }
@@ -460,6 +494,7 @@ class ExternalPlaybackTracker @Inject constructor(
      * content can't be identified, or nothing is found.
      */
     private suspend fun resolveSkipSegmentsJson(metadata: ExternalPlaybackMetadata): String? {
+        pendingContentEndSeconds = null
         if (metadata.contentType.equals("cloud", ignoreCase = true)) return null
         val settings = playerSettingsDataStore.playerSettings.first()
         if (!settings.shouldSendSkipSegments()) return null
@@ -494,6 +529,9 @@ class ExternalPlaybackTracker @Inject constructor(
                 }
             }
         }
+        pendingContentEndSeconds = intervals
+            ?.filter { interval -> interval.type in EXTERNAL_CONTENT_END_TYPES }
+            ?.minOfOrNull { interval -> interval.startTime }
         if (intervals.isNullOrEmpty()) return null
 
         val forwardedIntervals = externalSkipIntervals(intervals)
@@ -593,6 +631,9 @@ class ExternalPlaybackTracker @Inject constructor(
             nextEpisodeSnapshot = loadPersistedNextEpisodeSnapshot()
             autoNextEnabledForPendingLaunch = loadPersistedAutoNextEnabled()
             pendingCloudSessionToken = loadPersistedCloudSessionToken()
+            // A resume above the completion bar is the tail of a viewing the account already has,
+            // and the tracker needs its real start position to tell that from a fresh one.
+            pendingStartPositionMs = persistedPrefs.getLong("startPositionMs", 0L)
         }
 
         if (result == null) {
@@ -761,7 +802,17 @@ class ExternalPlaybackTracker @Inject constructor(
             .putString("year", m.year)
             .putInt("profileId", m.profileId)
             .putString("cloudSessionToken", cloudSessionToken)
+            .putLong("startPositionMs", 0L)
             .apply()
+    }
+
+    /**
+     * The result can arrive after the player killed our process, so the start position has to
+     * survive next to the metadata. Without it a resumed viewing above the bar looks like one that
+     * began from zero and can open a rewatch for a watch the account already has.
+     */
+    private fun persistStartPosition(positionMs: Long) {
+        persistedPrefs.edit().putLong("startPositionMs", positionMs).apply()
     }
 
     private fun loadPersistedCloudSessionToken(): String? =
@@ -1337,9 +1388,14 @@ class ExternalPlaybackTracker @Inject constructor(
     fun stopTracking() {
         zidooMonitorJob?.cancel()
         zidooMonitorJob = null
+        if (ownsTorrentStream) {
+            ownsTorrentStream = false
+            torrentService.stopStream()
+        }
         awaitingExternalPlayerResult = false
         pendingMetadata = null
         pendingCloudSessionToken = null
+        pendingStartPositionMs = 0L
         isAutoLaunch = false
         ExternalPlaybackKeepAliveService.stop(appContext)
         Log.d(TAG, "Stopped tracking")
@@ -1364,6 +1420,7 @@ class ExternalPlaybackTracker @Inject constructor(
             val resumePosition = if (startFromBeginning) 0L else withContext(Dispatchers.Default) {
                 getResumePosition(metadata)
             }
+            pendingStartPositionMs = resumePosition
             val result = ZidooPlayerMonitor.awaitPlaybackEnd(resumePositionMs = resumePosition)
             // State changes run on Main with ActivityResult; the monitor's HTTP requests use IO.
             if (pendingMetadata !== metadata) return@launch
@@ -1420,9 +1477,33 @@ class ExternalPlaybackTracker @Inject constructor(
         // Continue Watching or tracking entries for files that did not have them before.
         if (metadata.contentType.equals("cloud", ignoreCase = true)) return
         val effectiveDuration = durationMs ?: 0L
+        // A result whose duration was backfilled runs after the screen's ON_RESUME has already
+        // stopped tracking, so the in-memory position can be zero by now. The persisted copy still
+        // says where this playback began, including after a process recreation.
+        val startPositionMs = pendingStartPositionMs.takeIf { it > 0L }
+            ?: persistedPrefs.getLong("startPositionMs", 0L)
+        val startedAboveCompletionBar = effectiveDuration > 0L &&
+            startPositionMs > 0L &&
+            startPositionMs.toDouble() / effectiveDuration.toDouble() * 100.0 >=
+                TRACKING_COMPLETION_BAR_PERCENT
+        val startProgressPercent = if (effectiveDuration > 0L && startPositionMs > 0L) {
+            startPositionMs.toDouble() / effectiveDuration.toDouble() * 100.0
+        } else {
+            null
+        }
+        val contentEndPercent = pendingContentEndSeconds?.let { seconds ->
+            if (effectiveDuration <= 0L) {
+                null
+            } else {
+                val markerPercent = seconds * 1000.0 / effectiveDuration.toDouble() * 100.0
+                val tolerancePercent = EXTERNAL_CONTENT_END_TOLERANCE_SECONDS * 1000.0 /
+                    effectiveDuration.toDouble() * 100.0
+                (markerPercent - tolerancePercent).coerceAtLeast(0.0)
+            }
+        }
 
         scope.launch {
-            val progress = WatchProgress(
+            val reported = WatchProgress(
                 contentId = metadata.contentId,
                 contentType = metadata.contentType,
                 name = metadata.contentName,
@@ -1438,26 +1519,73 @@ class ExternalPlaybackTracker @Inject constructor(
                 progressPercent = explicitPercent,
                 lastWatched = System.currentTimeMillis()
             )
+            // Same rule as the internal player: past the app's own bar, a progress source that counts
+            // a watch only from a higher point decides whether this stop finished the item. A
+            // completion the external player reported itself stays one.
+            val progress = if (
+                explicitPercent == null &&
+                reported.progressPercentage >= WatchProgress.COMPLETED_THRESHOLD
+            ) {
+                reported.copy(
+                    completionThresholdOverride = watchProgressRepository.sourceCompletionThreshold(contentEndPercent)
+                )
+            } else {
+                reported
+            }
             Log.d(TAG, "Saving progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
                 "content=${metadata.contentId}, video=${metadata.videoId}, " +
                 "progressPct=${progress.progressPercentage}, isInProgress=${progress.isInProgress()}")
-            watchProgressRepository.saveProgress(progress, metadata.profileId)
+            try {
+                watchProgressRepository.saveProgress(progress, metadata.profileId)
+            } catch (error: IOException) {
+                Log.w(TAG, "Watch progress could not be saved", error)
+            }
 
             val progressPercent = if (effectiveDuration > 0L) {
                 (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
             } else {
                 0f
             }
+            val reportedCompletion = explicitPercent != null && explicitPercent >= 100f
+            if (progressPercent > 0f || reportedCompletion) {
+                addonEventDispatcher.player(
+                    target = AddonPlayerEventTarget(
+                        type = metadata.contentType,
+                        videoId = metadata.videoId.ifBlank { metadata.contentId }
+                    ),
+                    action = AddonPlayerAction.STOP,
+                    currentTimeMs = if (positionMs <= 0L && reportedCompletion) effectiveDuration else positionMs,
+                    durationMs = effectiveDuration
+                )
+            }
             if (progressPercent > 0f) {
                 val scrobbleItem = buildScrobbleItem(metadata)
                 if (scrobbleItem != null) {
+                    // The external player reports its start when it is already over, so the item's
+                    // resume position decides whether this playback began below the completion bar.
+                    // One that began above it finishes a viewing the account already has: it must
+                    // not open a rewatch, and the trackers that record a watch on every stop above
+                    // the bar must not hear it, or they count that viewing twice.
                     trackingScrobbleCoordinator.scrobble(
                         TrackingScrobbleAction.START,
-                        TrackingScrobbleEvent(scrobbleItem, 0.0)
+                        TrackingScrobbleEvent(
+                            scrobbleItem,
+                            0.0,
+                            sessionless = startedAboveCompletionBar,
+                            hasPlaybackSession = !startedAboveCompletionBar,
+                            startProgressPercent = startProgressPercent
+                        )
                     )
                     trackingScrobbleCoordinator.scrobble(
                         TrackingScrobbleAction.STOP,
-                        TrackingScrobbleEvent(scrobbleItem, progressPercent.toDouble())
+                        TrackingScrobbleEvent(
+                            scrobbleItem,
+                            progressPercent.toDouble(),
+                            contentEndPercent = contentEndPercent,
+                            sessionless = startedAboveCompletionBar,
+                            hasPlaybackSession = !startedAboveCompletionBar,
+                            startProgressPercent = startProgressPercent
+                        )
                     )
                 }
             }

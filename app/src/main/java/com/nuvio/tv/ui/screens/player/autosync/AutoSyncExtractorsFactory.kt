@@ -17,6 +17,7 @@ import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.SniffFailure
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.text.CueDecoder
+import com.nuvio.tv.ui.screens.player.RewrappableExtractor
 import com.nuvio.tv.ui.screens.player.SubtitleSyncCue
 import java.io.EOFException
 import kotlin.math.max
@@ -44,7 +45,9 @@ internal class AutoSyncExtractorsFactory(
 private class ObservingExtractor(
     private val delegate: Extractor,
     private val sourceKey: String,
-) : Extractor {
+) : RewrappableExtractor {
+    override val wrappedExtractor: Extractor get() = delegate
+    override fun rewrap(inner: Extractor): Extractor = ObservingExtractor(inner, sourceKey)
     override fun sniff(input: ExtractorInput) = delegate.sniff(input)
     override fun getSniffFailureDetails(): List<SniffFailure> = delegate.getSniffFailureDetails()
     override fun init(output: ExtractorOutput) = delegate.init(ObservingExtractorOutput(output, sourceKey))

@@ -16,6 +16,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true
+    streamCacheKey?.let { key ->
+        streamFallbackSession = com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, initialStreamUrl)
+            ?: com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, currentStreamUrl)
+    }
 
     val bg = navigationArgs.bingeGroup
     val cid = contentId
@@ -56,6 +60,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 Log.d("PlayerStartup", "Torrent stream ready: $localUrl")
                 currentStreamUrl = localUrl
                 currentHeaders = emptyMap()
+                recordDistinctPluginPlay(
+                    bingeGroup = navigationArgs.bingeGroup,
+                    playbackIdentity = infoHash
+                )
                 preparePlaybackBeforeStart(
                     url = localUrl,
                     headers = emptyMap(),
@@ -83,6 +91,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
         url = currentStreamUrl,
         headers = currentHeaders,
         loadSavedProgress = !navigationArgs.startFromBeginning
+    )
+    recordDistinctPluginPlay(
+        bingeGroup = navigationArgs.bingeGroup,
+        playbackIdentity = navigationArgs.infoHash ?: initialStreamUrl
     )
 }
 

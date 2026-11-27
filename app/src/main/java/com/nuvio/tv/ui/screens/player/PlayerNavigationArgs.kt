@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.lifecycle.SavedStateHandle
+import com.nuvio.tv.domain.model.toStreamClearKeys
 import org.json.JSONArray
 import java.net.URLDecoder
 
@@ -36,7 +37,14 @@ internal data class PlayerNavigationArgs(
     val rememberedAudioLanguage: String?,
     val rememberedAudioName: String?,
     val launchStartedAtMs: Long?,
-    val profileId: Int?
+    val profileId: Int?,
+    val audioDelayMs: Int? = null,
+    val audioDelayLanguage: String? = null,
+    val fromLinkCache: Boolean = false,
+    /** The source was picked by auto source selection (or reused from the link cache). */
+    val autoPlayNav: Boolean = false,
+    val streamType: String? = null,
+    val clearKeys: String? = null
 ) {
     val torrentTrackers: List<String>
         get() {
@@ -96,7 +104,14 @@ internal data class PlayerNavigationArgs(
                 rememberedAudioLanguage = decodedOrNull("rememberedAudioLanguage"),
                 rememberedAudioName = decodedOrNull("rememberedAudioName"),
                 launchStartedAtMs = savedStateHandle.get<String>("launchStartedAtMs")?.toLongOrNull(),
-                profileId = savedStateHandle.get<String>("profileId")?.toIntOrNull()
+                profileId = savedStateHandle.get<String>("profileId")?.toIntOrNull(),
+                audioDelayMs = savedStateHandle.get<String>("audioDelayMs")?.toIntOrNull(),
+                audioDelayLanguage = decodedOrNull("audioDelayLanguage"),
+                fromLinkCache = savedStateHandle.get<String>("fromLinkCache")?.toBooleanStrictOrNull() == true,
+                autoPlayNav = savedStateHandle.get<String>("autoPlayNav")?.toBooleanStrictOrNull() == true,
+                streamType = decodedOrNull("streamType"),
+                // Re-normalized: the route is restored from saved state.
+                clearKeys = decodedOrNull("clearKeys").toStreamClearKeys()
             )
         }
     }

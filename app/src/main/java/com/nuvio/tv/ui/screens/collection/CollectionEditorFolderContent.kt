@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.collection
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -30,11 +28,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,12 +42,18 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,6 +88,9 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.TvReorderList
+import com.nuvio.tv.ui.components.tvReorderDisabledFocusBorder
+import com.nuvio.tv.ui.screens.settings.SettingsVerticalScrollIndicators
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
@@ -96,6 +103,93 @@ fun FolderEditorContent(
     uiState: CollectionEditorUiState
 ) {
     val folder = uiState.editingFolder ?: return
+
+    val sourcesScrollState = key(folder.id) { rememberScrollState() }
+    val sourceRowHeightCache = remember(folder.id) { mutableMapOf<String, Float>() }
+    val titleFocusRequester = remember(folder.id) { FocusRequester() }
+    val noneCoverFocusRequester = remember(folder.id) { FocusRequester() }
+    val emojiCoverFocusRequester = remember(folder.id) { FocusRequester() }
+    val imageCoverFocusRequester = remember(folder.id) { FocusRequester() }
+    val addCatalogFocusRequester = remember(folder.id) { FocusRequester() }
+    val addTmdbFocusRequester = remember(folder.id) { FocusRequester() }
+    val addTraktFocusRequester = remember(folder.id) { FocusRequester() }
+    val sourceGenreFocusRequesters = remember(folder.id) { mutableMapOf<String, FocusRequester>() }
+    val sourceEditFocusRequesters = remember(folder.id) { mutableMapOf<String, FocusRequester>() }
+    val sourceRemoveFocusRequesters = remember(folder.id) { mutableMapOf<String, FocusRequester>() }
+    var pendingFocusTarget by remember(folder.id) {
+        mutableStateOf<FolderFocusTarget?>(FolderFocusTarget.Title)
+    }
+
+    val sourceKeys = remember(folder.sources) { collectionSourceKeys(folder.sources) }
+
+    LaunchedEffect(sourceKeys) {
+        val validKeys = sourceKeys.toSet()
+        sourceGenreFocusRequesters.keys.retainAll(validKeys)
+        sourceEditFocusRequesters.keys.retainAll(validKeys)
+        sourceRemoveFocusRequesters.keys.retainAll(validKeys)
+    }
+
+    val genrePickerIndex = uiState.genrePickerSourceIndex
+    val genrePickerSource = genrePickerIndex?.let { folder.sources.getOrNull(it) as? AddonCatalogCollectionSource }
+    val genrePickerCatalog = genrePickerSource?.let { source ->
+        uiState.availableCatalogs.find {
+            it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId
+        }
+    }
+    val showGenrePicker = genrePickerIndex != null &&
+        genrePickerSource != null &&
+        genrePickerCatalog != null &&
+        genrePickerCatalog.genreOptions.isNotEmpty()
+    val activePickerOpen = uiState.showCatalogPicker ||
+        uiState.showTmdbSourcePicker ||
+        uiState.showTraktSourcePicker ||
+        uiState.showEmojiPicker ||
+        showGenrePicker
+
+    val ensureComposedSourceKey = when (val target = pendingFocusTarget) {
+        is FolderFocusTarget.SourceGenre -> sourceKeys.getOrNull(target.sourceIndex)
+        is FolderFocusTarget.SourceEdit -> sourceKeys.getOrNull(target.sourceIndex)
+        is FolderFocusTarget.SourceRemove -> sourceKeys.takeIf { it.isNotEmpty() }
+            ?.let { it[target.sourceIndex.coerceIn(0, it.lastIndex)] }
+        else -> null
+    }
+
+    LaunchedEffect(folder.id, activePickerOpen, pendingFocusTarget, sourceKeys) {
+        if (activePickerOpen) return@LaunchedEffect
+        val target = pendingFocusTarget ?: return@LaunchedEffect
+        val requester = when (target) {
+            FolderFocusTarget.Title -> titleFocusRequester
+            FolderFocusTarget.EmojiCover -> emojiCoverFocusRequester
+            FolderFocusTarget.AddCatalog -> addCatalogFocusRequester
+            FolderFocusTarget.AddTmdb -> addTmdbFocusRequester
+            FolderFocusTarget.AddTrakt -> addTraktFocusRequester
+            is FolderFocusTarget.SourceGenre -> {
+                sourceKeys.getOrNull(target.sourceIndex)
+                    ?.let { sourceGenreFocusRequesters.getOrPut(it) { FocusRequester() } }
+                    ?: addCatalogFocusRequester
+            }
+            is FolderFocusTarget.SourceEdit -> {
+                sourceKeys.getOrNull(target.sourceIndex)
+                    ?.let { sourceEditFocusRequesters.getOrPut(it) { FocusRequester() } }
+                    ?: addCatalogFocusRequester
+            }
+            is FolderFocusTarget.SourceRemove -> {
+                if (sourceKeys.isEmpty()) {
+                    addCatalogFocusRequester
+                } else {
+                    val targetKey = sourceKeys[target.sourceIndex.coerceIn(0, sourceKeys.lastIndex)]
+                    sourceRemoveFocusRequesters.getOrPut(targetKey) { FocusRequester() }
+                }
+            }
+        }
+        val focused = requestFocusWhenReady(requester)
+        if (!focused && requester !== titleFocusRequester) {
+            requestFocusWhenReady(addCatalogFocusRequester) || requestFocusWhenReady(titleFocusRequester)
+        }
+        if (pendingFocusTarget == target) {
+            pendingFocusTarget = null
+        }
+    }
 
     if (uiState.showCatalogPicker) {
         BackHandler { viewModel.hideCatalogPicker() }
@@ -164,28 +258,18 @@ fun FolderEditorContent(
         return
     }
 
-    val genrePickerIndex = uiState.genrePickerSourceIndex
-    val genrePickerSource = genrePickerIndex?.let { folder.sources.getOrNull(it) as? AddonCatalogCollectionSource }
-    val genrePickerCatalog = genrePickerSource?.let { source ->
-        uiState.availableCatalogs.find {
-            it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId
-        }
-    }
-
-    if (
-        genrePickerIndex != null &&
-        genrePickerSource != null &&
-        genrePickerCatalog != null &&
-        genrePickerCatalog.genreOptions.isNotEmpty()
-    ) {
+    if (showGenrePicker) {
+        val activeGenreIndex = genrePickerIndex
+        val activeGenreSource = genrePickerSource
+        val activeGenreCatalog = genrePickerCatalog
         BackHandler { viewModel.hideGenrePicker() }
         GenrePickerContent(
-            title = genrePickerCatalog.catalogName,
-            selectedGenre = genrePickerSource.genre,
-            genreOptions = genrePickerCatalog.genreOptions,
-            allowAll = !genrePickerCatalog.genreRequired,
+            title = activeGenreCatalog.catalogName,
+            selectedGenre = activeGenreSource.genre,
+            genreOptions = activeGenreCatalog.genreOptions,
+            allowAll = !activeGenreCatalog.genreRequired,
             onSelect = { genre ->
-                viewModel.updateCatalogSourceGenre(genrePickerIndex, genre)
+                viewModel.updateCatalogSourceGenre(activeGenreIndex, genre)
                 viewModel.hideGenrePicker()
             },
             onBack = { viewModel.hideGenrePicker() }
@@ -193,89 +277,145 @@ fun FolderEditorContent(
         return
     }
 
-    BackHandler { viewModel.cancelFolderEdit() }
+    var showUnsavedFolderDialog by remember(folder.id) { mutableStateOf(false) }
 
-    val titleFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        repeat(5) { androidx.compose.runtime.withFrameNanos { } }
-        try { titleFocusRequester.requestFocus() } catch (_: Exception) {}
+    BackHandler(enabled = uiState.movingSourceKey == null) {
+        when {
+            showUnsavedFolderDialog -> showUnsavedFolderDialog = false
+            uiState.hasUnsavedFolderChanges -> showUnsavedFolderDialog = true
+            else -> viewModel.cancelFolderEdit()
+        }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.collections_editor_edit_folder),
-                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
-                color = NuvioTheme.colors.TextPrimary,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                NuvioButton(onClick = { viewModel.cancelFolderEdit() }) {
-                    Text(stringResource(R.string.collections_cancel))
-                }
-                val canSaveFolder = folder.sources.isNotEmpty()
-                NuvioButton(onClick = { viewModel.saveFolderEdit() }, enabled = canSaveFolder) {
-                    Text(stringResource(R.string.collections_editor_save))
-                }
+    val sourceItems = remember(sourceKeys, folder.sources) {
+        sourceKeys.zip(folder.sources).mapIndexed { index, (key, source) ->
+            FolderSourceItem(key = key, index = index, source = source)
+        }
+    }
+
+    val singleSourceFocusRequester = sourceItems.singleOrNull()?.let { item ->
+        val addonSource = item.source as? AddonCatalogCollectionSource
+        val catalog = addonSource?.let { addon ->
+            uiState.availableCatalogs.find {
+                it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
             }
         }
-
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
-
-        val catalogFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-        var pendingFocusIndex by remember { mutableStateOf(-1) }
-
-        LaunchedEffect(pendingFocusIndex, folder.sources.size) {
-            if (pendingFocusIndex >= 0) {
-                val targetIndex = pendingFocusIndex.coerceAtMost(folder.sources.lastIndex)
-                if (targetIndex >= 0) {
-                    val targetSource = folder.sources[targetIndex]
-                    val targetKey = collectionSourceKey(targetSource)
-                    repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-                    try { catalogFocusRequesters[targetKey]?.requestFocus() } catch (_: Exception) {}
-                }
-                pendingFocusIndex = -1
-            }
+        val hasGenreOptions = addonSource != null && catalog?.genreOptions?.isNotEmpty() == true
+        when {
+            item.source is TmdbCollectionSource || item.source is TraktCollectionSource ->
+                sourceEditFocusRequesters.getOrPut(item.key) { FocusRequester() }
+            hasGenreOptions ->
+                sourceGenreFocusRequesters.getOrPut(item.key) { FocusRequester() }
+            else ->
+                sourceRemoveFocusRequesters.getOrPut(item.key) { FocusRequester() }
         }
+    }
 
-        LazyColumn(
+    val sourcesMovingIndex = sourceItems.indexOfFirst { it.key == uiState.movingSourceKey }
+    Box(modifier = Modifier.fillMaxSize()) {
+        TvReorderList(
+            items = sourceItems,
+            key = { it.key },
+            canMove = { sourceItems.size > 1 && uiState.movingSourceKey == null },
+            movingKey = uiState.movingSourceKey,
+            onStartMove = viewModel::enterSourceMoveMode,
+            onMoveBy = viewModel::moveSourceDuringDrag,
+            onConfirmMove = { viewModel.confirmSourceMove() },
+            onCancelMove = viewModel::cancelSourceMove,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = NuvioTheme.spacing.xs, end = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
-        ) {
-            item {
+            scrollState = sourcesScrollState,
+            ensureComposedKey = ensureComposedSourceKey,
+            rowHeightCache = sourceRowHeightCache,
+            contentPadding = PaddingValues(
+                top = NuvioTheme.spacing.xxxl,
+                start = NuvioTheme.spacing.xxxl,
+                end = NuvioTheme.spacing.xxxl,
+                bottom = NuvioTheme.spacing.xxxl
+            ),
+            header = {
+                Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.collections_editor_edit_folder),
+                        style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                        color = NuvioTheme.colors.TextPrimary,
+                    )
+                    val cancelButtonFocusRequester = remember(folder.id) { FocusRequester() }
+                    val saveButtonFocusRequester = remember(folder.id) { FocusRequester() }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                        modifier = Modifier.focusEntryTarget(
+                            if (uiState.canSaveFolder) saveButtonFocusRequester else cancelButtonFocusRequester
+                        )
+                    ) {
+                        NuvioButton(
+                            onClick = {
+                                if (uiState.hasUnsavedFolderChanges) {
+                                    showUnsavedFolderDialog = true
+                                } else {
+                                    viewModel.cancelFolderEdit()
+                                }
+                            },
+                            modifier = Modifier.focusRequester(cancelButtonFocusRequester),
+                            enabled = uiState.movingSourceKey == null
+                        ) {
+                            Text(stringResource(R.string.collections_cancel))
+                        }
+                        NuvioButton(
+                            onClick = { viewModel.saveFolderEdit() },
+                            modifier = Modifier.focusRequester(saveButtonFocusRequester),
+                            enabled = uiState.canSaveFolder
+                        ) {
+                            Text(stringResource(R.string.collections_editor_save))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+
                 Text(stringResource(R.string.collections_editor_folder_title), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 NuvioTextField(
                     value = folder.title,
                     onValueChange = { viewModel.updateFolderTitle(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_folder),
                     focusRequester = titleFocusRequester
                 )
-            }
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-            item {
                 val hasEmoji = !folder.coverEmoji.isNullOrBlank()
                 val coverMode = when {
                     folder.coverImageUrl != null -> "image"
                     hasEmoji -> "emoji"
                     else -> "none"
                 }
+                val selectedCoverFocusRequester = when (coverMode) {
+                    "emoji" -> emojiCoverFocusRequester
+                    "image" -> imageCoverFocusRequester
+                    else -> noneCoverFocusRequester
+                }
 
                 Text(stringResource(R.string.collections_editor_cover), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    modifier = Modifier.focusEntryTarget(selectedCoverFocusRequester)
+                ) {
                     Button(
                         onClick = { viewModel.clearFolderCover() },
+                        modifier = Modifier
+                            .focusRequester(noneCoverFocusRequester)
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = coverMode == "none"
+                            },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "none") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "none") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -296,7 +436,16 @@ fun FolderEditorContent(
                     ) { Text(stringResource(R.string.collections_editor_cover_none)) }
 
                     Button(
-                        onClick = { viewModel.showEmojiPicker() },
+                        onClick = {
+                            pendingFocusTarget = FolderFocusTarget.EmojiCover
+                            viewModel.showEmojiPicker()
+                        },
+                        modifier = Modifier
+                            .focusRequester(emojiCoverFocusRequester)
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = coverMode == "emoji"
+                            },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "emoji") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "emoji") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -324,6 +473,12 @@ fun FolderEditorContent(
 
                     Button(
                         onClick = { viewModel.switchToImageMode() },
+                        modifier = Modifier
+                            .focusRequester(imageCoverFocusRequester)
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = coverMode == "image"
+                            },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "image") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "image") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -353,18 +508,18 @@ fun FolderEditorContent(
                         NuvioTextField(
                             value = folder.coverImageUrl ?: "",
                             onValueChange = { viewModel.updateFolderCoverImage(it) },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .blockHorizontalFocus(),
                             placeholder = stringResource(R.string.collections_editor_url_short_placeholder)
                         )
                         if (!folder.coverImageUrl.isNullOrBlank()) {
-                            Card(
-                                onClick = {},
+                            Surface(
                                 modifier = Modifier
                                     .width(NuvioTheme.spacing.huge)
                                     .height(NuvioTheme.spacing.huge),
-                                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                                colors = CardDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                                scale = CardDefaults.scale(focusedScale = 1f)
+                                shape = RoundedCornerShape(NuvioTheme.radii.md),
+                                colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard)
                             ) {
                                 AsyncImage(
                                     model = folder.coverImageUrl,
@@ -385,14 +540,22 @@ fun FolderEditorContent(
                 NuvioTextField(
                     value = folder.focusGifUrl.orEmpty(),
                     onValueChange = { viewModel.updateFolderFocusGifUrl(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_gif)
                 )
 
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                 Card(
                     onClick = { viewModel.updateFolderFocusGifEnabled(!folder.focusGifEnabled) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus()
+                        .semantics {
+                            role = Role.Switch
+                            toggleableState = if (folder.focusGifEnabled) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -416,7 +579,13 @@ fun FolderEditorContent(
                         Text(stringResource(R.string.collections_editor_play_gif), style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
                         Switch(
                             checked = folder.focusGifEnabled,
-                            onCheckedChange = null
+                            onCheckedChange = null,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = NuvioTheme.colors.Secondary,
+                                checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
+                                uncheckedThumbColor = NuvioTheme.colors.TextSecondary,
+                                uncheckedTrackColor = NuvioTheme.colors.BackgroundCard
+                            )
                         )
                     }
                 }
@@ -431,18 +600,18 @@ fun FolderEditorContent(
                     NuvioTextField(
                         value = folder.heroBackdropUrl.orEmpty(),
                         onValueChange = { viewModel.updateFolderHeroBackdropUrl(it) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .blockHorizontalFocus(),
                         placeholder = stringResource(R.string.collections_editor_placeholder_hero_backdrop)
                     )
                     if (!folder.heroBackdropUrl.isNullOrBlank()) {
-                        Card(
-                            onClick = {},
+                        Surface(
                             modifier = Modifier
                                 .width(NuvioTheme.spacing.huge)
                                 .height(NuvioTheme.spacing.huge),
-                            shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                            colors = CardDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                            scale = CardDefaults.scale(focusedScale = 1f)
+                            shape = RoundedCornerShape(NuvioTheme.radii.md),
+                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard)
                         ) {
                             AsyncImage(
                                 model = folder.heroBackdropUrl,
@@ -462,7 +631,9 @@ fun FolderEditorContent(
                 NuvioTextField(
                     value = folder.heroVideoUrl.orEmpty(),
                     onValueChange = { viewModel.updateFolderHeroVideoUrl(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .blockHorizontalFocus(),
                     placeholder = stringResource(R.string.collections_editor_placeholder_hero_video)
                 )
 
@@ -476,18 +647,18 @@ fun FolderEditorContent(
                     NuvioTextField(
                         value = folder.titleLogoUrl.orEmpty(),
                         onValueChange = { viewModel.updateFolderTitleLogoUrl(it) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .blockHorizontalFocus(),
                         placeholder = stringResource(R.string.collections_editor_placeholder_title_logo)
                     )
                     if (!folder.titleLogoUrl.isNullOrBlank()) {
-                        Card(
-                            onClick = {},
+                        Surface(
                             modifier = Modifier
                                 .width(100.dp)
                                 .height(NuvioTheme.spacing.huge),
-                            shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
-                            colors = CardDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                            scale = CardDefaults.scale(focusedScale = 1f)
+                            shape = RoundedCornerShape(NuvioTheme.radii.md),
+                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard)
                         ) {
                             AsyncImage(
                                 model = folder.titleLogoUrl,
@@ -500,17 +671,16 @@ fun FolderEditorContent(
                         }
                     }
                 }
-            }
 
-            item {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Text(stringResource(R.string.collections_editor_tile_shape), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 val shapeFocusRequesters = remember { PosterShape.entries.associateWith { FocusRequester() } }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                    modifier = Modifier.focusRestorer {
+                    modifier = Modifier.focusEntryTarget(
                         shapeFocusRequesters[folder.tileShape] ?: FocusRequester.Default
-                    }
+                    )
                 ) {
                     PosterShape.entries.forEach { shape ->
                         val label = when (shape) {
@@ -521,7 +691,12 @@ fun FolderEditorContent(
                         val isSelected = folder.tileShape == shape
                         Button(
                             onClick = { viewModel.updateFolderTileShape(shape) },
-                            modifier = Modifier.focusRequester(shapeFocusRequesters[shape]!!),
+                            modifier = Modifier
+                                .focusRequester(shapeFocusRequesters[shape]!!)
+                                .semantics {
+                                    role = Role.RadioButton
+                                    selected = isSelected
+                                },
                             colors = ButtonDefaults.colors(
                                 containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                                 contentColor = if (isSelected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -544,12 +719,23 @@ fun FolderEditorContent(
                         }
                     }
                 }
-            }
 
-            item {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Card(
                     onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusProperties {
+                            left = FocusRequester.Cancel
+                            right = FocusRequester.Cancel
+                            if (singleSourceFocusRequester != null) {
+                                down = singleSourceFocusRequester
+                            }
+                        }
+                        .semantics {
+                            role = Role.Switch
+                            toggleableState = if (folder.hideTitle) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -596,9 +782,8 @@ fun FolderEditorContent(
                         )
                     }
                 }
-            }
 
-            item {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -611,248 +796,369 @@ fun FolderEditorContent(
                         color = NuvioTheme.colors.TextTertiary
                     )
                 }
-            }
-
-            itemsIndexed(
-                items = folder.sources,
-                key = { _, source -> collectionSourceKey(source) }
-            ) { index, source ->
-                val addonSource = source as? AddonCatalogCollectionSource
-                val tmdbSource = source as? TmdbCollectionSource
-                val traktSource = source as? TraktCollectionSource
-                val catalog = addonSource?.let { addon ->
-                    uiState.availableCatalogs.find {
-                        it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
-                    }
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 }
-                val addonCatalogInfo = addonSource?.let { src ->
-                    val exactKey = collectionCatalogKey(src.addonId, src.type, src.catalogId)
-                    uiState.addonCatalogInfoByKey[exactKey]
-                        ?: uiState.addonCatalogInfoByKey[collectionCatalogKey(src.addonId, src.type, src.catalogId.substringBefore(","))]
-                }
-                val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
-                val sourceKey = collectionSourceKey(source)
-                val removeFocusRequester = catalogFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
-                val genreLabel = addonSource?.genre ?: if (catalog?.genreRequired == true) {
-                    stringResource(R.string.collections_editor_select_genre)
-                } else {
-                    stringResource(R.string.collections_editor_all_genres)
-                }
-                val addonTypeLabel = when (addonSource?.type?.lowercase()) {
-                    "movie" -> stringResource(R.string.type_movie)
-                    "series", "tv" -> stringResource(R.string.type_series)
-                    else -> addonSource?.type.orEmpty()
-                }
-                val hasGenreOptions = addonSource != null && catalog?.genreOptions?.isNotEmpty() == true
-                Surface(
-                    shape = RoundedCornerShape(NuvioTheme.radii.md),
-                    colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
-                    border = if (isMissing) Border(
-                        border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Error.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                    ) else Border.None,
-                    modifier = Modifier.fillMaxWidth()
+            },
+            footer = {
+            Row(
+                modifier = Modifier
+                    .padding(top = if (sourceItems.isEmpty()) 0.dp else NuvioTheme.spacing.lg)
+                    .focusEntryTarget(addCatalogFocusRequester),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+            ) {
+                NuvioButton(
+                    onClick = {
+                        pendingFocusTarget = FolderFocusTarget.AddCatalog
+                        viewModel.showCatalogPicker()
+                    },
+                    modifier = Modifier
+                        .focusRequester(addCatalogFocusRequester)
+                        .focusProperties {
+                            if (singleSourceFocusRequester != null) {
+                                up = singleSourceFocusRequester
+                            }
+                        },
+                    enabled = uiState.movingSourceKey == null
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(NuvioTheme.spacing.md),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                    Text(stringResource(R.string.collections_editor_add_catalog))
+                }
+                NuvioButton(
+                    onClick = {
+                        pendingFocusTarget = FolderFocusTarget.AddTmdb
+                        viewModel.showTmdbSourcePicker()
+                    },
+                    modifier = Modifier
+                        .focusRequester(addTmdbFocusRequester)
+                        .focusProperties {
+                            if (singleSourceFocusRequester != null) {
+                                up = singleSourceFocusRequester
+                            }
+                        },
+                    enabled = uiState.movingSourceKey == null
+                ) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                    Text(stringResource(R.string.collections_editor_add_tmdb_source))
+                }
+                NuvioButton(
+                    onClick = {
+                        pendingFocusTarget = FolderFocusTarget.AddTrakt
+                        viewModel.showTraktSourcePicker()
+                    },
+                    modifier = Modifier
+                        .focusRequester(addTraktFocusRequester)
+                        .focusProperties {
+                            if (singleSourceFocusRequester != null) {
+                                up = singleSourceFocusRequester
+                            }
+                        },
+                    enabled = uiState.movingSourceKey == null
+                ) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                    Text(stringResource(R.string.collections_editor_add_trakt_source))
+                }
+            }
+            },
+        ) { item, isMoving, onStartMove, onConfirmMove ->
+        val source = item.source
+        val index = item.index
+        val reorderActive = uiState.movingSourceKey != null
+        val addonSource = source as? AddonCatalogCollectionSource
+        val tmdbSource = source as? TmdbCollectionSource
+        val traktSource = source as? TraktCollectionSource
+        val catalog = addonSource?.let { addon ->
+            uiState.availableCatalogs.find {
+                it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
+            }
+        }
+        val addonCatalogInfo = addonSource?.let { src ->
+            val exactKey = collectionCatalogKey(src.addonId, src.type, src.catalogId)
+            uiState.addonCatalogInfoByKey[exactKey]
+                ?: uiState.addonCatalogInfoByKey[collectionCatalogKey(src.addonId, src.type, src.catalogId.substringBefore(","))]
+        }
+        val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
+        val sourceKey = item.key
+        val genreFocusRequester = sourceGenreFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val editFocusRequester = sourceEditFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val removeFocusRequester = sourceRemoveFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+        val genreLabel = addonSource?.genre ?: if (catalog?.genreRequired == true) {
+            stringResource(R.string.collections_editor_select_genre)
+        } else {
+            stringResource(R.string.collections_editor_all_genres)
+        }
+        val addonTypeLabel = when (addonSource?.type?.lowercase()) {
+            "movie" -> stringResource(R.string.type_movie)
+            "series", "tv" -> stringResource(R.string.type_series)
+            else -> addonSource?.type.orEmpty()
+        }
+        val hasGenreOptions = addonSource != null && catalog?.genreOptions?.isNotEmpty() == true
+        val cardColor by animateColorAsState(
+            targetValue = if (isMoving) {
+                NuvioTheme.colors.FocusBackground
+            } else {
+                NuvioTheme.colors.BackgroundCard
+            },
+            animationSpec = com.nuvio.tv.ui.theme.NuvioMotion.focusTween(),
+            label = "sourceCardColor",
+        )
+        Surface(
+            shape = RoundedCornerShape(NuvioTheme.radii.md),
+            colors = SurfaceDefaults.colors(containerColor = cardColor),
+            border = if (isMoving) {
+                Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                )
+            } else if (isMissing) Border(
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Error.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
+            ) else Border.None,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(NuvioTheme.spacing.md),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = catalog?.catalogName?.replaceFirstChar { it.uppercase() }
+                            ?: tmdbSource?.title
+                            ?: traktSource?.title
+                            ?: addonCatalogInfo?.catalogName?.replaceFirstChar { it.uppercase() }
+                            ?: addonSource?.catalogId
+                            ?: stringResource(R.string.collections_editor_source),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isMissing) NuvioTheme.colors.Error else NuvioTheme.colors.TextPrimary
+                    )
+                    Text(
+                        text = when {
+                            isMissing && addonSource.addonId in uiState.installedAddonIds -> stringResource(R.string.collections_editor_catalog_missing)
+                            isMissing -> stringResource(R.string.collections_editor_addon_missing, addonSource.addonId)
+                            addonSource != null && catalog != null -> "$addonTypeLabel - ${catalog.addonName}"
+                            addonSource != null && addonCatalogInfo != null -> "$addonTypeLabel - ${addonCatalogInfo.addonName}"
+                            tmdbSource != null -> tmdbSourceSubtitle(tmdbSource)
+                            traktSource != null -> traktSourceSubtitle(traktSource)
+                            else -> stringResource(R.string.collections_editor_source)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isMissing) NuvioTheme.colors.Error.copy(alpha = 0.7f) else NuvioTheme.colors.TextTertiary
+                    )
+                    if (hasGenreOptions) {
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(NuvioTheme.colors.BackgroundElevated)
+                                    .padding(horizontal = 10.dp, vertical = NuvioTheme.spacing.xs)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.collections_editor_genre_filter),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NuvioTheme.colors.TextSecondary
+                                )
+                            }
                             Text(
-                                text = catalog?.catalogName?.replaceFirstChar { it.uppercase() }
-                                    ?: tmdbSource?.title
-                                    ?: traktSource?.title
-                                    ?: addonCatalogInfo?.catalogName?.replaceFirstChar { it.uppercase() }
-                                    ?: addonSource?.catalogId
-                                    ?: stringResource(R.string.collections_editor_source),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isMissing) NuvioTheme.colors.Error else NuvioTheme.colors.TextPrimary
-                            )
-                            Text(
-                                text = when {
-                                    isMissing && addonSource.addonId in uiState.installedAddonIds -> stringResource(R.string.collections_editor_catalog_missing)
-                                    isMissing -> stringResource(R.string.collections_editor_addon_missing, addonSource.addonId)
-                                    addonSource != null && catalog != null -> "$addonTypeLabel - ${catalog.addonName}"
-                                    addonSource != null && addonCatalogInfo != null -> "$addonTypeLabel - ${addonCatalogInfo.addonName}"
-                                    tmdbSource != null -> tmdbSourceSubtitle(tmdbSource)
-                                    traktSource != null -> traktSourceSubtitle(traktSource)
-                                    else -> stringResource(R.string.collections_editor_source)
-                                },
+                                text = genreLabel,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (isMissing) NuvioTheme.colors.Error.copy(alpha = 0.7f) else NuvioTheme.colors.TextTertiary
+                                color = NuvioTheme.colors.TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (hasGenreOptions) {
-                                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .background(NuvioTheme.colors.BackgroundElevated)
-                                            .padding(horizontal = 10.dp, vertical = NuvioTheme.spacing.xs)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.collections_editor_genre_filter),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = NuvioTheme.colors.TextSecondary
-                                        )
-                                    }
-                                    Text(
-                                        text = genreLabel,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = NuvioTheme.colors.TextSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Button(
-                                        onClick = { viewModel.showGenrePicker(index) },
-                                        colors = ButtonDefaults.colors(
-                                            containerColor = NuvioTheme.colors.BackgroundElevated,
-                                            contentColor = NuvioTheme.colors.TextSecondary,
-                                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                            focusedContentColor = NuvioTheme.colors.Primary
-                                        ),
-                                        border = ButtonDefaults.border(
-                                            focusedBorder = Border(
-                                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                                shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                            )
-                                        ),
-                                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                                    ) {
-                                        Text(stringResource(R.string.collections_editor_choose_genre))
-                                    }
-                                }
-                            }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
-                            if (tmdbSource != null) {
-                                Button(
-                                    onClick = { viewModel.editTmdbSource(index) },
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = NuvioTheme.colors.BackgroundCard,
-                                        contentColor = NuvioTheme.colors.TextSecondary,
-                                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                        focusedContentColor = NuvioTheme.colors.TextPrimary
-                                    ),
-                                    border = ButtonDefaults.border(
-                                        focusedBorder = Border(
-                                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                        )
-                                    ),
-                                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                                ) {
-                                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
-                                }
-                            }
-                            if (traktSource != null) {
-                                Button(
-                                    onClick = { viewModel.editTraktSource(index) },
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = NuvioTheme.colors.BackgroundCard,
-                                        contentColor = NuvioTheme.colors.TextSecondary,
-                                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                        focusedContentColor = NuvioTheme.colors.TextPrimary
-                                    ),
-                                    border = ButtonDefaults.border(
-                                        focusedBorder = Border(
-                                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                        )
-                                    ),
-                                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                                ) {
-                                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
-                                }
-                            }
-                            Button(
-                                onClick = { viewModel.moveCatalogSourceUp(index) },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextSecondary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.TextPrimary
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up), tint = if (index > 0) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary)
-                            }
-                            Button(
-                                onClick = { viewModel.moveCatalogSourceDown(index) },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextSecondary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.TextPrimary
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down), tint = if (index < folder.sources.size - 1) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary)
-                            }
-                            Button(
-                                onClick = {
-                                    pendingFocusIndex = index
-                                    viewModel.removeCatalogSource(index)
-                                },
-                                modifier = Modifier.focusRequester(removeFocusRequester),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextSecondary,
-                                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                                    focusedContentColor = NuvioTheme.colors.Error
-                                ),
-                                border = ButtonDefaults.border(
-                                    focusedBorder = Border(
-                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                                    )
-                                ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
-                            ) {
-                                Icon(Icons.Default.Close, stringResource(R.string.cd_remove))
-                            }
                         }
                     }
                 }
-            }
-
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-                    NuvioButton(onClick = { viewModel.showCatalogPicker() }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
-                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                        Text(stringResource(R.string.collections_editor_add_catalog))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.trapHorizontalFocus()
+                ) {
+                    if (hasGenreOptions) {
+                        Button(
+                            onClick = {
+                                pendingFocusTarget = FolderFocusTarget.SourceGenre(index)
+                                viewModel.showGenrePicker(index)
+                            },
+                            enabled = !reorderActive,
+                            modifier = Modifier.focusRequester(genreFocusRequester),
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundElevated,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                ),
+                                focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Text(stringResource(R.string.collections_editor_choose_genre))
+                        }
                     }
-                    NuvioButton(onClick = { viewModel.showTmdbSourcePicker() }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
-                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                        Text(stringResource(R.string.collections_editor_add_tmdb_source))
+                    Button(
+                        onClick = if (isMoving) onConfirmMove else onStartMove,
+                        enabled = isMoving || (sourceItems.size > 1 && !reorderActive),
+                        colors = ButtonDefaults.colors(
+                            containerColor = if (isMoving) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
+                            contentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
+                            focusedContainerColor = if (isMoving) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = if (isMoving) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.Primary
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            ),
+                            focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Reorder,
+                            contentDescription = stringResource(R.string.cd_reorder)
+                        )
                     }
-                    NuvioButton(onClick = { viewModel.showTraktSourcePicker() }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
-                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                        Text(stringResource(R.string.collections_editor_add_trakt_source))
+                    if (tmdbSource != null) {
+                        Button(
+                            onClick = {
+                                pendingFocusTarget = FolderFocusTarget.SourceEdit(index)
+                                viewModel.editTmdbSource(index)
+                            },
+                            enabled = !reorderActive,
+                            modifier = Modifier.focusRequester(editFocusRequester),
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.TextPrimary
+                            ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                ),
+                                focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
+                        }
+                    }
+                    if (traktSource != null) {
+                        Button(
+                            onClick = {
+                                pendingFocusTarget = FolderFocusTarget.SourceEdit(index)
+                                viewModel.editTraktSource(index)
+                            },
+                            enabled = !reorderActive,
+                            modifier = Modifier.focusRequester(editFocusRequester),
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.TextPrimary
+                            ),
+                            border = ButtonDefaults.border(
+                                focusedBorder = Border(
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                ),
+                                focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            pendingFocusTarget = FolderFocusTarget.SourceRemove(index)
+                            viewModel.removeCatalogSource(index)
+                        },
+                        enabled = !reorderActive,
+                        modifier = Modifier.focusRequester(removeFocusRequester),
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextSecondary,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = NuvioTheme.colors.Error
+                        ),
+                        border = ButtonDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            ),
+                            focusedDisabledBorder = tvReorderDisabledFocusBorder(RoundedCornerShape(NuvioTheme.radii.md))
+                        ),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                    ) {
+                        Icon(Icons.Default.Close, stringResource(R.string.cd_remove))
                     }
                 }
             }
         }
+        }
+        SettingsVerticalScrollIndicators(
+            state = sourcesScrollState,
+            suppressBackward = sourcesMovingIndex == 0,
+            suppressForward = sourcesMovingIndex >= 0 &&
+                sourcesMovingIndex == sourceItems.lastIndex,
+            forceBackward = sourcesMovingIndex > 0,
+            forceForward = sourcesMovingIndex in 0 until sourceItems.lastIndex
+        )
+    }
+
+    if (showUnsavedFolderDialog) {
+        val canSave = uiState.canSaveFolder
+        UnsavedChangesDialog(
+            title = stringResource(
+                if (canSave) R.string.collections_editor_folder_unsaved_title
+                else R.string.collections_editor_folder_unsaved_incomplete_title
+            ),
+            subtitle = stringResource(
+                if (canSave) R.string.collections_editor_folder_unsaved_subtitle
+                else R.string.collections_editor_folder_unsaved_missing_source
+            ),
+            canSave = canSave,
+            onSave = {
+                showUnsavedFolderDialog = false
+                viewModel.saveFolderEdit()
+            },
+            onDiscard = {
+                showUnsavedFolderDialog = false
+                viewModel.cancelFolderEdit()
+            },
+            onDismiss = { showUnsavedFolderDialog = false }
+        )
     }
 }
+
+private sealed interface FolderFocusTarget {
+    data object Title : FolderFocusTarget
+    data object EmojiCover : FolderFocusTarget
+    data object AddCatalog : FolderFocusTarget
+    data object AddTmdb : FolderFocusTarget
+    data object AddTrakt : FolderFocusTarget
+    data class SourceGenre(val sourceIndex: Int) : FolderFocusTarget
+    data class SourceEdit(val sourceIndex: Int) : FolderFocusTarget
+    data class SourceRemove(val sourceIndex: Int) : FolderFocusTarget
+}
+
+private data class FolderSourceItem(
+    val key: String,
+    val index: Int,
+    val source: CollectionSource
+)

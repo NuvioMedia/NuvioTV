@@ -3,7 +3,11 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.core.network.NetworkConnectionKind
+import com.nuvio.tv.core.network.NetworkTransport
+import com.nuvio.tv.core.network.networkConnectionKind
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.keepLtr
 
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -91,26 +95,41 @@ private interface ProfileManagerEntryPoint {
 
 private enum class NetworkTestState { Idle, TestingLatency, TestingDownload, Done, Error }
 
-private enum class ConnectionType { WiFi, Ethernet, Offline }
+private fun getConnectionType(context: android.content.Context): NetworkConnectionKind {
+    val cm = context.getSystemService<ConnectivityManager>() ?: return NetworkConnectionKind.Offline
+    return runCatching {
+        val active = cm.activeNetwork
+        val activeCaps = active?.let { cm.getNetworkCapabilities(it) }
+        if (active == null || activeCaps == null) {
+            NetworkConnectionKind.Offline
+        } else {
+            networkConnectionKind(activeCaps.toTransportSet()) {
+                @Suppress("DEPRECATION")
+                cm.allNetworks
+                    .filter { it != active }
+                    .mapNotNull { cm.getNetworkCapabilities(it) }
+                    .filter { it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .map { it.toTransportSet() }
+            }
+        }
+    }.getOrDefault(NetworkConnectionKind.Offline)
+}
 
-private fun getConnectionType(context: android.content.Context): ConnectionType {
-    val cm = context.getSystemService<ConnectivityManager>() ?: return ConnectionType.Offline
-    val network = cm.activeNetwork ?: return ConnectionType.Offline
-    val caps = cm.getNetworkCapabilities(network) ?: return ConnectionType.Offline
-    return when {
-        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> ConnectionType.Ethernet
-        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> ConnectionType.WiFi
-        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> ConnectionType.WiFi // treat cellular as connected
-        else -> ConnectionType.Offline
+private fun NetworkCapabilities.toTransportSet(): Set<NetworkTransport> {
+    return buildSet {
+        if (hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) add(NetworkTransport.Wifi)
+        if (hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) add(NetworkTransport.Ethernet)
+        if (hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) add(NetworkTransport.Cellular)
+        if (hasTransport(NetworkCapabilities.TRANSPORT_VPN)) add(NetworkTransport.Vpn)
     }
 }
 
 @Composable
-private fun ConnectionStatusBadge(type: ConnectionType) {
+private fun ConnectionStatusBadge(type: NetworkConnectionKind) {
     val (icon, label, color) = when (type) {
-        ConnectionType.WiFi -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_wifi), NuvioTheme.colors.Success)
-        ConnectionType.Ethernet -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_ethernet), NuvioTheme.colors.Success)
-        ConnectionType.Offline -> Triple(Icons.Default.SignalWifiOff, stringResource(R.string.network_connection_offline), NuvioTheme.colors.Error)
+        NetworkConnectionKind.Wifi -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_wifi), NuvioTheme.colors.Success)
+        NetworkConnectionKind.Ethernet -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_ethernet), NuvioTheme.colors.Success)
+        NetworkConnectionKind.Offline -> Triple(Icons.Default.SignalWifiOff, stringResource(R.string.network_connection_offline), NuvioTheme.colors.Error)
     }
     Row(
         modifier = Modifier
@@ -474,6 +493,18 @@ fun AdvancedSettingsContent(
                         )
                     }
                 )
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_hardware_bitmaps),
+                    subtitle = stringResource(R.string.advanced_hardware_bitmaps_subtitle),
+                    checked = uiState.hardwareBitmapsEnabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetHardwareBitmapsEnabled(
+                                !uiState.hardwareBitmapsEnabled
+                            )
+                        )
+                    }
+                )
             }
         }
 
@@ -586,12 +617,18 @@ fun AdvancedSettingsContent(
                 )
                 val isStreamRunning = streamTestState != "Idle" && streamTestState != "Done" && streamTestState != "Error"
                 val hasStream = !lastStreamUrl.isNullOrBlank()
+                // A link served from this device, such as a built-in Usenet
+                // session, closes with its playback: there is no server to test.
+                val localStream = hasStream && android.net.Uri.parse(lastStreamUrl).host in
+                    setOf("127.0.0.1", "localhost", "::1", "[::1]")
                 SettingsActionRow(
                     title = stringResource(
                         if (isStreamRunning) R.string.stream_test_btn_running
                         else R.string.stream_test_card_title
                     ),
-                    subtitle = if (hasStream) {
+                    subtitle = if (localStream) {
+                        stringResource(R.string.stream_test_local_stream)
+                    } else if (hasStream) {
                         stringResource(R.string.stream_test_server_label, lastStreamUrl.let { android.net.Uri.parse(it).host } ?: stringResource(R.string.stream_quality_unknown))
                     } else {
                         stringResource(R.string.stream_test_no_stream)
@@ -606,8 +643,8 @@ fun AdvancedSettingsContent(
                             else -> stringResource(R.string.stream_test_btn_running)
                         }
                     } else null,
-                    enabled = hasStream && !isStreamRunning,
-                    onClick = { if (hasStream && !isStreamRunning) runStreamDiagnostics() }
+                    enabled = hasStream && !localStream && !isStreamRunning,
+                    onClick = { if (hasStream && !localStream && !isStreamRunning) runStreamDiagnostics() }
                 )
             }
         }
@@ -882,7 +919,7 @@ private fun NetworkMetricCard(
         Text(
             text = when {
                 loading -> "..."
-                value != null -> value
+                value != null -> value.keepLtr()
                 else -> "–"
             },
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -910,7 +947,7 @@ private fun StreamTestResultRow(
         Text(
             text = when {
                 isRunning -> stringResource(R.string.stream_test_btn_running)
-                speed != null -> "%.1f Mbps".format(speed)
+                speed != null -> "%.1f Mbps".format(speed).keepLtr()
                 else -> "---"
             },
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),

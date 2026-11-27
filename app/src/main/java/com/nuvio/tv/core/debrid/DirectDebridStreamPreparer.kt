@@ -126,11 +126,11 @@ class DirectDebridStreamPreparer @Inject constructor(
         original: Stream,
         prepared: Stream
     ): List<AddonStreams> {
-        val key = original.preparationKey()
+        val keyParts = original.preparationKeyParts()
         return groups.map { group ->
             var changed = false
             val updatedStreams = group.streams.map { stream ->
-                if (stream.preparationKey() == key) {
+                if (stream.hasPreparationKeyParts(keyParts)) {
                     changed = true
                     prepared.copy(
                         addonName = stream.addonName,
@@ -175,28 +175,39 @@ private fun ArrayDeque<Long>.removeOlderThan(cutoffMs: Long) {
     }
 }
 
-private fun Stream.preparationKey(): String {
+private fun Stream.preparationKey(): String =
+    preparationKeyParts().joinToString("|") { it.lowercase() }
+
+private fun Stream.preparationKeyParts(): List<String> {
     val resolve = clientResolve
     if (resolve != null) {
         return listOf(
-            resolve.service.orEmpty().lowercase(),
-            resolve.infoHash.orEmpty().lowercase(),
+            resolve.service.orEmpty(),
+            resolve.infoHash.orEmpty(),
             resolve.fileIdx?.toString().orEmpty(),
-            resolve.filename.orEmpty().lowercase(),
-            resolve.torrentName.orEmpty().lowercase(),
-            resolve.magnetUri.orEmpty().lowercase()
-        ).joinToString("|")
+            resolve.filename.orEmpty(),
+            resolve.torrentName.orEmpty(),
+            resolve.magnetUri.orEmpty()
+        )
     }
 
     return listOf(
-        addonName.lowercase(),
-        getEffectiveInfoHash().orEmpty().lowercase(),
-        torrentMagnetUri().orEmpty().lowercase(),
+        addonName,
+        getEffectiveInfoHash().orEmpty(),
+        torrentMagnetUri().orEmpty(),
         getEffectiveFileIdx()?.toString().orEmpty(),
-        getStreamUrl().orEmpty().lowercase(),
-        name.orEmpty().lowercase(),
-        title.orEmpty().lowercase()
-    ).joinToString("|")
+        getStreamUrl().orEmpty(),
+        name.orEmpty(),
+        title.orEmpty()
+    )
+}
+
+// Compares like preparationKey() but field by field, without lowercasing and
+// joining the fields (URLs and magnets included) of every stream in the list.
+private fun Stream.hasPreparationKeyParts(keyParts: List<String>): Boolean {
+    val parts = preparationKeyParts()
+    return parts.size == keyParts.size &&
+        parts.indices.all { index -> parts[index].equals(keyParts[index], ignoreCase = true) }
 }
 
 private fun Stream.searchableText(): String =

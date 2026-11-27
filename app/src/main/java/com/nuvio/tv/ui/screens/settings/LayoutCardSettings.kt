@@ -41,6 +41,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +63,7 @@ import com.nuvio.tv.core.poster.CustomPosterScreen
 import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
+import com.nuvio.tv.domain.model.ContinueWatchingClickAction
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_COVERAGE
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_STRENGTH
@@ -77,6 +82,7 @@ internal fun LayoutContinueWatchingSection(
     onEvent: (LayoutSettingsEvent) -> Unit
 ) {
     var showSortModeDialog by rememberSaveable { mutableStateOf(false) }
+    var showClickActionDialog by rememberSaveable { mutableStateOf(false) }
 
     SettingsToggleRow(
         title = stringResource(R.string.layout_cw_enabled),
@@ -139,6 +145,16 @@ internal fun LayoutContinueWatchingSection(
             onToggle = { onEvent(LayoutSettingsEvent.SetShowUnairedNextUp(!uiState.showUnairedNextUp)) }
         )
         SettingsActionRow(
+            title = stringResource(R.string.layout_cw_click_action),
+            subtitle = stringResource(R.string.layout_cw_click_action_sub),
+            value = when (uiState.continueWatchingClickAction) {
+                ContinueWatchingClickAction.STREAM -> stringResource(R.string.layout_cw_click_stream)
+                ContinueWatchingClickAction.DETAILS -> stringResource(R.string.layout_cw_click_details)
+                ContinueWatchingClickAction.DETAILS_FOR_UPCOMING -> stringResource(R.string.layout_cw_click_details_upcoming)
+            },
+            onClick = { showClickActionDialog = true }
+        )
+        SettingsActionRow(
             title = stringResource(R.string.layout_cw_sort_mode),
             subtitle = stringResource(R.string.layout_cw_sort_mode_sub),
             value = when (uiState.continueWatchingSortMode) {
@@ -147,6 +163,17 @@ internal fun LayoutContinueWatchingSection(
                 ContinueWatchingSortMode.SPLIT_UPCOMING -> stringResource(R.string.layout_cw_sort_split_upcoming)
             },
             onClick = { showSortModeDialog = true }
+        )
+    }
+
+    if (showClickActionDialog) {
+        ContinueWatchingClickActionDialog(
+            currentAction = uiState.continueWatchingClickAction,
+            onActionSelected = { action ->
+                onEvent(LayoutSettingsEvent.SetContinueWatchingClickAction(action))
+                showClickActionDialog = false
+            },
+            onDismiss = { showClickActionDialog = false }
         )
     }
 
@@ -225,6 +252,14 @@ internal fun LayoutFocusedPosterSection(
                 checked = uiState.focusedPosterBackdropTrailerMuted,
                 onToggle = {
                     onEvent(LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted(!uiState.focusedPosterBackdropTrailerMuted))
+                }
+            )
+            SettingsToggleRow(
+                title = stringResource(R.string.layout_trailer_continue_in_details),
+                subtitle = stringResource(R.string.layout_trailer_continue_in_details_sub),
+                checked = uiState.focusedPosterTrailerContinueInDetails,
+                onToggle = {
+                    onEvent(LayoutSettingsEvent.SetFocusedPosterTrailerContinueInDetails(!uiState.focusedPosterTrailerContinueInDetails))
                 }
             )
             if (isModern) {
@@ -332,7 +367,8 @@ internal fun LayoutCardDepthSection(
 internal fun LayoutCustomPosterSection(
     uiState: LayoutSettingsUiState,
     onEvent: (LayoutSettingsEvent) -> Unit,
-    onConfigureViaPhone: () -> Unit
+    onConfigureViaPhone: () -> Unit,
+    focusRequester: FocusRequester
 ) {
     val pattern = uiState.customPosterUrlPattern
     val isActive = pattern.isNotBlank()
@@ -354,7 +390,8 @@ internal fun LayoutCustomPosterSection(
     SettingsActionRow(
         title = stringResource(R.string.layout_custom_poster_qr),
         subtitle = if (isActive) stringResource(R.string.layout_custom_poster_active) else null,
-        onClick = onConfigureViaPhone
+        onClick = onConfigureViaPhone,
+        modifier = Modifier.focusRequester(focusRequester)
     )
     if (isActive) {
         SettingsActionRow(
@@ -394,12 +431,17 @@ private fun CwStyleCard(
 
     Card(
         onClick = onClick,
-        modifier = modifier.onFocusChanged { state ->
-            val nowFocused = state.isFocused
-            if (isFocused != nowFocused) {
-                isFocused = nowFocused
+        modifier = modifier
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                }
             }
-        },
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
+            },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.Background,
             focusedContainerColor = NuvioTheme.colors.Background
@@ -444,7 +486,7 @@ private fun CwStyleCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.FocusRing,
                         modifier = Modifier
                             .size(NuvioTheme.spacing.lg)
@@ -463,6 +505,41 @@ private fun CwStyleCard(
             }
         }
     }
+}
+
+@Composable
+private fun ContinueWatchingClickActionDialog(
+    currentAction: ContinueWatchingClickAction,
+    onActionSelected: (ContinueWatchingClickAction) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            ContinueWatchingClickAction.STREAM,
+            stringResource(R.string.layout_cw_click_stream),
+            stringResource(R.string.layout_cw_click_stream_desc)
+        ),
+        SettingsPickerOption(
+            ContinueWatchingClickAction.DETAILS,
+            stringResource(R.string.layout_cw_click_details),
+            stringResource(R.string.layout_cw_click_details_desc)
+        ),
+        SettingsPickerOption(
+            ContinueWatchingClickAction.DETAILS_FOR_UPCOMING,
+            stringResource(R.string.layout_cw_click_details_upcoming),
+            stringResource(R.string.layout_cw_click_details_upcoming_desc)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.layout_cw_click_action),
+        options = options,
+        selectedValue = currentAction,
+        onOptionSelected = onActionSelected,
+        onDismiss = onDismiss,
+        width = 420.dp,
+        maxHeight = 320.dp
+    )
 }
 
 @Composable
@@ -537,6 +614,15 @@ private fun ModernTrailerPlaybackTargetRow(
                 selected = selectedTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
                 onClick = {
                     onTargetSelected(FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+                }
+            )
+        }
+        item(key = "trailer_target_hero_media_no_expand") {
+            SettingsChoiceChip(
+                label = stringResource(R.string.layout_trailer_hero_media_no_expand),
+                selected = selectedTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA_NO_EXPAND,
+                onClick = {
+                    onTargetSelected(FocusedPosterTrailerPlaybackTarget.HERO_MEDIA_NO_EXPAND)
                 }
             )
         }

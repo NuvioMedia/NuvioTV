@@ -117,6 +117,20 @@ class MdbListRatingsLoaderTest {
     }
 
     @Test
+    fun `cached ratings are read without a request only after a lookup and before expiry`() = runTest {
+        val loader = loader()
+        assertNull(loader.cachedRatings("imdb", "movie", "tt1", credential))
+        assertEquals(8.1, loader.getRatings("movie", "tt1", credential)?.imdb)
+
+        assertEquals(8.1, loader.cachedRatings("imdb", "movie", "tt1", credential)?.imdb)
+        assertNull(loader.cachedRatings("imdb", "show", "tt1", credential))
+        assertNull(loader.cachedRatings("imdb", "movie", "tt1", MdbListRatingsCredential.ApiKey("other-key")))
+        now = 30L * 60L * 1000L
+        assertNull(loader.cachedRatings("imdb", "movie", "tt1", credential))
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `expired ratings are refreshed once and reused before expiry`() = runTest {
         val loader = loader()
         assertEquals(8.1, loader.getRatings("movie", "tt1", credential)?.imdb)

@@ -64,6 +64,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.cloud.PremiumizeCloudLibraryPosterUrl
 import com.nuvio.tv.core.cloud.TorboxCloudLibraryPosterUrl
 import com.nuvio.tv.core.cloud.cloudLibraryDisplayArtworkUrl
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 
 private const val NuvioRepositoryUrl = "https://github.com/NuvioMedia/NuvioTV"
 private const val TmdbUrl = "https://www.themoviedb.org"
@@ -75,6 +76,7 @@ private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
 private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-datasets/"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
+private const val SherpaOnnxUrl = "https://github.com/k2-fsa/sherpa-onnx"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
 private const val LibMpvAndroidUrl = "https://github.com/jarnedemeulemeester/libmpv-android"
 
@@ -323,7 +325,7 @@ private fun AttributionLogo(
         Image(
             painter = when (logo) {
                 is LicenseLogo.Drawable -> painterResource(id = logo.resId)
-                is LicenseLogo.Raw -> rememberRawSvgPainter(rawIconRes = logo.resId)
+                is LicenseLogo.Raw -> rememberRawSvgPainter(rawIconRes = logo.resId, targetSize = NuvioTheme.spacing.xxxl)
                 is LicenseLogo.Url -> rememberUrlSvgPainter(url = logo.url)
             },
             contentDescription = null,
@@ -331,21 +333,6 @@ private fun AttributionLogo(
             contentScale = ContentScale.Fit
         )
     }
-}
-
-@Composable
-private fun rememberRawSvgPainter(@RawRes rawIconRes: Int): Painter {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    val sizePx = with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
-    val request = remember(rawIconRes, context, sizePx) {
-        ImageRequest.Builder(context)
-            .data(rawIconRes)
-            .size(sizePx)
-            .crossfade(false)
-            .build()
-    }
-    return rememberAsyncImagePainter(model = request)
 }
 
 @Composable
@@ -432,5 +419,10 @@ private fun playbackLicenseItems() = listOf(
         title = stringResource(R.string.licenses_attributions_libmpv_title),
         body = stringResource(R.string.licenses_attributions_libmpv_body),
         url = LibMpvAndroidUrl
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_audio_sync_title),
+        body = stringResource(R.string.licenses_attributions_audio_sync_body),
+        url = SherpaOnnxUrl
     )
 )

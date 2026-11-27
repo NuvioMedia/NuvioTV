@@ -252,6 +252,26 @@ class MDBListRepositoryTest {
     }
 
     @Test
+    fun `cached detail ratings need a finished lookup and follow the given settings`() = runTest {
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
+        val detailSettings = settings.copy(showImdb = true)
+        val repository = repository(detailSettings)
+        assertNull(repository.cachedRatingsForMeta(meta(), "tt1234567", "movie", detailSettings))
+
+        val loaded = repository.getRatingsForMeta(meta(), "tt1234567", "movie")
+        assertEquals(loaded, repository.cachedRatingsForMeta(meta(), "tt1234567", "movie", detailSettings))
+        val audienceOnly = requireNotNull(
+            repository.cachedRatingsForMeta(meta(), "tt1234567", "movie", settings.copy(showTomatoes = false))
+        )
+        assertEquals(85.0, audienceOnly.ratings.audience)
+        assertNull(audienceOnly.ratings.tomatoes)
+        assertFalse(audienceOnly.hasImdbRating)
+        assertNull(repository.cachedRatingsForMeta(meta(), "tt1234567", "movie", detailSettings.copy(enabled = false)))
+        assertNull(repository.cachedRatingsForMeta(meta("show"), "tt1234567", "show", detailSettings))
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `disabling every detail source avoids a ratings request`() = runTest {
         val repository = repository(settings.copy(showTomatoes = false, showAudience = false))
 

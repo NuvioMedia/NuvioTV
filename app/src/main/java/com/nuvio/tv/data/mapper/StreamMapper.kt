@@ -15,12 +15,18 @@ import com.nuvio.tv.domain.model.StreamClientResolve
 import com.nuvio.tv.domain.model.StreamClientResolveParsed
 import com.nuvio.tv.domain.model.StreamClientResolveRaw
 import com.nuvio.tv.domain.model.StreamClientResolveStream
+import com.nuvio.tv.domain.model.toStreamAudioDelayLanguage
+import com.nuvio.tv.domain.model.toStreamAudioDelayMs
+import com.nuvio.tv.domain.model.toStreamClearKeys
 
 fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
     name = name,
     title = title,
     description = description,
     url = url,
+    nzbUrl = nzbUrl,
+    servers = servers,
+    fileMustInclude = fileMustInclude,
     ytId = ytId,
     infoHash = infoHash,
     fileIdx = fileIdx,
@@ -39,7 +45,8 @@ fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
             addonName = addonName,
             addonLogo = addonLogo,
             isStreamProvided = true,
-            headers = dto.headers
+            headers = dto.headers,
+            label = dto.label?.trim()?.takeIf { it.isNotBlank() }
         )
     }
 )
@@ -111,7 +118,10 @@ fun BehaviorHintsDto.toDomain(): StreamBehaviorHints = StreamBehaviorHints(
     proxyHeaders = proxyHeaders?.toDomain(),
     videoHash = videoHash,
     videoSize = videoSize,
-    filename = filename
+    filename = filename,
+    audioDelayMs = audioDelayMs.toStreamAudioDelayMs(),
+    audioDelayLanguage = audioDelayLanguage.toStreamAudioDelayLanguage(),
+    clearKeys = clearKeys.toStreamClearKeys()
 )
 
 fun ProxyHeadersDto.toDomain(): ProxyHeaders = ProxyHeaders(

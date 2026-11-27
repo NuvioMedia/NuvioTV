@@ -5,6 +5,11 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -61,6 +66,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.components.FocusScrollingText
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -81,6 +87,7 @@ import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch as coroutineLaunch
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -97,6 +104,7 @@ internal fun EpisodesSidePanel(
     onSeasonSelected: (Int) -> Unit,
     onAddonFilterSelected: (String?) -> Unit,
     onEpisodeSelected: (Video) -> Unit,
+    onEpisodeManualPlay: (Video) -> Unit,
     onStreamSelected: (Stream) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -154,7 +162,8 @@ internal fun EpisodesSidePanel(
                         uiState = uiState,
                         episodesFocusRequester = episodesFocusRequester,
                         onSeasonSelected = onSeasonSelected,
-                        onEpisodeSelected = onEpisodeSelected
+                        onEpisodeSelected = onEpisodeSelected,
+                        onEpisodeManualPlay = onEpisodeManualPlay
                     )
                 }
             }
@@ -274,29 +283,31 @@ private fun EpisodeStreamsView(
         }
     }
 
+    val chipListState = rememberLazyListState()
     fun requestChipFocus(index: Int) {
         if (index !in chipFocusRequesters.indices) return
         userMovedFromFirstResult = true
         focusJob?.cancel()
         focusJob = scope.coroutineLaunch {
             withFrameNanos { }
-            runCatching { chipFocusRequesters[index].requestFocus() }
+            chipListState.focusChip(index, chipFocusRequesters)
         }
     }
 
     fun onAddonFilterSelectedGuarded(addon: String?) {
         userMovedFromFirstResult = true
-        onAddonFilterSelected(addon)
-        focusJob?.cancel()
-        focusJob = scope.coroutineLaunch {
-            withFrameNanos {}
-            val targetRequester = if (addon == null) {
-                chipFocusRequesters.getOrNull(1)
-            } else {
-                addonFocusRequesters[addon]
-            }
-            runCatching { targetRequester?.requestFocus() }
+        val targetRequester = if (addon == null) {
+            chipFocusRequesters.getOrNull(1)
+        } else {
+            addonFocusRequesters[addon]
         }
+        focusJob?.cancel()
+        // Focus the chip before the results change: once the focused card is gone,
+        // Compose would otherwise park focus on another chip first.
+        focusJob = scope.coroutineLaunch(start = CoroutineStart.UNDISPATCHED) {
+            chipListState.focusChip(chipFocusRequesters.indexOf(targetRequester), chipFocusRequesters)
+        }
+        onAddonFilterSelected(addon)
     }
 
     LaunchedEffect(uiState.episodeSelectedAddonFilter) {
@@ -368,6 +379,7 @@ private fun EpisodeStreamsView(
                 onAddonSelected = { onAddonFilterSelected(it) },
                 externalFocusRequesters = chipFocusRequesters,
                 externalOrderedNames = orderedAddonNames,
+                chipListState = chipListState,
                 onUpKey = {
                     try { backButtonFocusRequester.requestFocus() } catch (_: Exception) {}
                 },
@@ -503,7 +515,8 @@ private fun EpisodesListView(
     uiState: PlayerUiState,
     episodesFocusRequester: FocusRequester,
     onSeasonSelected: (Int) -> Unit,
-    onEpisodeSelected: (Video) -> Unit
+    onEpisodeSelected: (Video) -> Unit,
+    onEpisodeManualPlay: (Video) -> Unit
 ) {
     val seasonTabFocusRequester = remember { FocusRequester() }
     val episodesListState = rememberLazyListState()
@@ -645,6 +658,8 @@ private fun EpisodesListView(
             showWatchedActions = false,
             isCurrentlyPlaying = episode.season == uiState.currentSeason &&
                 episode.episode == uiState.currentEpisode,
+            showPlayManually = episode.season != uiState.currentSeason ||
+                episode.episode != uiState.currentEpisode,
             onDismiss = { detailsEpisode = null },
             onNavigateEpisode = { step ->
                 adjacentEpisode(uiState.episodes, episode, step)?.let { detailsEpisode = it }
@@ -652,6 +667,10 @@ private fun EpisodesListView(
             onPlay = {
                 detailsEpisode = null
                 onEpisodeSelected(episode)
+            },
+            onPlayManually = {
+                detailsEpisode = null
+                onEpisodeManualPlay(episode)
             },
             onToggleWatched = {}
         )
@@ -711,13 +730,21 @@ private fun EpisodesSeasonTabs(
                 onClick = { onSeasonSelected(season) },
                 modifier = Modifier
                     .then(if (index == focusEntryIndex) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
+                    .semantics {
+                        role = Role.Tab
+                        this.selected = isSelected
+                    }
                     .onFocusChanged {
                         isFocused = it.isFocused
                         if (it.isFocused && season != selectedSeason) pendingSeason = season
+                    }
+                    .semantics {
+                        role = Role.Tab
+                        this.selected = isSelected
                     },
                 shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.spacing.xl)),
                 colors = CardDefaults.colors(
-                    containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioTheme.colors.BackgroundCard,
+                    containerColor = if (isSelected) NuvioPrimitives.neutral100 else NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = if (isSelected) Color.White else NuvioTheme.colors.Secondary
                 ),
                 border = CardDefaults.border(

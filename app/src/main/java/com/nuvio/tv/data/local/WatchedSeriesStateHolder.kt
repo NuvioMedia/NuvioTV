@@ -56,19 +56,21 @@ class WatchedSeriesStateHolder @Inject constructor(
 
     suspend fun loadFromDisk(profileId: Int = profileManager.activeProfileId.value) {
         if (loadedForProfileId == profileId) return
+        // Ids still in memory belong to the previously loaded profile.
+        val switchingProfile = loadedForProfileId != null
         val prefs = store(profileId).data.first()
         val persisted = prefs[KEY] ?: emptySet()
         val resetVersion = prefs[VALIDATION_RESET_KEY] ?: 0
         if (resetVersion < VALIDATION_RESET_VERSION) {
             revalidateAfterMap = emptyMap()
-            store().edit { p ->
+            store(profileId).edit { p ->
                 p.remove(REVALIDATE_KEY)
                 p[VALIDATION_RESET_KEY] = VALIDATION_RESET_VERSION
             }
         } else {
             revalidateAfterMap = parseTimestamps(prefs[REVALIDATE_KEY])
         }
-        if (_fullyWatchedSeriesIds.value.isEmpty() && persisted.isNotEmpty()) {
+        if (switchingProfile || (_fullyWatchedSeriesIds.value.isEmpty() && persisted.isNotEmpty())) {
             _fullyWatchedSeriesIds.value = persisted
         }
         loadedForProfileId = profileId
@@ -157,6 +159,27 @@ class WatchedSeriesStateHolder @Inject constructor(
         revalidateAfterMap = emptyMap()
         scope.launch {
             store(profileId).edit { prefs -> prefs.remove(REVALIDATE_KEY) }
+        }
+    }
+
+    /**
+     * Clears the revalidation deadline of the given series only.
+     *
+     * A changed rewatch run can put a series back into Continue Watching, and the older-seed path
+     * skips a series whose deadline is still fresh. Expiring only the changed ids keeps the rest of
+     * the row on its deadlines.
+     */
+    @Synchronized
+    fun clearValidationStateFor(
+        contentIds: Set<String>,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        if (contentIds.isEmpty()) return
+        val updated = revalidateAfterMap - contentIds
+        if (updated.size == revalidateAfterMap.size) return
+        revalidateAfterMap = updated
+        scope.launch {
+            store(profileId).edit { prefs -> prefs[REVALIDATE_KEY] = gson.toJson(updated) }
         }
     }
 

@@ -1,8 +1,10 @@
 package com.nuvio.tv.data.mediaserver.mediabrowser
 
+import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.data.mediaserver.ServerConnection
 import com.nuvio.tv.data.mediaserver.ServerException
 import com.nuvio.tv.data.mediaserver.ServerFailure
+import com.nuvio.tv.data.mediaserver.ServerIndexEntry
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.mediaserver.ServerLibrary
 import com.nuvio.tv.data.mediaserver.ServerMediaKind
@@ -12,6 +14,7 @@ import com.nuvio.tv.data.mediaserver.ServerPlaybackRequest
 import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
 import com.nuvio.tv.data.mediaserver.ServerPlayerCapabilities
 import com.nuvio.tv.data.mediaserver.ServerSession
+import com.nuvio.tv.data.mediaserver.ServerTitleQuery
 import com.nuvio.tv.data.mediaserver.emby.EmbyProvider
 import com.nuvio.tv.data.mediaserver.jellyfin.JellyfinProvider
 import org.junit.Test
@@ -219,6 +222,100 @@ class MediaBrowserRequestTest {
             assertTrue(request.header("Authorization").orEmpty().endsWith("Token=\"secret\""))
             assertNull(request.header("X-Emby-Authorization"))
         }
+    }
+
+    @Test
+    fun embyLooksUpATitleByItsProviderIdsInOneRequest() = runTest {
+        val http = TestHttp {
+            """{"Items": [{"Id": "m1", "Name": "Apocalypse Now", "Type": "Movie", "ProductionYear": 1979,
+                "ProviderIds": {"Imdb": "tt0078788", "Tmdb": "28"}}]}"""
+        }
+        val emby = EmbyProvider(http.client, testIdentity)
+        val query = ServerTitleQuery(TrackingExternalIds(imdb = "tt0078788", tmdb = 28), name = "Apocalypse Now", year = 1979)
+
+        val found = emby.lookupTitle(session("emby", "https://media.example.com"), ServerLibrary("lib1", "Movies", ServerMediaKind.MOVIE), query)
+
+        assertEquals(listOf(ServerIndexEntry("m1", TrackingExternalIds(imdb = "tt0078788", tmdb = 28), year = 1979)), found)
+        val request = http.requests.single()
+        assertEquals("/emby/Users/u1/Items", request.url.encodedPath)
+        assertEquals("imdb.tt0078788,tmdb.28", request.url.queryParameter("anyProviderIdEquals"))
+        assertEquals("lib1", request.url.queryParameter("parentId"))
+        assertEquals("Movie", request.url.queryParameter("includeItemTypes"))
+        assertEquals("true", request.url.queryParameter("recursive"))
+        assertEquals("ProviderIds,ProductionYear", request.url.queryParameter("fields"))
+        assertNull(request.url.queryParameter("searchTerm"))
+    }
+
+    @Test
+    fun embyCannotLookUpATitleWithoutImdbTmdbOrTvdbIds() = runTest {
+        val http = TestHttp()
+        val emby = EmbyProvider(http.client, testIdentity)
+        val query = ServerTitleQuery(TrackingExternalIds(kitsu = 1), name = "Show", year = null)
+
+        assertNull(emby.lookupTitle(session("emby", "https://media.example.com"), ServerLibrary("lib1", "Shows", ServerMediaKind.SERIES), query))
+        assertTrue(http.requests.isEmpty())
+    }
+
+    @Test
+    fun jellyfinLooksUpATitleByName() = runTest {
+        val http = TestHttp { """{"Items": [{"Id": "m1", "ProductionYear": 1979, "ProviderIds": {"Imdb": "tt0078788"}}]}""" }
+        val jellyfin = JellyfinProvider(http.client, testIdentity)
+        val session = session("jellyfin", "https://media.example.com")
+        val library = ServerLibrary("lib1", "Movies", ServerMediaKind.MOVIE)
+        val ids = TrackingExternalIds(imdb = "tt0078788")
+
+        val found = jellyfin.lookupTitle(session, library, ServerTitleQuery(ids, name = "Apocalypse Now", year = 1979))
+
+        assertEquals(listOf(ServerIndexEntry("m1", ids, year = 1979)), found)
+        val request = http.requests.single()
+        assertEquals("/Items", request.url.encodedPath)
+        assertEquals("u1", request.url.queryParameter("userId"))
+        assertEquals("Apocalypse Now", request.url.queryParameter("searchTerm"))
+        assertEquals("lib1", request.url.queryParameter("parentId"))
+        assertEquals("20", request.url.queryParameter("limit"))
+        assertNull(request.url.queryParameter("anyProviderIdEquals"))
+
+        assertNull(jellyfin.lookupTitle(session, library, ServerTitleQuery(ids, name = null, year = null)))
+        assertEquals(1, http.requests.size)
+    }
+
+    @Test
+    fun jellyfinTriesTheOriginalTitleOnceWhenTheNameFindsNothing() = runTest {
+        val http = TestHttp { request ->
+            if (request.url.queryParameter("searchTerm") == "Intouchables") {
+                """{"Items": [{"Id": "m1", "ProductionYear": 2011, "ProviderIds": {"Imdb": "tt1675434"}}]}"""
+            } else {
+                """{"Items": [{"Id": "m9", "ProductionYear": 2011, "ProviderIds": {"Imdb": "tt0000009"}}]}"""
+            }
+        }
+        val jellyfin = JellyfinProvider(http.client, testIdentity)
+        val session = session("jellyfin", "https://media.example.com")
+        val library = ServerLibrary("lib1", "Movies", ServerMediaKind.MOVIE)
+        val ids = TrackingExternalIds(imdb = "tt1675434")
+
+        val found = jellyfin.lookupTitle(session, library, ServerTitleQuery(ids, "The Intouchables", 2011, originalName = "Intouchables"))!!
+
+        assertTrue(ServerIndexEntry("m1", ids, year = 2011) in found)
+        assertEquals(listOf("The Intouchables", "Intouchables"), http.requests.map { it.url.queryParameter("searchTerm") })
+
+        jellyfin.lookupTitle(session, library, ServerTitleQuery(ids, "Intouchables", 2011, originalName = "The Intouchables"))
+        assertEquals(3, http.requests.size)
+        jellyfin.lookupTitle(session, library, ServerTitleQuery(ids, "The Intouchables", 2011))
+        assertEquals(4, http.requests.size)
+        jellyfin.lookupTitle(session, library, ServerTitleQuery(ids, "The Intouchables", 2011, originalName = " the intouchables "))
+        assertEquals(5, http.requests.size)
+    }
+
+    @Test
+    fun embyAsksOnceWhateverTheOriginalTitle() = runTest {
+        val http = TestHttp { """{"Items": []}""" }
+        val emby = EmbyProvider(http.client, testIdentity)
+        val query = ServerTitleQuery(TrackingExternalIds(imdb = "tt1675434"), "The Intouchables", 2011, originalName = "Intouchables")
+
+        val found = emby.lookupTitle(session("emby", "https://media.example.com"), ServerLibrary("lib1", "Movies", ServerMediaKind.MOVIE), query)
+
+        assertTrue(found!!.isEmpty())
+        assertEquals(1, http.requests.size)
     }
 
     @Test

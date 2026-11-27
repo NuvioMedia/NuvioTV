@@ -195,9 +195,12 @@
     <string name="episodes_specials">מיוחדים</string>
     <string name="episodes_episode">פרק</string>
     <string name="episodes_cd_watched">נצפה</string>
+    <string name="episodes_cd_rewatched">נצפה מחדש</string>
     <string name="episodes_dialog_subtitle">פעולות עבור הפרק הזה</string>
     <string name="episodes_mark_watched">סימון כנצפה</string>
     <string name="episodes_mark_unwatched">סימון כלא נצפה</string>
+    <string name="episodes_mark_rewatched">סימון כנצפה מחדש</string>
+    <string name="episodes_mark_not_rewatched">סימון כלא נצפה מחדש</string>
     <string name="episodes_mark_season_watched">סימון כל העונה כנצפתה</string>
     <string name="episodes_mark_season_unwatched">סימון כל העונה כלא נצפתה</string>
     <string name="episodes_mark_previous_watched">סימון פרקים קודמים בעונה זו כנצפו</string>
@@ -211,6 +214,10 @@
     <string name="detail_removed_from_library">הוסר מהספרייה</string>
     <string name="detail_episode_marked_watched">הפרק סומן כנצפה</string>
     <string name="detail_episode_marked_unwatched">הפרק סומן כלא נצפה</string>
+    <string name="detail_episode_marked_rewatched">הפרק סומן כנצפה מחדש</string>
+    <string name="detail_episode_marked_not_rewatched">הפרק סומן ככזה שלא נצפה שוב</string>
+    <string name="detail_rewatch_too_soon">Simkl לא תיעד צפייה חוזרת זו: הפרק נצפה לפני פחות מ-48 שעות.</string>
+    <string name="detail_rewatch_not_recorded">Simkl לא תיעד צפייה חוזרת זו.</string>
     <string name="detail_lists_updated">רשימות עודכנו</string>
     <string name="detail_movie_marked_watched">סומן כנצפה</string>
     <string name="detail_movie_marked_unwatched">סומן כלא נצפה</string>
@@ -414,9 +421,15 @@
     <string name="about_title">אודות</string>
     <string name="about_subtitle">מידע על האפליקציה, עדכונים וקישורים משפטיים</string>
     <string name="about_made_with_love">נוצר באהבה ❤️ על ידי Tapframe וחברים</string>
-    <string name="about_version">גרסה %1$s</string>
+    <string name="about_version">גרסה ‎%1$s</string>
     <string name="about_update_banner_title">באנר עדכון אוטומטי</string>
     <string name="about_update_banner_subtitle">הצגת באנר כאשר גרסה חדשה זמינה</string>
+    <string name="about_update_auto_install_title">התקנת עדכונים אוטומטית</string>
+    <string name="about_update_auto_install_subtitle">הורדת גרסאות חדשות ברקע והתקנתן כשהמכשיר במצב סרק</string>
+    <string name="about_update_auto_install_notice_title">הודעה לאחר עדכונים אוטומטיים</string>
+    <string name="about_update_auto_install_notice_subtitle">הצגת באנר בהפעלה הבאה לאחר שהאפליקציה מתעדכנת בעצמה</string>
+    <string name="about_update_optimize_install_title">אופטימיזציית עדכונים בזמן ההתקנה</string>
+    <string name="about_update_optimize_install_subtitle">הפעלה ראשונה מהירה יותר לאחר עדכון, אך האפליקציה נסגרת למשך כדקה בזמן ההתקנה. יש לכבות כדי להשתמש במקום זאת במסך ההתקנה של Android.</string>
     <string name="about_update_channel_title">ערוץ עדכון</string>
     <string name="about_update_channel_subtitle">בחירת ערוץ העדכונים המועדף</string>
     <string name="about_check_updates">בדיקת עדכונים</string>
@@ -494,6 +507,27 @@
     <string name="tracking_simkl_anime_id_mal">העדפת MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">העדפת Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">העדפת TVDB</string>
+    <string name="settings_tracking_completion_title">סף צפייה</string>
+    <string name="settings_tracking_completion_subtitle">אחוז ההפעלה הנדרש כדי לסמן כותרת כנצפתה. סימוני סוף קרדיטים מקבלים עדיפות כשהם זמינים.</string>
+    <string name="settings_tracking_completion_value">%1$s%%</string>
+    <string name="settings_tracking_rewatch_title">מעקב אחר צפייה חוזרת</string>
+    <string name="settings_tracking_rewatch_subtitle">רישום צפיות חוזרות בכותרות שהסתיימו לפני יותר מיומיים כסשני צפייה חוזרת נפרדים ב-Simkl, ומעקב אחר ריצות פעילות ב-“המשך צפייה”.</string>
+    <string name="settings_tracking_rewatch_dialog_title">מעקב אחר צפייה חוזרת</string>
+    <string name="settings_tracking_rewatch_dialog_subtitle">סשני צפייה חוזרת דורשים Simkl PRO או VIP ונוצרים רק עבור כותרות שכבר הסתיימו.</string>
+    <string name="settings_tracking_rewatch_off">כבוי</string>
+    <string name="settings_tracking_rewatch_off_subtitle">אין לרשום צפיות חוזרות ב-Simkl ואין להציג סשני צפייה חוזרת פעילים ב-“המשך צפייה”.</string>
+    <string name="settings_tracking_rewatch_semi">חצי אוטומטי</string>
+    <string name="settings_tracking_rewatch_semi_subtitle">שאלה פעם אחת לפני תחילת סשן צפייה חוזרת חדש. לאחר שהסשן פעיל, הפרקים הנותרים בריצה נרשמים אוטומטית.</string>
+    <string name="settings_tracking_rewatch_automatic">אוטומטי</string>
+    <string name="settings_tracking_rewatch_automatic_subtitle">התחלה אוטומטית של סשן צפייה חוזרת ורישום צפיות חוזרות בכל פעם שמפעילים שוב כותרת שהסתיימה.</string>
+    <string name="settings_tracking_rewatch_pro_title">מעקב אחר צפייה חוזרת דורש Simkl PRO או VIP.</string>
+    <string name="settings_tracking_rewatch_pro_description">Simkl רושמת צפיות חוזרות רק בחשבונות Pro או VIP. סשנים שכבר נמצאים בחשבון ה-Simkl שלך נשארים שם גם אם התוכנית משתנה.</string>
+    <string name="settings_tracking_rewatch_pro_upgrade">שדרוג</string>
+    <string name="settings_tracking_rewatch_pro_not_now">לא עכשיו</string>
+    <string name="rewatch_prompt_title">כותרת זו כבר נצפתה עד הסוף.</string>
+    <string name="rewatch_prompt_subtitle">להתחיל סשן צפייה חוזרת ב-Simkl?</string>
+    <string name="rewatch_prompt_confirm">כן</string>
+    <string name="rewatch_prompt_dismiss">לא</string>
     <string name="tracking_status_connected">מחובר</string>
     <string name="tracking_status_disconnected">לא מחובר</string>
     <string name="tracking_status_waiting">ממתין לאישור</string>
@@ -625,6 +659,8 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">שימוש באנימציית גלילת המיקוד הגלובלית המותאמת אישית של Nuvio ובמיקום שלה.</string>
     <string name="advanced_rgb565">פענוח תמונות RGB565</string>
     <string name="advanced_rgb565_subtitle">שימוש בצבע 16-סיביות בעל צריכת זיכרון נמוכה יותר עבור תמונות אטומות מתאימות. שינוי הגדרה זו מפעיל מחדש את האפליקציה.</string>
+    <string name="advanced_hardware_bitmaps">פענוח תמונות בחומרה</string>
+    <string name="advanced_hardware_bitmaps_subtitle">שמירת תמונות מפוענחות בזיכרון הגרפי בלבד. צורך פחות RAM, אך טעינת תמונות חדשות עלולה להיתקע במעבדים גרפיים חלשים.</string>
     <string name="advanced_memory_only_vertical_scroll">גלילה אנכית מהזיכרון בלבד</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">דילוג על בקשות תמונה מהדיסק ומהרשת בעת גלילה אנכית בשורות דף הבית.</string>
     <string name="advanced_compose_highlighter">מדגיש Compose</string>
@@ -651,6 +687,7 @@
     <string name="settings_mdblist_subtitle">ספקי דירוג חיצוניים</string>
     <string name="settings_animeskip_subtitle">חותמות זמן לדילוג על פתיחים וסיומים באנימה</string>
     <string name="settings_debrid_subtitle">מקורות חשבון ענן ניסיוניים</string>
+    <string name="settings_usenet_subtitle">ספקים, אינדקסרים, הפעלה ואבחון</string>
 
     <string name="playback_title">הגדרות הפעלה</string>
     <string name="playback_subtitle">הגדרת אפשרויות הפעלת וידאו וכתוביות</string>
@@ -776,6 +813,18 @@
     <string name="playback_engine_mvplayer">Libmpv (בטא)</string>
     <string name="playback_auto_switch_internal_player_on_error">החלפת מנוע אוטומטית בשגיאת הפעלה</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">אם הפעלת המקור נכשלת, החלפה אוטומטית בין ExoPlayer ל-Libmpv</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">יש לכבות את המעבר למקור התואם הבא כדי להשתמש באפשרות זו.</string>
+    <string name="autoplay_fallback_next_source">מעבר למקור התואם הבא בעת כשל</string>
+    <string name="autoplay_fallback_next_source_sub">אם המקור שנבחר אוטומטית נכשל או אינו מתחיל בזמן, ינוסו בשקט המקורות התואמים הבאים.</string>
+    <string name="autoplay_fallback_max_sources">מספר מקורות לניסיון בעת כשל</string>
+    <string name="autoplay_fallback_max_sources_sub">כמה מקורות תואמים נוספים לנסות לפני הצגת השגיאה.</string>
+    <string name="autoplay_fallback_startup_timeout">זמן להתחלת מקור</string>
+    <string name="autoplay_fallback_startup_timeout_sub">כמה זמן להמתין להתחלת מקור לפני מעבר לבא.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$d שנ׳</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">יש לכבות את המעבר האוטומטי בין מנועים בעת שגיאת הפעלה כדי להשתמש באפשרות זו.</string>
+    <string name="player_error_source_startup_timeout">המקור לא התחיל תוך %1$d שניות.</string>
+    <string name="playback_release_decoder_on_background">שחרור המפענח ברקע</string>
+    <string name="playback_release_decoder_on_background_sub">שחרור מפענח הווידאו כש-Nuvio עוברת לרקע. כדאי להפעיל אם ההפעלה נכשלת בשגיאת מפענח לאחר חזרה לאפליקציה. הנגן נטען מחדש בחזרה, גם לאחר שומר המסך</string>
     <string name="playback_external_forward_subtitles">העברת כתוביות לנגן חיצוני</string>
     <string name="playback_external_forward_subtitles_sub">משיכת כתוביות בשפה המועדפת מתוספים, והעברתן לנגן החיצוני.</string>
     <string name="playback_external_send_skip_segments">שליחת חותמות זמן של פתיח וסיום</string>
@@ -808,6 +857,10 @@
     <string name="video_section">וידאו</string>
     <string name="playback_true_black_letterbox">פסים שחורים אמיתיים</string>
     <string name="playback_true_black_letterbox_sub">השארת הפסים סביב התמונה ללא צביעה, כדי ש-HDR יישאר שחור אמיתי. כדאי להשאיר זאת כבוי אם מופיע קו בהיר על הפסים.</string>
+    <string name="playback_exo_chapters_title">הצגת מקטעים</string>
+    <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם.</string>
+    <string name="playback_chapter_title_title">הצגת שם המקטע</string>
+    <string name="playback_chapter_title_sub">הצגת שם המקטע הנוכחי מעל סרגל ההתקדמות.</string>
     <string name="audio_trailer_section">טריילר</string>
     <string name="audio_autoplay_trailers">הפעלה אוטומטית של טריילרים</string>
     <string name="audio_autoplay_trailers_sub">הפעלת טריילרים אוטומטית במסך הפרטים לאחר תקופת חוסר פעילות</string>
@@ -820,6 +873,17 @@
     <string name="audio_preferred_lang">שפת שמע מועדפת</string>
     <string name="audio_skip_silence">דילוג על שקט</string>
     <string name="audio_skip_silence_sub">זיהוי ודילוג אוטומטי על קטעים שקטים במהלך הניגון</string>
+    <string name="audio_night_mode">מצב לילה</string>
+    <string name="audio_night_mode_sub">מגביר דיאלוגים וצלילים שקטים, כדי שאפשר יהיה להשאיר את עוצמת הקול נמוכה</string>
+    <string name="audio_night_mode_desc">מגביר דיאלוגים וצלילים שקטים; סצנות רועשות נשארות כפי שמיקסו. פועל על שמע שמפוענח על ידי האפליקציה. Dolby ו-DTS שנשלחים למקלט או לסאונדבר במעבר ישיר (passthrough) נשארים ללא שינוי.</string>
+    <string name="audio_night_mode_value">מצב לילה: %1$s</string>
+    <string name="audio_night_mode_off">כבוי</string>
+    <string name="audio_night_mode_light">קל</string>
+    <string name="audio_night_mode_light_desc">הגברה עדינה, עד ‎+6 dB</string>
+    <string name="audio_night_mode_medium">בינוני</string>
+    <string name="audio_night_mode_medium_desc">דיאלוג מוגבר בבירור, עד ‎+10 dB</string>
+    <string name="audio_night_mode_strong">חזק</string>
+    <string name="audio_night_mode_strong_desc">עד ‎+15 dB, לצפייה בשעות הלילה המאוחרות בעוצמת קול נמוכה</string>
     <string name="audio_remember_delay_per_device">זכירת עיכוב שמע לפי מכשיר</string>
     <string name="audio_remember_delay_per_device_sub">שמירה ושחזור של עיכוב השמע בנגן עבור נתיב פלט השמע הנוכחי</string>
     <string name="audio_advanced_section">שמע מתקדם</string>
@@ -909,19 +973,48 @@
     <string name="sub_outline">קו מתאר</string>
     <string name="sub_outline_sub">הוספת קו מתאר סביב טקסט הכתוביות לנראות טובה יותר</string>
     <string name="sub_outline_color">צבע קו מתאר</string>
+    <string name="sub_outline_width">עובי המתאר</string>
+    <string name="sub_hdr_style">סגנון נפרד ל-HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">שימוש בצבע טקסט שונה ובבהירות מעומעמת יותר לכתוביות בווידאו HDR ו-Dolby Vision</string>
+    <string name="sub_hdr_text_color">צבע טקסט ב-HDR</string>
+    <string name="sub_hdr_brightness">בהירות כתוביות ב-HDR</string>
+    <string name="sub_hdr_dim_player_controls">עמעום פקדי הנגן ב-HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">החלת בהירות ה-HDR על פקדי הנגן והתפריטים המוצגים מעל וידאו HDR ו-Dolby Vision</string>
+    <string name="sub_appearance">מראה הכתוביות</string>
+    <string name="sub_appearance_desc">גופן, צבעים, רקע וצל</string>
+    <string name="sub_appearance_hint">חל על כתוביות טקסט. כתוביות ASS מעוצבות וכתוביות תמונה שומרות על מראן המקורי.</string>
+    <string name="sub_preview">תצוגה מקדימה</string>
+    <string name="sub_preview_text">כל סיפור מתחיל בקצת סקרנות.</string>
+    <string name="sub_font">גופן</string>
+    <string name="sub_font_default">ברירת מחדל</string>
+    <string name="sub_font_serif">סריף</string>
+    <string name="sub_font_mono">מונוספייס</string>
+    <string name="sub_font_import">ייבוא מהטלפון</string>
+    <string name="sub_font_import_desc">הוספת גופן ttf או otf בגודל של עד 10 MB. גופנים שיובאו נשארים בטלוויזיה הזו.</string>
+    <string name="sub_font_import_qr">יש לסרוק בטלפון כדי להוסיף גופן ttf או otf</string>
+    <string name="sub_font_missing">הגופן אינו זמין במכשיר זה. משתמשים בגופן ברירת המחדל.</string>
+    <string name="sub_font_remove">הסרת %1$s</string>
+    <string name="sub_background">רקע</string>
+    <string name="sub_bg_opacity">שקיפות הרקע</string>
+    <string name="sub_bg_roundness">עיגול פינות</string>
+    <string name="sub_shadow">צל</string>
+    <string name="sub_shadow_desc">הפרדת הטקסט מסצנות בהירות</string>
+    <string name="sub_shadow_opacity">שקיפות הצל</string>
+    <string name="sub_shadow_size">גודל הצל</string>
+    <string name="sub_reset_appearance">איפוס מראה</string>
     <string name="sub_advanced_section">הצגת כתוביות מתקדמת</string>
     <string name="sub_libass">שימוש ב-libass לכתוביות ASS/SSA</string>
     <string name="sub_libass_sub">ניסיוני: תמיכה בכתוביות עם עיצוב מיוחד, כמו אנימציות ומיקום משתנה על המסך</string>
     <string name="sub_libass_mode">אופן הצגת הכתוביות המעוצבות</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (מומלץ)</string>
-    <string name="sub_mode_overlay_gl_sub">האיכות הטובה ביותר עם תמיכה ב-HDR. מציג את הכתוביות בערוץ עיבוד (thread) נפרד לביצועים חלקים יותר.</string>
-    <string name="sub_mode_overlay_canvas">שכבת-על Canvas</string>
-    <string name="sub_mode_effects_gl">אפקטים OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">תומך באנימציות באמצעות אפקטי Media3. מהיר יותר משיטת Canvas.</string>
-    <string name="sub_mode_effects_canvas">אפקטים Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">תומך באנימציות באמצעות אפקטי Media3 עם עיבוד בשיטת Canvas.</string>
-    <string name="sub_mode_standard">כתוביות רגילות</string>
-    <string name="sub_mode_standard_sub">הצגת כתוביות בסיסית ללא תמיכה באנימציות. התואם ביותר.</string>
+    <string name="sub_libass_render_scale">רזולוציית עיבוד כתוביות</string>
+    <string name="sub_libass_render_scale_sub">רזולוציה נמוכה יותר משפרת ביצועים בכתוביות מורכבות, במחיר של חדות נמוכה יותר</string>
+    <string name="sub_libass_render_mode">מצב עיבוד ASS</string>
+    <string name="sub_libass_render_mode_sub">האופן שבו כתוביות ASS/SSA מצוירות על הווידאו</string>
+    <string name="sub_libass_render_mode_tunneled_sub">הפעלה במנהרה (Tunneled) עוקפת את צינור אפקטי הווידאו. מצב שכבת-על (Overlay) נבחר אוטומטית.</string>
+    <string name="sub_libass_render_mode_video_effect">אפקט וידאו</string>
+    <string name="sub_libass_render_mode_video_effect_sub">מצייר כתוביות ישירות על כל פריים של הווידאו. תזמון מדויק לפריים בכל החומרה. תוכן HDR עובר מיפוי גוונים ל-SDR.</string>
+    <string name="sub_libass_render_mode_overlay">שכבת-על</string>
+    <string name="sub_libass_render_mode_overlay_sub">מעבד כתוביות על שכבת משטח נפרדת. שומר על פלט HDR. תזמון הכתוביות עשוי לא להיות מדויק לחלוטין בחלק מהמכשירים.</string>
     <string name="sub_org_none">ללא (סדר ברירת מחדל)</string>
     <string name="sub_org_by_lang">לפי שפה</string>
     <string name="sub_org_by_addon">לפי תוסף</string>
@@ -1060,6 +1153,8 @@
     <string name="layout_cw_enabled_sub">הצגת שורת המשך הצפייה במסך הבית.</string>
     <string name="layout_use_episode_thumbnails_cw">שימוש ב-Thumbnail של הפרק ב\"המשך צפייה\"</string>
     <string name="layout_use_episode_thumbnails_cw_sub">שימוש ב-Thumbnail של הפרק כתמונת ברירת המחדל. כשהאפשרות מושבתת, תוצג תמונת הרקע</string>
+    <string name="layout_season_posters">פוסטרים של עונות</string>
+    <string name="layout_season_posters_sub">הצגת עונות כפוסטרים במקום כלשוניות טקסט, כשזמין.</string>
     <string name="layout_blur_unwatched">טשטוש פרקים שלא נצפו</string>
     <string name="layout_blur_unwatched_sub">טשטוש Thumbnails של פרקים שטרם נצפו, כדי למנוע ספוילרים</string>
     <string name="layout_episode_options_overlay">שכבת אפשרויות פרק</string>
@@ -1087,6 +1182,14 @@
     <string name="layout_cw_sort_streaming_desc">פריטים שיצאו תחילה, עתידיים בסוף</string>
     <string name="layout_cw_sort_split_upcoming">שורת \"עתידי\" נפרדת</string>
     <string name="layout_cw_sort_split_upcoming_desc">העברת פרקים שטרם שודרו לשורת \"עתידי\" נפרדת</string>
+    <string name="layout_cw_click_action">בעת בחירת פריט</string>
+    <string name="layout_cw_click_action_sub">מה ייפתח בעת בחירת פריט בשורת המשך הצפייה</string>
+    <string name="layout_cw_click_stream">פתיחת מקור צפייה</string>
+    <string name="layout_cw_click_stream_desc">בחירת מקור צפייה או המשך הפעלה</string>
+    <string name="layout_cw_click_details">פתיחת פרטים</string>
+    <string name="layout_cw_click_details_desc">פתיחת עמוד הפרטים של הכותרת</string>
+    <string name="layout_cw_click_details_upcoming">פרטים עבור פרקים עתידיים בלבד</string>
+    <string name="layout_cw_click_details_upcoming_desc">פתיחת פרטי הפרקים שטרם שודרו, ומקור הצפייה עבור שאר הפרקים</string>
     <string name="upcoming_section_title">עתידי</string>
     <string name="layout_trailer_button">הצגת כפתור טריילר</string>
     <string name="layout_trailer_button_sub">הצגת כפתור טריילר בעמוד הפרטים (רק כשטריילר זמין).</string>
@@ -1096,6 +1199,8 @@
     <string name="layout_trailer_pause_on_scroll_sub">השהיית הטריילר בגלילה למטה והמשכתו מאותה הנקודה בגלילה מעלה.</string>
     <string name="layout_trailer_4k">טריילרים ב-4K</string>
     <string name="layout_trailer_4k_sub">הפעלת טריילרים ברזולוציה מעל 1080p כשהם זמינים. צורך הרבה יותר זיכרון; כבוי כברירת מחדל במכשירים עם 2GB RAM או פחות.</string>
+    <string name="layout_trailer_subtitles">כתוביות בטריילר</string>
+    <string name="layout_trailer_subtitles_sub">הצגת כתוביות בטריילרים בשפת הכתוביות המועדפת שלך, כשזמין.</string>
     <string name="layout_detail_group_episodes">פרקים</string>
     <string name="layout_detail_group_trailers">טריילרים</string>
     <string name="layout_detail_group_metadata">מטא-דאטה</string>
@@ -1116,6 +1221,8 @@
     <string name="layout_trailer_muted">הפעלת טריילר ללא שמע</string>
     <string name="layout_trailer_muted_sub_preview">השתקת שמע הטריילר בתצוגה מקדימה אוטומטית.</string>
     <string name="layout_trailer_muted_sub_expanded">השתקת שמע הטריילר בכרטיסים מורחבים.</string>
+    <string name="layout_trailer_continue_in_details">המשך הטריילר בדף הפרטים</string>
+    <string name="layout_trailer_continue_in_details_sub">המשך הפעלת הטריילר בעת פתיחת דף הפרטים.</string>
     <string name="layout_section_card_style">כרטיס פוסטר</string>
     <string name="layout_section_card_style_desc">כוונון רוחב כרטיס ורדיוס פינה.</string>
     <string name="settings_card_depth_title">אפקט עומק לכרטיס</string>
@@ -1151,6 +1258,7 @@
     <string name="layout_trailer_location_sub">בחירת המיקום שבו מופעלת תצוגה מקדימה של הטריילר בדף הבית המודרני.</string>
     <string name="layout_trailer_expanded_card">בתוך הכרטיס המורחב</string>
     <string name="layout_trailer_hero_media">בחלקו העליון של המסך</string>
+    <string name="layout_trailer_hero_media_no_expand">מדיית האזור הראשי (ללא הרחבה)</string>
     <string name="layout_preset_compact">קומפקטי</string>
     <string name="layout_preset_dense">צפוף</string>
     <string name="layout_preset_standard">רגיל</string>
@@ -1189,6 +1297,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">תמיד רקע עם לוגו עבור פוסטרים לרוחב</string>
     <string name="layout_always_show_landscape_clearlogo_sub">התעלמות מפוסטר לרוחב מהתוסף, ושימוש ברקע עם שכבת לוגו שקוף במקום.</string>
+    <string name="layout_hero_description_auto_scroll">גלילה אוטומטית של תיאורים</string>
+    <string name="layout_hero_description_auto_scroll_sub">גלילה איטית של תיאורים ארוכים במסך הבית במקום חיתוכם.</string>
     <string name="web_custom_poster_title">מקור פוסטרים מותאם אישית</string>
     <string name="web_custom_poster_subtitle">יש להדביק למטה תבנית כתובת URL לפוסטר וללחוץ על שמירה.</string>
     <string name="web_custom_poster_label">תבנית URL</string>
@@ -1205,6 +1315,13 @@
     <string name="web_custom_poster_none">לא הוגדרה תבנית</string>
     <string name="web_custom_poster_loading">טוען…</string>
     <string name="web_custom_poster_placeholders_info">מציינים: {id} מעביר את כל מזהי התוכן. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} מיועדים לסוג מזהה בודד - אם הוא לא זמין, הפוסטר המקורי נשמר. {imdb_id|tmdb_id|kitsu_id} מציין סוגי מזהים נתמכים - נעשה שימוש בסוג המתאים, או שהפוסטר המקורי נשמר. הוספת ? הופכת מציין לאופציונלי, כך שיוחלף בערך ריק במקום לדלג: {imdb_id?}. מציינים נוספים: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">גופני כתוביות</string>
+    <string name="web_subtitle_font_subtitle">.יש לבחור קובץ TTF או OTF לשימוש ככתוביות בטלוויזיה</string>
+    <string name="web_subtitle_font_choose">בחירת קובץ גופן</string>
+    <string name="web_subtitle_font_uploading">…מעלה</string>
+    <string name="web_subtitle_font_added">נוסף לטלוויזיה שלך</string>
+    <string name="web_subtitle_font_error">.לא ניתן היה לייבא את הגופן הזה. יש לבחור קובץ TTF או OTF תקין בגודל של עד 10 MB</string>
+    <string name="web_subtitle_font_connection_error">שגיאת חיבור</string>
     
 
     <string name="mdblist_name">MDBList</string>
@@ -1228,7 +1345,7 @@
     <string name="mdblist_rate_limited">מגבלת הבקשות של MDBList מוצתה. הסנכרון יתחדש לאחר איפוס המגבלה.</string>
     <string name="mdblist_revoke_failed">הניתוק בוצע במכשיר זה. כדי לבטל את הגישה לגמרי, יש להסיר את האפליקציה בהגדרות חשבון ה-MDBList.</string>
     <string name="mdblist_title">דירוגי MDBList</string>
-    <string name="mdblist_subtitle">הגדרת דירוגים חיצוניים המוצגים בבאנר הראשי של דף הפרטים</string>
+    <string name="mdblist_subtitle">הגדרת הדירוגים החיצוניים שמוצגים באזור הראשי של הפרטים</string>
     <string name="mdblist_enable_title">אפשור דירוגי MDBList</string>
     <string name="mdblist_enable_subtitle">משיכת דירוגים מספקים חיצוניים במסך הפרטים</string>
     <string name="mdblist_api_key_title">מפתח API</string>
@@ -1255,7 +1372,7 @@
     <string name="mdblist_show_on_hero_title">הצגת דירוגים בבאנר הראשי</string>
     <string name="mdblist_show_on_hero_subtitle">הצגת דירוגי MDBList בקרוסלת הבאנר הראשי (מודרני וקלאסי/רשת)</string>
     <string name="mdblist_rating_order_title">סדר דירוגים</string>
-    <string name="mdblist_rating_order_subtitle">שלושת הדירוגים הראשונים הפעילים והזמינים מוצגים בבאנר הראשי המודרני. ניתן להשתמש בחצים לשינוי הסדר.</string>
+    <string name="mdblist_rating_order_subtitle">שלושת הדירוגים הראשונים שמופעלים וזמינים מוצגים באזור הראשי המודרני. יש להשתמש בכפתור שינוי הסדר כדי לשנות את סדרם.</string>
     <string name="mdblist_dialog_title">מפתח API של MDBList</string>
     <string name="mdblist_dialog_subtitle">הזנת מפתח ה-API לאחזור דירוגים חיצוניים</string>
     <string name="mdblist_dialog_placeholder">מפתח API של MDBList</string>
@@ -1400,6 +1517,11 @@
     <string name="settings_stream_badges_section">סגנון Fusion</string>
     <string name="settings_stream_size_badges_title">תגי גודל</string>
     <string name="settings_stream_size_badges_description">הצגת תגי גודל קובץ בתוצאות מקור ובפאנלי מקור בנגן.</string>
+    <string name="settings_stream_badges_in_player_title">הצגה בנגן</string>
+    <string name="settings_stream_badges_in_player_description">הצגת תגים לווידאו ולאודיו שמופעלים, מתחת לכותרת הנגן. נדרשת חבילת תגים שמתאימה לטקסט רגיל, כמו 2160p או Atmos.</string>
+    <string name="settings_stream_player_badges_title">תגי נגן</string>
+    <string name="settings_stream_player_badges_description">בחירת חבילת התגים שבה הנגן משתמש.</string>
+    <string name="settings_stream_player_badges_same">זהה לתגי המקור</string>
     <string name="settings_stream_addon_logo_title">הצגת לוגו התוסף</string>
     <string name="settings_stream_addon_logo_description">הצגת לוגו ושם תוסף לצד המקורות.</string>
     <string name="settings_stream_display_section">תצוגה</string>
@@ -1467,6 +1589,8 @@
     <string name="tmdb_networks_subtitle">רשתות עם לוגואים מ-TMDB</string>
     <string name="tmdb_episodes_title">פרקים</string>
     <string name="tmdb_episodes_subtitle">כותרות פרקים, סקירות, תמונות ממוזערות ומשך מ-TMDB</string>
+    <string name="tmdb_season_posters_title">פוסטרים של עונות</string>
+    <string name="tmdb_season_posters_subtitle">פוסטרים של עונות מ-TMDB ללשוניות העונות בדף הפרטים</string>
     <string name="tmdb_trailers_title">טריילרים</string>
     <string name="tmdb_trailers_subtitle">טריילרים אפשריים מתוך סרטוני TMDB עבור אזור הטריילר בעמוד הפרטים</string>
     <string name="tmdb_more_like_this_title">עוד כמו זה</string>
@@ -1710,6 +1834,13 @@
     <string name="addon_installing">מתקין</string>
     <string name="addon_install_btn">התקנה</string>
     <string name="addon_install_success">%1$s הותקן</string>
+    <string name="addon_tracking_consent_title">תוסף מעקב</string>
+    <string name="addon_tracking_consent_body">%1$s הוא תוסף מעקב. Nuvio תשלח אליו את הפעילות שלך: מה שמופעל, מושהה ומופסק יחד עם מיקום ההפעלה, מה שנוסף לספרייה שלך או מוסר ממנה, ומה שסומן כנצפה או כלא נצפה. הנתונים האלה יוצאים מ-Nuvio ומטופלים על ידי מפתח התוסף ועל ידי השירות שאליו הוא מתחבר.</string>
+    <string name="addon_tracking_consent_checkbox">הסכמה לשיתוף פעילות הצפייה והספרייה שלי עם התוסף הזה</string>
+    <string name="addon_tracking_consent_checked">מסומן</string>
+    <string name="addon_tracking_consent_unchecked">לא מסומן</string>
+    <string name="addon_tracking_consent_cancel">ביטול</string>
+    <string name="addon_tracking_consent_install">התקנה</string>
     <string name="addon_error_invalid_url">יש להזין כתובת תוסף תקינה</string>
     <string name="addon_error_invalid_scheme">כתובת התוסף חייבת להתחיל ב-http או https</string>
     <string name="addon_installed_section">מותקן</string>
@@ -1757,6 +1888,9 @@
     <string name="catalog_order_disabled_on_home">מושבת בבית</string>
     <string name="catalog_order_enable">הפעלה</string>
     <string name="catalog_order_disable">השבתה</string>
+    <string name="catalog_order_pinned">מוצמד</string>
+    <string name="catalog_order_pinned_to_top">מוצמד לראש הרשימה</string>
+    <string name="catalog_order_pin_to_move_toast">יש להסיר את ההצמדה לראש הרשימה מהאוסף כדי להזיז</string>
 
 
     <string name="stream_retry">ניסיון נוסף</string>
@@ -1790,9 +1924,9 @@
     <string name="settings_p2p_cache_size_title">גודל מטמון טורנט</string>
     <string name="settings_p2p_cache_size_description">נתוני טורנט שהורדו נשמרים במכשיר זה להפעלה חוזרת מהירה יותר</string>
     <string name="settings_p2p_cache_none">ללא מטמון קבוע</string>
-    <string name="settings_p2p_cache_2_gb">2 GB</string>
-    <string name="settings_p2p_cache_5_gb">5 GB</string>
-    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_cache_2_gb">‎2 GB</string>
+    <string name="settings_p2p_cache_5_gb">‎5 GB</string>
+    <string name="settings_p2p_cache_10_gb">‎10 GB</string>
     <string name="settings_p2p_clear_cache_title">ניקוי מטמון טורנט</string>
     <string name="settings_p2p_clear_cache_usage">%1$s בשימוש כרגע</string>
     <string name="settings_p2p_clear_cache_usage_pending">השימוש נמדד לאחר הפעלת P2P; ניתן לבחור כדי לנקות נתוני טורנט שמורים במטמון</string>
@@ -1825,6 +1959,8 @@
     <string name="player_engine_switching_title">מחליף מנוע הפעלה</string>
     <string name="player_engine_switching_message">האתחול נכשל. מחליף ל-%1$s…</string>
     <string name="player_engine_switching_manual_message">מחליף ל-%1$s…</string>
+    <string name="player_engine_switch_title">לעבור ל-%1$s?</string>
+    <string name="player_engine_switch_message">הווידאו ייטען מחדש מהנקודה שאליה הגעת.</string>
     <string name="playback_show_loading_status">הצגת סטטוס טעינה</string>
     <string name="playback_show_loading_status_sub">הצגת התקדמות שלב-אחר-שלב בזמן שהנגן מאתחל.</string>
     <string name="player_sync_line">סנכרון לפי שורה</string>
@@ -1849,8 +1985,7 @@
     <string name="parental_severity_moderate">בינוני</string>
     <string name="parental_severity_mild">קל</string>
     <string name="player_ends_at">מסתיים ב-%1$s</string>
-    <string name="player_live_watched">LIVE  %1$s</string>
-    <string name="player_via">דרך %1$s</string>
+    <string name="player_live_watched">LIVE %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">עיכוב כתוביות</string>
@@ -1926,13 +2061,13 @@
     <string name="audio_dialog_tab_tracks">שמע</string>
     <string name="audio_dialog_tab_mix">מיקס</string>
     <string name="audio_delay_label">השהיית שמע</string>
-    <string name="audio_delay_range">טווח: %1$.2f שנ׳ עד %2$.2f שנ׳</string>
+    <string name="audio_delay_range">טווח: ‎%1$.2f שנ׳ עד ‎%2$.2f שנ׳</string>
     <string name="audio_mix_label">הגברה (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">שמירה בין הפעלות: פועל</string>
     <string name="audio_mix_persist_off">שמירה בין הפעלות: כבוי</string>
-    <string name="audio_mix_range">טווח: %1$d dB עד %2$d dB</string>
-    <string name="audio_mix_range_saved">טווח: %1$d dB עד %2$d dB (שמור)</string>
+    <string name="audio_mix_range">טווח: ‎%1$d dB עד ‎%2$d dB</string>
+    <string name="audio_mix_range_saved">טווח: ‎%1$d dB עד ‎%2$d dB (שמור)</string>
     <string name="audio_mix_unavailable">הגברה אינה זמינה במכשיר זה</string>
     <string name="audio_center_mix_label">Downmix: רמת מיקס מרכזי</string>
     <string name="audio_center_mix_value_db">%1$d dB</string>
@@ -1940,6 +2075,12 @@
     <string name="audio_center_mix_unavailable">מיקס מרכזי זמין רק כאשר downmix של FFmpeg פעיל.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">שמירה על שמע מקורי ב-downmix</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">כשמושבת, נורמליזציית downmix עלולה להפחית את עוצמת הקול הכוללת.</string>
+    <string name="audio_downmix_lfe_level">רמת LFE ב-Downmix</string>
+    <string name="audio_downmix_lfe_level_sub">מערבב את ערוץ הסאבוופר (LFE) אל שאר הרמקולים במקום להשמיט אותו. רק לפריסות ללא LFE, כמו 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">בשימוש כשלפריסת ה-Downmix אין ערוץ LFE. חל מההפעלה הבאה.</string>
+    <string name="audio_downmix_lfe_level_off">כבוי</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
 
     <string name="subtitle_dialog_title">כתוביות</string>
     <string name="subtitle_no_builtin">אין כתוביות מובנות זמינות</string>
@@ -1967,12 +2108,16 @@
     <string name="subtitle_off">כבוי</string>
     <string name="subtitle_style_title">סגנון כתוביות</string>
     <string name="subtitle_style_customize">התאמה אישית</string>
+    <string name="subtitle_style_customize_ass">התאמה אישית של עיצוב ASS/SSA</string>
     <string name="subtitle_style_color">צבע</string>
     <string name="subtitle_style_reset">איפוס</string>
     <string name="subtitle_style_font_size">גודל גופן</string>
     <string name="subtitle_style_bold">מודגש:</string>
     <string name="subtitle_style_text_color">צבע הטקסט:</string>
     <string name="subtitle_style_text_opacity">שקיפות טקסט</string>
+    <string name="subtitle_style_text_color_hdr">צבע הטקסט (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">שקיפות טקסט (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">בהירות (HDR)</string>
     <string name="subtitle_style_outline">קו מתאר:</string>
     <string name="subtitle_style_bottom_offset">מרווח תחתון:</string>
     <string name="subtitle_style_defaults">ברירות מחדל</string>
@@ -2130,15 +2275,12 @@
     <string name="library_status_dropped">ננטש</string>
     <string name="library_syncing_library">מסנכרן ספרייה…</string>
     <string name="library_type_all">הכול</string>
-    <string name="library_type_items">פריטים</string>
-    <string name="library_empty_local_title">אין עדיין פריטים ב\"%1$s\"</string>
-    <string name="library_empty_trakt_title">אין %1$s ברשימה זו</string>
-    <string name="library_empty_local_subtitle">אפשר להתחיל לשמור מועדפים כדי לראותם כאן</string>
-    <string name="library_empty_trakt_subtitle">שימוש ב-+ בפרטים להוספת פריטים לרשימת צפייה</string>
+    <string name="library_empty_title">אין פריטים להצגה</string>
+    <string name="library_empty_local_hint">יש לשנות את המסננים או להתחיל לשמור מועדפים כדי לראות אותם כאן</string>
+    <string name="library_empty_trakt_hint">יש לשנות את המסננים או להשתמש ב-+ בדף הפרטים כדי להוסיף פריטים לרשימת הצפייה או לרשימות</string>
+    <string name="library_empty_simkl_hint">יש לשנות את המסננים או להשתמש ב-+ בדף הפרטים כדי להוסיף פריטים לסטטוס ב-Simkl</string>
     <string name="library_empty_trakt_not_auth_title">Trakt לא מחובר</string>
     <string name="library_empty_trakt_not_auth_subtitle">יש לחבר את חשבון ה-Trakt בהגדרות כדי לצפות בספריית ה-Trakt</string>
-    <string name="library_empty_simkl_title">אין %1$s בסטטוס זה</string>
-    <string name="library_empty_simkl_subtitle">יש ללחוץ על + בפרטים כדי להוסיף פריטים לסטטוס Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl לא מחובר</string>
     <string name="library_empty_simkl_not_auth_subtitle">יש לחבר את חשבון ה-Simkl בהגדרות כדי לראות את ספריית ה-Simkl</string>
     <string name="library_list_create_dialog_title">יצירת רשימה</string>
@@ -2353,6 +2495,7 @@
     <string name="cast_detail_error">משהו השתבש</string>
     <string name="cast_detail_retry">ניסיון נוסף</string>
     <string name="cast_detail_filmography">פילמוגרפיה</string>
+    <string name="cast_detail_filter_all">הכול</string>
     <string name="cast_detail_born">תאריך לידה: %1$s</string>
     <string name="cast_detail_born_died">%1$s — †%2$s</string>
     <string name="cast_detail_age">גיל %1$d</string>
@@ -2433,6 +2576,9 @@
     <string name="update_checking">בודק עדכונים…</string>
     <string name="update_waiting_for_stable">הגרסה היציבה הבאה תתקבל כשתהיה זמינה</string>
     <string name="update_download_complete">ההורדה הושלמה. מוכן להתקנה.</string>
+    <string name="update_ready_closes">ההורדה הושלמה. האפליקציה נסגרת בזמן התקנת העדכון, ויכול לקחת כדקה. יש לפתוח אותה שוב לאחר מכן.</string>
+    <string name="update_ready_closes_and_reopens">ההורדה הושלמה. האפליקציה נסגרת בזמן התקנת העדכון ונפתחת מחדש מעצמה, ויכול לקחת כדקה.</string>
+    <string name="update_installed_automatically">עודכן אוטומטית כשהמכשיר היה במצב סרק</string>
     <string name="update_up_to_date">ברשותך הגרסה העדכנית ביותר. שינויים אחרונים:</string>
     <string name="update_close">סגירה</string>
     <string name="update_open_settings">פתיחת הגדרות</string>
@@ -2470,6 +2616,10 @@
     <string name="plugin_repo_added_with_providers">התווסף %1$s עם %2$d ספקים</string>
     <string name="plugin_repo_removed">המאגר הוסר</string>
     <string name="plugin_repo_refreshed">המאגר רוענן</string>
+    <string name="plugin_repo_delete_confirm_title">למחוק את המאגר?</string>
+    <string name="plugin_repo_delete_confirm_message">האם למחוק אותו?</string>
+    <string name="plugin_repo_delete_no">לא</string>
+    <string name="plugin_repo_delete_yes">כן</string>
 
     <!-- Trakt errors -->
 
@@ -2512,7 +2662,6 @@
     <string name="player_error_failed_start_torrent">התחלת הטורנט נכשלה: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">תמיכה ב-HDR עם עיבוד Canvas. עלול לחסום את שרשור הממשק.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2524,6 +2673,10 @@
     <string name="cd_sources">מקורות</string>
     <string name="cd_switch_player_engine">החלפת מנוע נגן</string>
     <string name="cd_episodes">פרקים</string>
+    <string name="player_chapter_number">מקטע %1$d</string>
+    <string name="player_chapters">מקטעים</string>
+    <string name="player_chapters_title">מקטעים (%1$d)</string>
+    <string name="player_chapter_remaining">נותרו %1$s</string>
     <string name="cd_playback_speed">מהירות הפעלה</string>
     <string name="cd_aspect_ratio">יחס גובה-רוחב</string>
     <string name="cd_open_external_player">פתיחה בנגן חיצוני</string>
@@ -2537,6 +2690,7 @@
     <string name="cd_loading_logo">טוען לוגו</string>
     <string name="cd_move_up">הזזה למעלה</string>
     <string name="cd_move_down">הזזה למטה</string>
+    <string name="cd_reorder">שינוי סדר</string>
     <string name="cd_edit">עריכה</string>
     <string name="cd_delete">מחיקה</string>
     <string name="cd_qr_code">קוד QR</string>
@@ -2545,6 +2699,12 @@
     <string name="cd_remove">הסרה</string>
     <string name="cd_preview">תצוגה מקדימה</string>
     <string name="cd_test">בדיקה</string>
+    <string name="cd_enable_scraper">הפעלת %1$s</string>
+    <string name="cd_enable_addon">הפעלת %1$s</string>
+    <string name="cd_color_swatch">צבע %1$s</string>
+    <string name="cd_emoji_option">אימוג׳י %1$s</string>
+    <string name="cd_trailer_controls">פקדי טריילר</string>
+    <string name="cd_seek_bar">סרגל הדילוג</string>
     <string name="cd_unlink">ביטול קישור</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">לוגו Trakt</string>
@@ -2602,10 +2762,21 @@
     <string name="collections_valid_summary">%1$d אוספים, %2$d תיקיות</string>
     <string name="collections_confirm_import">אישור ייבוא</string>
     <string name="collections_folder_count">%1$d תיקיות</string>
+    <string name="collections_pinned">מוצמד</string>
 
     <!-- Collection Editor -->
     <string name="collections_editor_row_title">כותרת שורה</string>
     <string name="collections_editor_save">שמירה</string>
+    <string name="collections_editor_unsaved_title">לשמור שינויים?</string>
+    <string name="collections_editor_unsaved_subtitle">יש שינויים שלא נשמרו באוסף הזה.</string>
+    <string name="collections_editor_unsaved_incomplete_title">שינויים שלא נשמרו</string>
+    <string name="collections_editor_unsaved_missing_title_and_folder">יש להזין כותרת ולהוסיף לפחות תיקייה אחת כדי לשמור את האוסף הזה.</string>
+    <string name="collections_editor_unsaved_missing_title">יש להזין כותרת לאוסף כדי לשמור את השינויים.</string>
+    <string name="collections_editor_unsaved_missing_folder">יש להוסיף לפחות תיקייה אחת כדי לשמור את האוסף הזה.</string>
+    <string name="collections_editor_folder_unsaved_title">לשמור שינויים בתיקייה?</string>
+    <string name="collections_editor_folder_unsaved_subtitle">יש שינויים שלא נשמרו בתיקייה הזו.</string>
+    <string name="collections_editor_folder_unsaved_incomplete_title">שינויים בתיקייה שלא נשמרו</string>
+    <string name="collections_editor_folder_unsaved_missing_source">יש להוסיף לפחות מקור אחד כדי לשמור את התיקייה הזו.</string>
     <string name="collections_editor_backdrop">תמונת רקע</string>
     <string name="collections_editor_pin_above">נעיצה מעל הקטלוגים</string>
     <string name="collections_editor_pin_above_desc">הצגת אוסף זה מעל כל קטלוגי הבית הרגילים. מספר אוספים נעוצים מסודרים לפי סדר יצירת האוספים.</string>
@@ -3053,8 +3224,8 @@
     <string name="sponsors_error_api_http">שגיאת API של נותני חסות: %1$d</string>
 
     <!-- Contributor role badges -->
-    <string name="contributor_role_translator">מתרגם/ת</string>
-    <string name="contributor_role_maintainer">מתחזק/ת</string>
+    <string name="contributor_role_translator">תרגום</string>
+    <string name="contributor_role_maintainer">תחזוקה</string>
 
     <!-- Network / safe API errors -->
     <string name="network_error_empty_response_body">גוף תגובה ריק</string>
@@ -3214,7 +3385,7 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">אגירת נתונים ורשת</string>
     <string name="playback_section_buffer_network_desc">כמה תוכן לשמור בזיכרון וכיצד למשוך מקורות.</string>
-    <string name="playback_net_device_memory_info">זיכרון המכשיר: %1$s | מגבלת בטיחות מומלצת: %2$d MB</string>
+    <string name="playback_net_device_memory_info">זיכרון המכשיר: ‎%1$s | מגבלת בטיחות מומלצת: ‎%2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">זיכרון מקורי של ExoPlayer</string>
     <string name="playback_net_nuvio_performance_mode_sub">הפעלת הקצאת זיכרון מקורית מחוץ לערימה ואופטימיזציות גלילה.</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">תכונה זו אינה נתמכת במכשיר.</string>
@@ -3233,14 +3404,14 @@
     <string name="playback_buffer_after_rebuffer_sub">כמה תוכן לאגור אחרי שההפעלה נעצרת בגלל טעינה. ערכים גבוהים יותר מפחיתים הפסקות חוזרות.</string>
     <string name="playback_buffer_back">זיכרון לחזרה אחורה</string>
     <string name="playback_buffer_back_sub">כמה מהתוכן שכבר נצפה נשמר בזיכרון, כדי לאפשר חזרה אחורה בלי לחכות לטעינה מחדש. ניתן להגדיר ל-0 כדי להשבית ולחסוך בזיכרון.</string>
-    <string name="playback_buffer_back_reserve">נשמרים כ-%1$dMB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
+    <string name="playback_buffer_back_reserve">נשמרים כ-‎%1$d MB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
     <string name="playback_buffer_managed">ניהול זיכרון אוטומטי</string>
     <string name="playback_buffer_managed_sub">האפליקציה בוחרת בעצמה כמה זיכרון להשתמש כדי לא לפגוע במכשיר. כדאי לכבות רק כדי לקבוע ידנית את כמות הזיכרון (לא מומלץ למשתמשים רגילים).</string>
     <string name="playback_buffer_target">כמות זיכרון לטעינה מראש</string>
     <string name="playback_buffer_target_sub">כמה זיכרון מותר לאפליקציה להשתמש כדי לטעון תוכן מראש.</string>
     <string name="playback_buffer_target_managed_hint">מנוהל על ידי תקציב הזיכרון של המכשיר. יש לכבות את תקציב הזיכרון המנוהל כדי להגדיר זאת.</string>
-    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
-    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (%1$d MB). סיכון גבוה לקריסה.</string>
+    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (‎%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
+    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (‎%1$d MB). סיכון גבוה לקריסה.</string>
     <string name="playback_buffer_allow_large">אפשור זיכרון גדול יותר</string>
     <string name="playback_buffer_allow_large_sub">הסרת ההגבלה הרגילה. עלול לגרום לקריסת האפליקציה במכשירים עם מעט זיכרון.</string>
     <string name="playback_cache_header">מטמון דיסק</string>
@@ -3325,7 +3496,7 @@
     <string name="unit_speed_mb_s">%1$s MB/s</string>
 
     <!-- Misc fallbacks -->
-    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: %1$d / %2$d MB</string>
+    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: ‎%1$d / %2$d MB</string>
     <string name="profile_default_name">פרופיל %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">אוסף TMDB %1$d</string>
@@ -3337,20 +3508,27 @@
     <string name="stream_test_no_stream">לא נרשמה הפעלה. יש להפעיל וידאו כדי להריץ בדיקות אבחון על השרת שלו.</string>
     <string name="stream_test_btn_start">התחלת בדיקה</string>
     <string name="stream_test_btn_measuring_baseline">מודד קו בסיס…</string>
-    <string name="stream_test_btn_measuring_parallel1">מודד מקבילי (1MB)…</string>
-    <string name="stream_test_btn_measuring_parallel4">מודד מקבילי (4MB)…</string>
-    <string name="stream_test_btn_measuring_parallel8">מודד מקבילי (8MB)…</string>
-    <string name="stream_test_btn_measuring_parallel16">מודד מקבילי (16MB)…</string>
+    <string name="stream_test_btn_measuring_parallel1">מודד מקבילי (‎1 חיבור)…</string>
+    <string name="stream_test_btn_measuring_parallel4">מודד מקבילי (‎4 חיבורים)…</string>
+    <string name="stream_test_btn_measuring_parallel8">מודד מקבילי (‎8 חיבורים)…</string>
+    <string name="stream_test_btn_measuring_parallel16">מודד מקבילי (‎16 חיבורים)…</string>
     <string name="stream_test_btn_run_again">הרצה חוזרת</string>
     <string name="stream_test_btn_running">פועל…</string>
     <string name="stream_test_label_baseline">חיבור בודד סטנדרטי (קו בסיס)</string>
-    <string name="stream_test_label_parallel1">חיבור מקבילי (מקטעי 1 MB)</string>
-    <string name="stream_test_label_parallel4">חיבור מקבילי (מקטעי 4 MB)</string>
-    <string name="stream_test_label_parallel8">חיבור מקבילי (מקטעי 8 MB)</string>
-    <string name="stream_test_label_parallel16">חיבור מקבילי (מקטעי 16MB)</string>
+    <string name="stream_test_label_parallel1">חיבור מקבילי (‎1 חיבור)</string>
+    <string name="stream_test_label_parallel4">חיבור מקבילי (‎4 חיבורים)</string>
+    <string name="stream_test_label_parallel8">חיבור מקבילי (‎8 חיבורים)</string>
+    <string name="stream_test_label_parallel16">חיבור מקבילי (‎16 חיבורים)</string>
     <string name="stream_test_error_prefix">שגיאה: %1$s</string>
-    <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: %1$s</string>
+    <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: ‎%1$s</string>
     <string name="stream_test_error_connection">החיבור נכשל. ייתכן שקישור הסטרים האחרון שהופעל פג תוקף או שאינו נגיש. כדאי להפעיל את הווידאו שוב ולנסות שוב.</string>
+    <string name="player_finding_next_stream">מאתר את הזרם הבא…</string>
+    <string name="player_trying_next_stream">מנסה את הזרם הבא (ניסיון %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">אין עוד זרמים תקינים. יש לבחור מקור אחר או לנסות שוב.</string>
+    <string name="usenet_builtin_addon_title">Usenet מובנה</string>
+    <string name="usenet_builtin_addon_desc">תוצאות מספקי ה-NNTP ומאינדקסרי ה-Newznab שלך. אפשר להזיז אותו כדי לבחור היכן הם מופיעים ברשימה.</string>
+    <string name="usenet_fallback">חלופה אוטומטית ב-Usenet</string>
+    <string name="usenet_fallback_description">אם זרם Usenet נכשל, ינוסו מקורות Usenet הבאים עד מגבלת הניסיונות שהוגדרה. זרמי טורנט וזרמים אחרים אינם מתחלפים אוטומטית.</string>
 
     <string name="random_episode_title">ערבוב</string>
     <string name="layout_random_episode_sub">ערבוב פרקים מכל סדרה. כיבוי האפשרות לא מאפשר ערבוב.</string>
@@ -3383,8 +3561,24 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
     <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ורצועות מוטמעות נוספות לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, נעשה שימוש בהתאמה החזקה הראשונה שנמצאה, מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
-    <string name="autosync_toast_failed">הסנכרון נכשל: הסנכרון האוטומטי לא הצליח להתאים את הכתוביות לסרטון.</string>
-    <string name="autosync_toast_failed_no_reference">הסנכרון נכשל: אין בסרטון הזה כתוביות מוטמעות להשוואה.</string>
-    <string name="autosync_toast_failed_unsupported">הסנכרון נכשל: הסנכרון האוטומטי לא תומך בפורמט הכתוביות הזה.</string>
     <string name="autosync_label_synced">מסונכרן אוטומטית</string>
+    <string name="autosync_status_title">סטטוס סנכרון אוטומטי</string>
+    <string name="autosync_status_synced">מסונכרן</string>
+    <string name="autosync_status_not_needed">לא נדרש</string>
+    <string name="autosync_status_in_progress">בתהליך</string>
+    <string name="autosync_status_no_fit">ייתכן שאינו תואם</string>
+    <string name="autosync_status_no_reference">אין כתוביות מוטמעות</string>
+    <string name="autosync_status_failed">נכשל</string>
+    <string name="stream_resume_from_time">המשך מ-%1$s</string>
+    <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>
+    <string name="player_disc_titles">כותרות הדיסק</string>
+    <string name="player_disc_title_feature">סרט ראשי · %1$d דק׳</string>
+    <string name="player_disc_title_extra">תוספת · %1$d דק׳</string>
+    <string name="player_disc_title_subtitles">כתוביות %1$s</string>
+    <string name="player_disc_title_failed">לא ניתן היה להפעיל את הכותרת הזו</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">קטע אחד</item>
+        <item quantity="two">שני קטעים</item>
+        <item quantity="other">%d קטעים</item>
+    </plurals>
 </resources>

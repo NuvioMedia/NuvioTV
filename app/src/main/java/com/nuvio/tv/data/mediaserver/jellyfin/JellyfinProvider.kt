@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.mediaserver.jellyfin
 
+import com.nuvio.tv.data.mediaserver.ServerTitleQuery
 import com.nuvio.tv.data.mediaserver.mediabrowser.Endpoint
 import com.nuvio.tv.data.mediaserver.mediabrowser.MediaBrowserProvider
 import com.nuvio.tv.data.mediaserver.mediabrowser.ServerClientIdentity
@@ -25,4 +26,12 @@ internal class JellyfinProvider(
 
     override fun playedEndpoint(userId: String, itemId: String) =
         Endpoint("/UserPlayedItems/${pathSegment(itemId)}", mapOf("userId" to userId))
+
+    override fun titleLookupQuery(query: ServerTitleQuery): Map<String, String>? =
+        query.name?.trim()?.takeIf { it.isNotEmpty() }?.let { mapOf("searchTerm" to it) }
+
+    override fun titleRetryQuery(query: ServerTitleQuery): Map<String, String>? =
+        query.originalName?.trim()
+            ?.takeIf { it.isNotEmpty() && !it.equals(query.name?.trim(), ignoreCase = true) }
+            ?.let { mapOf("searchTerm" to it) }
 }

@@ -60,6 +60,8 @@ internal object SubtitleLanguageMatching {
         "ell" to "el",
         "gre" to "el",
         "heb" to "he",
+        "hbo" to "he",
+        "iw" to "he",
         "tha" to "th",
         "vie" to "vi",
         "ind" to "id",
@@ -74,11 +76,18 @@ internal object SubtitleLanguageMatching {
         "bul" to "bg",
         "hrv" to "hr",
         "srp" to "sr",
+        "cnr" to "sr-me",
+        "mne" to "sr-me",
+        "me" to "sr-me",
         "slk" to "sk",
         "slo" to "sk",
         "slv" to "sl",
         "zht" to "zh-tw",
         "zhs" to "zh-cn",
+        "zhc" to "zh-ca",
+        "zc" to "zh-ca",
+        "yue" to "zh-ca",
+        "zh-ca" to "zh-ca",
         "chi-tw" to "zh-tw",
         "chi-cn" to "zh-cn",
         "zh-tw" to "zh-tw",
@@ -154,6 +163,8 @@ internal object SubtitleLanguageMatching {
         "zh" to "chinese",
         "zh-cn" to "chinese",
         "zh-tw" to "chinese",
+        "zh-ca" to "cantonese",
+        "yue" to "cantonese",
         "hr" to "croatian",
         "cs" to "czech",
         "da" to "danish",
@@ -218,6 +229,8 @@ internal object SubtitleLanguageMatching {
         "zu" to "zulu",
     )
 
+    private val WHITESPACE_REGEX = Regex("\\s+")
+
     fun normalizeLanguageCode(lang: String): String {
         val code = lang.trim().lowercase()
         if (code.isBlank()) return ""
@@ -227,7 +240,7 @@ internal object SubtitleLanguageMatching {
             .replace('-', ' ')
             .replace('.', ' ')
             .replace('/', ' ')
-            .replace(Regex("\\s+"), " ")
+            .replace(WHITESPACE_REGEX, " ")
             .trim()
 
         fun containsAny(vararg values: String): Boolean = values.any { value ->
@@ -388,4 +401,3 @@ internal object SubtitleLanguageMatching {
         return tags.any { tag -> haystack.contains(tag) }
     }
 }
-

@@ -9,6 +9,9 @@ import com.google.gson.GsonBuilder
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.Subtitle
+import com.nuvio.tv.domain.model.toStreamAudioDelayLanguage
+import com.nuvio.tv.domain.model.toStreamAudioDelayMs
+import com.nuvio.tv.domain.model.toStreamClearKeys
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
@@ -1443,7 +1446,12 @@ class PluginRuntime @Inject constructor() {
                     peers = (item["peers"] as? Number)?.toInt(),
                     infoHash = item["infoHash"]?.toString()?.takeIf { !it.contains("[object") },
                     headers = headers,
-                    subtitles = parseSubtitles(item["subtitles"])
+                    subtitles = parseSubtitles(item["subtitles"]),
+                    audioDelayMs = ((item["behaviorHints"] as? Map<*, *>)?.get("audioDelayMs") as? Number)
+                        .toStreamAudioDelayMs(),
+                    audioDelayLanguage = ((item["behaviorHints"] as? Map<*, *>)?.get("audioDelayLanguage") as? String)
+                        .toStreamAudioDelayLanguage(),
+                    clearKeys = (item["behaviorHints"] as? Map<*, *>)?.get("clearKeys").toStreamClearKeys()
                 )
             }?.filter { it.url.isNotBlank() } ?: emptyList()
         } catch (e: Exception) {

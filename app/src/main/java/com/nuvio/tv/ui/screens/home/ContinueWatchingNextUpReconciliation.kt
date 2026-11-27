@@ -34,6 +34,24 @@ internal fun reconcileConclusiveNextUpItems(
     return retainedItems + acceptedResolvedItems
 }
 
+/**
+ * Cards on screen for series the current rebuild has not placed yet. A series whose episode was
+ * just finished has no in-progress entry and no usable cached next-up until its fresh next-up is
+ * built, so without these it leaves the row and comes back moments later.
+ */
+internal fun continueWatchingCardsAwaitingNextUp(
+    shownItems: List<ContinueWatchingItem>,
+    placedContentIds: Set<String>,
+    seededContentIds: Set<String>,
+    dismissedNextUpKeys: Set<String>
+): List<ContinueWatchingItem> = shownItems.filter { item ->
+    val contentId = item.contentId()
+    contentId !in placedContentIds &&
+        contentId in seededContentIds &&
+        (item !is ContinueWatchingItem.NextUp ||
+            nextUpDismissKey(contentId, item.info.seedSeason, item.info.seedEpisode) !in dismissedNextUpKeys)
+}
+
 internal fun mergeConcurrentContinueWatchingEnrichment(
     currentItems: List<ContinueWatchingItem>,
     originalItems: List<ContinueWatchingItem>,
@@ -86,7 +104,16 @@ internal suspend fun HomeViewModel.applyConclusiveOlderNextUpResults(
         )
         val sorted = sortContinueWatchingItems(reconciled, sortMode)
         val (main, upcoming) = splitUpcomingItems(sorted, sortMode)
-        if (state.continueWatchingItems == main && state.upcomingItems == upcoming) {
+        val holdForRewatchClose = shouldHoldContinueWatchingDuringRewatchClose(
+            currentMain = state.continueWatchingItems,
+            currentUpcoming = state.upcomingItems,
+            incomingMain = main,
+            incomingUpcoming = upcoming,
+            rewatchClosePending = cwPendingRewatchCloseContentIds.isNotEmpty()
+        )
+        if (holdForRewatchClose) {
+            state
+        } else if (state.continueWatchingItems == main && state.upcomingItems == upcoming) {
             state
         } else {
             state.copy(continueWatchingItems = main, upcomingItems = upcoming)

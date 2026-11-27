@@ -79,6 +79,7 @@ internal fun PlayerUiState.blocksPostPlayRecommendation(): Boolean {
         showStreamInfoOverlay ||
         showEpisodesPanel ||
         showSourcesPanel ||
+        showChaptersPanel ||
         showPartyPanel ||
         showAudioOverlay ||
         showSubtitleOverlay ||
@@ -86,6 +87,7 @@ internal fun PlayerUiState.blocksPostPlayRecommendation(): Boolean {
         showSubtitleDelayOverlay ||
         showSubtitleTimingDialog ||
         showSpeedDialog ||
+        showDiscTitlesDialog ||
         showMoreDialog
 }
 

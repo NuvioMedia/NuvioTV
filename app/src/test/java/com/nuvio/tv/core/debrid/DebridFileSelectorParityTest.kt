@@ -41,6 +41,62 @@ class DebridFileSelectorParityTest {
     }
 
     @Test
+    fun `torbox selector matches ampersand filename hint to and in provider filename`() {
+        val addonFilename =
+            "Madhurame Jeevitham (2026) 1080p - (DD+5.1 - 640Kbps & AAC 2.0) - ESub.mkv"
+        val files = listOf(
+            torboxFile(
+                id = 0,
+                name = "Madhurame Jeevitham (2026) 1080p - (DD+5.1 - 640Kbps and AAC 2.0) - ESub.mkv",
+                size = 2_044_866_613,
+            )
+        )
+
+        val selected = TorboxFileSelector().selectFile(
+            files = files,
+            resolve = resolve(fileIdx = 0, filename = addonFilename),
+            season = null,
+            episode = null
+        )
+
+        assertEquals(0, selected?.id)
+    }
+
+    @Test
+    fun `exact ampersand filename wins before normalized equivalent`() {
+        val files = listOf(
+            torboxFile(id = 1, name = "Movie & Friends.mkv", size = 100),
+            torboxFile(id = 2, name = "Movie and Friends.mkv", size = 200)
+        )
+
+        val selected = TorboxFileSelector().selectFile(
+            files = files,
+            resolve = resolve(filename = "Movie & Friends.mkv"),
+            season = null,
+            episode = null
+        )
+
+        assertEquals(1, selected?.id)
+    }
+
+    @Test
+    fun `ambiguous normalized ampersand filenames return null`() {
+        val files = listOf(
+            torboxFile(id = 1, name = "Folder One/Movie and Friends.mkv", size = 100),
+            torboxFile(id = 2, name = "Folder Two/Movie and Friends.mkv", size = 200)
+        )
+
+        val selected = TorboxFileSelector().selectFile(
+            files = files,
+            resolve = resolve(filename = "Movie & Friends.mkv"),
+            season = null,
+            episode = null
+        )
+
+        assertNull(selected)
+    }
+
+    @Test
     fun `torbox selector treats fileIdx as source list index before provider file id`() {
         val files = listOf(
             torboxFile(id = 0, name = "Request High Bitrate Stuff in Here.txt", size = 1),

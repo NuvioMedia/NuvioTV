@@ -4,6 +4,7 @@ import com.nuvio.tv.core.tracking.TrackingProgressProvider
 import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.domain.model.WatchProgress
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -20,9 +22,17 @@ class SimklTrackingProgressProvider @Inject constructor(
     private val syncRepository: SimklSyncRepository,
     private val apiClient: SimklApiClient,
     private val authStorage: SimklAuthStorage,
-    private val layoutPreferences: LayoutPreferenceDataStore
+    private val layoutPreferences: LayoutPreferenceDataStore,
+    private val settingsDataStore: TraktSettingsDataStore
 ) : TrackingProgressProvider {
     override val providerId = TrackingProviderId.SIMKL
+
+    /** The bar the stop of this playback is sent with, so a pause on the account is a pause here too. */
+    override suspend fun completionThresholdPercent(contentEndPercent: Double?): Double =
+        simklCompletionThresholdPercent(
+            userThresholdPercent = settingsDataStore.simklWatchedThresholdPercent.first(),
+            contentEndPercent = contentEndPercent
+        )
     override val isAuthenticated = authStorage.state.map { state -> state.isAuthenticated }
         .distinctUntilChanged()
     override val allProgress = syncRepository.projection.map { projection ->
@@ -78,12 +88,16 @@ class SimklTrackingProgressProvider @Inject constructor(
 
     override suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
         syncRepository.ensureLoaded()
-        val sessions = syncRepository.state.value.snapshot.playback.filter { session ->
+        val snapshot = syncRepository.state.value.snapshot
+        val entryIndex = syncRepository.currentEntryIndex()
+        val matchingEntries by lazy(LazyThreadSafetyMode.NONE) {
+            entryIndex?.matchingEntriesForContent(snapshot.entries, contentId, trackingProviderItemId = null)
+                ?: snapshot.entries.filter { entry -> entry.matchesSimklContentId(contentId) }
+        }
+        val sessions = snapshot.playback.filter { session ->
             val media = session.media ?: return@filter false
             val sameContent = media.canonicalContentId().equals(contentId, ignoreCase = true) ||
-                syncRepository.state.value.snapshot.entries.any { entry ->
-                    entry.media == media && entry.matchesSimklContentId(contentId)
-                }
+                matchingEntries.any { entry -> entry.media == media }
             val sessionSeason = session.episode?.tvdbSeason ?: session.episode?.season
             val sessionEpisode = session.episode?.tvdbNumber ?: session.episode?.number
             sameContent && (season == null || episode == null ||

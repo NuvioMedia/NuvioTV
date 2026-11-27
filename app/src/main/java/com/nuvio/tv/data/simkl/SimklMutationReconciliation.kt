@@ -5,29 +5,40 @@ import com.nuvio.tv.core.tracking.TrackingMediaReference
 
 internal fun SimklSyncSnapshot.applyMutationReceipt(
     receipt: SimklMutationReceipt,
-    committedAtEpochMs: Long
+    committedAtEpochMs: Long,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     val committedAt = committedAtEpochMs.epochMsToUtcIso() ?: return this
     return when (val mutation = receipt.mutation) {
-        is SimklCommittedMutation.MoveToList -> withListMutations(mutation.items, committedAt)
+        is SimklCommittedMutation.MoveToList -> withListMutations(mutation.items, committedAt, entryIndex)
         is SimklCommittedMutation.AddToHistory -> withHistoryMutations(
             mutation.items,
-            committedAtEpochMs
+            committedAtEpochMs,
+            entryIndex
         )
-        is SimklCommittedMutation.RemoveFromHistory -> withoutHistory(mutation.items)
+        is SimklCommittedMutation.RemoveFromHistory -> if (mutation.rewatchId != null) {
+            withRewatchRemoval(mutation.items, mutation.rewatchId)
+        } else {
+            withoutHistory(mutation.items)
+        }
     }.reconcileWatchedPlayback()
 }
 
 private fun SimklSyncSnapshot.withListMutations(
     mutations: List<SimklResolvedListMutation>,
-    committedAt: String
+    committedAt: String,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     if (mutations.isEmpty()) return this
     val updated = entries.toMutableList()
-    mutations.forEach { mutation ->
+    mutations.forEachIndexed { idx, mutation ->
         val requestMedia = mutation.request.toSimklMedia()
         val media = mutation.responseMedia.mergeMissing(requestMedia)
-        val index = updated.indexOfMatchingMedia(media)
+        val index = if (idx == 0 && entryIndex != null) {
+            entryIndex.indexOfMatchingMedia(entries, media)
+        } else {
+            updated.indexOfMatchingMediaLinear(media)
+        }
         val existing = updated.getOrNull(index)
         val mediaType = existing?.mediaType
             ?: mutation.resolvedMediaType
@@ -54,10 +65,11 @@ private fun SimklSyncSnapshot.withListMutations(
 
 private fun SimklSyncSnapshot.withHistoryMutations(
     mutations: List<SimklResolvedHistoryMutation>,
-    committedAtEpochMs: Long
+    committedAtEpochMs: Long,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     var updated = this
-    mutations.forEach { mutation ->
+    mutations.forEachIndexed { idx, mutation ->
         val request = mutation.request
         val mediaType = mutation.mediaType ?: request.media.kind.toSimklMediaType()
         updated = updated.applyScrobbleResult(
@@ -76,7 +88,8 @@ private fun SimklSyncSnapshot.withHistoryMutations(
                 },
                 watchedAt = request.watchedAtEpochMs?.epochMsToUtcIso()
             ),
-            committedAtEpochMs = committedAtEpochMs
+            committedAtEpochMs = committedAtEpochMs,
+            entryIndex = if (idx == 0) entryIndex else null
         )
         updated = updated.withResolvedHistoryStatus(mutation)
     }
@@ -87,7 +100,7 @@ private fun SimklSyncSnapshot.withResolvedHistoryStatus(
     mutation: SimklResolvedHistoryMutation
 ): SimklSyncSnapshot {
     val target = mutation.request.media.toSimklMedia()
-    val index = entries.indexOfMatchingMedia(target)
+    val index = entries.indexOfMatchingMediaLinear(target)
     val existing = entries.getOrNull(index) ?: return this
     val mediaType = mutation.mediaType ?: existing.mediaType
     val media = existing.media ?: target
@@ -101,6 +114,40 @@ private fun SimklSyncSnapshot.withResolvedHistoryStatus(
     return copy(entries = entries.toMutableList().apply { this[index] = updated })
 }
 
+/**
+ * Drops one episode from the rewatch session that was named, and leaves the canonical watch alone.
+ *
+ * A canonical removal clears the watched episode from the library entries. A rewatch removal must
+ * not: the original watch is what keeps the watched check while the run is open, and clearing the
+ * entry would make the episode look unwatched.
+ */
+private fun SimklSyncSnapshot.withRewatchRemoval(
+    mutations: List<TrackingMediaReference>,
+    rewatchId: Long
+): SimklSyncSnapshot {
+    if (mutations.isEmpty()) return this
+    var updatedSessions = rewatchSessions
+    mutations.forEach { mutation ->
+        val target = mutation.toSimklMedia()
+        val season = mutation.episode?.season
+        val number = mutation.episode?.number ?: return@forEach
+        updatedSessions = updatedSessions.map { entry ->
+            if (entry.rewatchId == rewatchId && entry.media?.matchesTarget(target) == true) {
+                entry.withoutWatchedEpisode(season, number, dropFromList = true)
+            } else {
+                entry
+            }
+        }
+    }
+    return copy(
+        rewatchSessions = updatedSessions,
+        rewatchRuns = deriveSimklRewatchRuns(
+            entries = updatedSessions,
+            offerRuns = rewatchRuns.isNotEmpty()
+        )
+    )
+}
+
 private fun SimklSyncSnapshot.withoutHistory(
     mutations: List<TrackingMediaReference>
 ): SimklSyncSnapshot {
@@ -108,11 +155,16 @@ private fun SimklSyncSnapshot.withoutHistory(
     var updated = entries
     mutations.forEach { mutation ->
         val target = mutation.toSimklMedia()
+        val targetIds = target.toTrackingExternalIds()
         if (mutation.kind == TrackingMediaKind.MOVIE || mutation.episode == null) {
-            updated = updated.filterNot { entry -> entry.media?.matchesTarget(target) == true }
+            updated = updated.filterNot { entry ->
+                val media = entry.media ?: return@filterNot false
+                media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)
+            }
         } else {
             updated = updated.map { entry ->
-                if (entry.media?.matchesTarget(target) == true) {
+                val media = entry.media
+                if (media != null && media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)) {
                     entry.withoutWatchedEpisode(
                         season = mutation.episode.season,
                         number = mutation.episode.number
@@ -128,16 +180,32 @@ private fun SimklSyncSnapshot.withoutHistory(
 
 private fun SimklLibraryEntry.withoutWatchedEpisode(
     season: Int?,
-    number: Int
+    number: Int,
+    dropFromList: Boolean = false
 ): SimklLibraryEntry {
-    val targetSeason = season ?: 1
     val updatedSeasons = seasons.map { candidateSeason ->
         candidateSeason.copy(
-            episodes = candidateSeason.episodes.map { episode ->
-                val matchesCanonical = candidateSeason.number == targetSeason && episode.number == number
-                val matchesTvdb = episode.tvdb?.season == targetSeason &&
-                    episode.tvdb.episode == number
-                if (matchesCanonical || matchesTvdb) episode.copy(watchedAt = null) else episode
+            episodes = candidateSeason.episodes.mapNotNull { episode ->
+                // A flat anime session has no season number, and simkl may return it either as
+                // null or as season 1. Match both so a removal also updates the local snapshot.
+                val matchesCanonical = when (season) {
+                    null -> (candidateSeason.number == null || candidateSeason.number == 1) &&
+                        episode.number == number
+                    else -> candidateSeason.number == season && episode.number == number
+                }
+                val matchesTvdb = when (season) {
+                    null -> (episode.tvdb?.season == null || episode.tvdb?.season == 1) &&
+                        episode.tvdb?.episode == number
+                    else -> episode.tvdb?.season == season && episode.tvdb?.episode == number
+                }
+                when {
+                    !(matchesCanonical || matchesTvdb) -> episode
+                    // A rewatch removal removes the viewing from the session. Leaving the episode
+                    // behind with a null date made rewatchedEpisodes fall back to the session date
+                    // and draw the removed episode as rewatched again.
+                    dropFromList -> null
+                    else -> episode.copy(watchedAt = null)
+                }
             }
         )
     }
@@ -150,5 +218,13 @@ private fun SimklLibraryEntry.withoutWatchedEpisode(
     )
 }
 
-private fun List<SimklLibraryEntry>.indexOfMatchingMedia(target: SimklMedia): Int =
-    indexOfFirst { entry -> entry.media?.matchesTarget(target) == true }
+internal fun List<SimklLibraryEntry>.indexOfMatchingMediaLinear(target: SimklMedia): Int {
+    val targetIds = target.toTrackingExternalIds()
+    for (index in indices) {
+        val media = this[index].media ?: continue
+        if (media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)) {
+            return index
+        }
+    }
+    return -1
+}

@@ -1,11 +1,13 @@
 package com.nuvio.tv.core.party
 
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
@@ -17,6 +19,7 @@ internal data class PartyIdentity(
     val displayName: String,
     val avatarUrl: String?,
     val avatarColor: String?,
+    val profileIndex: Int?,
 )
 
 @Singleton
@@ -24,14 +27,14 @@ class PartyApi @Inject constructor(
     private val postgrest: Postgrest,
 ) {
     internal suspend fun create(identity: PartyIdentity, media: PartyMedia, playback: PartyPlayback?): PartySnapshot =
-        call("watch_party_create", buildJsonObject {
+        callWithProfile("watch_party_create", identity.profileIndex, buildJsonObject {
             putIdentity(identity)
             put("p_media", json.encodeToJsonElement(media))
             put("p_playback", playback?.let { json.encodeToJsonElement(it) } ?: JsonNull)
         })
 
     internal suspend fun join(code: String, identity: PartyIdentity): PartySnapshot =
-        call("watch_party_join", buildJsonObject {
+        callWithProfile("watch_party_join", identity.profileIndex, buildJsonObject {
             put("p_code", code)
             putIdentity(identity)
         })
@@ -92,6 +95,16 @@ class PartyApi @Inject constructor(
         return json.decodeFromString(PartySnapshot.serializer(), body)
     }
 
+    private suspend fun callWithProfile(function: String, profileIndex: Int?, params: JsonObject): PartySnapshot {
+        if (profileIndex == null) return call(function, params)
+        return try {
+            call(function, JsonObject(params + ("p_profile_index" to JsonPrimitive(profileIndex))))
+        } catch (error: PostgrestRestException) {
+            if (error.code != MISSING_FUNCTION) throw error
+            call(function, params)
+        }
+    }
+
     private fun JsonObjectBuilder.putIdentity(identity: PartyIdentity) {
         put("p_device_id", identity.deviceId)
         put("p_display_name", identity.displayName)
@@ -100,6 +113,8 @@ class PartyApi @Inject constructor(
     }
 
     companion object {
+        private const val MISSING_FUNCTION = "PGRST202"
+
         val json = Json {
             ignoreUnknownKeys = true
             explicitNulls = false

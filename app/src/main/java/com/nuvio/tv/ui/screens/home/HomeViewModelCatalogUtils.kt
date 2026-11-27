@@ -358,10 +358,6 @@ internal fun HomeViewModel.disableCatalogKey(
     return "${addonBaseUrl}_${catalogTypeKey(type)}_${catalogId}_${catalogName}"
 }
 
-internal fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-    return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
-}
-
 internal fun CatalogDescriptor.shouldShowOnHome(): Boolean {
     if (isSearchOnlyCatalog()) return false
     return !hasExplicitShowInHome || showInHome

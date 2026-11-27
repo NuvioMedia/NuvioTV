@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.auth
 
+import com.nuvio.tv.core.util.findCause
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.exceptions.RestException
 import io.ktor.client.plugins.ClientRequestException
@@ -135,15 +136,6 @@ private fun Throwable.isInvalidRemoteSessionError(): Boolean {
         statusCode = null,
         message = causeMessages()
     )
-}
-
-private inline fun <reified T : Throwable> Throwable.findCause(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
 }
 
 private fun Throwable.causeMessages(): String {

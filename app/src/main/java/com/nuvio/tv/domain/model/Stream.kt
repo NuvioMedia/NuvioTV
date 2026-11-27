@@ -3,6 +3,8 @@ package com.nuvio.tv.domain.model
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.core.debrid.DebridProviders
 import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
+import kotlin.io.encoding.Base64
+import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 
 /**
@@ -28,8 +30,24 @@ data class Stream(
     val debridCacheStatus: StreamDebridCacheStatus? = null,
     val badges: List<StreamBadge> = emptyList(),
     val subtitles: List<Subtitle> = emptyList(),
-    val serverTarget: ServerPlaybackTarget? = null
+    val nzbUrl: String? = null,
+    val servers: List<String>? = null,
+    val fileMustInclude: String? = null,
+    /** When a built-in Usenet release was posted, in epoch milliseconds, if its indexer said. */
+    val publishedAt: Long? = null,
+    /**
+     * The season and episode a built-in Usenet release was searched by, when the episode's own
+     * numbering differs (an anime catalog's); its file in a pack is chosen by these.
+     */
+    val usenetSeason: Int? = null,
+    val usenetEpisode: Int? = null,
+    val serverTarget: ServerPlaybackTarget? = null,
+    val pluginSourceName: String? = null,
+    /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
+    val debridResolved: Boolean = false,
+    val declaredType: String? = null
 ) {
+    fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**
      * Returns the primary stream source URL
      */
@@ -47,7 +65,7 @@ data class Stream(
      * the HTTP url is preferred and this returns false.
      */
     fun isTorrent(): Boolean =
-        !isDirectDebrid() &&
+        !isUsenet() && !isDirectDebrid() &&
             getStreamUrl().isNullOrBlank() &&
             (!infoHash.isNullOrBlank() || !torrentMagnetUri().isNullOrBlank() || hasTorrentUrl())
 
@@ -120,7 +138,7 @@ data class Stream(
     /**
      * Returns true if this is an external URL (opens in browser)
      */
-    fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
+    fun isExternal(): Boolean = !isUsenet() && externalUrl != null && url == null && !externalUrl.isMagnetLink()
 
     /**
      * Returns a display name for the stream, or null when no field is usable.
@@ -147,7 +165,8 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
+        append(url ?: nzbUrl ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
+        append(fileMustInclude.orEmpty())
         append('\u0000')
         append(getEffectiveFileIdx() ?: "")
         append('\u0000')
@@ -174,7 +193,12 @@ data class StreamBadge(
     val tagStyle: String = "",
     val textColor: String = "",
     val borderColor: String = ""
-)
+) {
+    companion object {
+        /** A badge a source draws as its name, in its colours, rather than as an image. */
+        const val STYLE_LABEL = "label"
+    }
+}
 
 @Immutable
 data class StreamDebridCacheStatus(
@@ -192,6 +216,49 @@ enum class StreamDebridCacheState {
     UNKNOWN
 }
 
+const val AUDIO_DELAY_MIN_MS = -60000
+const val AUDIO_DELAY_MAX_MS = 60000
+
+/** Normalizes a `behaviorHints.audioDelayMs` value: whole ms, NaN/Infinity dropped, clamped to ±60 s. */
+fun Number?.toStreamAudioDelayMs(): Int? =
+    this?.toDouble()
+        ?.takeIf { it.isFinite() }
+        ?.roundToInt()
+        ?.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
+
+/** Normalizes a `behaviorHints.audioDelayLanguage` value: trimmed language code, blank or oversized values dropped. */
+fun String?.toStreamAudioDelayLanguage(): String? =
+    this?.trim()?.takeIf { it.isNotEmpty() && it.length <= 35 }
+
+/**
+ * Normalizes `behaviorHints.clearKeys` to `kid:key,kid:key` in lowercase hex. Accepts a `{kid: key}`
+ * object, a `[{kid, k}]` array or a `kid:key,kid:key` string; each side is hex (UUID dashes allowed)
+ * or base64/base64url and must be 16 bytes. Invalid pairs are dropped, null when none is left.
+ */
+fun Any?.toStreamClearKeys(): String? {
+    val pairs: List<Pair<Any?, Any?>> = when (this) {
+        is String -> split(',', ';').map { it.substringBefore(':', "") to it.substringAfter(':', "") }
+        is Map<*, *> -> entries.map { it.key to it.value }
+        is Iterable<*> -> mapNotNull { entry -> (entry as? Map<*, *>)?.let { it["kid"] to it["k"] } }
+        else -> return null
+    }
+    return pairs
+        .mapNotNull { (kid, key) -> clearKeyHex(kid)?.let { k -> clearKeyHex(key)?.let { v -> "$k:$v" } } }
+        .distinct()
+        .joinToString(",")
+        .ifEmpty { null }
+}
+
+private val clearKeyBase64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
+
+private fun clearKeyHex(value: Any?): String? {
+    val text = (value as? String)?.trim().orEmpty()
+    val hex = text.replace("-", "")
+    if (hex.length == 32 && hex.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return hex.lowercase()
+    val bytes = runCatching { clearKeyBase64.decode(text.replace('+', '-').replace('/', '_')) }.getOrNull()
+    return bytes?.takeIf { it.size == 16 }?.joinToString("") { "%02x".format(it) }
+}
+
 @Immutable
 data class StreamBehaviorHints(
     val notWebReady: Boolean?,
@@ -200,7 +267,13 @@ data class StreamBehaviorHints(
     val proxyHeaders: ProxyHeaders?,
     val videoHash: String? = null,
     val videoSize: Long? = null,
-    val filename: String? = null
+    val filename: String? = null,
+    // Extra audio delay for this stream (ms, >0 = audio later), added on top of the user's/device delay.
+    val audioDelayMs: Int? = null,
+    // When set, audioDelayMs only applies to audio and embedded subtitle tracks in this language.
+    val audioDelayLanguage: String? = null,
+    // ClearKey DRM pairs as `kid:key,kid:key` (hex), see [toStreamClearKeys]. Secret: never log them.
+    val clearKeys: String? = null
 )
 
 @Immutable

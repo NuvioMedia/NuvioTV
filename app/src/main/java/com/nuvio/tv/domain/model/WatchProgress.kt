@@ -32,7 +32,21 @@ data class WatchProgress(
     override val trackingProviderItemId: String? = null,
     override val trackingSourceUrl: String? = null,
     val completionThresholdOverride: Float? = null,
-    val excludedNextUpSeasons: Set<Int> = emptySet()
+    val excludedNextUpSeasons: Set<Int> = emptySet(),
+    /**
+     * True for a row that is a position a provider keeps open, not a watch it recorded.
+     *
+     * Where such a playback ends is the credits marker of the release being played, and a row the
+     * provider publishes does not carry it, so its percentage alone cannot say the watch is over.
+     * Reading it as completed drops the position out of Continue Watching, which is why this row never
+     * completes on a percentage or a position. A watch the provider really recorded arrives as history
+     * instead, and that row supersedes this one.
+     *
+     * A Simkl playback row and a Simkl watch recorded into history share [SOURCE_SIMKL_PLAYBACK], so
+     * the flag is carried by the row the playback projection builds rather than derived from the
+     * source.
+     */
+    val isProviderPlaybackPosition: Boolean = false
 ) : TrackingAttributedItem {
     override val trackingContentId: String
         get() = contentId
@@ -45,7 +59,6 @@ data class WatchProgress(
         const val SOURCE_SIMKL_PLAYBACK = "simkl_playback"
         const val SOURCE_REMOTE_PLAYBACK = "remote_playback"
         const val SOURCE_REMOTE_HISTORY = "remote_history"
-        const val STARTED_THRESHOLD = 0.02f
         const val COMPLETED_THRESHOLD = 0.90f
         const val SIMKL_COMPLETED_THRESHOLD = 0.80f
     }
@@ -62,15 +75,19 @@ data class WatchProgress(
         }
 
     /**
-     * Returns true if the content has been watched past the threshold (default 90%)
+     * Returns true if the content has been watched past the threshold (default 90%). A row a provider
+     * keeps open never completes on its percentage, whatever threshold it is read with, because where
+     * such a playback ends is the credits marker and the row does not carry one. Only a watch the
+     * provider really recorded, which arrives as history, completes such a row.
      */
-    fun isCompleted(threshold: Float = completionThreshold()): Boolean = progressPercentage >= threshold
+    fun isCompleted(threshold: Float = completionThreshold()): Boolean =
+        !isProviderPlaybackPosition && progressPercentage >= threshold
 
     /**
-     * Returns true if the content has been started but not completed
+     * Returns true if any progress was saved and the content is not completed.
+     * No start threshold, same as NuvioMobile.
      */
-    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = completionThreshold()): Boolean =
-        progressPercentage >= startThreshold && progressPercentage < endThreshold
+    fun isInProgress(): Boolean = !isCompleted() && (position > 0L || progressPercentage > 0f)
 
     private fun completionThreshold(): Float =
         completionThresholdOverride?.takeIf { it.isFinite() && it > 0f && it <= 1f }

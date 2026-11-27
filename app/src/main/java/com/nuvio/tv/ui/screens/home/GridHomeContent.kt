@@ -75,6 +75,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import coil3.Image
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -95,6 +96,7 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
+import com.nuvio.tv.ui.components.rememberCollectionFolderCover
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -109,6 +111,7 @@ fun GridHomeContent(
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
+    onMarkContinueWatchingWatched: (ContinueWatchingItem) -> Unit = {},
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
@@ -496,6 +499,7 @@ fun GridHomeContent(
                                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                                 mdbListShowOnHero = uiState.mdbListShowOnHero,
                                 mdbListRatingOrder = uiState.mdbListRatingOrder,
+                                descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                                 initialActiveIndex = savedHeroIndex.intValue,
                                 onItemFocus = {
                                     lastFocusedGridItemKey.value = "hero"
@@ -564,6 +568,7 @@ fun GridHomeContent(
                                 ""
                             )
                         },
+                        onMarkWatched = onMarkContinueWatchingWatched,
                         onRemoveItem = { item ->
                             val contentId = when (item) {
                                 is ContinueWatchingItem.InProgress -> item.progress.contentId
@@ -639,6 +644,7 @@ fun GridHomeContent(
                                 ""
                             )
                         },
+                        onMarkWatched = onMarkContinueWatchingWatched,
                         onRemoveItem = { item ->
                             val contentId = when (item) {
                                 is ContinueWatchingItem.InProgress -> item.progress.contentId
@@ -696,6 +702,7 @@ fun GridHomeContent(
                                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                                 mdbListShowOnHero = uiState.mdbListShowOnHero,
                                 mdbListRatingOrder = uiState.mdbListRatingOrder,
+                                descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                                 initialActiveIndex = savedHeroIndex.intValue,
                                 onItemFocus = {
                                     lastFocusedGridItemKey.value = "hero"
@@ -994,7 +1001,7 @@ private fun SeeAllGridCard(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = label ?: stringResource(R.string.action_see_all),
+                        contentDescription = null,
                         modifier = Modifier.size(NuvioTheme.spacing.xxl),
                         tint = NuvioTheme.colors.TextSecondary
                     )
@@ -1033,8 +1040,12 @@ private fun GridCollectionFolderCard(
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val cardDepthStyle = LocalCardDepthStyle.current
     var isFocused by remember { mutableStateOf(false) }
+    val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
+    val coverRequest = rememberCollectionFolderCover(activeImageUrl)
+    val loadedCover = remember(activeImageUrl) { mutableStateOf<Image?>(null) }
     val cardGlow = rememberArtworkBackedCardGlow(
-        imageUrl = folder.coverImageUrl,
+        cover = loadedCover.value,
+        isFocused = isFocused,
         fallbackSeed = "$collectionTitle:${folder.title}:${folder.coverEmoji.orEmpty()}",
         enabled = focusGlowEnabled
     )
@@ -1077,13 +1088,13 @@ private fun GridCollectionFolderCard(
                     style = cardDepthStyle
                 )
         ) {
-            val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
-            if (!activeImageUrl.isNullOrBlank()) {
+            if (coverRequest != null) {
                 AsyncImage(
-                    model = activeImageUrl,
+                    model = coverRequest,
                     contentDescription = folder.title,
                     modifier = Modifier.fillMaxSize().clip(cardShape),
-                    contentScale = ContentScale.FillBounds
+                    contentScale = ContentScale.FillBounds,
+                    onSuccess = { loadedCover.value = it.result.image }
                 )
             } else if (!folder.coverEmoji.isNullOrBlank()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

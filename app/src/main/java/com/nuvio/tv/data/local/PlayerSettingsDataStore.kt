@@ -3,6 +3,7 @@ package com.nuvio.tv.data.local
 import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -11,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.core.player.SubtitleFonts
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -151,8 +153,76 @@ data class SubtitleStyleSettings(
     val backgroundColor: Int = Color.Transparent.toArgb(),
     val outlineEnabled: Boolean = true,
     val outlineColor: Int = Color.Black.toArgb(),
-    val outlineWidth: Int = 2 // 1-5
-)
+    val outlineWidth: Int = OUTLINE_WIDTH_DEFAULT, // 1-5
+    val hdrStyleEnabled: Boolean = false,
+    val hdrTextColor: Int = Color.White.toArgb(),
+    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT, // 0-100, see hdrBrightnessFactor
+    val hdrDimPlayerControls: Boolean = false,
+    val fontId: String = SubtitleFonts.DEFAULT,
+    val backgroundRadius: Int = 0,
+    val shadowEnabled: Boolean = false,
+    val shadowOpacity: Int = SHADOW_OPACITY_DEFAULT,
+    val shadowSize: Int = SHADOW_SIZE_DEFAULT,
+    val fileColorBrightness: Float = 1f,
+    val customizeAss: Boolean = false
+) {
+    /**
+     * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
+     * color replaces the text color and every subtitle color is dimmed by the HDR brightness.
+     */
+    fun forVideo(isHdrVideo: Boolean): SubtitleStyleSettings {
+        if (!isHdrVideo || !hdrStyleEnabled) return this
+        val factor = hdrBrightnessFactor(hdrBrightness)
+        return copy(
+            textColor = scaleColorBrightness(hdrTextColor, factor),
+            backgroundColor = scaleColorBrightness(backgroundColor, factor),
+            outlineColor = scaleColorBrightness(outlineColor, factor),
+            fileColorBrightness = factor
+        )
+    }
+
+    /**
+     * Brightness factor for the player controls and menus drawn over the video: the HDR brightness
+     * on HDR/Dolby Vision video when both HDR options are enabled, otherwise full brightness.
+     */
+    fun playerControlsBrightness(isHdrVideo: Boolean): Float {
+        if (!isHdrVideo || !hdrStyleEnabled || !hdrDimPlayerControls) return 1f
+        return hdrBrightnessFactor(hdrBrightness)
+    }
+
+    /** The style the in-player editors show: on HDR video with the override enabled, its text color is the HDR one. */
+    fun editableForVideo(isHdrVideo: Boolean): SubtitleStyleSettings {
+        if (!isHdrVideo || !hdrStyleEnabled) return this
+        return copy(textColor = hdrTextColor)
+    }
+
+    companion object {
+        const val HDR_BRIGHTNESS_MIN = 0
+        const val HDR_BRIGHTNESS_MAX = 100
+        const val HDR_BRIGHTNESS_DEFAULT = 40
+        const val BACKGROUND_RADIUS_MAX = 24
+        const val OUTLINE_WIDTH_MIN = 1
+        const val OUTLINE_WIDTH_MAX = 5
+        const val OUTLINE_WIDTH_DEFAULT = 2
+        const val SHADOW_OPACITY_DEFAULT = 75
+        const val SHADOW_SIZE_MIN = 1
+        const val SHADOW_SIZE_MAX = 8
+        const val SHADOW_SIZE_DEFAULT = 2
+        const val ASS_SIZE_DEFAULT = 100
+
+        /** Maps the 0-100 setting onto 30%-100% of full brightness, so 0 still leaves readable text. */
+        private fun hdrBrightnessFactor(brightness: Int): Float =
+            (0.7f * brightness.coerceIn(HDR_BRIGHTNESS_MIN, HDR_BRIGHTNESS_MAX) + 30f) / 100f
+
+        private fun scaleColorBrightness(color: Int, factor: Float): Int {
+            val alpha = (color ushr 24) and 0xFF
+            val red = (((color shr 16) and 0xFF) * factor).toInt()
+            val green = (((color shr 8) and 0xFF) * factor).toInt()
+            val blue = ((color and 0xFF) * factor).toInt()
+            return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+        }
+    }
+}
 
 /**
  * Data class representing buffer settings
@@ -202,11 +272,39 @@ enum class AudioOutputChannels(
     CHANNELS_7_0("7.0", "7.0", 7, "7.0"),
     CHANNELS_7_1("7.1", "7.1", 8, "7.1");
 
+    val hasLfe: Boolean get() = settingValue.endsWith(".1")
+
     companion object {
         val default = CHANNELS_7_1
 
         fun fromSettingValue(value: String?): AudioOutputChannels {
             return entries.firstOrNull { it.settingValue == value } ?: default
+        }
+    }
+}
+
+/** LFE share mixed into the other channels when the downmix layout has no LFE channel. */
+enum class DownmixLfeLevel(val settingValue: String, val level: Float) {
+    OFF("off", 0f),
+    HALF("50", 0.5f),
+    FULL("100", 1f);
+
+    companion object {
+        fun fromSettingValue(value: String?): DownmixLfeLevel {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
+        }
+    }
+}
+
+enum class NightMode(val settingValue: String) {
+    OFF("off"),
+    LIGHT("light"),
+    MEDIUM("medium"),
+    STRONG("strong");
+
+    companion object {
+        fun fromSettingValue(value: String?): NightMode {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
         }
     }
 }
@@ -220,16 +318,21 @@ data class PlayerSettings(
     val autoSwitchInternalPlayerOnError: Boolean = false,
     val useLibass: Boolean = true,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
+    val libassRenderScale: LibassRenderScale = LibassRenderScale.FULL,
+    val libassRenderMode: LibassRenderMode = LibassRenderMode.DEFAULT,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
+    val assSubtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(size = SubtitleStyleSettings.ASS_SIZE_DEFAULT),
     val bufferSettings: BufferSettings = BufferSettings(),
     // Audio settings
     val decoderPriority: Int = 1, // EXTENSION_RENDERER_MODE_ON (0=off, 1=on, 2=prefer)
     val downmixEnabled: Boolean = false,
     val audioOutputChannels: AudioOutputChannels = AudioOutputChannels.default,
     val maintainOriginalAudioOnDownmix: Boolean = true,
+    val downmixLfeLevel: DownmixLfeLevel = DownmixLfeLevel.OFF,
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
     val skipSilence: Boolean = false,
+    val nightMode: NightMode = NightMode.OFF,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
     val persistAudioAmplification: Boolean = false,
@@ -255,6 +358,13 @@ data class PlayerSettings(
     // Only honored when dv7HandlingMode is OFF or DV81_LIBDOVI.
     val dv7LibdoviModeOverride: Int = -1,
     val stripHdr10PlusSei: Boolean = false,
+    /**
+     * Chapters on the progress bar and in the chapters panel, for both engines. ExoPlayer reads
+     * Matroska chapters itself over HTTP; mpv lists them. Chapters still feed skip intro when off.
+     */
+    val exoChaptersEnabled: Boolean = false,
+    /** The current chapter's title above the progress bar, when chapters are shown. */
+    val chapterTitleEnabled: Boolean = true,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
@@ -270,6 +380,9 @@ data class PlayerSettings(
     val postPlayMovieThresholdPercent: Int = DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
+    val streamAutoPlayFallbackOnFailure: Boolean = false,
+    val streamAutoPlayFallbackMaxSources: Int = DEFAULT_SOURCE_FALLBACK_MAX_SOURCES,
+    val streamAutoPlayFallbackStartupTimeoutSeconds: Int = DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS,
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
     val streamAutoPlayReuseBingeGroup: Boolean = false,
     val streamAutoPlayTimeoutSeconds: Int = 10,
@@ -308,6 +421,15 @@ data class PlayerSettings(
     val isPreferAppDecoder: Boolean
         get() = decoderPriority == 2
 
+    /**
+     * Falling back to the next matching source applies only while auto source selection picks the
+     * stream and the internal player plays it.
+     */
+    val streamAutoPlayFallbackActive: Boolean
+        get() = streamAutoPlayFallbackOnFailure &&
+            streamAutoPlayMode != StreamAutoPlayMode.MANUAL &&
+            playerPreference != PlayerPreference.EXTERNAL
+
     /** FFmpeg downmix only runs when the app decoder is preferred. */
     val effectiveDownmixEnabled: Boolean
         get() = downmixEnabled && isPreferAppDecoder
@@ -322,7 +444,20 @@ data class PlayerSettings(
     val effectiveTunnelingEnabled: Boolean
         get() = tunnelingEnabled && isTunnelingCompatible
 
+    /** Tunneled playback bypasses the video effects pipeline, so overlay is the only option. */
+    val effectiveLibassRenderMode: LibassRenderMode
+        get() = if (effectiveTunnelingEnabled) LibassRenderMode.OVERLAY else libassRenderMode
+
     companion object {
+        /** How many further sources falling back may try after the auto-selected one fails. */
+        const val DEFAULT_SOURCE_FALLBACK_MAX_SOURCES = 3
+        const val MIN_SOURCE_FALLBACK_MAX_SOURCES = 1
+        const val MAX_SOURCE_FALLBACK_MAX_SOURCES = 10
+        /** How long a source may take to start before falling back treats it as failed, in seconds. */
+        const val DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS = 15
+        const val MIN_SOURCE_STARTUP_TIMEOUT_SECONDS = 5
+        const val MAX_SOURCE_STARTUP_TIMEOUT_SECONDS = 45
+        const val SOURCE_STARTUP_TIMEOUT_SECONDS_STEP = 5
         const val DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD = 3
         const val MIN_STILL_WATCHING_EPISODE_THRESHOLD = 2
         const val MAX_STILL_WATCHING_EPISODE_THRESHOLD = 6
@@ -427,7 +562,57 @@ enum class InternalPlayerEngine {
 }
 
 enum class LibassRenderType {
-    CUES, EFFECTS_CANVAS, EFFECTS_OPEN_GL, OVERLAY_CANVAS, OVERLAY_OPEN_GL
+    // Legacy values kept for backward compatibility with persisted preferences.
+    // The new libass module always uses the SurfaceView atlas pipeline.
+    CUES, EFFECTS_CANVAS, EFFECTS_OPEN_GL, OVERLAY_CANVAS, OVERLAY_OPEN_GL;
+
+    companion object {
+        val DEFAULT = OVERLAY_OPEN_GL
+    }
+}
+
+/**
+ * Subtitle render resolution for the libass atlas pipeline. Lowering the scale
+ * reduces rasterization cost (proportional to pixel area) at the expense of
+ * sharpness - GL upscales the result to the full surface. Useful on weak TV
+ * hardware where heavy typesetting exceeds the frame budget at full resolution.
+ */
+enum class LibassRenderScale(val scale: Float, val label: String) {
+    FULL(1.0f, "1:1"),
+    THREE_QUARTER(0.75f, "\u00BE"),
+    HALF(0.5f, "\u00BD"),
+    THIRD(0.33f, "\u2153"),
+    QUARTER(0.25f, "\u00BC")
+}
+
+/**
+ * How libass subtitles are rendered relative to the video surface.
+ *
+ * setVideoEffects forces DefaultVideoFrameProcessor into the ExoPlayer pipeline.
+ * On devices that support HDR output (e.g. TCL MediaTek API 34), this processor
+ * tone-maps HDR to SDR. Skipping setVideoEffects keeps the default video path
+ * and preserves HDR passthrough.
+ *
+ * - VIDEO_EFFECT: subtitles drawn onto each video frame (frame-accurate timing).
+ *   HDR content is tone-mapped to SDR because DefaultVideoFrameProcessor is active.
+ * - OVERLAY: subtitles rendered on a separate SurfaceView layer. HDR passthrough
+ *   is preserved but subtitle timing may not be perfectly accurate on some TVs.
+ */
+enum class LibassRenderMode {
+    /** Preserves HDR output; subtitles may have a timing offset on TV hardware. */
+    OVERLAY,
+    /** Frame-accurate subtitles; HDR tone-mapped to SDR. */
+    VIDEO_EFFECT;
+
+    companion object {
+        val DEFAULT = OVERLAY
+
+        fun fromStoredString(value: String?): LibassRenderMode = when (value) {
+            VIDEO_EFFECT.name -> VIDEO_EFFECT
+            OVERLAY.name -> OVERLAY
+            else -> DEFAULT
+        }
+    }
 }
 /**
  * How DV7 streams should be handled at playback time.
@@ -486,16 +671,20 @@ class PlayerSettingsDataStore @Inject constructor(
     private val autoSwitchInternalPlayerOnErrorKey = booleanPreferencesKey("auto_switch_internal_player_on_error")
     private val useLibassKey = booleanPreferencesKey("use_libass")
     private val libassRenderTypeKey = stringPreferencesKey("libass_render_type")
+    private val libassRenderScaleKey = stringPreferencesKey("libass_render_scale")
+    private val libassRenderModeKey = stringPreferencesKey("libass_render_mode")
     private val decoderPriorityKey = intPreferencesKey("decoder_priority")
     private val downmixEnabledKey = booleanPreferencesKey("downmix_enabled")
     private val audioOutputChannelsKey = stringPreferencesKey("audio_output_channels")
     private val maintainOriginalAudioOnDownmixKey =
         booleanPreferencesKey("maintain_original_audio_on_downmix")
+    private val downmixLfeLevelKey = stringPreferencesKey("downmix_lfe_level")
     private val downmixNormalizationEnabledLegacyKey =
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
+    private val nightModeKey = stringPreferencesKey("night_mode")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
@@ -522,6 +711,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val legacyMapDv7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val dv7LibdoviModeOverrideKey = intPreferencesKey("dv7_libdovi_mode_override")
     private val stripHdr10PlusSeiKey = booleanPreferencesKey("strip_hdr10plus_sei")
+    private val exoChaptersEnabledKey = booleanPreferencesKey("exo_chapters_enabled")
+    private val chapterTitleEnabledKey = booleanPreferencesKey("chapter_title_enabled")
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
@@ -537,6 +728,10 @@ class PlayerSettingsDataStore @Inject constructor(
     private val postPlayMovieThresholdPercentKey = intPreferencesKey("post_play_movie_threshold_percent")
     private val streamAutoPlayNextEpisodeEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_enabled")
     private val streamAutoPlayNextEpisodeFallbackEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_fallback_enabled")
+    private val streamAutoPlayFallbackOnFailureKey = booleanPreferencesKey("stream_auto_play_fallback_on_failure")
+    private val streamAutoPlayFallbackMaxSourcesKey = intPreferencesKey("stream_auto_play_fallback_max_sources")
+    private val streamAutoPlayFallbackStartupTimeoutSecondsKey =
+        intPreferencesKey("stream_auto_play_fallback_startup_timeout_seconds")
     private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
     private val streamAutoPlayReuseBingeGroupKey = booleanPreferencesKey("stream_auto_play_reuse_binge_group")
     private val streamAutoPlayTimeoutSecondsKey = intPreferencesKey("stream_auto_play_timeout_seconds")
@@ -586,6 +781,29 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleOutlineEnabledKey = booleanPreferencesKey("subtitle_outline_enabled")
     private val subtitleOutlineColorKey = intPreferencesKey("subtitle_outline_color")
     private val subtitleOutlineWidthKey = intPreferencesKey("subtitle_outline_width")
+    private val subtitleHdrStyleEnabledKey = booleanPreferencesKey("subtitle_hdr_style_enabled")
+    private val subtitleHdrTextColorKey = intPreferencesKey("subtitle_hdr_text_color")
+    private val subtitleHdrBrightnessKey = intPreferencesKey("subtitle_hdr_brightness")
+    private val subtitleHdrDimPlayerControlsKey = booleanPreferencesKey("subtitle_hdr_dim_player_controls")
+    private val subtitleFontIdKey = stringPreferencesKey("subtitle_font_id")
+    private val subtitleBackgroundRadiusKey = intPreferencesKey("subtitle_background_radius")
+    private val subtitleShadowEnabledKey = booleanPreferencesKey("subtitle_shadow_enabled")
+    private val subtitleShadowOpacityKey = intPreferencesKey("subtitle_shadow_opacity")
+    private val subtitleShadowSizeKey = intPreferencesKey("subtitle_shadow_size")
+    private val subtitleCustomizeAssKey = booleanPreferencesKey("subtitle_customize_ass")
+    private val assSubtitleSizeKey = intPreferencesKey("ass_subtitle_size")
+    private val assSubtitleVerticalOffsetKey = intPreferencesKey("ass_subtitle_vertical_offset")
+    private val assSubtitleBoldKey = booleanPreferencesKey("ass_subtitle_bold")
+    private val assSubtitleTextColorKey = intPreferencesKey("ass_subtitle_text_color")
+    private val assSubtitleBackgroundColorKey = intPreferencesKey("ass_subtitle_background_color")
+    private val assSubtitleOutlineEnabledKey = booleanPreferencesKey("ass_subtitle_outline_enabled")
+    private val assSubtitleOutlineColorKey = intPreferencesKey("ass_subtitle_outline_color")
+    private val assSubtitleOutlineWidthKey = intPreferencesKey("ass_subtitle_outline_width")
+    private val assSubtitleFontIdKey = stringPreferencesKey("ass_subtitle_font_id")
+    private val assSubtitleBackgroundRadiusKey = intPreferencesKey("ass_subtitle_background_radius")
+    private val assSubtitleShadowEnabledKey = booleanPreferencesKey("ass_subtitle_shadow_enabled")
+    private val assSubtitleShadowOpacityKey = intPreferencesKey("ass_subtitle_shadow_opacity")
+    private val assSubtitleShadowSizeKey = intPreferencesKey("ass_subtitle_shadow_size")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -850,10 +1068,14 @@ class PlayerSettingsDataStore @Inject constructor(
                     runCatching { InternalPlayerEngine.valueOf(it) }.getOrDefault(InternalPlayerEngine.EXOPLAYER)
                 } ?: InternalPlayerEngine.EXOPLAYER,
                 autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false,
-                useLibass = prefs[useLibassKey] ?: false,
+                useLibass = prefs[useLibassKey] ?: true,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
                 } ?: LibassRenderType.OVERLAY_OPEN_GL,
+                libassRenderScale = prefs[libassRenderScaleKey]?.let {
+                    try { LibassRenderScale.valueOf(it) } catch (e: Exception) { LibassRenderScale.FULL }
+                } ?: LibassRenderScale.FULL,
+                libassRenderMode = LibassRenderMode.fromStoredString(prefs[libassRenderModeKey]),
                 decoderPriority = prefs[decoderPriorityKey] ?: 1,
                 downmixEnabled =
                     prefs[downmixEnabledKey]
@@ -868,9 +1090,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 maintainOriginalAudioOnDownmix =
                     prefs[maintainOriginalAudioOnDownmixKey]
                         ?: !(prefs[downmixNormalizationEnabledLegacyKey] ?: false),
+                downmixLfeLevel = DownmixLfeLevel.fromSettingValue(prefs[downmixLfeLevelKey]),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
+                nightMode = NightMode.fromSettingValue(prefs[nightModeKey]),
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
                     AUDIO_AMPLIFICATION_DB_MAX
@@ -907,6 +1131,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 },
                 dv7LibdoviModeOverride = (prefs[dv7LibdoviModeOverrideKey] ?: -1).coerceIn(-1, 4),
                 stripHdr10PlusSei = prefs[stripHdr10PlusSeiKey] ?: false,
+                exoChaptersEnabled = prefs[exoChaptersEnabledKey] ?: false,
+                chapterTitleEnabled = prefs[chapterTitleEnabledKey] ?: true,
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
@@ -931,6 +1157,19 @@ class PlayerSettingsDataStore @Inject constructor(
                 ),
                 streamAutoPlayNextEpisodeEnabled = prefs[streamAutoPlayNextEpisodeEnabledKey] ?: false,
                 streamAutoPlayNextEpisodeFallbackEnabled = prefs[streamAutoPlayNextEpisodeFallbackEnabledKey] ?: true,
+                streamAutoPlayFallbackOnFailure = prefs[streamAutoPlayFallbackOnFailureKey] ?: false,
+                streamAutoPlayFallbackMaxSources = prefs[streamAutoPlayFallbackMaxSourcesKey]
+                    ?.coerceIn(
+                        PlayerSettings.MIN_SOURCE_FALLBACK_MAX_SOURCES,
+                        PlayerSettings.MAX_SOURCE_FALLBACK_MAX_SOURCES
+                    )
+                    ?: PlayerSettings.DEFAULT_SOURCE_FALLBACK_MAX_SOURCES,
+                streamAutoPlayFallbackStartupTimeoutSeconds = prefs[streamAutoPlayFallbackStartupTimeoutSecondsKey]
+                    ?.coerceIn(
+                        PlayerSettings.MIN_SOURCE_STARTUP_TIMEOUT_SECONDS,
+                        PlayerSettings.MAX_SOURCE_STARTUP_TIMEOUT_SECONDS
+                    )
+                    ?: PlayerSettings.DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS,
                 streamAutoPlayPreferBingeGroupForNextEpisode =
                     prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: true,
                 streamAutoPlayReuseBingeGroup =
@@ -1009,7 +1248,7 @@ class PlayerSettingsDataStore @Inject constructor(
                         secondaryPreferredLanguage = prefs[subtitleSecondaryLanguageKey]
                             ?.let(::normalizeSelectableLanguageCode)
                             ?.takeUnless { it == SUBTITLE_LANGUAGE_FORCED },
-                        useForcedSubtitles = (prefs[subtitleUseForcedSubtitlesKey] ?: false) ||
+                        useForcedSubtitles = (prefs[subtitleUseForcedSubtitlesKey] ?: true) ||
                             prefs[subtitlePreferredLanguageKey]?.let(::normalizeSelectableLanguageCode) == SUBTITLE_LANGUAGE_FORCED ||
                             prefs[subtitleSecondaryLanguageKey]?.let(::normalizeSelectableLanguageCode) == SUBTITLE_LANGUAGE_FORCED,
                         showOnlyPreferredLanguages = prefs[subtitleShowOnlyPreferredLanguagesKey] ?: false,
@@ -1021,7 +1260,20 @@ class PlayerSettingsDataStore @Inject constructor(
                         backgroundColor = prefs[subtitleBackgroundColorKey] ?: Color.Transparent.toArgb(),
                         outlineEnabled = prefs[subtitleOutlineEnabledKey] ?: true,
                         outlineColor = prefs[subtitleOutlineColorKey] ?: Color.Black.toArgb(),
-                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
+                        outlineWidth = (prefs[subtitleOutlineWidthKey] ?: SubtitleStyleSettings.OUTLINE_WIDTH_DEFAULT)
+                            .coerceIn(SubtitleStyleSettings.OUTLINE_WIDTH_MIN, SubtitleStyleSettings.OUTLINE_WIDTH_MAX),
+                        hdrStyleEnabled = prefs[subtitleHdrStyleEnabledKey] ?: false,
+                        hdrTextColor = prefs[subtitleHdrTextColorKey] ?: Color.White.toArgb(),
+                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT,
+                        hdrDimPlayerControls = prefs[subtitleHdrDimPlayerControlsKey] ?: false,
+                        fontId = prefs[subtitleFontIdKey] ?: SubtitleFonts.DEFAULT,
+                        backgroundRadius = (prefs[subtitleBackgroundRadiusKey] ?: 0)
+                            .coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX),
+                        shadowEnabled = prefs[subtitleShadowEnabledKey] ?: false,
+                        shadowOpacity = (prefs[subtitleShadowOpacityKey] ?: SubtitleStyleSettings.SHADOW_OPACITY_DEFAULT)
+                            .coerceIn(0, 100),
+                        shadowSize = (prefs[subtitleShadowSizeKey] ?: SubtitleStyleSettings.SHADOW_SIZE_DEFAULT)
+                            .coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1033,7 +1285,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     backBufferDurationMs = prefs[backBufferDurationMsKey] ?: BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS,
                     retainBackBufferFromKeyframe = prefs[retainBackBufferFromKeyframeKey] ?: false
                 )
-            )
+            ).withAssSubtitleStyle(prefs)
         } catch (e: ClassCastException) {
             Log.w("PlayerSettingsDataStore", "Corrupt preference value, using defaults", e)
             PlayerSettings()
@@ -1043,7 +1295,7 @@ class PlayerSettingsDataStore @Inject constructor(
     val useLibass: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }
     }.map { prefs ->
-        prefs[useLibassKey] ?: false
+        prefs[useLibassKey] ?: true
     }
 
     val libassRenderType: Flow<LibassRenderType> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -1109,6 +1361,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setDownmixLfeLevel(level: DownmixLfeLevel) {
+        store().edit { prefs ->
+            prefs[downmixLfeLevelKey] = level.settingValue
+        }
+    }
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[tunnelingEnabledKey] = enabled
@@ -1124,6 +1382,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipSilence(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipSilenceKey] = enabled
+        }
+    }
+
+    suspend fun setNightMode(mode: NightMode) {
+        store().edit { prefs ->
+            prefs[nightModeKey] = mode.settingValue
         }
     }
 
@@ -1320,6 +1584,30 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setStreamAutoPlayFallbackOnFailure(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayFallbackOnFailureKey] = enabled
+        }
+    }
+
+    suspend fun setStreamAutoPlayFallbackMaxSources(count: Int) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayFallbackMaxSourcesKey] = count.coerceIn(
+                PlayerSettings.MIN_SOURCE_FALLBACK_MAX_SOURCES,
+                PlayerSettings.MAX_SOURCE_FALLBACK_MAX_SOURCES
+            )
+        }
+    }
+
+    suspend fun setStreamAutoPlayFallbackStartupTimeoutSeconds(seconds: Int) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayFallbackStartupTimeoutSecondsKey] = seconds.coerceIn(
+                PlayerSettings.MIN_SOURCE_STARTUP_TIMEOUT_SECONDS,
+                PlayerSettings.MAX_SOURCE_STARTUP_TIMEOUT_SECONDS
+            )
+        }
+    }
+
     suspend fun setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled: Boolean) {
         store().edit { prefs ->
             prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] = enabled
@@ -1437,6 +1725,7 @@ class PlayerSettingsDataStore @Inject constructor(
             "pt-br", "pt_br", "br", "pob" -> "pt-br"
             "pt-pt", "pt_pt", "por" -> "pt"
             "forced", "force", "forc" -> SUBTITLE_LANGUAGE_FORCED
+            "iw", "heb", "hbo" -> "he"
             "zh-cn", "zh_cn" -> "zh-CN"
             "zh-tw", "zh_tw" -> "zh-TW"
             "en-au", "en_au" -> "en-AU"
@@ -1542,12 +1831,32 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    /**
+     * Set the libass subtitle render scale (resolution reduction for performance).
+     */
+    suspend fun setLibassRenderScale(scale: LibassRenderScale) {
+        store().edit { prefs ->
+            prefs[libassRenderScaleKey] = scale.name
+        }
+    }
+
+    /**
+     * Set the libass subtitle render mode (video effect vs overlay).
+     */
+    suspend fun setLibassRenderMode(mode: LibassRenderMode) {
+        store().edit { prefs ->
+            prefs[libassRenderModeKey] = mode.name
+        }
+    }
+
     // Dolby Vision setters (libdovi conversion)
     suspend fun setDv5ToDv81Enabled(enabled: Boolean) { store().edit { it[dv5ToDv81EnabledKey] = enabled } }
     suspend fun setDv7ToDv81PreserveMappingEnabled(enabled: Boolean) { store().edit { it[dv7ToDv81PreserveMappingEnabledKey] = enabled } }
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) { store().edit { it[dv7HandlingModeKey] = mode.name } }
     suspend fun setDv7LibdoviModeOverride(mode: Int) { store().edit { it[dv7LibdoviModeOverrideKey] = mode.coerceIn(-1, 4) } }
     suspend fun setStripHdr10PlusSei(enabled: Boolean) { store().edit { it[stripHdr10PlusSeiKey] = enabled } }
+    suspend fun setExoChaptersEnabled(enabled: Boolean) { store().edit { it[exoChaptersEnabledKey] = enabled } }
+    suspend fun setChapterTitleEnabled(enabled: Boolean) { store().edit { it[chapterTitleEnabledKey] = enabled } }
 
     // Subtitle styles
     suspend fun setSubtitlePreferredLanguage(language: String) { store().edit { it[subtitlePreferredLanguageKey] = normalizeSelectableLanguageCode(language.ifBlank { SubtitleLanguageOption.DEVICE }) } }
@@ -1558,14 +1867,139 @@ class PlayerSettingsDataStore @Inject constructor(
             else prefs.remove(subtitleSecondaryLanguageKey)
         }
     }
-    suspend fun setSubtitleSize(size: Int) { store().edit { it[subtitleSizeKey] = size.coerceIn(50, 200) } }
-    suspend fun setSubtitleVerticalOffset(offset: Int) { store().edit { it[subtitleVerticalOffsetKey] = offset.coerceIn(-20, 50) } }
-    suspend fun setSubtitleBold(bold: Boolean) { store().edit { it[subtitleBoldKey] = bold } }
-    suspend fun setSubtitleTextColor(color: Int) { store().edit { it[subtitleTextColorKey] = color } }
-    suspend fun setSubtitleBackgroundColor(color: Int) { store().edit { it[subtitleBackgroundColorKey] = color } }
-    suspend fun setSubtitleOutlineEnabled(enabled: Boolean) { store().edit { it[subtitleOutlineEnabledKey] = enabled } }
-    suspend fun setSubtitleOutlineColor(color: Int) { store().edit { it[subtitleOutlineColorKey] = color } }
-    suspend fun setSubtitleOutlineWidth(width: Int) { store().edit { it[subtitleOutlineWidthKey] = width.coerceIn(1, 5) } }
+    suspend fun setSubtitleSize(size: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleSizeKey else subtitleSizeKey] = size.coerceIn(50, 200) }
+    }
+    suspend fun setSubtitleVerticalOffset(offset: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleVerticalOffsetKey else subtitleVerticalOffsetKey] = offset.coerceIn(-20, 50) }
+    }
+    suspend fun setSubtitleBold(bold: Boolean, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleBoldKey else subtitleBoldKey] = bold }
+    }
+    suspend fun setSubtitleTextColor(color: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleTextColorKey else subtitleTextColorKey] = color }
+    }
+    suspend fun setSubtitleBackgroundColor(color: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleBackgroundColorKey else subtitleBackgroundColorKey] = color }
+    }
+    suspend fun setSubtitleOutlineEnabled(enabled: Boolean, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleOutlineEnabledKey else subtitleOutlineEnabledKey] = enabled }
+    }
+    suspend fun setSubtitleOutlineColor(color: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleOutlineColorKey else subtitleOutlineColorKey] = color }
+    }
+    suspend fun setSubtitleOutlineWidth(width: Int, ass: Boolean = false) {
+        store().edit {
+            it[if (ass) assSubtitleOutlineWidthKey else subtitleOutlineWidthKey] = width.coerceIn(
+                SubtitleStyleSettings.OUTLINE_WIDTH_MIN,
+                SubtitleStyleSettings.OUTLINE_WIDTH_MAX
+            )
+        }
+    }
+    suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) { store().edit { it[subtitleHdrStyleEnabledKey] = enabled } }
+    suspend fun setSubtitleHdrTextColor(color: Int) { store().edit { it[subtitleHdrTextColorKey] = color } }
+    suspend fun setSubtitleHdrDimPlayerControls(enabled: Boolean) {
+        store().edit { it[subtitleHdrDimPlayerControlsKey] = enabled }
+    }
+    suspend fun setSubtitleHdrBrightness(brightness: Int) {
+        store().edit {
+            it[subtitleHdrBrightnessKey] = brightness.coerceIn(
+                SubtitleStyleSettings.HDR_BRIGHTNESS_MIN,
+                SubtitleStyleSettings.HDR_BRIGHTNESS_MAX
+            )
+        }
+    }
+    suspend fun setSubtitleFontId(fontId: String, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleFontIdKey else subtitleFontIdKey] = fontId }
+    }
+    suspend fun setSubtitleBackgroundRadius(radius: Int, ass: Boolean = false) {
+        store().edit {
+            it[if (ass) assSubtitleBackgroundRadiusKey else subtitleBackgroundRadiusKey] =
+                radius.coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX)
+        }
+    }
+    suspend fun setSubtitleShadowEnabled(enabled: Boolean, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleShadowEnabledKey else subtitleShadowEnabledKey] = enabled }
+    }
+    suspend fun setSubtitleShadowOpacity(opacity: Int, ass: Boolean = false) {
+        store().edit { it[if (ass) assSubtitleShadowOpacityKey else subtitleShadowOpacityKey] = opacity.coerceIn(0, 100) }
+    }
+    suspend fun setSubtitleShadowSize(size: Int, ass: Boolean = false) {
+        store().edit {
+            it[if (ass) assSubtitleShadowSizeKey else subtitleShadowSizeKey] =
+                size.coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
+        }
+    }
+    suspend fun setSubtitleCustomizeAss(enabled: Boolean) {
+        store().edit { it[subtitleCustomizeAssKey] = enabled }
+    }
+    suspend fun resetSubtitleAppearance(resetHdrText: Boolean = false) {
+        val defaults = SubtitleStyleSettings()
+        store().edit { prefs ->
+            prefs[subtitleSizeKey] = defaults.size
+            prefs[subtitleVerticalOffsetKey] = defaults.verticalOffset
+            prefs[subtitleBoldKey] = defaults.bold
+            if (resetHdrText) {
+                prefs[subtitleHdrTextColorKey] = defaults.hdrTextColor
+                prefs[subtitleHdrBrightnessKey] = defaults.hdrBrightness
+            } else {
+                prefs[subtitleTextColorKey] = defaults.textColor
+            }
+            prefs[subtitleBackgroundColorKey] = defaults.backgroundColor
+            prefs[subtitleOutlineEnabledKey] = defaults.outlineEnabled
+            prefs[subtitleOutlineColorKey] = defaults.outlineColor
+            prefs[subtitleOutlineWidthKey] = defaults.outlineWidth
+            prefs[subtitleFontIdKey] = defaults.fontId
+            prefs[subtitleBackgroundRadiusKey] = defaults.backgroundRadius
+            prefs[subtitleShadowEnabledKey] = defaults.shadowEnabled
+            prefs[subtitleShadowOpacityKey] = defaults.shadowOpacity
+            prefs[subtitleShadowSizeKey] = defaults.shadowSize
+        }
+    }
+
+    suspend fun resetAssSubtitleAppearance() {
+        store().edit { prefs ->
+            prefs.remove(assSubtitleSizeKey)
+            prefs.remove(assSubtitleVerticalOffsetKey)
+            prefs.remove(assSubtitleBoldKey)
+            prefs.remove(assSubtitleTextColorKey)
+            prefs.remove(assSubtitleBackgroundColorKey)
+            prefs.remove(assSubtitleOutlineEnabledKey)
+            prefs.remove(assSubtitleOutlineColorKey)
+            prefs.remove(assSubtitleOutlineWidthKey)
+            prefs.remove(assSubtitleFontIdKey)
+            prefs.remove(assSubtitleBackgroundRadiusKey)
+            prefs.remove(assSubtitleShadowEnabledKey)
+            prefs.remove(assSubtitleShadowOpacityKey)
+            prefs.remove(assSubtitleShadowSizeKey)
+            prefs.remove(subtitleCustomizeAssKey)
+        }
+    }
+
+    private fun PlayerSettings.withAssSubtitleStyle(prefs: Preferences): PlayerSettings {
+        val defaults = SubtitleStyleSettings()
+        return copy(
+            assSubtitleStyle = subtitleStyle.copy(
+                size = prefs[assSubtitleSizeKey] ?: SubtitleStyleSettings.ASS_SIZE_DEFAULT,
+                verticalOffset = prefs[assSubtitleVerticalOffsetKey] ?: defaults.verticalOffset,
+                bold = prefs[assSubtitleBoldKey] ?: defaults.bold,
+                textColor = prefs[assSubtitleTextColorKey] ?: defaults.textColor,
+                backgroundColor = prefs[assSubtitleBackgroundColorKey] ?: defaults.backgroundColor,
+                outlineEnabled = prefs[assSubtitleOutlineEnabledKey] ?: defaults.outlineEnabled,
+                outlineColor = prefs[assSubtitleOutlineColorKey] ?: defaults.outlineColor,
+                outlineWidth = (prefs[assSubtitleOutlineWidthKey] ?: defaults.outlineWidth)
+                    .coerceIn(SubtitleStyleSettings.OUTLINE_WIDTH_MIN, SubtitleStyleSettings.OUTLINE_WIDTH_MAX),
+                fontId = prefs[assSubtitleFontIdKey] ?: defaults.fontId,
+                backgroundRadius = (prefs[assSubtitleBackgroundRadiusKey] ?: defaults.backgroundRadius)
+                    .coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX),
+                shadowEnabled = prefs[assSubtitleShadowEnabledKey] ?: defaults.shadowEnabled,
+                shadowOpacity = (prefs[assSubtitleShadowOpacityKey] ?: defaults.shadowOpacity).coerceIn(0, 100),
+                shadowSize = (prefs[assSubtitleShadowSizeKey] ?: defaults.shadowSize)
+                    .coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX),
+                customizeAss = prefs[subtitleCustomizeAssKey] ?: false
+            )
+        )
+    }
 
     suspend fun setUseForcedSubtitles(enabled: Boolean) {
         store().edit { prefs ->

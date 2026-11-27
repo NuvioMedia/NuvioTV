@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.keepLtr
 
 import android.view.KeyEvent
 import androidx.compose.foundation.background
@@ -39,6 +40,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -50,6 +57,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import kotlin.math.roundToInt
 
 @Composable
 internal fun SliderSettingsItem(
@@ -63,7 +71,8 @@ internal fun SliderSettingsItem(
     subtitle: String? = null,
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showStepper: Boolean = true
 ) {
     val span = (maxValue - minValue).toFloat()
     val progress = if (span > 0f) (value - minValue).toFloat() / span else 0f
@@ -74,6 +83,12 @@ internal fun SliderSettingsItem(
         subtitle = subtitle,
         enabled = enabled,
         progressFraction = progress,
+        sliderValue = value.toFloat(),
+        sliderRange = minValue.toFloat()..maxValue.toFloat(),
+        onSliderProgressChange = { target ->
+            val newValue = target.roundToInt().coerceIn(minValue, maxValue)
+            if (newValue != value) onValueChange(newValue)
+        },
         onDecrease = {
             val newValue = (value - step).coerceAtLeast(minValue)
             if (newValue != value) onValueChange(newValue)
@@ -83,7 +98,8 @@ internal fun SliderSettingsItem(
             if (newValue != value) onValueChange(newValue)
         },
         onFocused = onFocused,
-        modifier = modifier
+        modifier = modifier,
+        showStepper = showStepper
     )
 }
 
@@ -111,6 +127,12 @@ internal fun SliderSettingsItem(
         subtitle = subtitle,
         enabled = enabled,
         progressFraction = progress,
+        sliderValue = index.toFloat(),
+        sliderRange = 0f..lastIndex.toFloat(),
+        onSliderProgressChange = { target ->
+            val newValue = values[target.roundToInt().coerceIn(0, lastIndex)]
+            if (newValue != selected) onValueChange(newValue)
+        },
         onDecrease = {
             val newValue = values[(index - 1).coerceAtLeast(0)]
             if (newValue != selected) onValueChange(newValue)
@@ -131,10 +153,14 @@ private fun SliderSettingsItemLayout(
     subtitle: String?,
     enabled: Boolean,
     progressFraction: Float,
+    sliderValue: Float,
+    sliderRange: ClosedFloatingPointRange<Float>,
+    onSliderProgressChange: (Float) -> Unit,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
     onFocused: () -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
+    showStepper: Boolean = true
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
@@ -165,6 +191,13 @@ private fun SliderSettingsItemLayout(
                         true
                     }
                     else -> false
+                }
+            }
+            .semantics {
+                progressBarRangeInfo = ProgressBarRangeInfo(sliderValue, sliderRange)
+                setProgress { target ->
+                    onSliderProgressChange(target)
+                    true
                 }
             },
         colors = settingsRowColors(),
@@ -204,7 +237,7 @@ private fun SliderSettingsItemLayout(
                 Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
 
                 Text(
-                    text = valueText,
+                    text = valueText.keepLtr(),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioTheme.colors.Primary.copy(alpha = contentAlpha)
                 )
@@ -217,13 +250,20 @@ private fun SliderSettingsItemLayout(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                SliderStepButton(
-                    icon = Icons.Default.Remove,
-                    contentDescription = stringResource(R.string.cd_decrease),
-                    enabled = enabled,
-                    onClick = onDecrease,
-                    onFocused = onFocused
-                )
+                /*
+                 * Plus and minus are optional: a row whose value is moved with the arrow keys on a
+                 * remote can hide them, while rows that rely on them keep looking the same, because
+                 * `showStepper` defaults to true.
+                 */
+                if (showStepper) {
+                    SliderStepButton(
+                        icon = Icons.Default.Remove,
+                        contentDescription = stringResource(R.string.cd_decrease),
+                        enabled = enabled,
+                        onClick = onDecrease,
+                        onFocused = onFocused
+                    )
+                }
 
                 Box(
                     modifier = Modifier
@@ -241,13 +281,15 @@ private fun SliderSettingsItemLayout(
                     )
                 }
 
-                SliderStepButton(
-                    icon = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.cd_increase),
-                    enabled = enabled,
-                    onClick = onIncrease,
-                    onFocused = onFocused
-                )
+                if (showStepper) {
+                    SliderStepButton(
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.cd_increase),
+                        enabled = enabled,
+                        onClick = onIncrease,
+                        onFocused = onFocused
+                    )
+                }
             }
         }
     }
