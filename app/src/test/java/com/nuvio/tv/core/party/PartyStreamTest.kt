@@ -63,6 +63,15 @@ class PartyStreamTest {
     }
 
     @Test
+    fun guestsGetTheHostClearKeys() {
+        val keys = "00112233445566778899aabbccddeeff:ffeeddccbbaa99887766554433221100"
+        val payload = PartyApi.json.encodeToString(PartyStream.serializer(), stream.copy(clearKeys = keys))
+        assertTrue(payload.contains("\"clear_keys\""))
+        val decoded = PartyApi.json.decodeFromString(PartyStream.serializer(), payload)
+        assertEquals(keys, decoded.toStream().behaviorHints?.clearKeys)
+    }
+
+    @Test
     fun mobileStreamPayloadDecodes() {
         val payload = """{"media_key":"movie|tt1||","url":"https://cdn.example.com/a.mkv","stream_type":"debrid","badges":[{"name":"4K","imageURL":"https://example.com/4k.png"}],"unknown":1}"""
         val decoded = PartyApi.json.decodeFromString(PartyStream.serializer(), payload)
