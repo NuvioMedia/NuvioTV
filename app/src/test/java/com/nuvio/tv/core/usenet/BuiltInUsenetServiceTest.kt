@@ -57,7 +57,7 @@ class BuiltInUsenetServiceTest {
         assertTrue(stream.isUsenet())
         assertEquals(listOf("nntps://user:pass@news.test:563/20?priority=1"), stream.servers)
         coVerify { client.search(good, match { it.season == 1 && it.episode == 3 && it.imdbId == "tt123" }, any()) }
-        coVerify(exactly = 0) { tmdb.ensureTmdbId(any(), any()) }
+        // The series' metadata failed here (the TMDB mock has no answers): its results are listed unchecked.
     }
 
     @Test fun `a reused release opens with today's providers`() {
@@ -610,6 +610,90 @@ class BuiltInUsenetServiceTest {
         // Without the film's names and year, the indexer's tags are trusted.
         coEvery { tmdbApi.getMovieNames(121, any()) } throws IllegalStateException("offline")
         assertEquals(setOf("The.Ring.2002.1080p"), titles())
+    }
+
+    // The Korean Suits (2018), which shares its name with the American one (2011).
+    private fun koreanSuits() = TmdbDetailsResponse(id = 77548, name = "Suits", firstAirDate = "2018-04-25", voteCount = 24,
+        originCountry = listOf("KR"), seasons = listOf(com.nuvio.tv.data.remote.api.TmdbSeasonSummary(1, 16, "2018-04-25")))
+    private fun suitsSearch() = com.nuvio.tv.data.remote.api.TmdbTvSearchResponse(listOf(
+        com.nuvio.tv.data.remote.api.TmdbTvSearchResult(37680, "Suits", "Suits", "2011-06-23", listOf("US"), 6055),
+        com.nuvio.tv.data.remote.api.TmdbTvSearchResult(77548, "Suits", "슈츠", "2018-04-25", listOf("KR"), 24),
+        com.nuvio.tv.data.remote.api.TmdbTvSearchResult(259453, "Suits LA", "Suits LA", "2025-02-23", listOf("US"), 66)))
+    private fun suitsTmdb(): Pair<TmdbService, TmdbApi> {
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "77548"
+        coEvery { tmdbApi.getTvDetails(77548, any(), any()) } returns Response.success(koreanSuits())
+        coEvery { tmdbApi.getTvExternalIds(77548, any()) } returns
+            Response.success(com.nuvio.tv.data.remote.api.TmdbExternalIdsResponse(77548, "tt8084058", 336811))
+        coEvery { tmdbApi.searchTv(any(), "Suits") } returns Response.success(suitsSearch())
+        return tmdb to tmdbApi
+    }
+
+    @Test fun `a series' results of another series of its name are dropped once its metadata comes`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(release(indexer, "Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG"),
+            release(indexer, "Suits.S01E02.1080p.BluRay-GERUDO"), release(indexer, "Suits.S01E02.2011.1080p.WEB-DL-DBTV"))
+        val (tmdb, tmdbApi) = suitsTmdb()
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        suspend fun titles() = service.search(config, "series", "tt8084058:1:2", null, null).toList()
+            .mapNotNull { it.group }.last().streams.map { it.title }.toSet()
+        assertEquals(setOf("Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG"), titles())
+        // Without the series of its name, only names with another year are another series'.
+        coEvery { tmdbApi.searchTv(any(), "Suits") } throws java.io.IOException("offline")
+        assertEquals(setOf("Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG", "Suits.S01E02.1080p.BluRay-GERUDO"), titles())
+        // Without its year, every result is listed.
+        coEvery { tmdbApi.getTvDetails(77548, any(), any()) } throws java.io.IOException("offline")
+        assertEquals(3, titles().size)
+    }
+
+    @Test fun `a series' list never waits for its metadata and is arranged again when it comes`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(release(indexer, "Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG"),
+            release(indexer, "Suits.S01E02.1080p.BluRay-GERUDO"))
+        val (tmdb, tmdbApi) = suitsTmdb()
+        coEvery { tmdbApi.getTvDetails(77548, any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(1_000); Response.success(koreanSuits())
+        }
+        val shownAt = mutableListOf<Long>()
+        val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt8084058:1:2", null, null)
+            .onEach { if (it.group != null) shownAt += testScheduler.currentTime }.toList().mapNotNull { it.group }
+        assertEquals(listOf(0L, 1_000L), shownAt)
+        assertEquals(2, lists.first().streams.size)
+        assertEquals(listOf("Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG"), lists.last().streams.map { it.title })
+
+        // Metadata later than its few seconds changes nothing.
+        shownAt.clear()
+        coEvery { tmdbApi.getTvDetails(77548, any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(60_000); Response.success(koreanSuits())
+        }
+        BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt8084058:1:2", null, null)
+            .onEach { if (it.group != null) shownAt += testScheduler.currentTime }.toList()
+        assertEquals(1, shownAt.size)
+    }
+
+    @Test fun `an id search that found only another series of its name is asked again by title`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities(tvParams = setOf("imdbid", "q", "season", "ep"))
+        // The indexer filed the American series' release under the Korean one's id, and answers after TMDB.
+        coEvery { client.search(indexer, match { it.imdbId != null }, any()) } coAnswers {
+            kotlinx.coroutines.delay(100); listOf(release(indexer, "Suits.S01E02.2011.1080p.WEB-DL-DBTV"))
+        }
+        coEvery { client.search(indexer, match { it.imdbId == null }, any()) } returns
+            listOf(release(indexer, "Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG"))
+        val (tmdb, tmdbApi) = suitsTmdb()
+        val streams = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt8084058:1:2", null, null)
+            .toList().mapNotNull { it.group }.last().streams
+        assertEquals(listOf("Suits.2018.S01E02.1080p.NF.WEB-DL-TSRG"), streams.map { it.title })
+        coVerify { client.search(indexer, match { it.imdbId == null && it.title == "Suits" && it.episode == 2 }, any()) }
     }
 
     @Test fun `a movie's release is its own binge group, so reusing the group opens it again`() = runTest {

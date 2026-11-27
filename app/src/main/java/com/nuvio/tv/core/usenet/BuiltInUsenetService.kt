@@ -11,6 +11,7 @@ import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.repository.SimklIdResolver
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.remote.api.TmdbDetailsResponse
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
@@ -29,6 +30,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
@@ -398,37 +400,52 @@ class BuiltInUsenetService @Inject constructor(
             catch (_: Exception) { false }
         coroutineScope {
             // A failed child would cancel this scope; keep lookup failures per indexer.
-            val metadata = async(start = CoroutineStart.LAZY) {
-                try { metadata(request, lookupId, type) }
+            // A series' TMDB id and details, asked for once: its metadata and its seasons' episode counts
+            // read them. Null when its TMDB id could not be looked up.
+            val seriesLookup = if (!series) null else async {
+                val id = try { request.tmdbId ?: tmdb.ensureTmdbId(lookupId, type) }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { return@async null }
+                val details = try { id?.toIntOrNull()?.let { tmdbApi.getTvDetails(it, BuildConfig.TMDB_API_KEY).body() } }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { null }
+                SeriesLookup(id, details)
+            }
+            // Results are checked against the title's names and year, asked for alongside the indexers.
+            val metadata = async {
+                try { metadata(request, lookupId, type, seriesLookup) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { null }
             }
-            // A movie's ID results are checked against its names and year, asked for alongside the indexers.
-            if (!series) metadata.start()
+            // A series' metadata, once it came within a few seconds: it tells the series' releases from
+            // another series' of its name. Like the episode counts, the list never waits for it, and is
+            // arranged again when it comes.
+            val seriesFacts = java.util.concurrent.atomic.AtomicReference<UsenetSearchRequest?>(null)
+            val factsLookup = if (!series) null else launch {
+                withTimeoutOrNull(ID_CHECK_WAIT_MS) { metadata.await() }?.let { seriesFacts.set(it) }
+            }
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
             // Each season's episode count lets season packs, of one season or several, be filtered and
-            // sorted by their size per episode. The show's seasons are asked of TMDB once the first pack
-            // shows up, alongside the indexers, and the list never waits for them: packs count with their
-            // whole size until they come, and the list is arranged again then. Without an answer within
-            // a few seconds nothing changes.
+            // sorted by their size per episode. The show's seasons are read once the first pack shows up,
+            // and the list never waits for them: packs count with their whole size until they come, and
+            // the list is arranged again then. Without an answer within a few seconds nothing changes.
             val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Map<Int, Int>?>(null)
-            val seasonLookup = if (!series) null else launch(start = CoroutineStart.LAZY) {
+            val seasonLookup = if (seriesLookup == null) null else launch(start = CoroutineStart.LAZY) {
                 val started = System.currentTimeMillis()
                 val counts = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
-                    try {
-                        (request.tmdbId ?: tmdb.ensureTmdbId(lookupId, type))?.toIntOrNull()?.let { id ->
-                            tmdbApi.getTvDetails(id, BuildConfig.TMDB_API_KEY).body()?.seasons?.mapNotNull {
-                                val number = it.seasonNumber ?: return@mapNotNull null
-                                it.episodeCount?.takeIf { count -> count > 0 }?.let { count -> number to count }
-                            }?.toMap()
-                        }?.takeIf { it.isNotEmpty() }
-                    } catch (e: CancellationException) { throw e }
-                    catch (_: Exception) { null }
+                    seriesLookup.await()?.details?.seasons?.mapNotNull {
+                        val number = it.seasonNumber ?: return@mapNotNull null
+                        it.episodeCount?.takeIf { count -> count > 0 }?.let { count -> number to count }
+                    }?.toMap()?.takeIf { it.isNotEmpty() }
                 }
                 seasonEpisodes.set(counts)
                 runCatching { android.util.Log.i("UsenetSearch", "season episodes=$counts ms=${System.currentTimeMillis() - started}") }
             }
+            // A series' releases its names leave to it, once its metadata is known.
+            fun ofSeries(found: List<UsenetRelease>): List<UsenetRelease> = seriesFacts.get()?.let {
+                NewznabProtocol.withoutNamesakeReleases(it, NewznabProtocol.seriesResultsOf(it, found))
+            } ?: found
             fun seasonCounts(): Map<Int, Int>? = seasonEpisodes.get()
             fun posted(release: UsenetRelease) = release.publishedAt.takeIf { it > 0 }
             // Each release's outcome is looked up once per list, by nzbUrl: the sort compares releases
@@ -443,8 +460,10 @@ class BuiltInUsenetService @Inject constructor(
                 val ranks = outcomes.mapValues { (_, it) ->
                     outcomeRank(it.failed || it.sibling?.blank == true, it.played, config.availableFirst)
                 }
+                // Across indexers: one indexer's release named with a newer series' year tells another's bare names apart.
+                val listed = ofSeries(releases)
                 return NewznabProtocol.arrange(
-                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config, seasonEpisodes = seasonCounts(), series = series) else releases, config,
+                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(listed, config, seasonEpisodes = seasonCounts(), series = series) else listed, config,
                     seasonEpisodes = seasonCounts(), series = series) { ranks[it.nzbUrl] ?: 1 }
             }
             val enabled = config.indexers.filter { it.enabled }
@@ -460,9 +479,22 @@ class BuiltInUsenetService @Inject constructor(
                             val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
                             val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
                             val fetchLimit = config.indexerResults(indexer)
-                            val found = client.search(indexer, search, caps, fetchLimit)
-                                .let { if (canSearchId && !series) confirmed(indexer, it) { metadata.await() } else it }
-                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, fetchLimit) { metadata.await() } ?: found else found)
+                            // A series' results, found by ID or by title, are checked as found when its
+                            // metadata is already known, so that results of another series alone are
+                            // asked again by title; a movie's title results were checked by the search,
+                            // which had its year.
+                            val seriesCheck: suspend (List<UsenetRelease>) -> List<UsenetRelease> = {
+                                seriesChecked(indexer, it, seriesFacts.get() ?: metadata.takeIf { m -> m.isCompleted }?.await())
+                            }
+                            val found = client.search(indexer, search, caps, fetchLimit).let {
+                                when {
+                                    series -> seriesCheck(it)
+                                    canSearchId -> confirmed(indexer, it) { metadata.await() }
+                                    else -> it
+                                }
+                            }
+                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, fetchLimit,
+                                seriesCheck.takeIf { series }) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
                         countSearch(indexer, kind, result)
@@ -492,12 +524,17 @@ class BuiltInUsenetService @Inject constructor(
                 val wait = if (config.progressiveResults) null else async { delay(COMPLETE_RESULTS_WAIT_MS) }
                 var waiting = wait != null
                 var lookupShown = false
+                var factsShown = false
+                // Whether the series' metadata, now known, takes releases off the list.
+                fun factsChangeList() = ofSeries(releases).size != releases.size
                 while (true) {
                     val event = select<Any> {
                         results.onReceiveCatching { it }
                         if (waiting) wait?.onAwait { WAIT_OVER }
                         // Arranged again once the episode count came, if the list is already shown.
                         if (!lookupShown && seasonLookup?.isActive == true) seasonLookup.onJoin { SEASON_COUNTED }
+                        // And once the series' metadata came, if it takes releases off the shown list.
+                        if (!factsShown && factsLookup?.isActive == true) factsLookup.onJoin { SERIES_KNOWN }
                     }
                     if (event === WAIT_OVER) {
                         log("wait over")
@@ -508,6 +545,11 @@ class BuiltInUsenetService @Inject constructor(
                     if (event === SEASON_COUNTED) {
                         lookupShown = true
                         if (!waiting && seasonEpisodes.get() != null) show()
+                        continue
+                    }
+                    if (event === SERIES_KNOWN) {
+                        factsShown = true
+                        if (!waiting && factsChangeList()) show()
                         continue
                     }
                     @Suppress("UNCHECKED_CAST")
@@ -536,10 +578,17 @@ class BuiltInUsenetService @Inject constructor(
                     seasonLookup.join()
                     if (seasonEpisodes.get() != null) show()
                 }
+                // Likewise the series' metadata, within its few seconds.
+                if (!factsShown && factsLookup?.isActive == true) {
+                    factsLookup.join()
+                    if (factsChangeList()) show()
+                }
                 // A lower priority is searched only when this one listed nothing; after the last, nothing is.
                 if (tier === tiers.last() || arranged(outcomes()).isNotEmpty()) break
             }
             metadata.cancel()
+            seriesLookup?.cancel()
+            factsLookup?.cancel()
             seasonLookup?.cancel()
         }
     }
@@ -559,10 +608,11 @@ class BuiltInUsenetService @Inject constructor(
     /**
      * Asks again when a search found nothing: by title after an ID search (some indexers have thin
      * ID coverage), then by the original title, under which foreign releases are often posted.
-     * Each attempt is made only when the ones before it found nothing. Null when none found anything.
+     * Each attempt is made only when the ones before it found nothing, after [check]. Null when none found anything.
      */
     private suspend fun askAgain(indexer: UsenetIndexer, searched: UsenetSearchRequest, caps: NewznabCapabilities,
-        results: Int, metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
+        results: Int, check: (suspend (List<UsenetRelease>) -> List<UsenetRelease>)? = null,
+        metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
         val url = NewznabProtocol.searchUrl(indexer, searched, caps) ?: return null
         val byTitle = (metadata() ?: return null).copy(imdbId = null, tmdbId = null, tvdbId = null)
         val attempts = listOfNotNull(
@@ -573,7 +623,7 @@ class BuiltInUsenetService @Inject constructor(
         )
         for (attempt in attempts) {
             if (NewznabProtocol.searchUrl(indexer, attempt, caps) == null) continue
-            val found = try { client.search(indexer, attempt, caps, results) }
+            val found = try { client.search(indexer, attempt, caps, results).let { check?.invoke(it) ?: it } }
             catch (e: CancellationException) { throw e }
             catch (e: IndexerCooldownException) { throw e }
             // The first search succeeded; a failed later attempt only means nothing more was found.
@@ -598,23 +648,51 @@ class BuiltInUsenetService @Inject constructor(
         }
     }
 
-    private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String): UsenetSearchRequest {
-        val id = request.tmdbId ?: tmdb.ensureTmdbId(videoId, type)
+    /**
+     * A series' releases that their names leave to it rather than to another series of its name,
+     * when its metadata, [series], is known; otherwise all of them.
+     */
+    private fun seriesChecked(indexer: UsenetIndexer, releases: List<UsenetRelease>,
+        series: UsenetSearchRequest?): List<UsenetRelease> {
+        if (releases.isEmpty() || series == null) return releases
+        return NewznabProtocol.seriesResultsOf(series, releases).also { kept ->
+            if (kept.size < releases.size) runCatching {
+                android.util.Log.i("UsenetSearch", "${indexer.name}: ${releases.size - kept.size} results of another series")
+            }
+        }
+    }
+
+    /** The other series TMDB gives [title], its own [id] left out; null when TMDB did not answer. */
+    private suspend fun namesakes(title: String, id: Int?): List<UsenetNamesake>? = try {
+        tmdbApi.searchTv(BuildConfig.TMDB_API_KEY, title).body()?.results?.filter {
+            it.id != id && (NewznabProtocol.sameName(it.name, title) || NewznabProtocol.sameName(it.originalName, title))
+        }?.map { UsenetNamesake(it.firstAirDate?.take(4)?.toIntOrNull(), it.originCountry.orEmpty().toSet(), it.voteCount ?: 0) }
+    } catch (e: CancellationException) { throw e }
+    catch (_: Exception) { null }
+
+    /** A series' TMDB id, and its details when they came. */
+    private class SeriesLookup(val id: String?, val details: TmdbDetailsResponse?)
+
+    /** [seriesLookup], a series', gives its TMDB id and details; a movie's are looked up here. */
+    private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String,
+        seriesLookup: Deferred<SeriesLookup?>?): UsenetSearchRequest = coroutineScope {
+        val lookup = seriesLookup?.await()
+        if (seriesLookup != null && lookup == null) error("TMDB id unavailable")
+        val id = if (lookup != null) lookup.id else request.tmdbId ?: tmdb.ensureTmdbId(videoId, type)
         val imdb = request.imdbId ?: id?.toIntOrNull()?.let { tmdb.tmdbToImdb(it, type) }
-        val details = if (!request.series) null else try {
-            id?.toIntOrNull()?.let { tmdbApi.getTvDetails(it, BuildConfig.TMDB_API_KEY).body() }
-        } catch (e: CancellationException) { throw e }
-        catch (_: Exception) { null }
+        val details = lookup?.details
         // A movie comes with its other names, which its ID results are checked against.
         val movie = if (request.series) null else try {
             id?.toIntOrNull()?.let { tmdbApi.getMovieNames(it, BuildConfig.TMDB_API_KEY).body() }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
+        val title = movie?.title ?: details?.title ?: details?.name
+        // A series' other series of its name, asked for alongside its TVDB id.
+        val namesakes = if (!request.series || title == null) null else async { namesakes(title, id?.toIntOrNull()) }
         val tvdb = if (!request.series) null else try {
             id?.toIntOrNull()?.let { tmdbApi.getTvExternalIds(it, BuildConfig.TMDB_API_KEY).body()?.tvdbId?.toString() }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
-        val title = movie?.title ?: details?.title ?: details?.name
         val original = (movie?.originalTitle ?: details?.originalTitle ?: details?.originalName)
             ?.takeIf { it.isNotBlank() && !it.equals(title, ignoreCase = true) }
         // Unknown unless both lists came: the movie's own titles alone would turn away its foreign releases.
@@ -623,8 +701,12 @@ class BuiltInUsenetService @Inject constructor(
             val translated = names.translations?.translations ?: return@let null
             (alternative.mapNotNull { it.title } + translated.mapNotNull { it.data?.title }).filter { it.isNotBlank() }.distinct()
         }
-        return request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = title, originalTitle = original,
-            otherTitles = others, year = (movie?.releaseDate ?: details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
+        fun yearOf(date: String?) = date?.take(4)?.toIntOrNull()
+        request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = title, originalTitle = original,
+            otherTitles = others, year = yearOf(movie?.releaseDate ?: details?.releaseDate ?: details?.firstAirDate),
+            seasonYear = yearOf(details?.seasons?.firstOrNull { it.seasonNumber == request.season }?.airDate),
+            lastYear = yearOf(details?.lastAirDate), countries = details?.originCountry.orEmpty().toSet(),
+            namesakes = namesakes?.await(), votes = details?.voteCount)
     }
 
     /**
@@ -773,13 +855,17 @@ class BuiltInUsenetService @Inject constructor(
         const val GROUP_NAME = "Built-in Usenet"
         private val WAIT_OVER = Any()
         private val SEASON_COUNTED = Any()
+        private val SERIES_KNOWN = Any()
         /** How long a search may use for a season's episode count; the list never waits for it. */
         private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
         /** How long a search of an anime catalog's id waits for its meta when the details page no longer holds it. */
         private const val META_LOOKUP_TIMEOUT_MS = 5_000L
         /** How long a search of an anime catalog's id waits for Simkl's mapping when its meta gives none. */
         private const val SIMKL_LOOKUP_TIMEOUT_MS = 5_000L
-        /** How long a movie's ID results wait for its metadata before they are listed unchecked. */
+        /**
+         * How long a movie's ID results wait for its metadata before they are listed unchecked, and
+         * how long a series' list may change once its metadata comes.
+         */
         private const val ID_CHECK_WAIT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */
         const val COMPLETE_RESULTS_WAIT_MS = 5_000L

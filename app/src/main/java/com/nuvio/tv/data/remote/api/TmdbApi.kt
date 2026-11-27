@@ -275,7 +275,29 @@ interface TmdbApi {
         @Path("movie_id") movieId: Int,
         @Query("api_key") apiKey: String
     ): Response<TmdbMovieNamesResponse>
+
+    /** Shows whose names match [query]: other shows of a show's name. */
+    @GET("search/tv")
+    suspend fun searchTv(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String
+    ): Response<TmdbTvSearchResponse>
 }
+
+@JsonClass(generateAdapter = true)
+data class TmdbTvSearchResponse(
+    @Json(name = "results") val results: List<TmdbTvSearchResult>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbTvSearchResult(
+    @Json(name = "id") val id: Int,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
+    @Json(name = "first_air_date") val firstAirDate: String? = null,
+    @Json(name = "origin_country") val originCountry: List<String>? = null,
+    @Json(name = "vote_count") val voteCount: Int? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TmdbMovieNamesResponse(
@@ -372,6 +394,7 @@ data class TmdbDetailsResponse(
     @Json(name = "runtime") val runtime: Int? = null,
     @Json(name = "episode_run_time") val episodeRunTime: List<Int>? = null,
     @Json(name = "vote_average") val voteAverage: Double? = null,
+    @Json(name = "vote_count") val voteCount: Int? = null,
     @Json(name = "production_companies") val productionCompanies: List<TmdbCompany>? = null,
     @Json(name = "networks") val networks: List<TmdbNetwork>? = null,
     @Json(name = "production_countries") val productionCountries: List<TmdbCountry>? = null,
@@ -388,7 +411,8 @@ data class TmdbDetailsResponse(
 @JsonClass(generateAdapter = true)
 data class TmdbSeasonSummary(
     @Json(name = "season_number") val seasonNumber: Int? = null,
-    @Json(name = "episode_count") val episodeCount: Int? = null
+    @Json(name = "episode_count") val episodeCount: Int? = null,
+    @Json(name = "air_date") val airDate: String? = null
 )
 
 @JsonClass(generateAdapter = true)
