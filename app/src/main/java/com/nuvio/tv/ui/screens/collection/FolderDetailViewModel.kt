@@ -69,6 +69,7 @@ data class FolderDetailUiState(
     val homeLayout: HomeLayout = HomeLayout.MODERN,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val posterLabelsEnabled: Boolean = true,
+    val modernPosterLabelsEnabled: Boolean = false,
     val catalogAddonNameEnabled: Boolean = true,
     val catalogTypeSuffixEnabled: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
@@ -263,6 +264,7 @@ class FolderDetailViewModel @Inject constructor(
             val homeLayout = layoutPreferenceDataStore.selectedLayout.first()
             val homeImdbRatingsVisibility = layoutPreferenceDataStore.homeImdbRatingsVisibility.first()
             val posterLabelsEnabled = layoutPreferenceDataStore.posterLabelsEnabled.first()
+            val modernPosterLabelsEnabled = layoutPreferenceDataStore.modernPosterLabelsEnabled.first()
             val catalogAddonNameEnabled = layoutPreferenceDataStore.catalogAddonNameEnabled.first()
             val catalogTypeSuffixEnabled = layoutPreferenceDataStore.catalogTypeSuffixEnabled.first()
             val hideUnreleasedContent = layoutPreferenceDataStore.hideUnreleasedContent.first()
@@ -364,6 +366,7 @@ class FolderDetailViewModel @Inject constructor(
                     homeLayout = homeLayout,
                     homeImdbRatingsVisibility = homeImdbRatingsVisibility,
                     posterLabelsEnabled = posterLabelsEnabled,
+                    modernPosterLabelsEnabled = modernPosterLabelsEnabled,
                     catalogAddonNameEnabled = catalogAddonNameEnabled,
                     catalogTypeSuffixEnabled = catalogTypeSuffixEnabled,
                     hideUnreleasedContent = hideUnreleasedContent,
@@ -581,7 +584,7 @@ class FolderDetailViewModel @Inject constructor(
                         isLoading = anyLoading,
                         homeLayout = s.homeLayout,
                         homeImdbRatingsVisibility = s.homeImdbRatingsVisibility,
-                        posterLabelsEnabled = if (s.homeLayout == HomeLayout.MODERN) false else s.posterLabelsEnabled,
+                        posterLabelsEnabled = if (s.homeLayout == HomeLayout.MODERN) s.modernPosterLabelsEnabled else s.posterLabelsEnabled,
                         modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
                         modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
                         alwaysShowLandscapeClearlogo = s.alwaysShowLandscapeClearlogo,

@@ -1127,6 +1127,7 @@
     <string name="layout_discover_location_in_sidebar_desc">Discover gets its own item in the side panel.</string>
     <string name="layout_poster_labels">Show Poster Labels</string>
     <string name="layout_poster_labels_sub">Show titles under posters in rows, grid, and see-all.</string>
+    <string name="layout_modern_poster_labels_sub">Show the title and year under posters in Home rows.</string>
     <string name="layout_addon_name">Show Addon Name</string>
     <string name="layout_addon_name_sub">Show source name under catalog titles.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>
