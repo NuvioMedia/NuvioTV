@@ -176,7 +176,7 @@ internal fun HomeViewModel.findCatalogItemById(itemId: String): MetaPreview? = s
     val focusedRow = liveFocusedRowKey?.let { key -> rows.firstOrNull { it.stableKey() == key } }
     (listOfNotNull(focusedRow) + rows).firstNotNullOfOrNull { row ->
         row.items.firstOrNull { it.id == itemId }
-    }
+    } ?: homeWatchlistItems.firstOrNull { it.id == itemId }
 }
 
 internal inline fun HomeViewModel.updateIndexedCatalogItem(
@@ -199,6 +199,11 @@ internal inline fun HomeViewModel.updateIndexedCatalogItem(
             mutableItems[itemIndex] = updatedItem
             catalogsMap[key] = row.copy(items = mutableItems)
             truncatedRowCache.remove(key)
+            changed = true
+        }
+
+        if (homeWatchlistItems.any { it.id == itemId }) {
+            homeWatchlistItems = homeWatchlistItems.map { if (it.id == itemId) transform(it) else it }
             changed = true
         }
 
