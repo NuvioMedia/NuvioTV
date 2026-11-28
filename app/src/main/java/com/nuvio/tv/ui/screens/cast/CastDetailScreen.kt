@@ -103,6 +103,7 @@ import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import kotlinx.coroutines.launch
+import com.nuvio.tv.core.util.firstGraphemeOrNull
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -461,7 +462,7 @@ private fun HeroSection(
                     )
                 } else {
                     Text(
-                        text = person.name.firstOrNull()?.uppercase() ?: "?",
+                        text = person.name.firstGraphemeOrNull()?.uppercase() ?: "?",
                         style = MaterialTheme.typography.displayLarge,
                         color = NuvioTheme.colors.TextTertiary
                     )

@@ -88,6 +88,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.nuvio.tv.core.util.firstGraphemeOrNull
 
 private val SUPPORT_URL: String
     get() = BuildConfig.SUPPORT_URL
@@ -878,7 +879,7 @@ private fun NameAvatar(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    val initial = label.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+    val initial = label.firstGraphemeOrNull()?.uppercase() ?: "?"
 
     Box(
         modifier = modifier
@@ -919,7 +920,7 @@ private fun PersonAvatar(
     ) {
         if (avatarUrl.isNullOrBlank() || painter.state.collectAsState().value is AsyncImagePainter.State.Error) {
             Text(
-                text = label.take(1).uppercase(),
+                text = label.firstGraphemeOrNull()?.uppercase().orEmpty(),
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioTheme.colors.TextPrimary,
                 fontWeight = FontWeight.SemiBold

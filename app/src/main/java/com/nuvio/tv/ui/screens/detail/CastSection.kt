@@ -72,6 +72,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaCastMember
+import com.nuvio.tv.core.util.firstGraphemeOrNull
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -532,7 +533,7 @@ private fun CastMemberItem(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = member.name.firstOrNull()?.uppercase() ?: "?",
+                            text = member.name.firstGraphemeOrNull()?.uppercase() ?: "?",
                             style = initialsStyle,
                             color = NuvioTheme.colors.TextPrimary
                         )
