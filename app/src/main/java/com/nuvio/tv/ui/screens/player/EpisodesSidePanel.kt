@@ -5,6 +5,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -179,7 +180,7 @@ private fun EpisodeStreamsView(
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit
 ) {
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val streamListState = rememberLazyListState()
     var userMovedFromFirstResult by remember { mutableStateOf(false) }
     var firstResultFocusAssigned by remember { mutableStateOf(false) }
@@ -791,7 +792,7 @@ private fun EpisodeItem(
 ) {
     val shouldBlur = blurUnwatched && !isWatched
     var isFocused by remember { mutableStateOf(false) }
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val context = LocalContext.current
     val episodeTitle = episode.title.localizeEpisodeTitle(context).ifBlank { context.getString(R.string.episodes_episode) }
     val formattedDate = remember(episode.released) {

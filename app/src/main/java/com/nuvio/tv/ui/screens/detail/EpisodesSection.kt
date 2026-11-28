@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
@@ -168,7 +169,7 @@ fun SeasonTabs(
         regularSeasons + specials
     }
 
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val initialSeasonIndex = remember(sortedSeasons, selectedSeason) {
         sortedSeasons.indexOf(selectedSeason).coerceAtLeast(0)
     }

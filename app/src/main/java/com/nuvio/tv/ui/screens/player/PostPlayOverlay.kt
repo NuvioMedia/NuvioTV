@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioMotion
 
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -296,7 +297,7 @@ private fun StillWatchingBody(
                 )
             }
         }
-        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        val isRtl = isRtlLayout()
         Row(
             modifier = Modifier.padding(start = NuvioTheme.spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(6.dp),

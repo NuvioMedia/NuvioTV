@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.profile
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import androidx.tv.material3.MaterialTheme
 import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -2559,7 +2560,7 @@ private fun ProfileNameField(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveToAvatarsKey = if (isRtl) AndroidKeyEvent.KEYCODE_DPAD_LEFT else AndroidKeyEvent.KEYCODE_DPAD_RIGHT
     val backgroundColor by animateColorAsState(
         targetValue = if (isFocused) NuvioTheme.colors.FocusBackground else Color.White.copy(alpha = 0.05f),

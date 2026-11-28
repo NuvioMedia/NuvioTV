@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.components.LocalPlaybackAvailability
 import com.nuvio.tv.ui.navigation.LocalDetailChildClosedEpoch
 import com.nuvio.tv.ui.navigation.LocalDetailChildOverlayVisible
@@ -2298,7 +2299,7 @@ private fun MetaDetailsContent(
     val configuration = LocalConfiguration.current
     val localContext = LocalContext.current
     val localDensity = LocalDensity.current
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val screenWidthDp = remember(configuration) { configuration.screenWidthDp.dp }
     val screenHeightDp = remember(configuration) { configuration.screenHeightDp.dp }
     val backdropWidthPx = remember(screenWidthDp, localDensity) {

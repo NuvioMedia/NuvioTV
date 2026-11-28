@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.search
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
 
@@ -974,7 +975,7 @@ private fun RecentSearchesSection(
     emptyHistoryFocusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val searchFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val removeFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var pendingDownwardFocus by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -1194,8 +1195,7 @@ private fun SearchInputField(
 ) {
     var isDiscoverButtonFocused by remember { mutableStateOf(false) }
     var isVoiceButtonFocused by remember { mutableStateOf(false) }
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-
+    val isRtl = isRtlLayout()
     Row(
         modifier = modifier
             .fillMaxWidth()

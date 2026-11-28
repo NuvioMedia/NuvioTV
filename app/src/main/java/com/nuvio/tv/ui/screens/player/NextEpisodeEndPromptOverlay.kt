@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.background
@@ -110,7 +111,7 @@ fun NextEpisodeEndPromptOverlay(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+                val isRtl = isRtlLayout()
                 PlayerOverlayButton(
                     text = stringResource(R.string.player_next_episode_prompt_yes),
                     onClick = onContinue,
