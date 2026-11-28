@@ -291,6 +291,9 @@ class SiloProviderTest {
 
         assertEquals("2160p", candidate.title)
         assertEquals("HEVC • DV P7.6 • eng TrueHD Atmos 7.1 • MKV", candidate.description)
+        assertEquals(2160, candidate.media.resolution)
+        assertEquals("HEVC", candidate.media.videoCodec)
+        assertEquals(listOf("HEVC • DV P7.6", "eng TrueHD Atmos 7.1", "Dolby TrueHD + Dolby Atmos", "eng"), candidate.media.labels)
     }
 
     @Test

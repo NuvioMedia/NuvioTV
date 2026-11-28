@@ -171,7 +171,7 @@ class PlexProviderTest {
     }
 
     private val movieItem = """{"MediaContainer":{"Metadata":[{"ratingKey":"10","key":"/library/metadata/10","type":"movie","title":"Heat","duration":600000,
-        "Media":[{"id":1,"videoResolution":"4k","videoCodec":"hevc","audioCodec":"truehd","audioChannels":8,"container":"mkv",
+        "Media":[{"id":1,"videoResolution":"4k","videoCodec":"hevc","audioCodec":"truehd","audioChannels":8,"bitrate":24000,"container":"mkv",
           "Part":[{"id":5,"key":"/library/parts/5/123/file.mkv","file":"/media/Heat.mkv","size":1000,
             "Stream":[
               {"id":100,"streamType":2,"codec":"truehd","languageCode":"eng","displayTitle":"English (TRUEHD 7.1)","selected":true},
@@ -193,6 +193,10 @@ class PlexProviderTest {
         assertEquals("4K", candidate.title)
         assertEquals("HEVC • TrueHD 7.1 • MKV", candidate.description)
         assertEquals("Heat.mkv", candidate.filename)
+        assertEquals(2160, candidate.media.resolution)
+        assertEquals("HEVC", candidate.media.videoCodec)
+        assertEquals(24_000L, candidate.media.bitrateKbps)
+        assertEquals(listOf("English (TRUEHD 7.1)", "eng", "TrueHD", "TrueHD", "7.1"), candidate.media.labels)
     }
 
     @Test

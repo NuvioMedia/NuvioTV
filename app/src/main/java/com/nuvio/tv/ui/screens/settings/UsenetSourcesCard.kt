@@ -216,7 +216,11 @@ internal fun UsenetSourcesCard(
             SettingsToggleRow(title = stringResource(R.string.usenet_available_first),
                 subtitle = stringResource(R.string.usenet_available_first_description), checked = configuration.availableFirst,
                 onToggle = { update(configuration.copy(availableFirst = !configuration.availableFirst)) })
-            SettingsToggleRow(title = stringResource(R.string.usenet_show_release_names),
+            SettingsToggleRow(title = stringResource(R.string.usenet_stream_formatter),
+                subtitle = stringResource(R.string.usenet_stream_formatter_description), checked = configuration.useStreamFormatter,
+                onToggle = { update(configuration.copy(useStreamFormatter = !configuration.useStreamFormatter)) })
+            // The formatter's templates decide whether a result shows its release name.
+            if (!configuration.useStreamFormatter) SettingsToggleRow(title = stringResource(R.string.usenet_show_release_names),
                 subtitle = stringResource(R.string.usenet_show_release_names_description), checked = configuration.showReleaseNames,
                 onToggle = { update(configuration.copy(showReleaseNames = !configuration.showReleaseNames)) })
         }

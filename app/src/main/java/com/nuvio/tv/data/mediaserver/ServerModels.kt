@@ -149,8 +149,51 @@ data class ServerCandidate(
     val title: String,
     val description: String?,
     val filename: String?,
-    val sizeBytes: Long?
+    val sizeBytes: Long?,
+    val media: ServerMediaFacts = ServerMediaFacts()
 )
+
+/**
+ * What a server knows of a version's streams, for the stream formatter. [labels] are the server's own words for the
+ * video and audio ("4K DoVi/HDR10 (HEVC Main 10)", "English - Dolby TrueHD + Dolby Atmos - 7.1", "eng"), read the
+ * way a release name's tags are, so a renamed file still shows its formats. [resolution] is in lines, 2160 for 4K.
+ */
+data class ServerMediaFacts(
+    val resolution: Int? = null,
+    val videoCodec: String? = null,
+    val labels: List<String> = emptyList(),
+    val bitrateKbps: Long? = null
+) {
+    companion object {
+        private val STANDARD_LINES = listOf(4320, 2160, 1440, 1080, 720, 576, 480)
+        private val LINES = Regex("(?<![0-9])([0-9]{3,4})p?(?![0-9])", RegexOption.IGNORE_CASE)
+        private val FOUR_K = Regex("(?<![0-9a-z])(?:4k|uhd)(?![0-9a-z])", RegexOption.IGNORE_CASE)
+
+        /** The standard height of a picture, letterboxing aside: 3840×1600 is 2160, 1920×800 is 1080. */
+        fun lines(width: Int?, height: Int?): Int? {
+            val lines = maxOf(height ?: 0, (width ?: 0) * 9 / 16)
+            if (lines <= 0) return null
+            return STANDARD_LINES.firstOrNull { lines >= it * 9 / 10 } ?: lines
+        }
+
+        /** Lines from a server's resolution label: "4k", "1080", "720p", "sd". */
+        fun lines(label: String?): Int? = when {
+            label.isNullOrBlank() -> null
+            FOUR_K.containsMatchIn(label) -> 2160
+            label.equals("sd", ignoreCase = true) -> 480
+            else -> LINES.find(label)?.groupValues?.get(1)?.toInt()
+        }
+
+        /** A video codec under the labels release names give: hevc and h265 are HEVC, h264 is AVC. */
+        fun codecLabel(codec: String?): String? = when (codec?.trim()?.lowercase()) {
+            null, "" -> null
+            "hevc", "h265", "x265" -> "HEVC"
+            "h264", "avc", "x264" -> "AVC"
+            "av1" -> "AV1"
+            else -> codec.trim().uppercase()
+        }
+    }
+}
 
 data class ServerPlaybackRequest(
     val target: ServerPlaybackTarget,

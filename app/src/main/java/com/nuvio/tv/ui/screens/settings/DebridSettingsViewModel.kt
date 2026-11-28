@@ -151,6 +151,10 @@ class DebridSettingsViewModel @Inject constructor(
         update { dataStore.resetStreamTemplates() }
     }
 
+    fun setFormatServerResults(enabled: Boolean) {
+        update { dataStore.setFormatServerResults(enabled) }
+    }
+
     fun setInstantPlaybackPreparationEnabled(enabled: Boolean) {
         val nextLimit = if (enabled) {
             DEBRID_PREPARE_INSTANT_PLAYBACK_DEFAULT_LIMIT
@@ -391,6 +395,7 @@ data class DebridSettingsUiState(
     val streamPreferences: DebridStreamPreferences = DebridStreamPreferences(),
     val streamNameTemplate: String = "",
     val streamDescriptionTemplate: String = "",
+    val formatServerResults: Boolean = false,
     val isFormatterQrModeActive: Boolean = false,
     val formatterQrCodeBitmap: Bitmap? = null,
     val formatterServerUrl: String? = null,
@@ -456,7 +461,8 @@ data class DebridSettingsUiState(
         streamCodecFilter = settings.streamCodecFilter,
         streamPreferences = settings.streamPreferences,
         streamNameTemplate = settings.streamNameTemplate,
-        streamDescriptionTemplate = settings.streamDescriptionTemplate
+        streamDescriptionTemplate = settings.streamDescriptionTemplate,
+        formatServerResults = settings.formatServerResults
     )
 }
 

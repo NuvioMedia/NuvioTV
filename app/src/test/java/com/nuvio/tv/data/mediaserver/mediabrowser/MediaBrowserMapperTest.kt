@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.mediaserver.mediabrowser
 
 import com.nuvio.tv.data.mediaserver.ServerItemRef
+import com.nuvio.tv.data.mediaserver.ServerMediaFacts
 import com.nuvio.tv.data.mediaserver.ServerMediaKind
 import com.nuvio.tv.domain.model.ContentType
 import kotlinx.serialization.json.Json
@@ -29,7 +30,9 @@ class MediaBrowserMapperTest {
           "BackdropImageTags": ["b1"],
           "MediaSources": [
             {"Id": "ms1", "Name": "4K Remux", "Path": "/media/movie.mkv", "Container": "mkv", "Size": 50000000000,
-             "MediaStreams": [{"Type": "Video", "Width": 3840, "Height": 1600, "DisplayTitle": "4K HEVC HDR"}]},
+             "Bitrate": 60000000,
+             "MediaStreams": [{"Type": "Video", "Codec": "hevc", "Width": 3840, "Height": 1600, "DisplayTitle": "4K HEVC HDR"},
+               {"Type": "Audio", "Codec": "truehd", "Language": "eng", "DisplayTitle": "English - Dolby TrueHD + Dolby Atmos - 7.1"}]},
             {"Id": "ms2", "Name": "1080p", "Path": "/media/movie-1080p.mp4", "Container": "mp4"}
           ]
         }
@@ -63,6 +66,12 @@ class MediaBrowserMapperTest {
         assertEquals(listOf("ms1", "ms2"), candidates.map { it.target.mediaSourceId })
         assertEquals("4K Remux", candidates.first().title)
         assertEquals("movie.mkv", candidates.first().filename)
+        val media = candidates.first().media
+        assertEquals(2160, media.resolution)
+        assertEquals("HEVC", media.videoCodec)
+        assertEquals(60_000L, media.bitrateKbps)
+        assertEquals(listOf("4K HEVC HDR", "English - Dolby TrueHD + Dolby Atmos - 7.1", "truehd", "eng"), media.labels)
+        assertEquals(ServerMediaFacts(), candidates.last().media)
     }
 
     @Test

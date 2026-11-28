@@ -68,9 +68,16 @@ class DebridFormatterConfigServer(
             "descriptionTemplate" to defaults.descriptionTemplate,
             "streamPreferences" to defaults.streamPreferences
         )
+        val presetsMap = mapOf(
+            "detailed" to mapOf(
+                "nameTemplate" to DebridStreamFormatterDefaults.DETAILED_NAME_TEMPLATE,
+                "descriptionTemplate" to DebridStreamFormatterDefaults.DETAILED_DESCRIPTION_TEMPLATE
+            )
+        )
         val settingsJson = gson.toJson(settingsMap)
         val defaultsJson = gson.toJson(defaultsMap)
-        val responseJson = """{"settings":$settingsJson,"defaults":$defaultsJson}"""
+        val presetsJson = gson.toJson(presetsMap)
+        val responseJson = """{"settings":$settingsJson,"defaults":$defaultsJson,"presets":$presetsJson}"""
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", responseJson)
     }
 

@@ -145,7 +145,8 @@ class StreamRepositoryImpl @Inject constructor(
                     serverSources = if (continuePluginOnly) {
                         emptyList()
                     } else {
-                        serverStreams.sources(type, videoId, season, episode, forceRefresh)
+                        serverStreams.sources(type, videoId, season, episode, forceRefresh,
+                            sourceConfiguration.debridSettings)
                     },
                     priorityBingeGroup = priorityBingeGroup,
                     preferredPluginOnly = preferredPluginOnly,
@@ -290,7 +291,8 @@ class StreamRepositoryImpl @Inject constructor(
                 launch {
                     try {
                         if (!usenetSources.ready) return@launch
-                        builtInUsenetService.search(usenetSources, type, videoId, season, episode, contentId).collect { result ->
+                        builtInUsenetService.search(usenetSources, type, videoId, season, episode, contentId,
+                            debridSettings).collect { result ->
                             result.group?.let { resultChannel.send(it) }
                             result.failure?.let {
                                 attemptedFailures += StreamAttemptFailure(BuiltInUsenetService.GROUP_NAME,

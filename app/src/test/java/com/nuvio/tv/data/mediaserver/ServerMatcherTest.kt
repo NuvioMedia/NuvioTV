@@ -1,6 +1,9 @@
 package com.nuvio.tv.data.mediaserver
 
+import com.nuvio.tv.core.debrid.DebridStreamFormatter
+import com.nuvio.tv.core.debrid.DebridStreamTemplateEngine
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.domain.repository.MetaRepository
@@ -144,6 +147,28 @@ class ServerMatcherTest {
         assertEquals(ServerItemRef(connection.id, "42"), found.single().serverTarget?.item)
 
         assertTrue(streams.sources("movie", "tt0068646", null, null).single().load().isEmpty())
+    }
+
+    @Test
+    fun streamTemplatesNameServerSourcesOnlyWhenOnForServers() = runBlocking {
+        val provider = FakeServerProvider().apply { indexedIds["42"] = TrackingExternalIds(imdb = "tt0111161") }
+        val (matcher, repository, _) = matcher(provider)
+        val streams = ServerStreams(repository, matcher, DebridStreamFormatter(DebridStreamTemplateEngine()))
+        val templates = DebridSettings(streamNameTemplate = "{service.shortName} {stream.type}",
+            streamDescriptionTemplate = "{stream.filename}")
+
+        val off = streams.sources("movie", "tt0111161", null, null, debridSettings = templates).single().load().single()
+        assertEquals("Original", off.name)
+
+        val on = streams.sources("movie", "tt0111161", null, null, debridSettings = templates.copy(formatServerResults = true))
+            .single().load().single()
+        assertEquals("Fake server", on.name)
+        assertEquals("item-42.mkv", on.description)
+
+        val blank = streams.sources("movie", "tt0111161", null, null,
+            debridSettings = DebridSettings(streamNameTemplate = "", streamDescriptionTemplate = "", formatServerResults = true))
+            .single().load().single()
+        assertEquals("Original", blank.name)
     }
 
     @Test

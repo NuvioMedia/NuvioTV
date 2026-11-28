@@ -1,6 +1,9 @@
 package com.nuvio.tv.core.usenet
 
+import com.nuvio.tv.core.debrid.DebridStreamFormatter
+import com.nuvio.tv.core.debrid.DebridStreamTemplateEngine
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbAlternativeTitlesResponse
 import com.nuvio.tv.data.remote.api.TmdbDetailsResponse
@@ -310,6 +313,29 @@ class BuiltInUsenetServiceTest {
         val names = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
             .search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.map { it.name }
         assertEquals(listOf("4K", "720p", "Usenet"), names)
+    }
+
+    @Test fun `with Debrid formatting on, the formatter's templates name and describe each result`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(release(indexer, "Movie.2020.2160p.WEB-DL.DV.HDR10.DDP5.1-GRP"))
+        val templates = DebridSettings(streamNameTemplate = "{stream.resolution} {stream.visualTags::join(' ')}",
+            streamDescriptionTemplate = "{stream.audioTags::join(' ')} {stream.audioChannels::join(' ')} • {stream.releaseGroup}")
+        val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>(),
+            formatter = DebridStreamFormatter(DebridStreamTemplateEngine()))
+        suspend fun result(config: UsenetSourceConfiguration, settings: DebridSettings) =
+            service.search(config, "movie", "tt1", null, null, debridSettings = settings).toList()
+                .mapNotNull { it.group }.last().streams.single()
+        val formatted = result(config.copy(useStreamFormatter = true), templates)
+        assertEquals("2160p DV HDR10", formatted.name)
+        assertEquals("DD+ 5.1 • GRP", formatted.description)
+        // Off, or a template that renders nothing: the usual text.
+        assertEquals("4K WEB-DL • DV HDR", result(config, templates).name)
+        val blank = result(config.copy(useStreamFormatter = true), templates.copy(streamNameTemplate = "{stream.network}"))
+        assertEquals("4K WEB-DL • DV HDR", blank.name)
+        assertEquals("DD+ 5.1 • GRP", blank.description)
     }
 
     @Test fun `results wait for every indexer, briefly, unless shown progressively`() = runTest {

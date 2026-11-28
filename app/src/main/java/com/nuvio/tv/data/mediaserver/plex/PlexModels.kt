@@ -197,6 +197,8 @@ internal data class MediaWire(
     @SerialName("videoCodec") val videoCodec: String? = null,
     @SerialName("audioCodec") val audioCodec: String? = null,
     @SerialName("audioChannels") val audioChannels: Int? = null,
+    /** Kilobits per second. */
+    val bitrate: Long? = null,
     val container: String? = null,
     val title: String? = null,
     @SerialName("Part") val parts: List<PartWire> = emptyList()

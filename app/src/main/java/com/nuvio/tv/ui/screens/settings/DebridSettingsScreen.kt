@@ -278,7 +278,17 @@ fun DebridSettingsContent(
                                 value = stringResource(R.string.debrid_formatter_configure),
                                 onClick = { viewModel.startFormatterQrMode() },
                                 modifier = Modifier.focusRequester(formatterFocusRequester),
-                                enabled = uiState.enabled
+                                // Built-in Usenet results can use these templates too, without Debrid.
+                                enabled = true
+                            )
+                        }
+
+                        item(key = "debrid_format_server_results") {
+                            SettingsToggleRow(
+                                title = stringResource(R.string.debrid_format_server_results),
+                                subtitle = stringResource(R.string.debrid_format_server_results_description),
+                                checked = uiState.formatServerResults,
+                                onToggle = { viewModel.setFormatServerResults(!uiState.formatServerResults) }
                             )
                         }
 
@@ -288,7 +298,7 @@ fun DebridSettingsContent(
                                 subtitle = stringResource(R.string.debrid_formatter_reset_subtitle),
                                 value = stringResource(R.string.layout_reset_default),
                                 onClick = { viewModel.resetFormatterTemplates() },
-                                enabled = uiState.enabled
+                                enabled = true
                             )
                         }
 
