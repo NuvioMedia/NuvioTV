@@ -106,11 +106,16 @@ internal fun PlayerOverlayScaffold(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawWithCache {
+                        // The scrim is darkest behind the content, which sits at the start edge:
+                        // the left in LTR, the right in RTL (drawing is not mirrored automatically).
+                        val rtl = layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl
                         val horizontalGradient = Brush.horizontalGradient(
                             colors = listOf(
                                 Color.Black.copy(alpha = 0.88f),
                                 Color.Transparent
-                            )
+                            ),
+                            startX = if (rtl) size.width else 0f,
+                            endX = if (rtl) 0f else size.width
                         )
                         val verticalGradient = Brush.verticalGradient(
                             colorStops = arrayOf(
