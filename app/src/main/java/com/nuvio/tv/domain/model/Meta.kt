@@ -32,6 +32,7 @@ data class Meta(
     val language: String?,
     val links: List<MetaLink>,
     val trailerYtIds: List<String> = emptyList(),
+    val trailerUrls: List<String> = emptyList(),
     val imdbId: String? = null,
     val slug: String? = null,
     val released: String? = null,
@@ -241,8 +242,13 @@ data class MetaTrailer(
     val type: String? = null,
     val name: String? = null,
     val ytId: String? = null,
-    val lang: String? = null
-)
+    val lang: String? = null,
+    val url: String? = null,
+    val thumbnail: String? = null
+) {
+    val playbackKey: String?
+        get() = ytId?.trim()?.takeIf(String::isNotBlank) ?: url?.trim()?.takeIf(String::isNotBlank)
+}
 
 @Immutable
 data class MetaReleaseDateCountry(

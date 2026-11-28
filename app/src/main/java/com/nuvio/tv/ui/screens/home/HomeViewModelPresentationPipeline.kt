@@ -11,6 +11,7 @@ import com.nuvio.tv.core.poster.patternForScreen
 import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
 import com.nuvio.tv.data.mediaserver.ServerItemRef
+import com.nuvio.tv.data.trailer.TrailerPlaybackSource
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
@@ -418,7 +419,8 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(item: MetaPreview) {
         title = item.name,
         releaseInfo = item.releaseInfo,
         apiType = item.apiType,
-        fallbackYtId = item.trailerYtIds.firstOrNull()
+        fallbackYtId = item.trailerYtIds.firstOrNull(),
+        fallbackUrl = item.trailerUrls.firstOrNull()
     )
 }
 
@@ -427,7 +429,8 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
     title: String,
     releaseInfo: String?,
     apiType: String,
-    fallbackYtId: String? = null
+    fallbackYtId: String? = null,
+    fallbackUrl: String? = null
 ) {
     if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
     if (startupGracePeriodActive) return
@@ -435,6 +438,7 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
 
     // Resolve fallbackYtId from catalog item if not provided
     val resolvedFallbackYtId = fallbackYtId ?: findCatalogItemById(itemId)?.trailerYtIds?.firstOrNull()
+    val resolvedFallbackUrl = fallbackUrl ?: findCatalogItemById(itemId)?.trailerUrls?.firstOrNull()
 
     // Always bump version — only the latest request (highest version) will proceed after debounce
     activeTrailerPreviewItemId = itemId
@@ -471,7 +475,9 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
 
             withContext(Dispatchers.Main) {
                 if (trailerSource?.videoUrl.isNullOrBlank()) {
-                    val fallbackSource = resolvedFallbackYtId?.let { ytId ->
+                    val fallbackSource = resolvedFallbackUrl?.let { url ->
+                        TrailerPlaybackSource(videoUrl = url)
+                    } ?: resolvedFallbackYtId?.let { ytId ->
                         trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
                             youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
                             title = title,
@@ -990,6 +996,7 @@ internal fun HomeViewModel.updateCatalogItemImdbRating(itemId: String, rating: F
 private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) {
     enrichmentMergedIds.add(itemId)
     val incomingTrailerYtIds = meta.trailerYtIds
+    val incomingTrailerUrls = meta.trailerUrls
     val seasonCount = meta.videos
         .asSequence()
         .mapNotNull { it.season }
@@ -1010,7 +1017,8 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         language = meta.language ?: currentItem.language,
         country = meta.country ?: currentItem.country,
         seasonCount = seasonCount ?: currentItem.seasonCount,
-        trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
+        trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds,
+        trailerUrls = if (incomingTrailerUrls.isNotEmpty()) incomingTrailerUrls else currentItem.trailerUrls
     )
 
     updateIndexedCatalogItem(itemId, ::mergeItem)
@@ -1024,7 +1032,7 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
 
     // If external meta brought new trailerYtIds and the item has no trailer resolved yet, retry.
     // Only retry if this item is currently focused — avoid prefetching trailers for adjacent items.
-    if (incomingTrailerYtIds.isNotEmpty() && !trailerPreviewUrlsState.containsKey(itemId) && activeTrailerPreviewItemId == itemId) {
+    if ((incomingTrailerYtIds.isNotEmpty() || incomingTrailerUrls.isNotEmpty()) && !trailerPreviewUrlsState.containsKey(itemId) && activeTrailerPreviewItemId == itemId) {
         trailerPreviewNegativeCache.remove(itemId)
         trailerPreviewLoadingIds.remove(itemId)
         // Bump version so any in-flight pipeline for this item treats itself as stale

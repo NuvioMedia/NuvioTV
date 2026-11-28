@@ -60,22 +60,58 @@ internal fun mapTrailers(
     trailers: List<MetaTrailerDto>?,
     trailerStreams: List<TrailerStreamDto>?
 ): List<MetaTrailer> {
+    val streamNamesByYtId = trailerStreams.orEmpty()
+        .mapNotNull { stream ->
+            val ytId = stream.ytId?.trim()?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val name = listOf(stream.title, stream.name, stream.description)
+                .firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }
+                ?: return@mapNotNull null
+            ytId to name
+        }
+        .distinctBy { it.first }
+        .toMap()
     val fromTrailers = trailers.orEmpty().map {
+        val ytId = (it.source ?: it.ytId)?.takeIf(String::isNotBlank)
         MetaTrailer(
             source = it.source?.takeIf(String::isNotBlank),
             type = it.type?.takeIf(String::isNotBlank),
-            name = it.name?.takeIf(String::isNotBlank),
-            ytId = (it.source ?: it.ytId)?.takeIf(String::isNotBlank),
-            lang = it.lang?.takeIf(String::isNotBlank)
+            name = listOf(it.name, it.title, it.description)
+                .firstNotNullOfOrNull { value -> value?.trim()?.takeIf(String::isNotBlank) }
+                ?: ytId?.let { id -> streamNamesByYtId[id.trim()] },
+            ytId = ytId,
+            lang = it.lang?.takeIf(String::isNotBlank),
+            url = it.url?.trim()?.takeIf { url -> ytId == null && isHttpTrailerUrl(url) },
+            thumbnail = it.thumbnail?.trim()?.takeIf(String::isNotBlank)
         )
     }
-    val existingYtIds = fromTrailers.mapNotNull { it.ytId }.toSet()
+    val seenYtIds = fromTrailers.mapNotNull { it.ytId }.toMutableSet()
+    val seenUrls = fromTrailers.mapNotNull { it.url }.toMutableSet()
     val fromStreams = trailerStreams.orEmpty().mapNotNull { stream ->
-        val ytId = stream.ytId?.takeIf(String::isNotBlank) ?: return@mapNotNull null
-        if (ytId in existingYtIds) return@mapNotNull null
-        MetaTrailer(ytId = ytId)
+        val name = listOf(stream.title, stream.name, stream.description)
+            .firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }
+        val thumbnail = stream.thumbnail?.trim()?.takeIf(String::isNotBlank)
+        val ytId = stream.ytId?.trim()?.takeIf(String::isNotBlank)
+        if (ytId != null) {
+            if (!seenYtIds.add(ytId)) return@mapNotNull null
+            return@mapNotNull MetaTrailer(name = name, ytId = ytId, thumbnail = thumbnail)
+        }
+        val url = stream.url?.trim()?.takeIf(::isHttpTrailerUrl) ?: return@mapNotNull null
+        if (!seenUrls.add(url)) return@mapNotNull null
+        MetaTrailer(name = name, url = url, thumbnail = thumbnail)
     }
-    return fromTrailers + fromStreams
+    return (fromTrailers + fromStreams).sortedByDescending { it.url != null }
+}
+
+private fun isHttpTrailerUrl(url: String): Boolean =
+    url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)
+
+internal fun collectTrailerUrls(
+    trailers: List<MetaTrailerDto>?,
+    trailerStreams: List<TrailerStreamDto>?
+): List<String> {
+    return mapTrailers(trailers, trailerStreams)
+        .mapNotNull { it.url }
+        .distinct()
 }
 
 internal fun collectTrailerYtIds(

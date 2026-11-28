@@ -20,7 +20,7 @@ class YouTubeStreamResolver internal constructor(
 ) {
     @Inject
     constructor(extractor: InAppYouTubeExtractor) : this(
-        inAppPlaybackEnabled = AppFeaturePolicy.inAppTrailerPlaybackEnabled,
+        inAppPlaybackEnabled = AppFeaturePolicy.youTubeTrailerPlaybackEnabled,
         extractSingleUrl = extractor::extractSingleUrl
     )
 

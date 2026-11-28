@@ -56,7 +56,7 @@ object StreamAutoPlaySelector {
             stream.isUsenet() ||
             // A YouTube id is resolved to a playable URL on the device when the stream is played.
             // Builds without in-app YouTube playback open the watch page instead, an external link.
-            (AppFeaturePolicy.inAppTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
+            (AppFeaturePolicy.youTubeTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
     }
 
     /**

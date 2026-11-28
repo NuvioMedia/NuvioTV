@@ -113,7 +113,7 @@ internal class PostPlayRecommendationController(
     private val recommendationDetailJobs = mutableMapOf<Int, Job>()
     private val recommendationCache = mutableMapOf<Int, PostPlayRecommendation>()
     private var recommendationLoadAttempted = false
-    private val postPlayTrailerPlaybackEnabled = AppFeaturePolicy.inAppTrailerPlaybackEnabled
+    private val postPlayTrailerPlaybackEnabled = AppFeaturePolicy.youTubeTrailerPlaybackEnabled
     private var autoPlayTrailerEnabled = postPlayTrailerPlaybackEnabled
     private var lastSnapshot: PlaybackSnapshot? = null
     private var lastPlaybackIdentity: PlaybackIdentity? = null

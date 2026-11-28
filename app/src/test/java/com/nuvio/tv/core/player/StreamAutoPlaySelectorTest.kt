@@ -451,7 +451,7 @@ class StreamAutoPlaySelectorTest {
             selectedPlugins = emptySet()
         )
 
-        if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+        if (AppFeaturePolicy.youTubeTrailerPlaybackEnabled) {
             assertEquals(youTube, selected)
         } else {
             // Without in-app playback the video would open externally, like the watch page.
@@ -492,7 +492,7 @@ class StreamAutoPlaySelectorTest {
             selectedPlugins = emptySet()
         )
 
-        if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+        if (AppFeaturePolicy.youTubeTrailerPlaybackEnabled) {
             assertEquals(youTube, selected)
         } else {
             assertNull(selected)

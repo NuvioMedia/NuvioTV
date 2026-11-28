@@ -175,6 +175,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerPlayInBackground = false
     private var trailerHasPlayed = false
     private var trailerHandoffActive = false
+    private var trailerUrlIsExternal = false
     private var handoffTrailerYoutubeKey: String? = null
     private var suppressSeasonAutoSwitch = false
 
@@ -1768,7 +1769,8 @@ class MetaDetailsViewModel @Inject constructor(
             if (mergedTrailers.isNotEmpty()) {
                 updated = updated.copy(
                     trailers = mergedTrailers,
-                    trailerYtIds = mergedTrailers.mapNotNull { it.ytId }.distinct()
+                    trailerYtIds = mergedTrailers.mapNotNull { it.ytId }.distinct(),
+                    trailerUrls = mergedTrailers.mapNotNull { it.url }.distinct()
                 )
             }
         }
@@ -3272,13 +3274,15 @@ class MetaDetailsViewModel @Inject constructor(
                 null
             }
 
-            val source = if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            val inAppSource = if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
                 trailerService.getTrailerPlaybackSource(
                     title = meta.name,
                     year = year,
                     tmdbId = tmdbId,
                     type = meta.apiType
-                ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                ) ?: meta.trailerUrls.firstOrNull()?.let { url ->
+                    com.nuvio.tv.data.trailer.TrailerPlaybackSource(videoUrl = url)
+                } ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
                     trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
                         youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
                         title = meta.name,
@@ -3286,18 +3290,25 @@ class MetaDetailsViewModel @Inject constructor(
                     )
                 }
             } else {
+                null
+            }
+            val externalSource = if (inAppSource == null && !AppFeaturePolicy.youTubeTrailerPlaybackEnabled) {
                 val externalUrl = if (AppFeaturePolicy.externalTrailerPlaybackEnabled) {
                     trailerService.getExternalTrailerUrl(
                         tmdbId = tmdbId,
                         type = meta.apiType
-                    ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                    ) ?: meta.trailerUrls.firstOrNull() ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
                         "https://www.youtube.com/watch?v=$ytId"
                     }
                 } else {
                     null
                 }
                 externalUrl?.let { com.nuvio.tv.data.trailer.TrailerPlaybackSource(videoUrl = it) }
+            } else {
+                null
             }
+            trailerUrlIsExternal = inAppSource == null && externalSource != null
+            val source = inAppSource ?: externalSource
             val url = source?.videoUrl
             val audioUrl = source?.audioUrl
 
@@ -3316,7 +3327,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            if (url != null && isPlayButtonFocused && AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            if (url != null && isPlayButtonFocused && AppFeaturePolicy.inAppTrailerPlaybackEnabled && !trailerUrlIsExternal) {
                 startIdleTimer()
             }
         }
@@ -3324,7 +3335,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun startIdleTimer() {
         idleTimerJob?.cancel()
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled || trailerUrlIsExternal) return
 
         val state = _uiState.value
         if (state.trailerUrl == null || state.isTrailerPlaying || state.isBackgroundTrailerPlaying) return
@@ -3384,7 +3395,7 @@ class MetaDetailsViewModel @Inject constructor(
     private fun handleTrailerButtonClick() {
         val state = _uiState.value
         if (state.trailerUrl.isNullOrBlank()) return
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled || trailerUrlIsExternal) {
             openExternalTrailer(state.trailerUrl)
             return
         }
@@ -3431,7 +3442,8 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun handleSharedTrailerSelected(trailer: MetaTrailer) {
         val ytId = trailer.ytId?.trim().orEmpty()
-        if (ytId.isBlank()) {
+        val directUrl = trailer.url?.trim()?.takeIf { ytId.isBlank() && it.isNotBlank() }
+        if (ytId.isBlank() && directUrl == null) {
             _uiState.update { state ->
                 state.copy(
                     isSharedTrailerOverlayVisible = true,
@@ -3445,8 +3457,10 @@ class MetaDetailsViewModel @Inject constructor(
             return
         }
 
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
-            openExternalTrailer("https://www.youtube.com/watch?v=$ytId")
+        val playsInApp = AppFeaturePolicy.inAppTrailerPlaybackEnabled &&
+            (directUrl != null || AppFeaturePolicy.youTubeTrailerPlaybackEnabled)
+        if (!playsInApp && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
+            openExternalTrailer(directUrl ?: "https://www.youtube.com/watch?v=$ytId")
             return
         }
 
@@ -3458,6 +3472,20 @@ class MetaDetailsViewModel @Inject constructor(
                 showControls = false,
                 hideLogo = false
             )
+        }
+
+        if (directUrl != null) {
+            _uiState.update { state ->
+                state.copy(
+                    isSharedTrailerOverlayVisible = true,
+                    isSharedTrailerLoading = false,
+                    sharedTrailerUrl = directUrl,
+                    sharedTrailerAudioUrl = null,
+                    sharedTrailerErrorMessage = null,
+                    selectedSharedTrailer = trailer
+                )
+            }
+            return
         }
 
         _uiState.update { state ->
@@ -3483,7 +3511,7 @@ class MetaDetailsViewModel @Inject constructor(
             )
 
             _uiState.update { state ->
-                if (state.selectedSharedTrailer?.ytId != trailer.ytId) {
+                if (state.selectedSharedTrailer?.playbackKey != trailer.playbackKey) {
                     state
                 } else {
                     state.copy(
@@ -3527,7 +3555,7 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun mergeTrailers(existing: List<MetaTrailer>, incoming: List<MetaTrailer>): List<MetaTrailer> {
-        if (existing.isEmpty()) return incoming.distinctBy { it.ytId ?: it.name ?: it.type ?: "" }
+        if (existing.isEmpty()) return incoming.distinctBy { it.playbackKey ?: it.name ?: it.type ?: "" }
         if (incoming.isEmpty()) return existing
 
         val merged = LinkedHashMap<String, MetaTrailer>()
@@ -3535,13 +3563,15 @@ class MetaDetailsViewModel @Inject constructor(
         fun keyOf(trailer: MetaTrailer): String {
             val yt = trailer.ytId?.trim().orEmpty()
             if (yt.isNotBlank()) return "yt:$yt"
+            val url = trailer.url?.trim().orEmpty()
+            if (url.isNotBlank()) return "url:$url"
             val fallback = listOf(trailer.name, trailer.type, trailer.lang)
                 .joinToString("|") { it?.trim()?.lowercase().orEmpty() }
             return "meta:$fallback"
         }
 
-        existing.forEach { trailer -> merged.putIfAbsent(keyOf(trailer), trailer) }
         incoming.forEach { trailer -> merged.putIfAbsent(keyOf(trailer), trailer) }
+        existing.forEach { trailer -> merged.putIfAbsent(keyOf(trailer), trailer) }
         return merged.values.toList()
     }
 

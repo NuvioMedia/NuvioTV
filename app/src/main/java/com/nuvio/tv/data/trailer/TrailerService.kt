@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.trailer
 
 import android.util.Log
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.player.TrailerVideoPolicy
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
@@ -88,6 +89,7 @@ class TrailerService(
         type: String? = null,
         ignoreUseTrailersGate: Boolean = false
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
+        if (!AppFeaturePolicy.youTubeTrailerPlaybackEnabled) return@withContext null
         // Read the TMDB settings once and reuse for both the "Disable Trailers"
         // gate and the trailer language lookup below. The gate respects the
         // user's "Disable Trailers in TMDB Enrichment" toggle: the TMDB path
@@ -262,6 +264,7 @@ class TrailerService(
         title: String? = null,
         year: String? = null
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
+        if (!AppFeaturePolicy.youTubeTrailerPlaybackEnabled) return@withContext null
         try {
             val maxHeight = maxTrailerVideoHeight()
             val youtubeKey = extractYouTubeVideoId(youtubeUrl)
