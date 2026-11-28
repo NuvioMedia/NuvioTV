@@ -2417,7 +2417,7 @@ private fun ProfilePinOverlay(
                     isInputFocused = state.isFocused
                 },
             singleLine = true,
-            textStyle = TextStyle(color = Color.Transparent),
+            textStyle = TextStyle(color = Color.Transparent, textDirection = TextDirection.Content),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.NumberPassword,
                 imeAction = ImeAction.Done,
