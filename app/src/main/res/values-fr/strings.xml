@@ -952,7 +952,7 @@
 
     <string name="sub_section">Sous-titres</string>
     <string name="sub_not_set">Non défini</string>
-    <string name="sub_forced_lang">Forcés</string>
+    <string name="sub_forced_lang">Forcé</string>
     <string name="sub_preferred_lang">Langue préférée</string>
     <string name="sub_secondary_lang">Seconde langue préférée</string>
     <string name="sub_use_forced_subtitles">Utiliser les sous-titres forcés</string>
@@ -1127,6 +1127,7 @@
     <string name="layout_discover_location_in_sidebar_desc">Découvrir dispose de son propre élément dans le panneau latéral.</string>
     <string name="layout_poster_labels">Afficher les titres des affiches</string>
     <string name="layout_poster_labels_sub">Afficher les titres sous les affiches dans les rangées, la grille et la vue complète.</string>
+    <string name="layout_modern_poster_labels_sub">Afficher le titre et l’année sous les affiches dans les rangées de l’accueil.</string>
     <string name="layout_addon_name">Afficher le nom de l’addon</string>
     <string name="layout_addon_name_sub">Afficher le nom de la source sous les titres de catalogue.</string>
     <string name="layout_catalog_type">Afficher le type de catalogue</string>
@@ -2910,7 +2911,7 @@
     <string name="collections_editor_sort_list_order">Ordre de la liste</string>
     <string name="collections_editor_sort_recently_added">Ajoutés récemment</string>
     <string name="collections_editor_sort_title">Titre</string>
-    <string name="collections_editor_sort_released">Sortie</string>
+    <string name="collections_editor_sort_released">Date de sortie</string>
     <string name="collections_editor_sort_votes">Votes</string>
     <string name="collections_editor_direction_asc_short">Asc.</string>
     <string name="collections_editor_direction_desc_short">Desc.</string>
