@@ -5,6 +5,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.towardEnd
+import com.nuvio.tv.ui.util.isRtlLayout
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.layout.boundsInWindow
 import android.graphics.RectF
@@ -235,7 +237,7 @@ fun PlayerScreen(
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsState(initial = false)
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
     val progressBarFocusRequester = remember { FocusRequester() }
@@ -1877,8 +1879,8 @@ fun PlayerScreen(
         }
         AnimatedVisibility(
             visible = uiState.showChaptersPanel && uiState.chapters.isNotEmpty() && uiState.error == null,
-            enter = slideInHorizontally(animationSpec = tween(220), initialOffsetX = { it }),
-            exit = slideOutHorizontally(animationSpec = tween(220), targetOffsetX = { it }),
+            enter = slideInHorizontally(animationSpec = tween(220), initialOffsetX = { it.towardEnd(isRtl) }),
+            exit = slideOutHorizontally(animationSpec = tween(220), targetOffsetX = { it.towardEnd(isRtl) }),
             modifier = playerControlsDim
         ) {
             val chaptersTimeline by viewModel.playbackTimeline.collectAsState()
@@ -1916,11 +1918,11 @@ fun PlayerScreen(
                 !uiState.showEpisodeAutoPlayLoadingOverlay,
             enter = slideInHorizontally(
                 animationSpec = tween(220),
-                initialOffsetX = { it }
+                initialOffsetX = { it.towardEnd(isRtl) }
             ),
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
-                targetOffsetX = { it }
+                targetOffsetX = { it.towardEnd(isRtl) }
             ),
             modifier = playerControlsDim
         ) {
@@ -1962,11 +1964,11 @@ fun PlayerScreen(
             visible = uiState.showSourcesPanel && uiState.error == null,
             enter = slideInHorizontally(
                 animationSpec = tween(220),
-                initialOffsetX = { it }
+                initialOffsetX = { it.towardEnd(isRtl) }
             ),
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
-                targetOffsetX = { it }
+                targetOffsetX = { it.towardEnd(isRtl) }
             ),
             modifier = playerControlsDim
         ) {
@@ -2007,11 +2009,11 @@ fun PlayerScreen(
             visible = uiState.showPartyPanel && uiState.error == null,
             enter = slideInHorizontally(
                 animationSpec = tween(220),
-                initialOffsetX = { it }
+                initialOffsetX = { it.towardEnd(isRtl) }
             ),
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
-                targetOffsetX = { it }
+                targetOffsetX = { it.towardEnd(isRtl) }
             ),
             modifier = playerControlsDim
         ) {
@@ -3150,15 +3152,16 @@ private fun PlayerControlsOverlay(
                         )
                     }
 
+                    val moreDialogRtl = isRtlLayout()
                     AnimatedVisibility(
                         visible = uiState.showMoreDialog,
                         enter = slideInHorizontally(
                             animationSpec = tween(NuvioMotion.tokens.durations.fast),
-                            initialOffsetX = { it / 2 }
+                            initialOffsetX = { (it / 2).towardEnd(moreDialogRtl) }
                         ) + fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
                         exit = slideOutHorizontally(
                             animationSpec = tween(160),
-                            targetOffsetX = { it / 2 }
+                            targetOffsetX = { (it / 2).towardEnd(moreDialogRtl) }
                         ) + fadeOut(animationSpec = tween(160))
                     ) {
                         Row(

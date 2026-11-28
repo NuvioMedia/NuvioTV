@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.towardEnd
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioMotion
 
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -89,13 +91,14 @@ fun PostPlayOverlay(
 
     var placedFocused by remember(isAutoPlay, controlsVisible) { mutableStateOf(false) }
 
+    val slideRtl = isRtlLayout()
     val transition = updateTransition(targetState = mode, label = "PostPlayMode")
 
     transition.AnimatedVisibility(
         visible = { it != null },
-        enter = slideInHorizontally(animationSpec = tween(260), initialOffsetX = { it / 2 }) +
+        enter = slideInHorizontally(animationSpec = tween(260), initialOffsetX = { (it / 2).towardEnd(slideRtl) }) +
             fadeIn(animationSpec = tween(220)),
-        exit = slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { it / 2 }) +
+        exit = slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { (it / 2).towardEnd(slideRtl) }) +
             fadeOut(animationSpec = tween(160)),
         modifier = modifier,
     ) {
@@ -296,7 +299,7 @@ private fun StillWatchingBody(
                 )
             }
         }
-        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        val isRtl = isRtlLayout()
         Row(
             modifier = Modifier.padding(start = NuvioTheme.spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
