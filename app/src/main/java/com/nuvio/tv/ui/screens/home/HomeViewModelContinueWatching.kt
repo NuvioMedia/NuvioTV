@@ -387,6 +387,11 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     .sortedByDescending { it.lastWatched }
                     .take(CW_MAX_RECENT_PROGRESS_ITEMS)
                     .toList()
+                val latestCompletedAtByContent = nextUpSeeds
+                    .asSequence()
+                    .filter { shouldUseAsCompletedSeed(it) }
+                    .groupBy { it.contentId }
+                    .mapValues { (_, seeds) -> seeds.maxOf { it.lastWatched } }
                 // All series that still have at least one watched-episode seed.
                 // Used to drop cached next-up items for series whose episodes
                 // have been fully unmarked as watched.
@@ -470,7 +475,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val inProgressOnly = buildList {
                     val liveInProgress = deduplicateInProgress(
                         recentItems.filter { shouldTreatAsInProgressForContinueWatching(it) }
-                    )
+                    ).filter { progress ->
+                        shouldTreatAsActiveInProgressForNextUpSuppression(
+                            progress = progress,
+                            latestCompletedAt = latestCompletedAtByContent[progress.contentId]
+                        )
+                    }
                     if (liveInProgress.isNotEmpty()) {
                         liveInProgress.forEach { progress ->
                             val cached = cachedEnrichmentFromInProgress[progress.contentId]
@@ -922,6 +932,9 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             .groupBy { it.contentId }
                             .mapNotNull { (_, items) -> choosePreferredNextUpSeed(items, nextUpFromFurthestEpisode) }
                         if (uncachedSeeds.isNotEmpty()) {
+                            val olderCompletedAtByContent = uncachedSeeds
+                                .groupBy { it.contentId }
+                                .mapValues { (_, seeds) -> seeds.maxOf { it.lastWatched } }
                             launch(Dispatchers.IO) {
                                 // Process sequentially with yielding to avoid CPU/GC spikes.
                                 // Emit partial updates every few resolved items so user sees
@@ -985,6 +998,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                                     resolvedItems = partialToInject,
                                                     conclusivelyProcessedContentIds =
                                                         conclusivelyProcessedOlderContentIds.toSet(),
+                                                    latestCompletedAtByContent = olderCompletedAtByContent,
                                                     dismissedNextUpKeys = dismissedNextUp,
                                                     sortMode = continueWatchingSortMode,
                                                     pipelineProfileId = pipelineProfileId,
@@ -1020,6 +1034,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                                 resolvedItems = resolvedItemsToRetain,
                                                 conclusivelyProcessedContentIds =
                                                     conclusivelyProcessedOlderContentIds.toSet(),
+                                                latestCompletedAtByContent = olderCompletedAtByContent,
                                                 dismissedNextUpKeys = dismissedNextUp,
                                                 sortMode = continueWatchingSortMode,
                                                 pipelineProfileId = pipelineProfileId,
@@ -1057,6 +1072,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                         resolvedItems = itemsToInject,
                                         conclusivelyProcessedContentIds =
                                             conclusivelyProcessedOlderContentIds.toSet(),
+                                        latestCompletedAtByContent = olderCompletedAtByContent,
                                         dismissedNextUpKeys = dismissedNextUp,
                                         sortMode = continueWatchingSortMode,
                                         pipelineProfileId = pipelineProfileId,
@@ -1323,7 +1339,7 @@ internal fun HomeViewModel.shouldUseAsCompletedSeed(progress: WatchProgress): Bo
     return watchProgressRepository.shouldUseAsNextUpSeed(progress, System.currentTimeMillis())
 }
 
-private fun HomeViewModel.shouldTreatAsActiveInProgressForNextUpSuppression(
+internal fun shouldTreatAsActiveInProgressForNextUpSuppression(
     progress: WatchProgress,
     latestCompletedAt: Long?
 ): Boolean {
@@ -1875,7 +1891,18 @@ internal fun mergeContinueWatchingItems(
     nextUpItems: List<ContinueWatchingItem.NextUp>,
     mode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT
 ): List<ContinueWatchingItem> {
-    val allInProgressIds = inProgressItems
+    val latestNextUpAtByContent = nextUpItems
+        .groupBy { it.info.contentId }
+        .mapValues { (_, items) -> items.maxOf { it.info.lastWatched } }
+    val activeInProgressItems = inProgressItems.filter { item ->
+        val progress = item.progress
+        !isSeriesTypeCW(progress.contentType) ||
+            shouldTreatAsActiveInProgressForNextUpSuppression(
+                progress = progress,
+                latestCompletedAt = latestNextUpAtByContent[progress.contentId]
+            )
+    }
+    val allInProgressIds = activeInProgressItems
         .asSequence()
         .map { it.progress }
         .filter { isSeriesTypeCW(it.contentType) }
@@ -1887,7 +1914,7 @@ internal fun mergeContinueWatchingItems(
         item.info.contentId !in allInProgressIds
     }
 
-    val combined = inProgressItems + filteredNextUpItems
+    val combined = activeInProgressItems + filteredNextUpItems
 
     val seen = mutableSetOf<String>()
     val deduplicated = combined.filter { item ->
@@ -2848,7 +2875,7 @@ private fun NextUpInfo.toProgressSeed(): WatchProgress {
     )
 }
 
-private fun isSeriesTypeCW(type: String?): Boolean {
+internal fun isSeriesTypeCW(type: String?): Boolean {
     return type.equals("series", ignoreCase = true) || type.equals("tv", ignoreCase = true)
 }
 

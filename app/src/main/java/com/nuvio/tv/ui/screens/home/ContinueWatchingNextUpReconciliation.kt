@@ -10,28 +10,43 @@ internal fun reconcileConclusiveNextUpItems(
     currentItems: List<ContinueWatchingItem>,
     resolvedItems: List<ContinueWatchingItem.NextUp>,
     conclusivelyProcessedContentIds: Set<String>,
-    dismissedNextUpKeys: Set<String>
+    dismissedNextUpKeys: Set<String>,
+    latestCompletedAtByContent: Map<String, Long> = resolvedItems.associate { item ->
+        item.info.contentId to item.info.lastWatched
+    }
 ): List<ContinueWatchingItem> {
-    val resolvedByContentId = resolvedItems
+    val acceptedResolvedItems = resolvedItems
         .distinctBy { item -> item.info.contentId }
-        .associateBy { item -> item.info.contentId }
-    val inProgressContentIds = currentItems.mapNotNullTo(mutableSetOf()) { item ->
+        .filter { item ->
+            item.info.contentId in conclusivelyProcessedContentIds &&
+                nextUpDismissKey(
+                    item.info.contentId,
+                    item.info.seedSeason,
+                    item.info.seedEpisode
+                ) !in dismissedNextUpKeys
+        }
+    val retainedItems = currentItems.filter { item ->
+        when (item) {
+            is ContinueWatchingItem.NextUp ->
+                item.info.contentId !in conclusivelyProcessedContentIds
+
+            is ContinueWatchingItem.InProgress -> {
+                val progress = item.progress
+                !isSeriesTypeCW(progress.contentType) ||
+                    progress.contentId !in conclusivelyProcessedContentIds ||
+                    shouldTreatAsActiveInProgressForNextUpSuppression(
+                        progress = progress,
+                        latestCompletedAt = latestCompletedAtByContent[progress.contentId]
+                    )
+            }
+        }
+    }
+    val inProgressContentIds = retainedItems.mapNotNullTo(mutableSetOf()) { item ->
         (item as? ContinueWatchingItem.InProgress)?.progress?.contentId
     }
-    val retainedItems = currentItems.filterNot { item ->
-        item is ContinueWatchingItem.NextUp &&
-            item.info.contentId in conclusivelyProcessedContentIds
+    return retainedItems + acceptedResolvedItems.filter { item ->
+        item.info.contentId !in inProgressContentIds
     }
-    val acceptedResolvedItems = resolvedByContentId.values.filter { item ->
-        item.info.contentId !in inProgressContentIds &&
-            item.info.contentId in conclusivelyProcessedContentIds &&
-            nextUpDismissKey(
-                item.info.contentId,
-                item.info.seedSeason,
-                item.info.seedEpisode
-            ) !in dismissedNextUpKeys
-    }
-    return retainedItems + acceptedResolvedItems
 }
 
 /**
@@ -68,6 +83,7 @@ internal fun mergeConcurrentContinueWatchingEnrichment(
 internal suspend fun HomeViewModel.applyConclusiveOlderNextUpResults(
     resolvedItems: List<ContinueWatchingItem.NextUp>,
     conclusivelyProcessedContentIds: Set<String>,
+    latestCompletedAtByContent: Map<String, Long>,
     dismissedNextUpKeys: Set<String>,
     sortMode: ContinueWatchingSortMode,
     pipelineProfileId: Int,
@@ -100,7 +116,8 @@ internal suspend fun HomeViewModel.applyConclusiveOlderNextUpResults(
             currentItems = state.continueWatchingItems + state.upcomingItems,
             resolvedItems = acceptedResolvedItems,
             conclusivelyProcessedContentIds = conclusivelyProcessedContentIds,
-            dismissedNextUpKeys = dismissedNextUpKeys
+            dismissedNextUpKeys = dismissedNextUpKeys,
+            latestCompletedAtByContent = latestCompletedAtByContent
         )
         val sorted = sortContinueWatchingItems(reconciled, sortMode)
         val (main, upcoming) = splitUpcomingItems(sorted, sortMode)
