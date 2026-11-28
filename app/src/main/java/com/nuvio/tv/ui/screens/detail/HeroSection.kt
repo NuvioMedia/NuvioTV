@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.core.util.formatRuntimeMinutes
 import com.nuvio.tv.ui.theme.NuvioMotion
 
 import android.view.KeyEvent as AndroidKeyEvent
@@ -953,33 +954,18 @@ private fun formatRuntime(runtime: String): String? {
     if (trimmed.contains('h') || trimmed.contains('m')) {
         val hours = Regex("(\\d+)\\s*h").find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val mins = Regex("(\\d+)\\s*m").find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-        val total = hours * 60 + mins
-        if (total > 0) return if (total >= 60) {
-            val h = total / 60; val m = total % 60
-            if (m > 0) "${h}h ${m}m" else "${h}h"
-        } else "${total}m"
+        formatRuntimeMinutes(hours * 60 + mins)?.let { return it }
     }
     // "H:MM" or "HH:MM" format
     if (trimmed.contains(':')) {
         val parts = trimmed.split(':')
         val hours = parts.getOrNull(0)?.toIntOrNull() ?: 0
         val mins = parts.getOrNull(1)?.toIntOrNull() ?: 0
-        val total = hours * 60 + mins
-        if (total > 0) return if (total >= 60) {
-            val m = total % 60
-            if (m > 0) "${hours}h ${m}m" else "${hours}h"
-        } else "${total}m"
+        formatRuntimeMinutes(hours * 60 + mins)?.let { return it }
     }
     // Plain number (minutes)
     val minutes = trimmed.filter { it.isDigit() }.toIntOrNull() ?: return runtime
-    if (minutes <= 0) return null
-    return if (minutes >= 60) {
-        val hours = minutes / 60
-        val mins = minutes % 60
-        if (mins > 0) "${hours}h ${mins}m" else "${hours}h"
-    } else {
-        "${minutes}m"
-    }
+    return formatRuntimeMinutes(minutes)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
