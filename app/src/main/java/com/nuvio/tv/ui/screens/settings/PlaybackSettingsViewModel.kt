@@ -154,6 +154,13 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
+        // Transcoding and bitstream passthrough cannot both apply to the same sink.
+        if (enabled) playerSettingsDataStore.setForceAudioPassthrough(false)
+    }
+
+    suspend fun setForceAudioPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setForceAudioPassthrough(enabled)
+        if (enabled) playerSettingsDataStore.setForceOpticalPassthrough(false)
     }
 
     suspend fun setSkipSilence(enabled: Boolean) {

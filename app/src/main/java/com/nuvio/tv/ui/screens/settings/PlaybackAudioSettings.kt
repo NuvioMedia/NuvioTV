@@ -120,6 +120,13 @@ internal fun PlaybackAudioSection(
         onToggle = { onUpdate { setForceOpticalPassthrough(!settings.forceOpticalPassthrough) } },
         enabled = enabled && settings.decoderPriority != 0
     )
+    SettingsToggleRow(
+        title = stringResource(R.string.audio_force_passthrough),
+        subtitle = stringResource(R.string.audio_force_passthrough_sub),
+        checked = settings.forceAudioPassthrough && !settings.isPreferAppDecoder,
+        onToggle = { onUpdate { setForceAudioPassthrough(!settings.forceAudioPassthrough) } },
+        enabled = enabled && !settings.isPreferAppDecoder
+    )
 }
 
 @Composable

@@ -331,6 +331,11 @@ data class PlayerSettings(
     val downmixLfeLevel: DownmixLfeLevel = DownmixLfeLevel.OFF,
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
+    /**
+     * Pins AC-3/E-AC-3/DTS/DTS-HD/TrueHD capabilities on the audio sink instead of trusting the
+     * framework. For API < 29 devices that never advertise HDMI encodings (many TV boxes).
+     */
+    val forceAudioPassthrough: Boolean = false,
     val skipSilence: Boolean = false,
     val nightMode: NightMode = NightMode.OFF,
     val audioAmplificationDb: Int = 0,
@@ -683,6 +688,7 @@ class PlayerSettingsDataStore @Inject constructor(
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
+    private val forceAudioPassthroughKey = booleanPreferencesKey("force_audio_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val nightModeKey = stringPreferencesKey("night_mode")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
@@ -1093,6 +1099,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 downmixLfeLevel = DownmixLfeLevel.fromSettingValue(prefs[downmixLfeLevelKey]),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
+                forceAudioPassthrough = prefs[forceAudioPassthroughKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
                 nightMode = NightMode.fromSettingValue(prefs[nightModeKey]),
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
@@ -1376,6 +1383,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         store().edit { prefs ->
             prefs[forceOpticalPassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setForceAudioPassthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[forceAudioPassthroughKey] = enabled
         }
     }
 

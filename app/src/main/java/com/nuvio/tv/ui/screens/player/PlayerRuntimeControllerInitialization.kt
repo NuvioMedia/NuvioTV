@@ -962,6 +962,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
                 downmixLfeLevel = playerSettings.downmixLfeLevel.level,
                 forceOpticalPassthrough = isForcePassthroughActive,
+                forceAudioPassthrough = playerSettings.forceAudioPassthrough,
                 bluetoothForcePcm = isBluetoothAudioOutput,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
@@ -2267,6 +2268,7 @@ private class SubtitleOffsetRenderersFactory(
     private val downmixNormalizationEnabled: Boolean,
     private val downmixLfeLevel: Float,
     private val forceOpticalPassthrough: Boolean,
+    private val forceAudioPassthrough: Boolean = false,
     private val bluetoothForcePcm: Boolean = false,
     private val playbackSpeedProvider: () -> Float,
     private val initialForcePcm: Boolean = false,
@@ -2334,11 +2336,20 @@ private class SubtitleOffsetRenderersFactory(
     ): AudioSink {
         // Bluetooth: pin Media3-equivalent DEFAULT (PCM-only) so TV HDMI profiles / force-optical
         // cannot advertise AC3/DTS passthrough while audio is routed to A2DP.
-        // Non-BT optical: pin expanded capabilities. Otherwise keep live Builder(context).
+        // Non-BT optical: pin expanded capabilities. Force passthrough pins the receiver set.
+        // Otherwise keep live Builder(context).
         val builder = when {
             bluetoothForcePcm -> {
                 DefaultAudioSink.Builder()
                     .setAudioCapabilities(AudioOutputRouteDetector.bluetoothPcmOnlyCapabilities())
+            }
+            forceAudioPassthrough -> {
+                android.util.Log.i(
+                    PlayerRuntimeController.TAG,
+                    "Audio sink capabilities pinned for forced passthrough: ${ForcedPassthroughCapabilities.encodings.joinToString()}"
+                )
+                DefaultAudioSink.Builder()
+                    .setAudioCapabilities(ForcedPassthroughCapabilities.build())
             }
             forceOpticalPassthrough -> {
                 @Suppress("DEPRECATION")
