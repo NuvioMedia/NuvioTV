@@ -57,6 +57,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.AuthState
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.firstGraphemeOrNull
 
 @Composable
 fun AccountSettingsContent(
@@ -297,7 +298,7 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = profile.profileName.firstOrNull()?.uppercase() ?: "?",
+                text = profile.profileName.firstGraphemeOrNull()?.uppercase() ?: "?",
                 color = Color.White,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
