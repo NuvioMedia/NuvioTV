@@ -5,36 +5,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 
+/** Upper bound of code points inspected, so this stays cheap when called on every recomposition. */
+private const val MAX_DIRECTION_SCAN_CODE_POINTS = 64
+
 /**
- * Detects a string's own reading direction from its first strong-directional character
- * (Unicode bidi rules P2/P3), independent of the app's ambient UI locale/LayoutDirection.
- * 
- * Skips emoji characters (including flag emojis) to find the actual text content direction.
+ * Detects a string's own reading direction, independent of the app's ambient UI locale/LayoutDirection.
+ *
+ * Follows the first strong-directional character (Unicode bidi rules P2/P3), skipping emoji, with one
+ * refinement for mixed text: when the string *starts* with a left-to-right run (a brand, a name, a
+ * title in Latin script) but is mostly right-to-left letters, it is treated as RTL.
+ * e.g. "Netflix מציגה סדרה חדשה" is RTL, while "Breaking Bad" and "Fast X: מהיר" stay LTR.
+ * A string that starts with an RTL letter is always RTL (the fast path).
  */
 fun String.contentTextDirection(): TextDirection {
     var index = 0
-    while (index < length) {
+    var scanned = 0
+    var startsWithLtr = false
+    var ltrLetters = 0
+    var rtlLetters = 0
+    while (index < length && scanned < MAX_DIRECTION_SCAN_CODE_POINTS) {
         val codePoint = codePointAt(index)
-        val charCount = Character.charCount(codePoint)
-        
-        // Skip emoji and emoji-related characters
-        if (isEmojiOrModifier(codePoint)) {
-            index += charCount
-            continue
+        index += Character.charCount(codePoint)
+        scanned++
+
+        if (isEmojiOrModifier(codePoint)) continue
+
+        when (Character.getDirectionality(codePoint)) {
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT,
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> {
+                if (ltrLetters == 0 && rtlLetters == 0) return TextDirection.Rtl
+                rtlLetters++
+            }
+            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> {
+                if (ltrLetters == 0 && rtlLetters == 0) startsWithLtr = true
+                ltrLetters++
+            }
         }
-        
-        // Check directionality of non-emoji characters
-        val directionality = Character.getDirectionality(codePoint)
-        if (directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
-            directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC) {
-            return TextDirection.Rtl
-        }
-        if (directionality == Character.DIRECTIONALITY_LEFT_TO_RIGHT) {
-            return TextDirection.Ltr
-        }
-        index += charCount
     }
-    return TextDirection.Ltr
+    return if (startsWithLtr && rtlLetters > ltrLetters) TextDirection.Rtl else TextDirection.Ltr
 }
 
 /**
