@@ -267,9 +267,12 @@ fun GridContentCard(
                                     onDrawBehind { drawRect(gradient) }
                                 }
                         )
-                        val logoRequest = remember(item.logo) {
+                        val landscapeLogoWidthPx = (requestWidthPx * 0.62f).toInt().coerceAtLeast(1)
+                        val landscapeLogoHeightPx = (requestHeightPx * 0.34f).toInt().coerceAtLeast(1)
+                        val logoRequest = remember(item.logo, landscapeLogoWidthPx, landscapeLogoHeightPx) {
                             ImageRequest.Builder(context)
                                 .data(item.logo)
+                                .size(width = landscapeLogoWidthPx, height = landscapeLogoHeightPx)
                                 .crossfade(true)
                                 .build()
                         }
@@ -328,9 +331,12 @@ fun GridContentCard(
                                 onDrawBehind { drawRect(gradient) }
                             }
                     )
-                    val logoRequest = remember(item.logo) {
+                    val logoWidthPx = requestWidthPx
+                    val logoHeightPx = (requestHeightPx * 0.35f).toInt().coerceAtLeast(1)
+                    val logoRequest = remember(item.logo, logoWidthPx, logoHeightPx) {
                         ImageRequest.Builder(context)
                             .data(item.logo)
+                            .size(width = logoWidthPx, height = logoHeightPx)
                             .crossfade(true)
                             .build()
                     }
