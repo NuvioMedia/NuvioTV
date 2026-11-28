@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.core.util.formatRuntimeMinutes
+import com.nuvio.tv.ui.util.isRtlLayout
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
@@ -168,7 +170,7 @@ fun SeasonTabs(
         regularSeasons + specials
     }
 
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val initialSeasonIndex = remember(sortedSeasons, selectedSeason) {
         sortedSeasons.indexOf(selectedSeason).coerceAtLeast(0)
     }
@@ -513,7 +515,7 @@ fun EpisodesRow(
     onOpenEpisodeComments: (Video) -> Unit = {},
     showOpenEpisodeComments: Boolean = false,
     onMarkPreviousEpisodesWatched: (Video) -> Unit = {},
-    upFocusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester? = null,
     episodeFocusRequesters: MutableMap<String, FocusRequester> = mutableMapOf(),
     restoreEpisodeId: String? = null,
@@ -779,7 +781,7 @@ private fun EpisodeCard(
     cardMetrics: EpisodeCardMetrics,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
-    upFocusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester? = null,
     focusRequester: FocusRequester,
     isFocusEnabled: Boolean = true,
@@ -1002,9 +1004,7 @@ private fun EpisodeCard(
             }
             .focusProperties {
                 canFocus = isFocusEnabled
-                if (upFocusRequester != null) {
-                    up = upFocusRequester
-                }
+                up = upFocusRequester
                 if (downFocusRequester != null) {
                     down = downFocusRequester
                 }
@@ -1470,14 +1470,7 @@ private fun rememberEpisodeCardMetrics(posterCardCornerRadiusDp: Int = 12): Epis
 }
 
 private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
-    if (runtimeMinutes <= 0) return ""
-    val hours = runtimeMinutes / 60
-    val minutes = runtimeMinutes % 60
-    return when {
-        hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
-        hours > 0 -> "${hours}h"
-        else -> "${minutes}m"
-    }
+    return formatRuntimeMinutes(runtimeMinutes).orEmpty()
 }
 
 private fun formatEpisodeCardDate(isoDate: String): String {
