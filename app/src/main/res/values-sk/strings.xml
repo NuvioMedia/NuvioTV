@@ -3595,4 +3595,10 @@
     <string name="player_disc_title_extra">Bonus · %1$d min</string>
     <string name="player_disc_title_subtitles">Titulky %1$s</string>
     <string name="player_disc_title_failed">Tento titul sa nepodarilo prehrať</string>
+
+    <string name="audio_zero_dovi_l5_title">Ignorovať letterbox metadáta Dolby Vision (L5)</string>
+    <string name="audio_zero_dovi_l5_sub">Počas prehrávania vynuluje posuny aktívnej oblasti Dolby Vision L5. Opravuje tmavšie alebo priesvitné pruhy pozdĺž okrajov letterboxu pri súboroch s chybnými metadátami L5.</string>
+    <string name="layout_modern_poster_labels_sub">Zobrazovať názov a rok pod plagátmi v riadkoch domovskej obrazovky.</string>
+    <string name="settings_p2p_cache_memory_only">Len v pamäti</string>
+    <string name="settings_p2p_cache_memory_only_description">Údaje torrentu zostávajú v pamäti RAM a nikdy sa nezapisujú do úložiska. Pri posunutí späť sa stiahnu znova.</string>
 </resources>

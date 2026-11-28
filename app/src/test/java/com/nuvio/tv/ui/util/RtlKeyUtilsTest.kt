@@ -14,4 +14,12 @@ class RtlKeyUtilsTest {
     fun `getClearHistoryDpadKey returns RIGHT when RTL is false`() {
         assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, RtlKeyUtils.getClearHistoryDpadKey(isRtl = false))
     }
+
+    @Test
+    fun `end and start keys are mirrored in RTL`() {
+        assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, RtlKeyUtils.endDpadKey(isRtl = false))
+        assertEquals(KeyEvent.KEYCODE_DPAD_LEFT, RtlKeyUtils.endDpadKey(isRtl = true))
+        assertEquals(KeyEvent.KEYCODE_DPAD_LEFT, RtlKeyUtils.startDpadKey(isRtl = false))
+        assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, RtlKeyUtils.startDpadKey(isRtl = true))
+    }
 }
