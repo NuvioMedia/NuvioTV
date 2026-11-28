@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.profile
 
+import com.nuvio.tv.ui.util.towardEnd
+import com.nuvio.tv.ui.util.isRtlLayout
 import androidx.tv.material3.MaterialTheme
 import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -374,19 +376,20 @@ fun ProfileSelectionScreen(
             profileBackground = profileBackground
         )
 
+        val slideRtl = isRtlLayout()
         AnimatedContent(
             targetState = pinOverlayState,
             transitionSpec = {
                 val entering = fadeIn(tween(240)) + slideInHorizontally(
                     animationSpec = tween(320, easing = ProfileCardFocusEasing),
                     initialOffsetX = { fullWidth ->
-                        if (targetState == null) -fullWidth / 10 else fullWidth / 12
+                        (if (targetState == null) -fullWidth / 10 else fullWidth / 12).towardEnd(slideRtl)
                     }
                 )
                 val exiting = fadeOut(tween(NuvioMotion.tokens.durations.fast)) + slideOutHorizontally(
                     animationSpec = tween(240),
                     targetOffsetX = { fullWidth ->
-                        if (targetState == null) fullWidth / 12 else -fullWidth / 12
+                        (if (targetState == null) fullWidth / 12 else -fullWidth / 12).towardEnd(slideRtl)
                     }
                 )
                 entering togetherWith exiting
@@ -2417,7 +2420,7 @@ private fun ProfilePinOverlay(
                     isInputFocused = state.isFocused
                 },
             singleLine = true,
-            textStyle = TextStyle(color = Color.Transparent),
+            textStyle = TextStyle(color = Color.Transparent, textDirection = TextDirection.Content),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.NumberPassword,
                 imeAction = ImeAction.Done,
@@ -2559,7 +2562,7 @@ private fun ProfileNameField(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val moveToAvatarsKey = if (isRtl) AndroidKeyEvent.KEYCODE_DPAD_LEFT else AndroidKeyEvent.KEYCODE_DPAD_RIGHT
     val backgroundColor by animateColorAsState(
         targetValue = if (isFocused) NuvioTheme.colors.FocusBackground else Color.White.copy(alpha = 0.05f),

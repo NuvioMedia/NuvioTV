@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.stream
 
+import com.nuvio.tv.ui.util.towardEnd
+import com.nuvio.tv.ui.util.isRtlLayout
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -828,7 +830,7 @@ private fun RightStreamSection(
     hazeState: HazeState?,
     modifier: Modifier = Modifier
 ) {
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     var enter by remember { mutableStateOf(false) }
     var firstStreamFocusRequestId by remember { mutableStateOf(0) }
     var listHasFocus by remember { mutableStateOf(false) }
@@ -924,7 +926,7 @@ private fun RightStreamSection(
             enter = fadeIn(animationSpec = tween(260)) +
                 slideInHorizontally(
                     animationSpec = tween(260),
-                    initialOffsetX = { fullWidth -> (fullWidth * 0.06f).toInt() }
+                    initialOffsetX = { fullWidth -> (fullWidth * 0.06f).toInt().towardEnd(isRtl) }
                 ),
             exit = fadeOut(animationSpec = tween(120))
         ) {
@@ -1166,7 +1168,7 @@ private fun StreamsList(
     onFocusChanged: (Boolean) -> Unit = {},
     onExpandStreams: () -> Unit = {}
 ) {
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     val restoreFocusRequester = remember { FocusRequester() }
     val streamListState = rememberLazyListState()

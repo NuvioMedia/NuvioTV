@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.util.towardEnd
+import com.nuvio.tv.ui.util.isRtlLayout
 import android.content.Context
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.AnimatedContent
@@ -137,7 +139,7 @@ internal fun EpisodeOptionsOverlay(
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val overlayColor = Color(0xFF050505)
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val primaryFocusRequester = remember { FocusRequester() }
     val detailsFocusRequester = remember { FocusRequester() }
     val detailsScrollState = rememberScrollState()
@@ -537,8 +539,8 @@ internal fun EpisodeOptionsOverlay(
                     transitionSpec = {
                         val forward = targetState
                         val motion = spring<IntOffset>(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
-                        (slideInHorizontally(motion) { if (forward) it / 3 else -it / 3 } + fadeIn(tween(180))) togetherWith
-                            (slideOutHorizontally(motion) { if (forward) -it / 3 else it / 3 } + fadeOut(tween(120))) using
+                        (slideInHorizontally(motion) { (if (forward) it / 3 else -it / 3).towardEnd(isRtl) } + fadeIn(tween(180))) togetherWith
+                            (slideOutHorizontally(motion) { (if (forward) -it / 3 else it / 3).towardEnd(isRtl) } + fadeOut(tween(120))) using
                             SizeTransform(clip = false)
                     },
                     contentAlignment = Alignment.Center,
