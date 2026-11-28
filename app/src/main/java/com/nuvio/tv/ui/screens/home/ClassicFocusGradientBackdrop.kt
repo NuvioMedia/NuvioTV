@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -18,12 +17,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as DrawSize
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -122,6 +120,8 @@ internal fun ClassicFocusGradientBackdrop(
 
     val color0 = slotColors.first
     val color1 = slotColors.second
+    val gradientModifier0 = remember(color0) { Modifier.drawFocusGradient(color0) }
+    val gradientModifier1 = remember(color1) { Modifier.drawFocusGradient(color1) }
     val alpha0 = 1f - crossfadeProgress
     val alpha1 = crossfadeProgress
 
@@ -132,51 +132,53 @@ internal fun ClassicFocusGradientBackdrop(
 
     Box(modifier = modifier.fillMaxSize()) {
         if (color0 != Color.Transparent && alpha0 >= 0.005f) {
-            Canvas(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
                         alpha = alpha0
-                        compositingStrategy = CompositingStrategy.Offscreen
                     }
-            ) {
-                drawFocusGradient(color0)
-            }
+                    .then(gradientModifier0)
+            )
         }
         if (color1 != Color.Transparent && alpha1 >= 0.005f) {
-            Canvas(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
                         alpha = alpha1
-                        compositingStrategy = CompositingStrategy.Offscreen
                     }
-            ) {
-                drawFocusGradient(color1)
-            }
+                    .then(gradientModifier1)
+            )
         }
     }
 }
 
-private fun DrawScope.drawFocusGradient(color: Color) {
-    if (color == Color.Transparent) return
-    val firstVisibleX = size.width * 0.29f
-    val brush = Brush.linearGradient(
-        colorStops = arrayOf(
-            0f to Color.Transparent,
-            0.42f to Color.Transparent,
-            0.66f to color.copy(alpha = 0.16f),
-            0.84f to color.copy(alpha = 0.30f),
-            1f to color.copy(alpha = 0.44f)
-        ),
-        start = Offset(size.width * 0.12f, 0f),
-        end = Offset(size.width, size.height * 0.82f)
-    )
-    drawRect(
-        brush = brush,
-        topLeft = Offset(firstVisibleX, 0f),
-        size = DrawSize(size.width - firstVisibleX, size.height)
-    )
+private fun Modifier.drawFocusGradient(color: Color): Modifier {
+    if (color == Color.Transparent) return this
+    return drawWithCache {
+        val firstVisibleX = size.width * 0.29f
+        val brush = Brush.linearGradient(
+            colorStops = arrayOf(
+                0f to Color.Transparent,
+                0.42f to Color.Transparent,
+                0.66f to color.copy(alpha = 0.16f),
+                0.84f to color.copy(alpha = 0.30f),
+                1f to color.copy(alpha = 0.44f)
+            ),
+            start = Offset(size.width * 0.12f, 0f),
+            end = Offset(size.width, size.height * 0.82f)
+        )
+        val topLeft = Offset(firstVisibleX, 0f)
+        val rectSize = DrawSize(size.width - firstVisibleX, size.height)
+        onDrawBehind {
+            drawRect(
+                brush = brush,
+                topLeft = topLeft,
+                size = rectSize
+            )
+        }
+    }
 }
 
 private data class ResolvedArtworkColor(
