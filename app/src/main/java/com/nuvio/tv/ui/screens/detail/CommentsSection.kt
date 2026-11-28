@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.animation.AnimatedContent
@@ -132,7 +133,7 @@ fun CommentsSection(
     windowResetKey: String? = null
 ) {
     val cardShape = RoundedCornerShape(NuvioTheme.radii.xl)
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val firstItemFocusRequester = remember { FocusRequester() }
     val internalTitleModeFocusRequester = remember { FocusRequester() }
     val internalEpisodeModeFocusRequester = remember { FocusRequester() }
@@ -779,6 +780,12 @@ fun CommentOverlay(
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
     val mainContentFocusRequester = remember { FocusRequester() }
+    // In RTL the sequence runs right-to-left like the comment row it was opened from:
+    // Left means next, Right means previous, and the slide animation follows the same side.
+    val isRtl = isRtlLayout()
+    val previousKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
+    val nextKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
+    val slideSign = if (isRtl) -1 else 1
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -802,7 +809,7 @@ fun CommentOverlay(
                         false
                     } else {
                         when (event.key) {
-                            Key.DirectionLeft -> {
+                            previousKey -> {
                                 if (canNavigatePrevious) {
                                     onPrevious()
                                     true
@@ -810,7 +817,7 @@ fun CommentOverlay(
                                     false
                                 }
                             }
-                            Key.DirectionRight -> {
+                            nextKey -> {
                                 if (canNavigateNext) {
                                     if (!isLoadingNext) onNext()
                                     true
@@ -829,12 +836,12 @@ fun CommentOverlay(
                 transitionSpec = {
                     when {
                         transitionDirection > 0 -> {
-                            slideInHorizontally(initialOffsetX = { it / 5 }) + fadeIn() togetherWith
-                                slideOutHorizontally(targetOffsetX = { -it / 5 }) + fadeOut()
+                            slideInHorizontally(initialOffsetX = { slideSign * it / 5 }) + fadeIn() togetherWith
+                                slideOutHorizontally(targetOffsetX = { -slideSign * it / 5 }) + fadeOut()
                         }
                         transitionDirection < 0 -> {
-                            slideInHorizontally(initialOffsetX = { -it / 5 }) + fadeIn() togetherWith
-                                slideOutHorizontally(targetOffsetX = { it / 5 }) + fadeOut()
+                            slideInHorizontally(initialOffsetX = { -slideSign * it / 5 }) + fadeIn() togetherWith
+                                slideOutHorizontally(targetOffsetX = { slideSign * it / 5 }) + fadeOut()
                         }
                         else -> fadeIn() togetherWith fadeOut()
                     }
