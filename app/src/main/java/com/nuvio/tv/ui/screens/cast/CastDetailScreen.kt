@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.cast
 
+import com.nuvio.tv.ui.util.isRtlLayout
+import androidx.compose.ui.graphics.graphicsLayer
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -269,9 +271,11 @@ private fun CastDetailContent(
             )
         }
         // Accent goes on top of the plain background to provide the Cast theme coloring
+        // (mirrored in RTL so the accent stays on the start side, like the content)
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .then(if (isRtlLayout()) Modifier.graphicsLayer { scaleX = -1f } else Modifier)
                 .background(accentGradient)
         )
 
@@ -758,7 +762,12 @@ private fun CastDetailSkeleton(personName: String) {
             )
         }
         // Accent gradient provides skeleton color depth
-        Box(modifier = Modifier.fillMaxSize().background(accentGradient))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (isRtlLayout()) Modifier.graphicsLayer { scaleX = -1f } else Modifier)
+                .background(accentGradient)
+        )
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Hero skeleton
