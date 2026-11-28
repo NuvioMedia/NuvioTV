@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.util.isRtlLayout
 import com.nuvio.tv.ui.screens.party.PartySettingsContent
 import com.nuvio.tv.ui.screens.party.PartyViewModel
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -216,7 +217,7 @@ fun SettingsScreen(
     }
     val visibleSections = visibleCategories.map { category -> settingsSectionSpec(category) }
 
-    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val isRtl = isRtlLayout()
     val isHorizonStyle = NuvioTheme.settingsUiStyle == SettingsUiStyle.HORIZON
     var selectedCategory by rememberSaveable {
         mutableStateOf(
@@ -404,7 +405,14 @@ fun SettingsScreen(
             if (!requested) withFrameNanos { }
         }
         if (!requested) {
-            focusManager.moveFocus(if (isHorizonStyle) FocusDirection.Down else FocusDirection.Right)
+            // The detail pane sits at the END of the rail: to its right in LTR, to its left in RTL.
+            focusManager.moveFocus(
+                when {
+                    isHorizonStyle -> FocusDirection.Down
+                    isRtl -> FocusDirection.Left
+                    else -> FocusDirection.Right
+                }
+            )
         }
         pendingContentFocusCategory = null
     }
