@@ -191,6 +191,7 @@ class PlayerRuntimeController(
     internal val poster: String? = navigationArgs.poster
     internal val backdrop: String? = navigationArgs.backdrop
     internal val logo: String? = navigationArgs.logo
+    internal var logoLanguage: String? = navigationArgs.logoLanguage
     internal val videoId: String? = navigationArgs.videoId
     internal val initialSeason: Int? = navigationArgs.initialSeason
     internal val initialEpisode: Int? = navigationArgs.initialEpisode
@@ -350,6 +351,7 @@ class PlayerRuntimeController(
             contentType = contentType,
             backdrop = backdrop,
             logo = logo,
+            logoLanguage = logoLanguage,
             showLoadingOverlay = true,
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,

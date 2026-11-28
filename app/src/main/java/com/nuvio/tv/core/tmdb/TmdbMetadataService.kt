@@ -304,11 +304,12 @@ class TmdbMetadataService(
                 val collectionId = details?.belongsToCollection?.id
                 val collectionName = details?.belongsToCollection?.name
 
-                val logoPath = images?.logos?.let {
-                    selectBestLocalizedImagePath(it, normalizedLanguage)
+                val logoImage = images?.logos?.let {
+                    selectBestLocalizedImage(it, normalizedLanguage)
                 }
 
-                val logo = buildImageUrl(logoPath, size = "w500")
+                val logo = buildImageUrl(logoImage?.filePath, size = "w500")
+                val logoLanguage = logoImage?.iso6391?.trim()?.takeIf { it.isNotBlank() }
 
                 val castMembers = credits?.cast
                     .orEmpty()
@@ -474,6 +475,7 @@ class TmdbMetadataService(
                     genres = genres,
                     backdrop = backdrop,
                     logo = logo,
+                    logoLanguage = logoLanguage,
                     poster = poster,
                     directorMembers = exposedDirectorMembers,
                     writerMembers = exposedWriterMembers,
@@ -1227,10 +1229,10 @@ class TmdbMetadataService(
         }
     }
 
-    private fun selectBestLocalizedImagePath(
+    private fun selectBestLocalizedImage(
         images: List<TmdbImage>,
         normalizedLanguage: String
-    ): String? {
+    ): TmdbImage? {
         if (images.isEmpty()) return null
         val languageCode = normalizedLanguage.substringBefore("-")
         val explicitRegion = normalizedLanguage.substringAfter("-", "").uppercase(Locale.US).takeIf { it.length == 2 }
@@ -1250,8 +1252,12 @@ class TmdbMetadataService(
                     .thenByDescending { it.iso6391 == null }
             )
             .firstOrNull()
-            ?.filePath
     }
+
+    private fun selectBestLocalizedImagePath(
+        images: List<TmdbImage>,
+        normalizedLanguage: String
+    ): String? = selectBestLocalizedImage(images, normalizedLanguage)?.filePath
 
     companion object {
         private val DEFAULT_LANGUAGE_REGIONS = mapOf(
@@ -1656,6 +1662,8 @@ data class TmdbEnrichment(
     val genres: List<String>,
     val backdrop: String?,
     val logo: String?,
+    /** ISO 639-1 language code of the specific [logo] image TMDB selected, when known. */
+    val logoLanguage: String? = null,
     val poster: String?,
     val directorMembers: List<MetaCastMember>,
     val writerMembers: List<MetaCastMember>,

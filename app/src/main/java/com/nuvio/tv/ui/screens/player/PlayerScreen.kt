@@ -1374,6 +1374,7 @@ fun PlayerScreen(
                 uiState.error == null && !postPlayRecommendationState.isVisible,
             backdropUrl = uiState.backdrop,
             logoUrl = uiState.logo,
+            logoLanguage = uiState.logoLanguage,
             title = uiState.title,
             message = if (uiState.isEpisodeAutoPlaySearching) {
                 stringResource(R.string.stream_finding_source).takeIf { uiState.showPlayerLoadingStatus }

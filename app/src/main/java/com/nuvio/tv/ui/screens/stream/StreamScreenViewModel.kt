@@ -145,6 +145,7 @@ class StreamScreenViewModel @Inject constructor(
     private val poster: String? = savedStateHandle.getOptionalString("poster")
     private val backdrop: String? = savedStateHandle.getOptionalString("backdrop")
     private val logo: String? = savedStateHandle.getOptionalString("logo")
+    private val logoLanguage: String? = savedStateHandle.getOptionalString("logoLanguage")
     private val season: Int? = savedStateHandle.get<String>("season")?.toIntOrNull()
     private val episode: Int? = savedStateHandle.get<String>("episode")?.toIntOrNull()
     private val episodeName: String? = savedStateHandle.getOptionalString("episodeName")
@@ -194,6 +195,7 @@ class StreamScreenViewModel @Inject constructor(
             poster = poster,
             backdrop = backdrop,
             logo = logo,
+            logoLanguage = logoLanguage,
             season = season,
             episode = episode,
             episodeName = episodeName,
@@ -540,6 +542,7 @@ class StreamScreenViewModel @Inject constructor(
                                 poster = poster,
                                 backdrop = backdrop,
                                 logo = logo,
+                                logoLanguage = logoLanguage,
                                 videoId = videoId,
                                 season = season,
                                 episode = episode,
@@ -1301,12 +1304,18 @@ class StreamScreenViewModel @Inject constructor(
                 val posterValue = state.poster ?: meta.poster
                 val backdropValue = state.backdrop ?: meta.backdropUrl
                 val logoValue = state.logo ?: meta.logo
+                val logoLanguageValue = if (state.logo == null && meta.logo != null) {
+                    meta.logoLanguage
+                } else {
+                    state.logoLanguage
+                }
                 val genresValue = state.genres?.takeIf { it.isNotBlank() } ?: metaGenres
                 val yearValue = state.year?.takeIf { it.isNotBlank() } ?: metaYear
                 val runtimeValue = state.runtime ?: metaRuntime
                 if (state.poster == posterValue &&
                     state.backdrop == backdropValue &&
                     state.logo == logoValue &&
+                    state.logoLanguage == logoLanguageValue &&
                     state.genres == genresValue &&
                     state.year == yearValue &&
                     state.runtime == runtimeValue
@@ -1317,6 +1326,7 @@ class StreamScreenViewModel @Inject constructor(
                         poster = posterValue,
                         backdrop = backdropValue,
                         logo = logoValue,
+                        logoLanguage = logoLanguageValue,
                         genres = genresValue,
                         year = yearValue,
                         runtime = runtimeValue
@@ -1912,6 +1922,7 @@ class StreamScreenViewModel @Inject constructor(
             poster = poster,
             backdrop = backdrop,
             logo = logo,
+            logoLanguage = logoLanguage,
             videoId = videoId,
             season = season,
             episode = episode,
@@ -2525,6 +2536,7 @@ data class StreamPlaybackInfo(
     val poster: String?,
     val backdrop: String?,
     val logo: String?,
+    val logoLanguage: String? = null,
     val videoId: String?,
     val season: Int?,
     val episode: Int?,
